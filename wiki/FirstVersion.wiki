@@ -20,7 +20,7 @@
  * cosplay.paheal.net
  * rule34.paheal.net
  * rule63.paheal.net
- * pixiv.net `[`+ by author id`]`
+ * pixiv.net `[`+ by author id `[`works, bookmarks`]``]`
  * rmart.org
  * safebooru.org
  * chan.sankakucomplex.com
