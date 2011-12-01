@@ -29,3 +29,6 @@
  * wildcritters.ws `[`+ pools`]`
  * xbooru.com
  * zerochan.net
+
+#sidebar TableOfContents
+ * [Поддерживаемые_борды Поддерживаемые борды]
