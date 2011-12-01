@@ -1,5 +1,4 @@
 #summary Описание 1й версии
-#sidebar FirstVersion
 
 =Поддерживаемые борды=
 
