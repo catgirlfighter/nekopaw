@@ -30,5 +30,4 @@
  * xbooru.com
  * zerochan.net
 
-#sidebar TableOfContents
- * [Поддерживаемые_борды Поддерживаемые борды]
+#sidebar Поддерживаемые_борды
