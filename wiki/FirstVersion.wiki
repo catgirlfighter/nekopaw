@@ -10,8 +10,8 @@
  * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Закачка_изображений_по_списку">Закачка изображений по списку</a>
  * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Вкладка_Metadata">Вкладка Metadata</a>
  * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Выборка">Выборка</a>
- * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Вкладка Settings">Вкладка Settings</a>
- * <a href="http://code.google.com/p/nekopaw/wiki/Команды_запуска">Команды запуска</a>
+ * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Вкладка_Settings">Вкладка Settings</a>
+ * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Команды_запуска">Команды запуска</a>
  * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Поддерживаемые_борды">Поддерживаемые борды</a>
 
 =Получение списка=
