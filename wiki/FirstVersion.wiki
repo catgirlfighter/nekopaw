@@ -1,11 +1,11 @@
 #summary Описание 1й версии
-<img src="http://img38.imageshack.us/img38/2636/imgwn.png" align=right />
+
 Процесс закачки состоит из 2х основных шагов:
  # Получение списка;
  # Закачка изображений по списку.
 
 Программа не качает флэш-ролики и текст, в случае их наличия они будут проигнорированы.
-
+<img src="http://img38.imageshack.us/img38/2636/imgwn.png" align=right />
 ===Содержание===
 
  * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Получение_списка">Получение списка</a>
