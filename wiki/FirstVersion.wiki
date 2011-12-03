@@ -1,4 +1,4 @@
-#summary Описание 1й версии
+#summary Описание 1й версии1
 
  * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Поддерживаемые_борды">Поддерживаемые борды</a>
 
