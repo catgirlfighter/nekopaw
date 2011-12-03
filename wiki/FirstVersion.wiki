@@ -14,7 +14,7 @@
  * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Выборка">Выборка</a>
  * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Вкладка_Settings">Вкладка Settings</a>
  * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Команды_запуска">Команды запуска</a>
- * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Описчание_Settings.ini">Описчание Settings.ini</a>
+ * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Описание_Settings.ini">Описание Settings.ini</a>
  * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Поддерживаемые_борды">Поддерживаемые борды</a>
 
 =Получение списка=
@@ -189,7 +189,7 @@
 
 <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Содержание">К содержанию</a>
 
-=Описчание Settings.ini=
+=Описание Settings.ini=
 
 ;секция "общие параметры", загружаются при запуске программы<br />
 `[`parametres`]`<br />
