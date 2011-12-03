@@ -5,8 +5,9 @@
 
 Программа не качает флэш-ролики и текст, в случае их наличия они будут проигнорированы.
 
-===Содержание===
 <img src="http://img38.imageshack.us/img38/2636/imgwn.png" align=right />
+===Содержание===
+
  * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Получение_списка">Получение списка</a>
  * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Закачка_изображений_по_списку">Закачка изображений по списку</a>
  * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Вкладка_Metadata">Вкладка Metadata</a>
