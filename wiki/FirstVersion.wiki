@@ -14,6 +14,7 @@
  * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Выборка">Выборка</a>
  * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Вкладка_Settings">Вкладка Settings</a>
  * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Команды_запуска">Команды запуска</a>
+ * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Описчание_Settings.ini">Описчание Settings.ini</a>
  * <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Поддерживаемые_борды">Поддерживаемые борды</a>
 
 =Получение списка=
@@ -185,6 +186,126 @@
       Если в указываемых вами параметрах присутсвуют пробелы, то нужно их изолировать кавычками "".
 
       Все остальные настройки наследуются из сохраненных. Например, если не указывать путь сохранения, то будет указан путь по умолчанию. Параметры скачки, типа "качать альбомы и раскидывать по папкам", "автоматическая генерация пути" и т.п. плюшки также берутся из сохраненных настроек. То же касается сохраенных логина и пароля (в этом случае параметры login= и password= прописывать нет необходимости). Настройки можно указать в самой программе (расставив все необходимые галочки) или ручками отредактировать файл settings.ini в папке программы.
+
+<a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Содержание">К содержанию</a>
+
+=Описчание Settings.ini=
+
+;секция "общие параметры", загружаются при запуске программы<br />
+`[`parametres`]`<br />
+;дефолтный путь<br />
+dir=c:\tmp\<br />
+;id ресурса<br />
+destination=23<br />
+;ширина окна<br />
+width=548<br />
+;высота окна<br />
+height=542<br />
+;состояние окна (0 wsNormal, 1 wsMinimized, 2 wsMaximized)<br />
+windowstate=0<br />
+;панелька логов скрыта<br />
+loghided=0
+
+;настройки<br />
+`[`options`]`<br />
+;кол-во потоков<br />
+threads=5<br />
+;качать альбомы<br />
+downloadalbums=1<br />
+;создавать папки для альбомов<br />
+createnewdirs=1<br />
+;открыть сд-родм<br />
+opendrive=0<br />
+;буква сд-рома<br />
+driveletter=F<br />
+;показывать превью<br />
+showpreview=0<br />
+;после завершение (после завершения списка перейти на 0 get, 1 metadata, 2 download<br />
+afterend=2<br />
+;фильтр тэгов по количеству пиков<br />
+cntfilter=1<br />
+;пропускать существующие (0 skip, 1 delete, 2 rename)<br />
+existingfile=0<br />
+;чекбокс saved tags<br />
+savedtagschecked=0<br />
+;derp<br />
+savedtags=<br />
+;pixiv по автору -1 отключен 0, из работ, 1 из фаворитов<br />
+byauthor=-1<br />
+;иконка в трее<br />
+trayicon=1<br />
+;скрывать при сварачивании (при trayicon=1)<br />
+taskbar=1<br />
+;защита от запуска 2х копий<br />
+keepinstance=1<br />
+;автоматическая генерация пути<br />
+autodirname=1<br />
+;формат автоматической генерации пути<br />
+autodirnameformat=?t\?s<br />
+;SAVE META TO JPEG<br />
+savejpegmeta=1<br />
+;интервал запросов в секундах<br />
+queryinterval=3<br />
+;чекбокс формат имени<br />
+nameformatcheck=0<br />
+;формат имени<br />
+nameformat=?i?p_p/<br />
+;уведомление о несохраненном списке<br />
+savenote=1<br />
+;чекбокс all tags in<br />
+tagsincheck=1<br />
+;all tags in 0 filename, 1 cvs file<br />
+tagsin=0<br />
+;orginal filenames<br />
+origfnames=1<br />
+;чекбокс quryinterval на вкладке get<br />
+checkqueryinterval1=1<br />
+;чекбокс quryinterval на вкладке download<br />
+checkqueryinterval2=1<br />
+;чекбокс before geting list<br />
+checkbeforeget=1<br />
+;чекбокс before downloading pic<br />
+checkbeforedwnld=0<br />
+;чекбокс after downloading pic<br />
+checkbafterdwnld=0<br />
+;кол-во повторов при ошибке<br />
+retries=0<br />
+;incremental filenames<br />
+incfnames=1<br />
+;сохранять пароль авторизации на ресурсе<br />
+savepwd=1
+
+;настройки таблицы<br />
+`[`grid`]`<br />
+;автоматически прокручиваться при начале загрузки следующего пика
+autoscroll=0<br />
+
+;раздел прокси<br />
+`[`proxy`]`<br />
+;прокси включен<br />
+enabled=1<br />
+;хост<br />
+host=gateway<br />
+;порт <br />
+port=3128<br />
+;требуется авторизация<br />
+auth=1<br />
+;логин<br />
+login=lgn<br />
+;сохранять пароль<br />
+savepwd=1<br />
+;пароль<br />
+pwd=pwd
+
+;данные авторизации на ресурсах<br />
+`[`authdata14`]`<br />
+login=<br />
+pwd=<br />
+`[`authdata7`]`<br />
+login=<br />
+pwd=<br />
+;и т.д. `<`кол-во ресурсов`>` раз
+
 
 <a href="http://code.google.com/p/nekopaw/wiki/FirstVersion#Содержание">К содержанию</a>
 
