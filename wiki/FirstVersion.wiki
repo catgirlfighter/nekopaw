@@ -340,6 +340,7 @@ pwd=<br />
  * gelbooru.com
  * oreno.imouto.org `[`+ pools`]`
  * konachan.com `[`+ pools`]`
+ * minitokyo.net
  * nekobooru.net `[`+ pools`]`
  * cosplay.paheal.net
  * rule34.paheal.net
