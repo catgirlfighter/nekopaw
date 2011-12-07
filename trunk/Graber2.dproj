@@ -1,10 +1,14 @@
 ﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{DB2644DF-90D9-40BF-8DC8-9BDB1ECD35E2}</ProjectGuid>
-			<ProjectVersion>12.0</ProjectVersion>
+			<ProjectVersion>12.2</ProjectVersion>
 			<MainSource>Graber2.dpr</MainSource>
 			<Config Condition="'$(Config)'==''">Debug</Config>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
+			<Base>True</Base>
+			<Platform>Win32</Platform>
+			<AppType>Application</AppType>
+			<FrameworkType>VCL</FrameworkType>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
 			<Base>true</Base>
@@ -40,7 +44,8 @@
 			<DelphiCompile Include="Graber2.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="MainFormU.pas">
+			<DCCReference Include="common.pas"/>
+			<DCCReference Include="MainForm.pas">
 				<Form>mf</Form>
 			</DCCReference>
 			<DCCReference Include="graberU.pas">
@@ -50,25 +55,24 @@
 				<Form>fStart</Form>
 				<DesignClass>TFrame</DesignClass>
 			</DCCReference>
-			<DCCReference Include="NewListForm.pas">
-				<Form>fGetList</Form>
+			<DCCReference Include="NewListFrame.pas">
+				<Form>fNewList</Form>
+				<DesignClass>TFrame</DesignClass>
 			</DCCReference>
-			<DCCReference Include="Settings.pas">
-				<Form>fmSettings</Form>
-			</DCCReference>
-			<BuildConfiguration Include="Base">
-				<Key>Base</Key>
-			</BuildConfiguration>
 			<BuildConfiguration Include="Debug">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>
+			</BuildConfiguration>
+			<BuildConfiguration Include="Base">
+				<Key>Base</Key>
 			</BuildConfiguration>
 			<BuildConfiguration Include="Release">
 				<Key>Cfg_1</Key>
 				<CfgParent>Base</CfgParent>
 			</BuildConfiguration>
 		</ItemGroup>
-		<Import Project="$(BDS)\Bin\CodeGear.Delphi.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Delphi.Targets')"/>
+		<Import Condition="Exists('$(BDS)\Bin\CodeGear.Delphi.Targets')" Project="$(BDS)\Bin\CodeGear.Delphi.Targets"/>
+		<Import Condition="Exists('$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\8.0\UserTools.proj')" Project="$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\8.0\UserTools.proj"/>
 		<ProjectExtensions>
 			<Borland.Personality>Delphi.Personality.12</Borland.Personality>
 			<Borland.ProjectType/>
@@ -77,11 +81,7 @@
 					<Source>
 						<Source Name="MainSource">Graber2.dpr</Source>
 					</Source>
-					<Parameters>
-						<Parameters Name="UseLauncher">False</Parameters>
-						<Parameters Name="LoadAllSymbols">True</Parameters>
-						<Parameters Name="LoadUnspecifiedSymbols">False</Parameters>
-					</Parameters>
+					<Parameters/>
 					<VersionInfo>
 						<VersionInfo Name="IncludeVerInfo">False</VersionInfo>
 						<VersionInfo Name="AutoIncBuild">False</VersionInfo>
@@ -112,24 +112,27 @@
 					<Excluded_Packages>
 						<Excluded_Packages Name="C:\Documents and Settings\All Users\Документы\RAD Studio\7.0\Bpl\tmsd2010.bpl">TMS Component Pack</Excluded_Packages>
 						<Excluded_Packages Name="C:\Documents and Settings\All Users\Документы\RAD Studio\7.0\Bpl\DclEhLibDataDrivers140.bpl">EhLib 5.2 DataDrivers</Excluded_Packages>
-						<Excluded_Packages Name="$(BDS)\bin\dcldbx140.bpl">Embarcadero dbExpress Components</Excluded_Packages>
-						<Excluded_Packages Name="$(BDS)\bin\dclbde140.bpl">Embarcadero BDE DB Components</Excluded_Packages>
-						<Excluded_Packages Name="$(BDS)\bin\dclado140.bpl">Embarcadero ADO DB Components</Excluded_Packages>
-						<Excluded_Packages Name="$(BDS)\bin\bcbie140.bpl">Embarcadero C++Builder Internet Explorer Components Package</Excluded_Packages>
-						<Excluded_Packages Name="$(BDS)\bin\dclbcbsmp140.bpl">Embarcadero Sample Controls Design Time Package</Excluded_Packages>
-						<Excluded_Packages Name="$(BDS)\bin\dcl31w140.bpl">Delphi 1.0 Compatibility Components</Excluded_Packages>
-						<Excluded_Packages Name="$(BDS)\bin\samplevisualizers140.bpl">Embarcadero Sample Debugger Visualizers</Excluded_Packages>
-						<Excluded_Packages Name="$(BDS)\bin\dcltee8140.bpl">TeeChart Standard 8 Components</Excluded_Packages>
-						<Excluded_Packages Name="$(BDS)\bin\dclIntraweb_100_140.bpl">VCL for the Web 10.0  Design Package for CodeGear RAD Studio</Excluded_Packages>
-						<Excluded_Packages Name="$(BDS)\bin\bcboffice2k140.bpl">Embarcadero C++Builder Office 2000 Servers Package</Excluded_Packages>
-						<Excluded_Packages Name="$(BDS)\bin\bcbofficexp140.bpl">Embarcadero C++Builder Office XP Servers Package</Excluded_Packages>
-						<Excluded_Packages Name="$(BDS)\bin\dcloffice2k140.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
-						<Excluded_Packages Name="$(BDS)\bin\dclofficexp140.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
-						<Excluded_Packages Name="$(BDS)\bin\dclDataSnapIndy10ServerTransport140.bpl">Embarcadero DBExpress DataSnap Server Transport Components</Excluded_Packages>
-						<Excluded_Packages Name="$(BDS)\bin\dclDataSnapProviderClient140.bpl">Embarcadero DBExpress DataSnap Provider Client Components</Excluded_Packages>
-						<Excluded_Packages Name="$(BDS)\bin\dclDataSnapServer140.bpl">Embarcadero DBExpress DataSnap Server Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dcldbx140.bpl">Embarcadero dbExpress Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclbde140.bpl">Embarcadero BDE DB Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclado140.bpl">Embarcadero ADO DB Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\bcbie140.bpl">Embarcadero C++Builder Internet Explorer Components Package</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclbcbsmp140.bpl">Embarcadero Sample Controls Design Time Package</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dcl31w140.bpl">Delphi 1.0 Compatibility Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\samplevisualizers140.bpl">Embarcadero Sample Debugger Visualizers</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dcltee8140.bpl">TeeChart Standard 8 Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclIntraweb_100_140.bpl">VCL for the Web 10.0  Design Package for CodeGear RAD Studio</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\bcboffice2k140.bpl">Embarcadero C++Builder Office 2000 Servers Package</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\bcbofficexp140.bpl">Embarcadero C++Builder Office XP Servers Package</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dcloffice2k140.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclofficexp140.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclDataSnapIndy10ServerTransport140.bpl">Embarcadero DBExpress DataSnap Server Transport Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclDataSnapProviderClient140.bpl">Embarcadero DBExpress DataSnap Provider Client Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclDataSnapServer140.bpl">Embarcadero DBExpress DataSnap Server Components</Excluded_Packages>
 					</Excluded_Packages>
 				</Delphi.Personality>
+				<Platforms>
+					<Platform value="Win32">True</Platform>
+				</Platforms>
 			</BorlandProject>
 			<ProjectFileVersion>12</ProjectFileVersion>
 		</ProjectExtensions>
