@@ -2,11 +2,11 @@ program Graber2;
 
 uses
   Forms,
-  MainFormU in 'MainFormU.pas' {mf},
+  common in 'common.pas',
+  MainForm in 'MainForm.pas' {mf},
   graberU in 'graberU.pas' {graber comps},
   StartFrame in 'StartFrame.pas' {fStart: TFrame},
-  NewListForm in 'NewListForm.pas' {fGetList},
-  Settings in 'Settings.pas' {fmSettings};
+  NewListFrame in 'NewListFrame.pas' {fNewList: TFrame};
 
 {$R *.res}
 
@@ -15,7 +15,5 @@ begin
   Application.MainFormOnTaskbar := True;
   Application.Title := 'nekopaw grabber';
   Application.CreateForm(Tmf, mf);
-  Application.CreateForm(TfGetList, fGetList);
-  Application.CreateForm(TfmSettings, fmSettings);
   Application.Run;
 end.

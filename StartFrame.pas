@@ -3,10 +3,15 @@ unit StartFrame;
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms, 
-  Dialogs, cxGraphics, cxLookAndFeels, cxLookAndFeelPainters, Menus, cxControls,
-  cxContainer, cxEdit, dxSkinsCore, cxHeader, ActnList, cxImage, StdCtrls,
-  cxButtons, dxGDIPlusClasses, ExtCtrls;
+  {base}
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, Menus, StdCtrls, ExtCtrls,
+  {devexp}
+  cxGraphics, cxLookAndFeels, cxLookAndFeelPainters, cxControls,
+  cxContainer, cxEdit, dxSkinsCore, cxHeader, cxImage,
+  cxButtons, dxGDIPlusClasses,
+  {graber2}
+  common;
 
 const
   IconWidth = 300;
@@ -22,6 +27,7 @@ type
     bSettings: TcxButton;
     iIcon: TImage;
     procedure FrameResize(Sender: TObject);
+    procedure bNewClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -30,9 +36,14 @@ type
 
 implementation
 
-uses MainFormU;
+uses MainForm;
 
 {$R *.dfm}
+
+procedure TfStart.bNewClick(Sender: TObject);
+begin
+  PostMessage(mf.Handle,CM_NEWLIST,0,0);
+end;
 
 procedure TfStart.FrameResize(Sender: TObject);
 begin

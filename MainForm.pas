@@ -1,18 +1,20 @@
-unit MainFormU;
+unit MainForm;
 
 interface
 
 uses
+  {base}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, dxDockControl, dxDockPanel, cxGraphics, cxControls, cxLookAndFeels,
+  Dialogs,
+  {devex}
+  dxDockControl, dxDockPanel, cxGraphics, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxStyles, dxSkinsCore, dxSkinscxPCPainter,
   cxCustomData, cxFilter, cxData, cxDataStorage, cxEdit, DB, cxDBData,
   cxGridLevel, cxClasses, cxGridCustomView, cxGridCustomTableView,
-  cxGridTableView, cxGridDBTableView, cxGrid, TB2Dock, SpTBXItem, SpTBXDkPanels,
-  dxSkinsdxDockControlPainter, ActnList, cxCheckBox, cxTextEdit;
-
-const
-  CM_EXPROW = WM_USER + 1;
+  cxGridTableView, cxGridDBTableView, cxGrid, dxSkinsdxDockControlPainter,
+  ActnList, cxCheckBox, cxTextEdit,
+  {graber2}
+  common;
 
 type
 
@@ -30,14 +32,16 @@ type
 
   TmycxGridViewData = class(TcxGridViewData)
   protected
-    function GetRecordClass(ARecordInfo: TcxRowInfo): TcxCustomGridRecordClass;
-      override;
+    function GetRecordClass(ARecordInfo: TcxRowInfo)
+      : TcxCustomGridRecordClass; override;
   end;
 
   TmycxGridMasterDataRow = class(TcxGridMasterDataRow)
   protected
     function GetExpandable: Boolean; override;
   end;
+
+  TmfState = (msStart, msNewList, msGrid, msSettings);
 
   Tmf = class(TForm)
     ActionList: TActionList;
@@ -67,21 +71,33 @@ type
     tvChildDName: TcxGridColumn;
     dxLayoutDockSite3: TdxLayoutDockSite;
     dxVertContainerDockSite2: TdxVertContainerDockSite;
+    aLApplyNew: TAction;
+    aLCancel: TAction;
+    aStart: TAction;
+    deStyleRepository: TcxStyleRepository;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure aLNewExecute(Sender: TObject);
-    procedure dpGridCloseQuery(Sender: TdxCustomDockControl;
-      var CanClose: Boolean);
     procedure gLevel2GetGridView(Sender: TcxGridLevel;
       AMasterRecord: TcxCustomGridRecord; var AGridView: TcxCustomGridView);
+    procedure aLCancelExecute(Sender: TObject);
+    procedure aStartExecute(Sender: TObject);
+    procedure dpGridCloseQuery(Sender: TdxCustomDockControl;
+      var CanClose: Boolean);
   private
     mFrame: TFrame;
     tvMain: TmycxGridTableView;
   protected
     procedure EXPANDROW(var Msg: TMessage); message CM_EXPROW;
+    procedure NEWLIST(var Msg: TMessage); message CM_NEWLIST;
+    procedure APPLYNEWLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
+    procedure CANCELNEWLIST(var Msg: TMessage); message CM_CANCELNEWLIST;
+    procedure ShowGrid;
+    // procedure APPLYEDITLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
   private
     { Private declarations }
   public
+    OldState: TmfState;
     procedure tvMainRecordExpandable(MasterDataRow: TcxGridMasterDataRow;
       var Expandable: Boolean);
     { Public declarations }
@@ -92,7 +108,7 @@ var
 
 implementation
 
-uses StartFrame, NewListForm;
+uses StartFrame, NewListFrame;
 {$R *.dfm}
 { TmycxGridTableView }
 
@@ -123,10 +139,8 @@ function TmycxGridMasterDataRow.GetExpandable: Boolean;
 begin
   Result := false;
   if Assigned((GridView as TmycxGridTableView).OnGetExpandable) then
-  (GridView as TmycxGridTableView)
-    .OnGetExpandable(Self, Result)
-  else
-    Result := inherited GetExpandable;
+    (GridView as TmycxGridTableView).OnGetExpandable(Self, Result) else Result
+      := inherited GetExpandable;
 end;
 
 { Tmf }
@@ -144,7 +158,7 @@ var
   cl: TcxCustomGridView;
 begin
   if not((TObject(Msg.WParam) is TcxCustomGridRecord) and
-      (TObject(Msg.LParam) is TcxGridTableView)) then
+    (TObject(Msg.LParam) is TcxGridTableView)) then
     Exit;
   mr := TcxCustomGridRecord(Msg.WParam);
   gv := TcxGridTableView(Msg.LParam);
@@ -164,25 +178,70 @@ begin
   end;
 end;
 
-procedure Tmf.aLNewExecute(Sender: TObject);
+procedure Tmf.NEWLIST(var Msg: TMessage);
 begin
-  if fGetList.Execute then
-  begin
-    mFrame.Hide;
-    tvMain.DataController.ClearDetails;
-    ds.Show;
-    tvMain.DataController.RecordCount := 2;
-    tvMain.ViewData.Rows[0].Values[1] := 'url1';
-    tvMain.ViewData.Rows[1].Values[1] := 'album1';
-  end;
+  aLNewExecute(nil);
+end;
+
+procedure Tmf.APPLYNEWLIST(var Msg: TMessage);
+begin
+  ShowGrid;
+end;
+
+procedure Tmf.aStartExecute(Sender: TObject);
+begin
+  if Assigned(mFrame) then
+    FreeAndNil(mFrame);
+
+  if ds.Visible then
+    ds.Hide;
+
+  mFrame := TfStart.Create(Self);
+  mFrame.Parent := Self;
+end;
+
+procedure Tmf.CANCELNEWLIST(var Msg: TMessage);
+begin
+  alCancelExecute(nil);
 end;
 
 procedure Tmf.dpGridCloseQuery(Sender: TdxCustomDockControl;
   var CanClose: Boolean);
 begin
-  ds.Hide;
-  mFrame.Show;
   CanClose := false;
+  aStartExecute(nil);
+end;
+
+procedure Tmf.aLCancelExecute(Sender: TObject);
+begin
+  if tvMain.DataController.RecordCount > 0 then
+    ShowGrid
+  else
+    aStartExecute(nil);
+end;
+
+procedure Tmf.aLNewExecute(Sender: TObject);
+begin
+  if Assigned(mFrame) then
+    FreeAndNil(mFrame);
+
+  if ds.Visible then
+    ds.Hide;
+
+  if Assigned(mFrame) then
+    FreeAndNil(mFrame);
+
+  if ds.Visible then
+    ds.Hide;
+
+  mFrame := TfNewList.Create(Self);
+  mFrame.Parent := Self;
+
+  {
+    ds.Show;
+    tvMain.DataController.RecordCount := 2;
+    tvMain.ViewData.Rows[0].Values[1] := 'url1';
+    tvMain.ViewData.Rows[1].Values[1] := 'album1'; }
 end;
 
 procedure Tmf.FormCreate(Sender: TObject);
@@ -210,6 +269,14 @@ procedure Tmf.gLevel2GetGridView(Sender: TcxGridLevel;
 
 begin
   PostMessage(handle, CM_EXPROW, Integer(AMasterRecord), Integer(AGridView));
+end;
+
+procedure Tmf.ShowGrid;
+begin
+  if Assigned(mFrame) then
+    FreeAndNil(mFrame);
+
+  ds.Show;
 end;
 
 end.

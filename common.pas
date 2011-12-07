@@ -3,103 +3,19 @@
 interface
 
 uses Classes, SysUtils, Math, Forms, StdCtrls, ExtCtrls, ComCtrls, Controls, HTTPApp,
-  ShellAPI, Windows, Graphics, JPEG, GIFImg, PNGImage, Messages,
-
-  hacks;
+  ShellAPI, Windows, Graphics, JPEG, GIFImg, PNGImage, Messages;
 
 const
-  MENU_MIN_HEIGHT = 158;
-  LOG_MIN_HEIGHT = 100;
-  TABLIST_HEIGHT = 24;
+  UNIQUE_ID = 'GRABER2LOCK';
 
-  UNIQUE_ID = 'AVILGRABERLOCK';
-  MSG_FORCERESTORE  = WM_USER + 1;
-  MSG_UPDATELIST     = WM_USER + 2;
+  CM_EXPROW = WM_USER + 1;
+  CM_NEWLIST = WM_USER + 2;
+  CM_APPLYNEWLIST = WM_USER + 3;
+  CM_CANCELNEWLIST = WM_USER + 4;
+  CM_EDITLIST = WM_USER + 5;
+  CM_APPLYEDITLIST = WM_USER + 6;
 
   SAVEFILE_VERSION = 2;
-
-  ZLAINS = 12;
-
-  RESOURCE_COUNT = 27;
-
-  RP_GELBOORU = 11;
-  RP_DONMAI_DANBOORU = 5;
-  RP_KONACHAN = 13;
-  RP_IMOUTO = 12;
-  RP_PIXIV = 18;
-  RP_SAFEBOORU = 20;
-  RP_SANKAKU_CHAN = 21;
-  RP_BEHOIMI = 1;
-  RP_EHENTAI_G = 8;
-  RP_EXHENTAI = 10;
-  RP_PAHEAL_RULE34 = 16;
-  RP_SANKAKU_IDOL = 22;
-  RP_DEVIANTART = 4;
-  RP_E621 = 9;
-  RP_413CHAN_PONIBOORU = 0;
-  RP_BOORU_II = 2;
-  RP_ZEROCHAN = 26;
-  RP_PAHEAL_RULE63 = 17;
-  RP_PAHEAL_COSPLAY = 15;
-  RP_XBOORU = 25;
-  RP_WILDCRITTERS = 24;
-  RP_BOORU_RULE34 = 3;
-  RP_RMART = 19;
-  RP_DONMAI_HIJIRIBE = 6;
-  RP_DONMAI_SONOHARA = 7;
-  RP_NEKOBOORU = 14;
-  RP_THEDOUJIN = 23;
-
-  RS_POOLS = [RP_BEHOIMI, RP_SANKAKU_CHAN, RP_IMOUTO, RP_DONMAI_DANBOORU,
-  RP_SANKAKU_IDOL, RP_E621, RP_KONACHAN, RP_WILDCRITTERS, RP_DONMAI_HIJIRIBE,
-  RP_DONMAI_SONOHARA, RP_NEKOBOORU];
-
-  RS_GALLISTS = [RP_EHENTAI_G,RP_EXHENTAI,RP_THEDOUJIN];
-
-  //http://rmart.org/
-  //http://macrochan.org/
-  //http://www.animepaper.net/
-
-  RESOURCE_URLS: array[0..RESOURCE_COUNT-1] of string =
-              {00}('http://ponibooru.413chan.net/',
-              {01} 'http://behoimi.org/',
-              {02} 'http://ii.booru.org/',
-              {03} 'http://rule34.booru.org/',
-              {04} 'http://deviantart.com/',
-              {05} 'http://danbooru.donmai.us/',
-              {06} 'http://hijiribe.donmai.us/',
-              {07} 'http://sonohara.donmai.us/',
-              {08} 'http://g.e-hentai.org/',
-              {09} 'http://e621.net/',
-              {10} 'http://exhentai.org/',
-              {11} 'http://gelbooru.com/',
-              {12} 'http://oreno.imouto.org/',
-              {13} 'http://konachan.com/',
-              {14} 'http://nekobooru.net/',
-              {15} 'http://cosplay.paheal.net/',
-              {16} 'http://rule34.paheal.net/',
-              {17} 'http://rule63.paheal.net/',
-              {18} 'http://pixiv.net/',
-              {19} 'http://rmart.org/',
-              {20} 'http://safebooru.org/',
-              {21} 'http://chan.sankakucomplex.com/',
-              {22} 'http://idol.sankakucomplex.com/',
-              {23} 'http://thedoujin.com/',
-              {24} 'http://wildcritters.ws/',
-              {25} 'http://xbooru.com/',
-              {26} 'http://www.zerochan.net/');
-
-
-  RVLIST: array [0 .. RESOURCE_COUNT - 1] of Integer =
-    (RP_GELBOORU, RP_DONMAI_DANBOORU, RP_KONACHAN, RP_IMOUTO, RP_PIXIV,
-    RP_SAFEBOORU, RP_SANKAKU_CHAN, RP_BEHOIMI, RP_EHENTAI_G, RP_EXHENTAI,
-    RP_PAHEAL_RULE34, RP_SANKAKU_IDOL, RP_DEVIANTART, RP_E621,
-    RP_413CHAN_PONIBOORU, RP_BOORU_II, RP_ZEROCHAN, RP_PAHEAL_RULE63,
-    RP_PAHEAL_COSPLAY, RP_XBOORU, RP_WILDCRITTERS, RP_BOORU_RULE34, RP_RMART,
-    RP_DONMAI_HIJIRIBE, RP_DONMAI_SONOHARA, RP_NEKOBOORU, RP_THEDOUJIN);
-
-  REV_RVLIST: array [0 .. RESOURCE_COUNT - 1] of Integer = (14, 7, 15, 21, 12, 1, 23, 24,
-    8, 13, 9, 0, 3, 2, 25, 18, 10, 17, 4, 22, 5, 6, 11, 26, 20, 19, 16);
 
 type
   TArrayOfWord = array of word;
@@ -121,12 +37,7 @@ function diff(n1, n2: extended): extended;
 function batchreplace(src: string; substr1: array of string; substr2: string): string;
 function STRINGENCODE(S: STRING): STRING;
 function STRINGDECODE(S: STRING): STRING;
-function extracttags(S: TStrings): String;
-function getnexts(var s: string; del: char= ';'; ins: char = #0): string;
-procedure ImportTags(src: String; Dst: TStrings); overload;
 function Trim(S: String; ch: char = ' '): String;
-function StringToArrayOfWord(S: String): TArrayOfWord;
-procedure AddSrtdd(var l: TArrayOfWord; s: Word);
 function CopyTo(s, substr: string): string;
 function CopyFromTo(S, sub1, sub2: String; re: boolean = false): String;
 function ExtractFolder(s: string): string;
@@ -134,11 +45,8 @@ function MoveDir(const fromDir, toDir: string): Boolean;
 procedure MultWordArrays(var a1: TArrayOfWord; a2: TArrayOfWord);
 procedure _Delay(dwMilliseconds: Longint);
 function ValidFName(FName: String; bckslsh: boolean = false): String;
-function MemoDlg(ACaption,AHint,DefaultValue: String; OnPaste: TPreventNotifyEvent = nil): String;
-function MultiInputDlg(ACaption: String; Captions, Values: array of string; Pwd: array of boolean): TArrayOfString;
 function strlisttostr(s: tstringlist; del: char = ';'; ins: char = '"'): string;
 function strtostrlist(s: string; del: char = ';'; ins: char = '"'): string;
-function ArrayOfWordToString(S: TArrayOfWord): String;
 procedure DrawImage(AImage: TImage; AStream: TStream; Ext: String);
 procedure DrawImageFromRes(AImage: TImage; ResName, Ext: String);
 procedure WriteLWToPChar(n: LongWord; p: PChar);
@@ -591,171 +499,6 @@ begin
   F.Free;
 end;
 
-function MemoDlg(ACaption,AHint,DefaultValue: String;
-  OnPaste: TPreventNotifyEvent = nil): String;
-var
-  F: TForm;
-  L: TLabel;
-  M: TMemo;
-  OkBtn,CancelBtn: TButton;
-begin
-
-  Result := DefaultValue;
-
-  F := TForm.Create(Application);
-  F.Caption := ACaption;
-  F.BorderStyle := bsDialog;
-  F.Position := poMainFormCenter;
-  L := TLabel.Create(F);
-  L.Parent := F;
-  if AHint = '' then
-    L.Caption := 'Input text:'
-  else
-    L.Caption := AHint;
-  L.Left := 4;
-  L.Top := 4;
-  M := TMemo.Create(F);
-  M.Parent := F;
-  M.Top := L.Top + L.Height + 4;
-  M.Left := 4;
-
-{  n := -1;
-  for i := 0 to length(AItems)-1 do
-  begin
-    R.Items.Add(AItems[i]);
-    if F.Canvas.TextWidth(AItems[i]) > n then
-      n := F.Canvas.TextWidth(AItems[i]);
-  end;  }
-//  M.ItemIndex := 0;
-  M.Width := {Max(n + 8 + 24,200)} 200;
-  M.Height := {R.Items.Count * 20 + 12} 200;
-  M.ScrollBars := ssBoth;
-  M.OnPaste := OnPaste;
-  M.Text := Result;
-  F.ClientWidth := M.Left + M.Width + 4;
-
-
-  OkBtn := TButton.Create(F);
-  OkBtn.Parent := F;
-  OkBtn.Caption := 'Ok';
-  OkBtn.ModalResult := mrOk;
-  OkBtn.Default := true;
-  OkBtn.Left := 4;
-  OkBtn.Top := M.Top + M.Height + 4;
-
-  CancelBtn := TButton.Create(F);
-  CancelBtn.Parent := F;
-  CancelBtn.Caption := 'Cancel';
-  CancelBtn.ModalResult := mrCancel;
-  CancelBtn.Cancel := true;
-  CancelBtn.Left := F.ClientWidth - CancelBtn.Width - 4;
-  CancelBtn.Top := OkBtn.Top;
-
-  F.ClientHeight := OkBtn.Top + OkBtn.Height + 4;
-  F.ShowModal;
-  case F.ModalResult of
-    mrOk: Result := M.Text;
-  end;
-  OkBtn.Free;
-  CancelBtn.Free;
-  L.Free;
-  M.Free;
-  F.Free;
-end;
-
-function MultiInputDlg(ACaption: String; Captions, Values: array of string; PWD: array of boolean): TArrayOfString;
-var
-  F: TForm;
-  L: array of TLabel;
-  E: array of TEdit;
-  OkBtn,CancelBtn: TButton;
-  maxlwidth: integer;
-  i: integer;
-begin
-
-  Result := nil;
-
-  if length(Values) = 0 then
-    Exit;
-
-  F := TForm.Create(Application);
-  F.Caption := ACaption;
-  F.BorderStyle := bsDialog;
-  F.Position := poMainFormCenter;
-
-  maxlwidth := 0;
-
-  SetLength(L,length(Values));
-  SetLength(E,length(Values));
-
-  for i := 0 to length(Captions) -1 do
-  begin
-    L[i] := TLabel.Create(F);
-    L[i].Parent := F;
-    L[i].Left := 4;
-    L[i].Top := 8*(i+1) + 19*i;
-    L[i].Caption := Captions[i];
-    if L[i].Width > maxlwidth then
-      maxlwidth := L[i].Width;
-  end;
-
-  for i := 0 to length(Values) -1 do
-  begin
-    E[i] := TEdit.Create(F);
-    E[i].Parent := F;
-    E[i].Top := 4*(i+1) + 23*i;
-    E[i].Left := maxlwidth + 8;
-    E[i].Text := Values[i];
-  end;
-
-  for i := 0 to length(PWD) -1 do
-    if PWD[i] then
-      E[i].PasswordChar := '*';
-
-  F.ClientWidth := E[0].Left + E[0].Width + 4;
-
-  OkBtn := TButton.Create(F);
-  OkBtn.Parent := F;
-  OkBtn.Caption := 'Ok';
-  OkBtn.ModalResult := mrOk;
-  OkBtn.Default := true;
-  OkBtn.Left := 4;
-  OkBtn.Top := E[length(Values)-1].Top + E[length(Values)-1].Height + 4;
-
-  CancelBtn := TButton.Create(F);
-  CancelBtn.Parent := F;
-  CancelBtn.Caption := 'Cancel';
-  CancelBtn.ModalResult := mrCancel;
-  CancelBtn.Cancel := true;
-  CancelBtn.Left := OkBtn.Left + OkBtn.Width + 4;
-  CancelBtn.Top := OkBtn.Top;
-
-  F.ClientHeight := OkBtn.Top + OkBtn.Height + 4;
-  F.ShowModal;
-
-  case F.ModalResult of
-    mrOk:
-    begin
-     SetLength(Result,length(Values));
-     for i:= 0 to length(Values) -1 do
-      Result [i] := E[i].Text;
-    end;
-  end;
-
-  OkBtn.Free;
-  CancelBtn.Free;
-
-  for i:= 0 to length(Values) -1 do
-  begin
-    FreeAndNil(L[i]);
-    FreeAndNil(E[i]);
-  end;
-
-  L := nil;
-  E := nil;
-  FreeAndNil(F);
-end;
-
 function DeleteTo(s: String; subs: string; casesens: boolean = true; re: boolean = false): string;
 var
   p: integer;
@@ -797,16 +540,6 @@ begin
   RESULT := UTF8ToString(HTTPDECODE(S));
 end;
 
-function extracttags(S: TStrings): String;
-var
-  i,l: integer;
-begin
-  Result := '';
-  l := S.Count - 1;
-  for i := 0 to l do
-    Result := Result + '"' + StringEncode(S[i]) + '" ';
-end;
-
 function getnexts(var s: string; del: char = ';'; ins: char = #0): string;
 var
   n: integer;
@@ -845,18 +578,6 @@ begin
   end;
 end;
 
-procedure ImportTags(src: String; Dst: TStrings);
-var
-  S: string;
-begin
-  Dst.Clear;
-  while SRC <> '' do
-  begin
-    S := StringDecode(trim(GetNextS(src,' ','"'),'"'));
-    Dst.Add(S);
-  end;
-end;
-
 function Trim(S: String; ch: char = ' '): String;
 var
   I, L: Integer;
@@ -871,35 +592,6 @@ begin
   end;
 end;
 
-function StringToArrayOfWord(S: String): TArrayOfWord;
-begin
-  Result := nil;
-  while s <> '' do
-  begin
-    SetLength(result,length(result)+1);
-    result[length(result)-1] := StrToInt(GetNextS(S,' '));
-    //result := result + [StrToInt(GetNextS(S,' '))];
-  end;
-end;
-
-
-procedure AddSrtdd(var l: TArrayOfWord; s: Word);
-var
-  i,j: integer;
-begin
-  for i  := 0 to length(l)-1 do
-      if l[i] > s then
-      begin
-      SetLength(l,length(l)+1);
-      for j := length(l)-1 downto i+1 do
-        l[j] := l[j-1];
-      l[i] := s;
-      Exit;
-    end;
-  SetLength(l,length(l)+1);
-  l[length(l)-1] := s;
-end;
-
 function CopyTo(s, substr: string): string;
 var
   i: integer;
@@ -909,15 +601,6 @@ begin
     result := copy(s,1,length(s))
   else
     result := copy(s,1,i-1);
-end;
-
-function ArrayOfWordToString(S: TArrayOfWord): String;
-var
-  i: integer;
-begin
-  Result := '';
-  for i := 0 to length(S)-1 do
-      Result := Result + IntToStr(s[i]) + ' ';
 end;
 
 function CopyFromTo(S, sub1, sub2: String; re: boolean = false): String;

@@ -161,13 +161,12 @@ object mf: Tmf
           Left = -185
           Top = 0
           Width = 185
-          Height = 429
+          Height = 0
           Visible = False
           AllowFloating = False
           AutoHide = True
           Caption = 'dpTags'
           CaptionButtons = [cbHide]
-          ExplicitLeft = 0
           AutoHidePosition = 0
           DockType = 3
           OriginalWidth = 185
@@ -177,13 +176,12 @@ object mf: Tmf
           Left = -185
           Top = 0
           Width = 185
-          Height = 429
+          Height = 0
           Visible = False
           AllowFloating = False
           AutoHide = True
           Caption = 'dpPicInfo'
           CaptionButtons = [cbHide]
-          ExplicitLeft = 0
           AutoHidePosition = 0
           DockType = 1
           OriginalWidth = 185
@@ -234,8 +232,8 @@ object mf: Tmf
     end
   end
   object ActionList: TActionList
-    Left = 576
-    Top = 8
+    Left = 496
+    Top = 40
     object aLNew: TAction
       Category = 'List'
       Caption = 'Create new list'
@@ -256,6 +254,19 @@ object mf: Tmf
       Category = 'Interface'
       Caption = 'Simple interface'
     end
+    object aLApplyNew: TAction
+      Category = 'List'
+      Caption = 'aLApplyNew'
+    end
+    object aLCancel: TAction
+      Category = 'List'
+      Caption = 'aLCancel'
+      OnExecute = aLCancelExecute
+    end
+    object aStart: TAction
+      Caption = 'aStart'
+      OnExecute = aStartExecute
+    end
   end
   object DockManager: TdxDockingManager
     AutoHideInterval = 0
@@ -274,7 +285,12 @@ object mf: Tmf
     Font.Name = 'Tahoma'
     Font.Style = []
     ViewStyle = vsNET
-    Left = 528
-    Top = 8
+    Left = 448
+    Top = 40
+  end
+  object deStyleRepository: TcxStyleRepository
+    Left = 544
+    Top = 40
+    PixelsPerInch = 96
   end
 end
