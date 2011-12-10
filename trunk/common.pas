@@ -141,7 +141,7 @@ C_NUM = '#';
 N_MLN =  7 ;
 N_MNC = 252;
 var
-  i,l,t,spc,sep: integer;
+  i,l,t,spc: integer;
 
 function ChMnem(var s: string; const b,e: integer): boolean;
 var

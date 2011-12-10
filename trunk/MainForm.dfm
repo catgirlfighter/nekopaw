@@ -158,10 +158,10 @@ object mf: Tmf
         OriginalWidth = 185
         OriginalHeight = 140
         object dpTags: TdxDockPanel
-          Left = -185
+          Left = -370
           Top = 0
           Width = 185
-          Height = 0
+          Height = 183
           Visible = False
           AllowFloating = False
           AutoHide = True
@@ -176,7 +176,7 @@ object mf: Tmf
           Left = -185
           Top = 0
           Width = 185
-          Height = 0
+          Height = 246
           Visible = False
           AllowFloating = False
           AutoHide = True
@@ -192,7 +192,7 @@ object mf: Tmf
     object dxTabContainerDockSite1: TdxTabContainerDockSite
       Left = 0
       Top = 0
-      Width = 0
+      Width = 185
       Height = 140
       Visible = False
       ActiveChildIndex = 0
