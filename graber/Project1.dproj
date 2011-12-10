@@ -1,0 +1,292 @@
+﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+		<PropertyGroup>
+			<ProjectGuid>{A7539650-4E0B-4B41-AF08-3ACAC423459D}</ProjectGuid>
+			<MainSource>Project1.dpr</MainSource>
+			<Config Condition="'$(Config)'==''">Debug</Config>
+			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
+			<ProjectVersion>12.0</ProjectVersion>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
+			<Base>true</Base>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_1)'!=''">
+			<Cfg_1>true</Cfg_1>
+			<CfgParent>Base</CfgParent>
+			<Base>true</Base>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_2)'!=''">
+			<Cfg_2>true</Cfg_2>
+			<CfgParent>Base</CfgParent>
+			<Base>true</Base>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Base)'!=''">
+			<DCC_DcuOutput>..\units\</DCC_DcuOutput>
+			<DCC_ExeOutput>..\compiled\</DCC_ExeOutput>
+			<DCC_UsePackage>vclx;vcl;Rave76VCL;rtl;IndyCore;IndySystem;IndyProtocols;intrawebdb_100_120;Intraweb_100_120;XmlComponents_D7;vclimg;VclSmp;vclactnband;xmlrtl</DCC_UsePackage>
+			<DCC_ImageBase>00400000</DCC_ImageBase>
+			<DCC_SymbolReferenceInfo>1</DCC_SymbolReferenceInfo>
+			<DCC_DependencyCheckOutputName>..\compiled\Project1.exe</DCC_DependencyCheckOutputName>
+			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
+			<DCC_Platform>x86</DCC_Platform>
+			<DCC_N>true</DCC_N>
+			<DCC_S>false</DCC_S>
+			<DCC_K>false</DCC_K>
+			<DCC_E>false</DCC_E>
+			<DCC_F>false</DCC_F>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Cfg_1)'!=''">
+			<DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
+			<DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
+			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
+			<DCC_DebugInformation>false</DCC_DebugInformation>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Cfg_2)'!=''">
+			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
+		</PropertyGroup>
+		<ItemGroup>
+			<DelphiCompile Include="Project1.dpr">
+				<MainSource>MainSource</MainSource>
+			</DelphiCompile>
+			<DCCReference Include="Unit1.pas">
+				<Form> MainForm </Form>
+			</DCCReference>
+			<DCCReference Include="rpVersionInfo.pas"/>
+			<DCCReference Include="Unit3.pas">
+				<Form> fPreview </Form>
+			</DCCReference>
+			<DCCReference Include="MyXMLParser.pas"/>
+			<DCCReference Include="Unit_Win7Taskbar.pas"/>
+			<DCCReference Include="common.pas"/>
+			<DCCReference Include="hacks.pas"/>
+			<DCCReference Include="DownloadThreads.pas"/>
+			<DCCReference Include="stoping_u.pas">
+				<Form>fStoping</Form>
+			</DCCReference>
+			<DCCReference Include="Unit5.pas">
+				<Form>fmLogin</Form>
+			</DCCReference>
+			<RcItem Include="ico\anim\getlist\9.ico">
+				<ResourceType>Icon</ResourceType>
+				<ResourceId>ZGLIST8</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\getlist\8.ico">
+				<ResourceType>Icon</ResourceType>
+				<ResourceId>ZGLIST7</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\getlist\7.ico">
+				<ResourceType>Icon</ResourceType>
+				<ResourceId>ZGLIST6</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\getlist\6.ico">
+				<ResourceType>Icon</ResourceType>
+				<ResourceId>ZGLIST5</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\getlist\5.ico">
+				<ResourceType>Icon</ResourceType>
+				<ResourceId>ZGLIST4</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\getlist\4.ico">
+				<ResourceType>Icon</ResourceType>
+				<ResourceId>ZGLIST3</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\getlist\3.ico">
+				<ResourceType>Icon</ResourceType>
+				<ResourceId>ZGLIST2</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\getlist\2.ico">
+				<ResourceType>Icon</ResourceType>
+				<ResourceId>ZGLIST1</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\getlist\1.ico">
+				<ResourceType>Icon</ResourceType>
+				<ResourceId>ZGLIST0</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\images.ico">
+				<ResourceType>Icon</ResourceType>
+				<ResourceId>ZIMAGE</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\loading.gif">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZLOADING</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\lain2_121px.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZLAIN1</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\lain3_121px.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZLAIN2</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\lain4.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZLAIN3</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\lain5.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZLAIN4</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\lain6.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZLAIN5</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\lain7.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZLAIN6</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\lain8.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZLAIN7</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\lain9.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZLAIN8</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\lain10.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZLAIN9</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\lain11.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZLAIN10</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\lain12.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZLAIN11</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\lain121px.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZLAIN0</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\ok.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZOK</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\16.ico">
+				<ResourceType>Icon</ResourceType>
+				<ResourceId>ZICON</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\getlist\error.ico">
+				<ResourceType>Icon</ResourceType>
+				<ResourceId>ZGLISTERROR</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\downloading\bg.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZDBG</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\downloading\9.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZD9</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\downloading\8.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZD8</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\downloading\7.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZD7</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\downloading\6.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZD6</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\downloading\5.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZD5</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\downloading\4.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZD4</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\downloading\3.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZD3</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\downloading\2.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZD2</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\downloading\0.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZD0</ResourceId>
+			</RcItem>
+			<RcItem Include="ico\anim\downloading\1.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZD1</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\tao4.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZTAO</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\nothingfound.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZNOTHING</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\error.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZERROR</ResourceId>
+			</RcItem>
+			<RcItem Include="pics\nya.png">
+				<ResourceType>RCData</ResourceType>
+				<ResourceId>ZNYA</ResourceId>
+			</RcItem>
+			<BuildConfiguration Include="Base">
+				<Key>Base</Key>
+			</BuildConfiguration>
+			<BuildConfiguration Include="Debug">
+				<Key>Cfg_2</Key>
+				<CfgParent>Base</CfgParent>
+			</BuildConfiguration>
+			<BuildConfiguration Include="Release">
+				<Key>Cfg_1</Key>
+				<CfgParent>Base</CfgParent>
+			</BuildConfiguration>
+		</ItemGroup>
+		<Import Project="$(BDS)\Bin\CodeGear.Delphi.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Delphi.Targets')"/>
+		<ProjectExtensions>
+			<Borland.Personality>Delphi.Personality.12</Borland.Personality>
+			<Borland.ProjectType>VCLApplication</Borland.ProjectType>
+			<BorlandProject>
+				<Delphi.Personality>
+					<Source>
+						<Source Name="MainSource">Project1.dpr</Source>
+					</Source>
+					<Parameters>
+						<Parameters Name="UseLauncher">False</Parameters>
+						<Parameters Name="LoadAllSymbols">True</Parameters>
+						<Parameters Name="LoadUnspecifiedSymbols">False</Parameters>
+					</Parameters>
+					<VersionInfo>
+						<VersionInfo Name="IncludeVerInfo">True</VersionInfo>
+						<VersionInfo Name="AutoIncBuild">False</VersionInfo>
+						<VersionInfo Name="MajorVer">1</VersionInfo>
+						<VersionInfo Name="MinorVer">1</VersionInfo>
+						<VersionInfo Name="Release">0</VersionInfo>
+						<VersionInfo Name="Build">6</VersionInfo>
+						<VersionInfo Name="Debug">True</VersionInfo>
+						<VersionInfo Name="PreRelease">True</VersionInfo>
+						<VersionInfo Name="Special">True</VersionInfo>
+						<VersionInfo Name="Private">True</VersionInfo>
+						<VersionInfo Name="DLL">False</VersionInfo>
+						<VersionInfo Name="Locale">1033</VersionInfo>
+						<VersionInfo Name="CodePage">1252</VersionInfo>
+					</VersionInfo>
+					<VersionInfoKeys>
+						<VersionInfoKeys Name="CompanyName"/>
+						<VersionInfoKeys Name="FileDescription"/>
+						<VersionInfoKeys Name="FileVersion">1.1.0.6</VersionInfoKeys>
+						<VersionInfoKeys Name="InternalName"/>
+						<VersionInfoKeys Name="LegalCopyright">Avil</VersionInfoKeys>
+						<VersionInfoKeys Name="LegalTrademarks"/>
+						<VersionInfoKeys Name="OriginalFilename"/>
+						<VersionInfoKeys Name="ProductName">Imagegraber</VersionInfoKeys>
+						<VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys>
+						<VersionInfoKeys Name="Comments"/>
+						<VersionInfoKeys Name="SpecialBuild"/>
+						<VersionInfoKeys Name="PrivateBuild"/>
+					</VersionInfoKeys>
+					<Excluded_Packages/>
+				</Delphi.Personality>
+			</BorlandProject>
+			<ProjectFileVersion>12</ProjectFileVersion>
+		</ProjectExtensions>
+	</Project>

@@ -1,0 +1,30 @@
+object aboutform: Taboutform
+  Left = 0
+  Top = 0
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsToolWindow
+  ClientHeight = 237
+  ClientWidth = 206
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = 131586
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  FormStyle = fsStayOnTop
+  GlassFrame.Enabled = True
+  GlassFrame.SheetOfGlass = True
+  OldCreateOrder = False
+  Position = poDesktopCenter
+  OnCreate = FormCreate
+  OnMouseMove = FormMouseMove
+  PixelsPerInch = 96
+  TextHeight = 13
+  object Image1: TImage
+    Left = 8
+    Top = 8
+    Width = 190
+    Height = 221
+    OnMouseMove = Image1MouseMove
+  end
+end
