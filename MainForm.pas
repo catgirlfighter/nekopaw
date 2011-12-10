@@ -5,14 +5,14 @@ interface
 uses
   {base}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs,
+  Dialogs, DB, ActnList,
   {devex}
   dxDockControl, dxDockPanel, cxGraphics, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxStyles, dxSkinsCore, dxSkinscxPCPainter,
-  cxCustomData, cxFilter, cxData, cxDataStorage, cxEdit, DB, cxDBData,
+  cxCustomData, cxFilter, cxData, cxDataStorage, cxEdit, cxDBData,
   cxGridLevel, cxClasses, cxGridCustomView, cxGridCustomTableView,
   cxGridTableView, cxGridDBTableView, cxGrid, dxSkinsdxDockControlPainter,
-  ActnList, cxCheckBox, cxTextEdit,
+  cxCheckBox, cxTextEdit,
   {graber2}
   common;
 
