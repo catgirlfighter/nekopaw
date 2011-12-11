@@ -12,7 +12,7 @@ uses
   cxCustomData, cxFilter, cxData, cxDataStorage, cxEdit, cxDBData,
   cxGridLevel, cxClasses, cxGridCustomView, cxGridCustomTableView,
   cxGridTableView, cxGridDBTableView, cxGrid, dxSkinsdxDockControlPainter,
-  cxCheckBox, cxTextEdit,
+  cxCheckBox, cxTextEdit, cxImage,
   {graber2}
   common;
 
@@ -108,7 +108,7 @@ var
 
 implementation
 
-uses StartFrame, NewListFrame;
+uses StartFrame, NewListFrame, OpBase;
 {$R *.dfm}
 { TmycxGridTableView }
 
@@ -190,11 +190,10 @@ end;
 
 procedure Tmf.aStartExecute(Sender: TObject);
 begin
-  if Assigned(mFrame) then
-    FreeAndNil(mFrame);
-
   if ds.Visible then
     ds.Hide;
+  if Assigned(mFrame) and not(mFrame is TfStart) then
+    FreeAndNil(mFrame);
 
   mFrame := TfStart.Create(Self);
   mFrame.Parent := Self;
@@ -202,7 +201,7 @@ end;
 
 procedure Tmf.CANCELNEWLIST(var Msg: TMessage);
 begin
-  alCancelExecute(nil);
+  aLCancelExecute(nil);
 end;
 
 procedure Tmf.dpGridCloseQuery(Sender: TdxCustomDockControl;
@@ -221,33 +220,51 @@ begin
 end;
 
 procedure Tmf.aLNewExecute(Sender: TObject);
+var
+  i: integer;
+  pic: TPicture;
+  S: AnsiString;
 begin
-  if Assigned(mFrame) then
-    FreeAndNil(mFrame);
-
   if ds.Visible then
     ds.Hide;
 
-  if Assigned(mFrame) then
+  if Assigned(mFrame) and not(mFrame is TfNewList) then
     FreeAndNil(mFrame);
-
-  if ds.Visible then
-    ds.Hide;
 
   mFrame := TfNewList.Create(Self);
-  mFrame.Parent := Self;
+  
+  with (mFrame as TfNewList) do
+  begin
+    gFull.BeginUpdate;
 
-  {
-    ds.Show;
-    tvMain.DataController.RecordCount := 2;
-    tvMain.ViewData.Rows[0].Values[1] := 'url1';
-    tvMain.ViewData.Rows[1].Values[1] := 'album1'; }
+    pic := TPicture.Create;
+
+    with tvFull.DataController do
+    begin
+      RecordCount := FullResList.Count;
+      for i := 0 to FullResList.Count - 1 do
+      begin
+        Values[i, 0] := i;
+        pic.LoadFromFile(rootdir+'\resources\icons\'+FullResLIst[i].IconFile);
+        SavePicture(pic,s);
+        Values[i, 2] := s;
+        {FileToString(rootdir+'\resources\icons\'+FullResLIst[i].IconFile)};
+        Values[i, 3] := FullResList[i].Name;
+//        tvFull.DataController.
+      end;
+
+    end;
+
+    pic.Free;
+
+    gFull.EndUpdate;
+  end;
+
+  mFrame.Parent := Self;
 end;
 
 procedure Tmf.FormCreate(Sender: TObject);
 begin
-  // ds.Hide;
-
   mFrame := TfStart.Create(Self);
   mFrame.Parent := Self;
 
@@ -268,7 +285,7 @@ procedure Tmf.gLevel2GetGridView(Sender: TcxGridLevel;
   AMasterRecord: TcxCustomGridRecord; var AGridView: TcxCustomGridView);
 
 begin
-  PostMessage(handle, CM_EXPROW, Integer(AMasterRecord), Integer(AGridView));
+  PostMessage(handle, CM_EXPROW, integer(AMasterRecord), integer(AGridView));
 end;
 
 procedure Tmf.ShowGrid;

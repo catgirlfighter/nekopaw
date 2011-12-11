@@ -1,8 +1,8 @@
 object fNewList: TfNewList
   Left = 0
   Top = 0
-  Width = 476
-  Height = 330
+  Width = 451
+  Height = 304
   Align = alClient
   TabOrder = 0
   object VSplitter: TcxSplitter
@@ -10,27 +10,21 @@ object fNewList: TfNewList
     Left = 153
     Top = 34
     Width = 8
-    Height = 293
+    Height = 267
     Margins.Left = 0
     Margins.Right = 0
     MinSize = 150
     Control = gRes
-    ExplicitLeft = 137
-    ExplicitTop = 42
-    ExplicitHeight = 288
   end
   object pButtons: TPanel
     AlignWithMargins = True
     Left = 3
     Top = 3
-    Width = 470
+    Width = 445
     Height = 25
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitLeft = 0
-    ExplicitTop = 0
-    ExplicitWidth = 476
     object btnOk: TcxButton
       Left = 0
       Top = 0
@@ -55,21 +49,15 @@ object fNewList: TfNewList
     Left = 3
     Top = 34
     Width = 150
-    Height = 293
+    Height = 267
     Margins.Right = 0
     Align = alLeft
     TabOrder = 2
-    object gResTableView1: TcxGridTableView
+    object tvRes: TcxGridTableView
       NavigatorButtons.ConfirmDelete = False
       DataController.Summary.DefaultGroupSummaryItems = <>
       DataController.Summary.FooterSummaryItems = <>
       DataController.Summary.SummaryGroups = <>
-      DataController.Data = {
-        8C0000000F00000044617461436F6E74726F6C6C657231020000001200000054
-        6378537472696E6756616C75655479706512000000546378537472696E675661
-        6C75655479706503000000445855464D540000050000004900740065006D0031
-        0001445855464D540000050000004900740065006D00320001445855464D5400
-        00050000004900740065006D00330001}
       NewItemRow.SeparatorWidth = 2
       OptionsCustomize.ColumnFiltering = False
       OptionsCustomize.ColumnGrouping = False
@@ -78,17 +66,17 @@ object fNewList: TfNewList
       OptionsView.ColumnAutoWidth = True
       OptionsView.GroupByBox = False
       OptionsView.Header = False
-      object gResTableView1Column1: TcxGridColumn
+      object gRescName: TcxGridColumn
         PropertiesClassName = 'TcxLabelProperties'
         Options.Filtering = False
         Options.ShowEditButtons = isebAlways
       end
-      object gResTableView1Column2: TcxGridColumn
+      object gRescButton: TcxGridColumn
         PropertiesClassName = 'TcxButtonEditProperties'
         Properties.Buttons = <
           item
             Default = True
-            Kind = bkEllipsis
+            Kind = bkGlyph
           end>
         Properties.ViewStyle = vsButtonsAutoWidth
         MinWidth = 19
@@ -99,20 +87,93 @@ object fNewList: TfNewList
         Width = 19
       end
     end
-    object gResTableView2: TcxGridTableView
-      NavigatorButtons.ConfirmDelete = False
-      DataController.Summary.DefaultGroupSummaryItems = <>
-      DataController.Summary.FooterSummaryItems = <>
-      DataController.Summary.SummaryGroups = <>
-      OptionsView.ColumnAutoWidth = True
-      OptionsView.GroupByBox = False
-      OptionsView.Header = False
+    object lvlRes1: TcxGridLevel
+      GridView = tvRes
     end
-    object gResLevel1: TcxGridLevel
-      GridView = gResTableView1
+  end
+  object pcMain: TcxPageControl
+    Left = 161
+    Top = 31
+    Width = 290
+    Height = 273
+    ActivePage = tsList
+    Align = alClient
+    TabOrder = 3
+    ClientRectBottom = 273
+    ClientRectRight = 290
+    ClientRectTop = 24
+    object tsList: TcxTabSheet
+      Caption = 'tsList'
+      ImageIndex = 0
+      object gFull: TcxGrid
+        AlignWithMargins = True
+        Left = 3
+        Top = 3
+        Width = 287
+        Height = 243
+        Margins.Right = 0
+        Align = alLeft
+        TabOrder = 0
+        object tvFull: TcxGridTableView
+          NavigatorButtons.ConfirmDelete = False
+          DataController.Summary.DefaultGroupSummaryItems = <>
+          DataController.Summary.FooterSummaryItems = <>
+          DataController.Summary.SummaryGroups = <>
+          NewItemRow.SeparatorWidth = 2
+          OptionsCustomize.ColumnFiltering = False
+          OptionsCustomize.ColumnGrouping = False
+          OptionsCustomize.ColumnMoving = False
+          OptionsCustomize.ColumnSorting = False
+          OptionsView.ColumnAutoWidth = True
+          OptionsView.DataRowHeight = 21
+          OptionsView.GroupByBox = False
+          OptionsView.Header = False
+          object tvFullID: TcxGridColumn
+            DataBinding.ValueType = 'Integer'
+            Visible = False
+          end
+          object tvFullcButton: TcxGridColumn
+            PropertiesClassName = 'TcxButtonEditProperties'
+            Properties.Buttons = <
+              item
+                Default = True
+                Kind = bkGlyph
+              end>
+            Properties.ViewStyle = vsButtonsAutoWidth
+            MinWidth = 21
+            Options.ShowEditButtons = isebAlways
+            Options.HorzSizing = False
+            Options.Moving = False
+            Options.Sorting = False
+            Width = 21
+          end
+          object tvFullcIcon: TcxGridColumn
+            PropertiesClassName = 'TcxImageProperties'
+            MinWidth = 21
+            Options.HorzSizing = False
+            Width = 21
+          end
+          object tvFullcName: TcxGridColumn
+            PropertiesClassName = 'TcxLabelProperties'
+            Options.Filtering = False
+            Options.ShowEditButtons = isebAlways
+          end
+        end
+        object lvlFull1: TcxGridLevel
+          GridView = tvFull
+          Options.DetailFrameWidth = 0
+        end
+      end
     end
-    object gResLevel2: TcxGridLevel
-      GridView = gResTableView2
+    object tsSettings: TcxTabSheet
+      Caption = 'tsSettings'
+      ImageIndex = 1
+    end
+  end
+  object EditRepository: TcxEditRepository
+    Left = 392
+    Top = 80
+    object EditRepositoryLabel1: TcxEditRepositoryLabel
     end
   end
 end

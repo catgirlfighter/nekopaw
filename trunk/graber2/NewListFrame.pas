@@ -12,9 +12,9 @@ uses
   dxSkinsCore, ExtCtrls, cxSplitter, cxInplaceContainer,
   cxButtons, dxSkinscxPCPainter, cxFilter, cxData, cxDataStorage, cxEdit,
   cxGridCustomTableView, cxGridTableView, cxGridCustomView, cxClasses,
-  cxGridLevel, cxGrid,
+  cxGridLevel, cxGrid, cxButtonEdit, cxExtEditRepositoryItems, cxPC,
   {graber2}
-  common, cxButtonEdit, cxLabel;
+  common, cxLabel, cxImage;
 
 type
   TListFrameState = (lfsNew, lfsEdit);
@@ -24,13 +24,23 @@ type
     pButtons: TPanel;
     btnOk: TcxButton;
     btnCancel: TcxButton;
-    gResLevel1: TcxGridLevel;
+    lvlRes1: TcxGridLevel;
     gRes: TcxGrid;
-    gResTableView1: TcxGridTableView;
-    gResTableView1Column1: TcxGridColumn;
-    gResLevel2: TcxGridLevel;
-    gResTableView2: TcxGridTableView;
-    gResTableView1Column2: TcxGridColumn;
+    tvRes: TcxGridTableView;
+    gRescName: TcxGridColumn;
+    gRescButton: TcxGridColumn;
+    pcMain: TcxPageControl;
+    tsList: TcxTabSheet;
+    tsSettings: TcxTabSheet;
+    gFull: TcxGrid;
+    tvFull: TcxGridTableView;
+    tvFullcButton: TcxGridColumn;
+    tvFullcName: TcxGridColumn;
+    lvlFull1: TcxGridLevel;
+    tvFullID: TcxGridColumn;
+    EditRepository: TcxEditRepository;
+    EditRepositoryLabel1: TcxEditRepositoryLabel;
+    tvFullcIcon: TcxGridColumn;
     procedure btnCancelClick(Sender: TObject);
     procedure btnOkClick(Sender: TObject);
     procedure gResTableView1Column1PropertiesButtonClick(Sender: TObject;
@@ -42,15 +52,18 @@ type
     { Public declarations }
   end;
 
+var
+  LList: array of TcxLabelProperties;
+
 implementation
 
-uses MainForm;
+uses MainForm, OpBase;
 
 {$R *.dfm}
 
 procedure TfNewList.btnCancelClick(Sender: TObject);
 begin
-  PostMessage(Parent.Handle, CM_CANCELNEWLIST, integer(Sender), 0);
+  PostMessage(Parent.Handle, CM_CANCELNEWLIST, Integer(Sender), 0);
 end;
 
 procedure TfNewList.btnOkClick(Sender: TObject);
@@ -67,7 +80,11 @@ end;
 procedure TfNewList.gResTableView1Column1PropertiesButtonClick(Sender: TObject;
   AButtonIndex: Integer);
 begin
-  MessageDlg('derp',mtInformation,[mbOk],0);
+  MessageDlg('derp', mtInformation, [mbOk], 0);
 end;
+
+initialization
+
+
 
 end.
