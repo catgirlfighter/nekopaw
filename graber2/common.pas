@@ -2,7 +2,8 @@
 
 interface
 
-uses Classes, SysUtils, Math, Forms, StdCtrls, ExtCtrls, ComCtrls, Controls, HTTPApp,
+uses Classes, SysUtils, Math, Forms, StdCtrls, ExtCtrls, ComCtrls, Controls,
+  HTTPApp,
   ShellAPI, Windows, Graphics, JPEG, GIFImg, PNGImage, Messages;
 
 const
@@ -15,38 +16,45 @@ const
   CM_EDITLIST = WM_USER + 5;
   CM_APPLYEDITLIST = WM_USER + 6;
 
-  SAVEFILE_VERSION = 2;
+  SAVEFILE_VERSION = 0;
 
 type
   TArrayOfWord = array of word;
   TArrayOfString = array of string;
+  TSetOfChar = Set of WideChar;
 
-function Replace(src, s1, s2: string; rpslashes: boolean = false;  rpall: boolean = false): string;
+function Replace(src, s1, s2: string; rpslashes: boolean = false;
+  rpall: boolean = false): string;
 function emptyname(s: string): string;
-function deleteids(s: string;slsh: boolean = false): string;
-function addstr(s1,s2: string): string;
+function deleteids(s: string; slsh: boolean = false): string;
+function addstr(s1, s2: string): string;
 function numstr(n: word; s1, s2, s3: string; engstyle: boolean = false): string;
-function CreateDirExt(Dir: string): Boolean;
+function CreateDirExt(Dir: string): boolean;
 function ClearHTML(s: string): string;
-function RadioGroupDlg(ACaption,AHint: String; AItems: array of String): Integer;
-function DeleteTo(s: String; subs: string; casesens: boolean = true; re: boolean = false): string;
-function DeleteFromTo(S, sub1, sub2: String; casesens: boolean = true): String;
+function RadioGroupDlg(ACaption, AHint: String;
+  AItems: array of String): Integer;
+function DeleteTo(s: String; subs: string; casesens: boolean = true;
+  re: boolean = false): string;
+function DeleteFromTo(s, sub1, sub2: String; casesens: boolean = true): String;
 function GetBtString(n: Extended): string;
 function GetBtStringEx(n: Extended): string;
-function diff(n1, n2: extended): extended;
-function batchreplace(src: string; substr1: array of string; substr2: string): string;
-function STRINGENCODE(S: STRING): STRING;
-function STRINGDECODE(S: STRING): STRING;
-function Trim(S: String; ch: char = ' '): String;
+
+function diff(n1, n2: Extended): Extended;
+function batchreplace(src: string; substr1: array of string;
+  substr2: string): string;
+function STRINGENCODE(s: STRING): STRING;
+function STRINGDECODE(s: STRING): STRING;
+function Trim(s: String; ch: Char = ' '): String;
+function TrimEx(s: String; ch: TSetOfChar): String;
 function CopyTo(s, substr: string): string;
-function CopyFromTo(S, sub1, sub2: String; re: boolean = false): String;
+function CopyFromTo(s, sub1, sub2: String; re: boolean = false): String;
 function ExtractFolder(s: string): string;
-function MoveDir(const fromDir, toDir: string): Boolean;
+function MoveDir(const fromDir, toDir: string): boolean;
 procedure MultWordArrays(var a1: TArrayOfWord; a2: TArrayOfWord);
 procedure _Delay(dwMilliseconds: Longint);
 function ValidFName(FName: String; bckslsh: boolean = false): String;
-function strlisttostr(s: tstringlist; del: char = ';'; ins: char = '"'): string;
-function strtostrlist(s: string; del: char = ';'; ins: char = '"'): string;
+function strlisttostr(s: tstringlist; del: Char = ';'; ins: Char = '"'): string;
+function strtostrlist(s: string; del: Char = ';'; ins: Char = '"'): string;
 procedure DrawImage(AImage: TImage; AStream: TStream; Ext: String);
 procedure DrawImageFromRes(AImage: TImage; ResName, Ext: String);
 procedure WriteLWToPChar(n: LongWord; p: PChar);
@@ -55,10 +63,20 @@ function PngToIcon(const Png: TPngImage; Background: TColor = clNone): HICON;
 function ImageFormat(Start: Pointer): string;
 function GetWinVersion: string;
 procedure ShutDown;
+function CheckStr(s: string; a: TSetOfChar; inv: boolean = false): boolean;
+function CheckStrPos(s: string; a: TSetOfChar; inv: boolean = false): Integer;
+function CharPos(str: string; ch: Char; Isolators: array of string;
+  From: Integer = 1): Integer;
+function CharPosEx(str: string; ch: TSetOfChar; Isolators: array of string;
+  From: Integer = 1): Integer;
+function GetNextS(var s: string; del: Char = ';'; ins: Char = #0): string;
+function GetNextSEx(var s: string; del: TSetOfChar = [';'];
+  ins: TSetOfChar = []): string;
+function FileToString(AFileName: string): string;
 
 implementation
 
-function clearhtml(s: string): string;    //Заебись
+function ClearHTML(s: string): string; // Заебись
 
 type
   tmnemonica = packed record
@@ -67,120 +85,152 @@ type
   end;
 
 const
-//http://ru.wikipedia.org/wiki/%D0%9C%D0%BD%D0%B5%D0%BC%D0%BE%D0%BD%D0%B8%D0%BA%D0%B8_%D0%B2_HTML
-//2011-09-27
+  // http://ru.wikipedia.org/wiki/%D0%9C%D0%BD%D0%B5%D0%BC%D0%BE%D0%BD%D0%B8%D0%BA%D0%B8_%D0%B2_HTML
+  // 2011-09-27
 
-a: array[1..252] of tmnemonica = (
-(m:'AElig';a:198),(m:'Aacute';a:193 ),(m:'Acirc'  ;a:194),(m:'Agrave';a:192),(m:'Alpha' ;a:913),
-(m:'Aring';a:197),(m:'Atilde';a:195 ),(m:'Auml'   ;a:196),(m:'Beta'  ;a:914),(m:'Ccedil';a:199),
-(m:'Chi'  ;a:935),(m:'Dagger';a:8225),(m:'Delta'  ;a:916),(m:'ETH'   ;a:208),(m:'Eacute';a:201),
-(m:'Ecirc';a:202),(m:'Egrave';a:200 ),(m:'Epsilon';a:917),(m:'Eta'   ;a:919),(m:'Euml'  ;a:203),
-(m:'Gamma';a:915),(m:'Iacute';a:205 ),(m:'Icirc'  ;a:206),(m:'Igrave';a:204),(m:'Iota'  ;a:921),
-//25
-(m:'Iuml'  ;a:207),(m:'Kappa'  ;a:922),(m:'Lambda';a:923 ),(m:'Mu'    ;a:924),(m:'Ntilde';a:209),
-(m:'Nu'    ;a:925),(m:'OElig'  ;a:338),(m:'Oacute';a:211 ),(m:'Ocirc' ;a:212),(m:'Ograve';a:210),
-(m:'Omega' ;a:937),(m:'Omicron';a:927),(m:'Oslash';a:216 ),(m:'Otilde';a:213),(m:'Ouml'  ;a:214),
-(m:'Phi'   ;a:934),(m:'Pi'     ;a:928),(m:'Prime' ;a:8243),(m:'Psi'   ;a:936),(m:'Rho'   ;a:929),
-(m:'Scaron';a:352),(m:'Sigma'  ;a:931),(m:'THORN' ;a:222 ),(m:'Tau'   ;a:932),(m:'Theta' ;a:920),
-//50
-(m:'Uacute';a:218 ),(m:'Ucirc' ;a:219),(m:'Ugrave';a:217 ),(m:'Upsilon';a:933 ),(m:'Uuml'   ;a:220 ),
-(m:'Xi'    ;a:926 ),(m:'Yacute';a:221),(m:'Yuml'  ;a:376 ),(m:'Zeta'   ;a:918 ),(m:'aacute' ;a:225 ),
-(m:'acirc' ;a:226 ),(m:'acute' ;a:180),(m:'aelig' ;a:230 ),(m:'agrave' ;a:224 ),(m:'alefsym';a:8501),
-(m:'alpha' ;a:945 ),(m:'amp'   ;a:38 ),(m:'and'   ;a:8743),(m:'ang'    ;a:8736),(m:'aring'  ;a:229 ),
-(m:'asymp' ;a:8776),(m:'atilde';a:227),(m:'auml'  ;a:228 ),(m:'bdquo'  ;a:8222),(m:'beta'   ;a:946 ),
-//75
-(m:'brvbar';a:166 ),(m:'bull'  ;a:8226),(m:'cap'  ;a:8745),(m:'ccedil';a:231 ),(m:'cedil';a:184 ),
-(m:'cent'  ;a:162 ),(m:'chi'   ;a:967 ),(m:'circ' ;a:710 ),(m:'clubs' ;a:9827),(m:'cong' ;a:8773),
-(m:'copy'  ;a:169 ),(m:'crarr' ;a:8629),(m:'cup'  ;a:8746),(m:'curren';a:164 ),(m:'dArr' ;a:8659),
-(m:'dagger';a:8224),(m:'darr'  ;a:8595),(m:'deg'  ;a:176 ),(m:'delta' ;a:948 ),(m:'diams';a:9830),
-(m:'divide';a:247 ),(m:'eacute';a:233 ),(m:'ecirc';a:234 ),(m:'egrave';a:232 ),(m:'empty';a:8709),
-//100
-(m:'emsp'  ;a:8195),(m:'ensp'  ;a:8194),(m:'epsilon';a:949 ),(m:'equiv' ;a:8801),(m:'eta'  ;a:951 ),
-(m:'eth'   ;a:240 ),(m:'euml'  ;a:235 ),(m:'euro'   ;a:8364),(m:'exist' ;a:8707),(m:'fnof' ;a:402 ),
-(m:'forall';a:8704),(m:'frac12';a:189 ),(m:'frac14' ;a:188 ),(m:'frac34';a:190 ),(m:'frasl';a:8260),
-(m:'gamma' ;a:947 ),(m:'ge'    ;a:8805),(m:'gt'     ;a:62  ),(m:'hArr'  ;a:8660),(m:'harr' ;a:8596),
-(m:'hearts';a:9829),(m:'hellip';a:8230),(m:'iacute' ;a:237 ),(m:'icirc' ;a:238 ),(m:'iexcl';a:161 ),
-//125
-(m:'igrave';a:236 ),(m:'image' ;a:8465),(m:'infin' ;a:8734),(m:'int'   ;a:8747),(m:'iota' ;a:953 ),
-(m:'iquest';a:191 ),(m:'isin'  ;a:8712),(m:'iuml'  ;a:239 ),(m:'kappa' ;a:954 ),(m:'lArr' ;a:8656),
-(m:'lambda';a:955 ),(m:'lang'  ;a:9001),(m:'laquo' ;a:171 ),(m:'larr'  ;a:8592),(m:'lceil';a:8968),
-(m:'ldquo' ;a:8220),(m:'le'    ;a:8804),(m:'lfloor';a:8970),(m:'lowast';a:8727),(m:'loz'  ;a:9674),
-(m:'lrm'   ;a:8206),(m:'lsaquo';a:8249),(m:'lsquo' ;a:8216),(m:'lt'    ;a:60  ),(m:'macr' ;a:175 ),
-//150
-(m:'mdash' ;a:8212),(m:'micro'  ;a:181 ),(m:'middot';a:183 ),(m:'minus' ;a:8722),(m:'mu'   ;a:956 ),
-(m:'nabla' ;a:8711),(m:'nbsp'   ;a:160 ),(m:'ndash' ;a:8211),(m:'ne'    ;a:8800),(m:'ni'   ;a:8715),
-(m:'not'   ;a:172 ),(m:'notin'  ;a:8713),(m:'nsub'  ;a:8836),(m:'ntilde';a:241 ),(m:'nu'   ;a:957 ),
-(m:'oacute';a:243 ),(m:'ocirc'  ;a:244 ),(m:'oelig' ;a:339 ),(m:'ograve';a:242 ),(m:'oline';a:8254),
-(m:'omega' ;a:969 ),(m:'omicron';a:959 ),(m:'oplus' ;a:8853),(m:'or'    ;a:8744),(m:'ordf' ;a:170 ),
-//175
-(m:'ordm' ;a:186 ),(m:'oslash';a:248 ),(m:'otilde';a:245 ),(m:'otimes';a:8855),(m:'ouml' ;a:246 ),
-(m:'para' ;a:182 ),(m:'part'  ;a:8706),(m:'permil';a:8240),(m:'perp'  ;a:8869),(m:'phi'  ;a:966 ),
-(m:'pi'   ;a:960 ),(m:'piv'   ;a:982 ),(m:'plusmn';a:177 ),(m:'pound' ;a:163 ),(m:'prime';a:8242),
-(m:'prod' ;a:8719),(m:'prop'  ;a:8733),(m:'psi'   ;a:968 ),(m:'quot'  ;a:34  ),(m:'rArr' ;a:8658),
-(m:'radic';a:8730),(m:'rang'  ;a:9002),(m:'raquo' ;a:187 ),(m:'rarr'  ;a:8594),(m:'rceil';a:8969),
-//200
-(m:'rdquo';a:8221),(m:'real'  ;a:8476),(m:'reg'  ;a:174 ),(m:'rfloor';a:8971),(m:'rho'   ;a:961 ),
-(m:'rlm'  ;a:8207),(m:'rsaquo';a:8250),(m:'rsquo';a:8217),(m:'sbquo' ;a:8218),(m:'scaron';a:353 ),
-(m:'sdot' ;a:8901),(m:'sect'  ;a:167 ),(m:'shy'  ;a:173 ),(m:'sigma' ;a:963 ),(m:'sigmaf';a:962 ),
-(m:'sim'  ;a:8764),(m:'spades';a:9824),(m:'sub'  ;a:8834),(m:'sube'  ;a:8838),(m:'sum'   ;a:8721),
-(m:'sup'  ;a:8835),(m:'sup1'  ;a:185 ),(m:'sup2' ;a:178 ),(m:'sup3'  ;a:179 ),(m:'supe'  ;a:8839),
-//225
-(m:'szlig' ;a:223 ),(m:'tau'   ;a:964),(m:'there4' ;a:8756),(m:'theta';a:952),(m:'thetasy';a:977 ),
-(m:'thinsp';a:8201),(m:'thorn' ;a:254),(m:'tilde'  ;a:732 ),(m:'times';a:215),(m:'trade'  ;a:8482),
-(m:'uArr'  ;a:8657),(m:'uacute';a:250),(m:'uarr'   ;a:8593),(m:'ucirc';a:251),(m:'ugrave' ;a:249 ),
-(m:'uml'   ;a:168 ),(m:'upsih' ;a:978),(m:'upsilon';a:965 ),(m:'uuml' ;a:252),(m:'weierp' ;a:8472),
-(m:'xi'    ;a:958 ),(m:'yacute';a:253),(m:'yen'    ;a:165 ),(m:'yuml' ;a:255),(m:'zeta'   ;a:950 ),
-//250
-(m:'zwj';a:8205),(m:'zwnj';a:8204)
-//252
-);
+  a: array [1 .. 252] of tmnemonica = ((m: 'AElig'; a: 198), (m: 'Aacute';
+    a: 193), (m: 'Acirc'; a: 194), (m: 'Agrave'; a: 192), (m: 'Alpha'; a: 913),
+    (m: 'Aring'; a: 197), (m: 'Atilde'; a: 195), (m: 'Auml'; a: 196),
+    (m: 'Beta'; a: 914), (m: 'Ccedil'; a: 199), (m: 'Chi'; a: 935),
+    (m: 'Dagger'; a: 8225), (m: 'Delta'; a: 916), (m: 'ETH'; a: 208),
+    (m: 'Eacute'; a: 201), (m: 'Ecirc'; a: 202), (m: 'Egrave'; a: 200),
+    (m: 'Epsilon'; a: 917), (m: 'Eta'; a: 919), (m: 'Euml'; a: 203),
+    (m: 'Gamma'; a: 915), (m: 'Iacute'; a: 205), (m: 'Icirc'; a: 206),
+    (m: 'Igrave'; a: 204), (m: 'Iota'; a: 921),
+    // 25
+    (m: 'Iuml'; a: 207), (m: 'Kappa'; a: 922), (m: 'Lambda'; a: 923), (m: 'Mu';
+    a: 924), (m: 'Ntilde'; a: 209), (m: 'Nu'; a: 925), (m: 'OElig'; a: 338),
+    (m: 'Oacute'; a: 211), (m: 'Ocirc'; a: 212), (m: 'Ograve'; a: 210),
+    (m: 'Omega'; a: 937), (m: 'Omicron'; a: 927), (m: 'Oslash'; a: 216),
+    (m: 'Otilde'; a: 213), (m: 'Ouml'; a: 214), (m: 'Phi'; a: 934), (m: 'Pi';
+    a: 928), (m: 'Prime'; a: 8243), (m: 'Psi'; a: 936), (m: 'Rho'; a: 929),
+    (m: 'Scaron'; a: 352), (m: 'Sigma'; a: 931), (m: 'THORN'; a: 222),
+    (m: 'Tau'; a: 932), (m: 'Theta'; a: 920),
+    // 50
+    (m: 'Uacute'; a: 218), (m: 'Ucirc'; a: 219), (m: 'Ugrave'; a: 217),
+    (m: 'Upsilon'; a: 933), (m: 'Uuml'; a: 220), (m: 'Xi'; a: 926),
+    (m: 'Yacute'; a: 221), (m: 'Yuml'; a: 376), (m: 'Zeta'; a: 918),
+    (m: 'aacute'; a: 225), (m: 'acirc'; a: 226), (m: 'acute'; a: 180),
+    (m: 'aelig'; a: 230), (m: 'agrave'; a: 224), (m: 'alefsym'; a: 8501),
+    (m: 'alpha'; a: 945), (m: 'amp'; a: 38), (m: 'and'; a: 8743), (m: 'ang';
+    a: 8736), (m: 'aring'; a: 229), (m: 'asymp'; a: 8776), (m: 'atilde';
+    a: 227), (m: 'auml'; a: 228), (m: 'bdquo'; a: 8222), (m: 'beta'; a: 946),
+    // 75
+    (m: 'brvbar'; a: 166), (m: 'bull'; a: 8226), (m: 'cap'; a: 8745),
+    (m: 'ccedil'; a: 231), (m: 'cedil'; a: 184), (m: 'cent'; a: 162), (m: 'chi';
+    a: 967), (m: 'circ'; a: 710), (m: 'clubs'; a: 9827), (m: 'cong'; a: 8773),
+    (m: 'copy'; a: 169), (m: 'crarr'; a: 8629), (m: 'cup'; a: 8746),
+    (m: 'curren'; a: 164), (m: 'dArr'; a: 8659), (m: 'dagger'; a: 8224),
+    (m: 'darr'; a: 8595), (m: 'deg'; a: 176), (m: 'delta'; a: 948), (m: 'diams';
+    a: 9830), (m: 'divide'; a: 247), (m: 'eacute'; a: 233), (m: 'ecirc';
+    a: 234), (m: 'egrave'; a: 232), (m: 'empty'; a: 8709),
+    // 100
+    (m: 'emsp'; a: 8195), (m: 'ensp'; a: 8194), (m: 'epsilon'; a: 949),
+    (m: 'equiv'; a: 8801), (m: 'eta'; a: 951), (m: 'eth'; a: 240), (m: 'euml';
+    a: 235), (m: 'euro'; a: 8364), (m: 'exist'; a: 8707), (m: 'fnof'; a: 402),
+    (m: 'forall'; a: 8704), (m: 'frac12'; a: 189), (m: 'frac14'; a: 188),
+    (m: 'frac34'; a: 190), (m: 'frasl'; a: 8260), (m: 'gamma'; a: 947),
+    (m: 'ge'; a: 8805), (m: 'gt'; a: 62), (m: 'hArr'; a: 8660), (m: 'harr';
+    a: 8596), (m: 'hearts'; a: 9829), (m: 'hellip'; a: 8230), (m: 'iacute';
+    a: 237), (m: 'icirc'; a: 238), (m: 'iexcl'; a: 161),
+    // 125
+    (m: 'igrave'; a: 236), (m: 'image'; a: 8465), (m: 'infin'; a: 8734),
+    (m: 'int'; a: 8747), (m: 'iota'; a: 953), (m: 'iquest'; a: 191), (m: 'isin';
+    a: 8712), (m: 'iuml'; a: 239), (m: 'kappa'; a: 954), (m: 'lArr'; a: 8656),
+    (m: 'lambda'; a: 955), (m: 'lang'; a: 9001), (m: 'laquo'; a: 171),
+    (m: 'larr'; a: 8592), (m: 'lceil'; a: 8968), (m: 'ldquo'; a: 8220),
+    (m: 'le'; a: 8804), (m: 'lfloor'; a: 8970), (m: 'lowast'; a: 8727),
+    (m: 'loz'; a: 9674), (m: 'lrm'; a: 8206), (m: 'lsaquo'; a: 8249),
+    (m: 'lsquo'; a: 8216), (m: 'lt'; a: 60), (m: 'macr'; a: 175),
+    // 150
+    (m: 'mdash'; a: 8212), (m: 'micro'; a: 181), (m: 'middot'; a: 183),
+    (m: 'minus'; a: 8722), (m: 'mu'; a: 956), (m: 'nabla'; a: 8711), (m: 'nbsp';
+    a: 160), (m: 'ndash'; a: 8211), (m: 'ne'; a: 8800), (m: 'ni'; a: 8715),
+    (m: 'not'; a: 172), (m: 'notin'; a: 8713), (m: 'nsub'; a: 8836),
+    (m: 'ntilde'; a: 241), (m: 'nu'; a: 957), (m: 'oacute'; a: 243),
+    (m: 'ocirc'; a: 244), (m: 'oelig'; a: 339), (m: 'ograve'; a: 242),
+    (m: 'oline'; a: 8254), (m: 'omega'; a: 969), (m: 'omicron'; a: 959),
+    (m: 'oplus'; a: 8853), (m: 'or'; a: 8744), (m: 'ordf'; a: 170),
+    // 175
+    (m: 'ordm'; a: 186), (m: 'oslash'; a: 248), (m: 'otilde'; a: 245),
+    (m: 'otimes'; a: 8855), (m: 'ouml'; a: 246), (m: 'para'; a: 182),
+    (m: 'part'; a: 8706), (m: 'permil'; a: 8240), (m: 'perp'; a: 8869),
+    (m: 'phi'; a: 966), (m: 'pi'; a: 960), (m: 'piv'; a: 982), (m: 'plusmn';
+    a: 177), (m: 'pound'; a: 163), (m: 'prime'; a: 8242), (m: 'prod'; a: 8719),
+    (m: 'prop'; a: 8733), (m: 'psi'; a: 968), (m: 'quot'; a: 34), (m: 'rArr';
+    a: 8658), (m: 'radic'; a: 8730), (m: 'rang'; a: 9002), (m: 'raquo'; a: 187),
+    (m: 'rarr'; a: 8594), (m: 'rceil'; a: 8969),
+    // 200
+    (m: 'rdquo'; a: 8221), (m: 'real'; a: 8476), (m: 'reg'; a: 174),
+    (m: 'rfloor'; a: 8971), (m: 'rho'; a: 961), (m: 'rlm'; a: 8207),
+    (m: 'rsaquo'; a: 8250), (m: 'rsquo'; a: 8217), (m: 'sbquo'; a: 8218),
+    (m: 'scaron'; a: 353), (m: 'sdot'; a: 8901), (m: 'sect'; a: 167), (m: 'shy';
+    a: 173), (m: 'sigma'; a: 963), (m: 'sigmaf'; a: 962), (m: 'sim'; a: 8764),
+    (m: 'spades'; a: 9824), (m: 'sub'; a: 8834), (m: 'sube'; a: 8838),
+    (m: 'sum'; a: 8721), (m: 'sup'; a: 8835), (m: 'sup1'; a: 185), (m: 'sup2';
+    a: 178), (m: 'sup3'; a: 179), (m: 'supe'; a: 8839),
+    // 225
+    (m: 'szlig'; a: 223), (m: 'tau'; a: 964), (m: 'there4'; a: 8756),
+    (m: 'theta'; a: 952), (m: 'thetasy'; a: 977), (m: 'thinsp'; a: 8201),
+    (m: 'thorn'; a: 254), (m: 'tilde'; a: 732), (m: 'times'; a: 215),
+    (m: 'trade'; a: 8482), (m: 'uArr'; a: 8657), (m: 'uacute'; a: 250),
+    (m: 'uarr'; a: 8593), (m: 'ucirc'; a: 251), (m: 'ugrave'; a: 249),
+    (m: 'uml'; a: 168), (m: 'upsih'; a: 978), (m: 'upsilon'; a: 965),
+    (m: 'uuml'; a: 252), (m: 'weierp'; a: 8472), (m: 'xi'; a: 958),
+    (m: 'yacute'; a: 253), (m: 'yen'; a: 165), (m: 'yuml'; a: 255),
+    (m: 'zeta'; a: 950),
+    // 250
+    (m: 'zwj'; a: 8205), (m: 'zwnj'; a: 8204)
+    // 252
+    );
 
-C_SEP = ';';
-C_SPC = '&';
-C_NUM = '#';
-N_MLN =  7 ;
-N_MNC = 252;
+  C_SEP = ';';
+  C_SPC = '&';
+  C_NUM = '#';
+  N_MLN = 7;
+  N_MNC = 252;
 var
-  i,l,t,spc: integer;
+  i, l, t, spc: Integer;
 
-function ChMnem(var s: string; const b,e: integer): boolean;
-var
-  i: integer;
-  c: string;
-begin
-  Result := false;
-  c := copy(s,b+1,e-b-1);
-  i := 1;
-  while i <= N_MNC do
+  function ChMnem(var s: string; const b, e: Integer): boolean;
+  var
+    i: Integer;
+    c: string;
   begin
-    if a[i].m = c then
+    Result := false;
+    c := copy(s, b + 1, e - b - 1);
+    i := 1;
+    while i <= N_MNC do
     begin
-      s[b] := Char(a[i].a);
-      Delete(s,b+1,e-b);
-      Result := true;
-    end else if a[i].m > c then
-      break;
-    inc(i);
+      if a[i].m = c then
+      begin
+        s[b] := Char(a[i].a);
+        Delete(s, b + 1, e - b);
+        Result := true;
+      end
+      else if a[i].m > c then
+        break;
+      inc(i);
+    end;
   end;
-end;
 
-function ChNum(var s: string; const b,e: integer): boolean;
-begin
-  s[b] := Char(StrToInt(Copy(s,b+2,e-b-2)));
-  Delete(s,b+1,e-b);
-  Result := True;
-end;
+  function ChNum(var s: string; const b, e: Integer): boolean;
+  begin
+    s[b] := Char(StrToInt(copy(s, b + 2, e - b - 2)));
+    Delete(s, b + 1, e - b);
+    Result := true;
+  end;
 
 begin
 
   l := length(s);
   t := -1;
   i := 1;
-
+  spc := -1;
   while i <= l do
   begin
     case t of
-      -1:
+      - 1:
         case s[i] of
           C_SPC:
             begin
@@ -188,50 +238,69 @@ begin
               t := 0;
             end;
         end;
-      0..2:
+      0 .. 2:
         case s[i] of
           C_SPC:
             begin
               spc := i;
               t := 0;
             end;
-          'A'..'F','a'..'f':
+          'A' .. 'F', 'a' .. 'f':
             case t of
-              0: t := 1;
-              1,2: ;
-              else t := -1;
+              0:
+                t := 1;
+              1, 2:
+                ;
+            else
+              t := -1;
             end;
-          'G'..'W','Y','Z','g'..'w','y','z':
+          'G' .. 'W', 'Y', 'Z', 'g' .. 'w', 'y', 'z':
             case t of
-              0: t := 1;
-              1: ;
-              else t := -1;
+              0:
+                t := 1;
+              1:
+                ;
+            else
+              t := -1;
             end;
           C_NUM:
             case t of
-              0: t := 2;
-              else t := -1;
+              0:
+                t := 2;
+            else
+              t := -1;
             end;
-          'X','x':
+          'X', 'x':
             case t of
-              0: t := 1;
-              1: ;
-              2: if i-spc <> 3 then t := -1;
-              else t := -1;
+              0:
+                t := 1;
+              1:
+                ;
+              2:
+                if i - spc <> 3 then
+                  t := -1;
+            else
+              t := -1;
             end;
-          '0'..'9':
+          '0' .. '9':
             case t of
-              2: ;
-              else t := -1;
+              2:
+                ;
+            else
+              t := -1;
             end;
           C_SEP:
-          begin
-            case t of
-              1: if (i - spc <= N_MLN) and ChMnem(s,spc,i) then dec(i,i-spc);
-              2: if ChNum(s,spc,i) then dec(i,i-spc);
+            begin
+              case t of
+                1:
+                  if (i - spc <= N_MLN) and ChMnem(s, spc, i) then
+                    dec(i, i - spc);
+                2:
+                  if ChNum(s, spc, i) then
+                    dec(i, i - spc);
+              end;
+              t := -1;
             end;
-            t := -1;
-          end;
         end;
     end;
     inc(i);
@@ -242,135 +311,139 @@ end;
 
 function emptyname(s: string): string;
 var
-  p: integer;
+  p: Integer;
 begin
   p := length(s);
-  while (p > 0) and not CharInSet(s[p],['/','=']) do
+  while (p > 0) and not CharInSet(s[p], ['/', '=']) do
     dec(p);
-  delete(s,1,p);
-  result := s;
+  Delete(s, 1, p);
+  Result := s;
 end;
 
-function Replace(src, s1, s2: string; rpslashes: boolean = false; rpall: boolean = false): string;
+function Replace(src, s1, s2: string; rpslashes: boolean = false;
+  rpall: boolean = false): string;
 var
-  n: integer;
+  n: Integer;
 begin
-  result := '';
-  n := pos(s1,src);
+  Result := '';
+  n := pos(s1, src);
 
   while n > 0 do
   begin
-    if (copy(src,n,length(s2))=s2) and rpall and rpslashes then
-      result := result + copy(src,1,n-1)
+    if (copy(src, n, length(s2)) = s2) and rpall and rpslashes then
+      Result := Result + copy(src, 1, n - 1)
     else
-      result := result + copy(src,1,n-1)+s2;
-    delete(src,1,n+length(s1)-1);
+      Result := Result + copy(src, 1, n - 1) + s2;
+    Delete(src, 1, n + length(s1) - 1);
     if rpall then
-      n := pos(s1,src)
+      n := pos(s1, src)
     else
     begin
       if rpslashes then
       begin
-        n := pos('/',src);
+        n := pos('/', src);
         while n > 0 do
         begin
-          delete(src,1,n);
-          n := pos('/',src);
+          Delete(src, 1, n);
+          n := pos('/', src);
         end;
       end;
       n := 0;
     end;
   end;
-  result := result + src;
+  Result := Result + src;
 end;
 
 function deleteids(s: string; slsh: boolean): string;
 var
-  p: integer;
+  p: Integer;
 begin
   if not slsh then
   begin
-    p := pos('?',s);
-    delete(s,p,length(s)-p+1);
-    result := s;
-  end else
+    p := pos('?', s);
+    Delete(s, p, length(s) - p + 1);
+    Result := s;
+  end
+  else
   begin
     p := length(s);
-    while(p>0)and(s[p]<>'/')do
+    while (p > 0) and (s[p] <> '/') do
       dec(p);
     if p = 0 then
-      result := s
+      Result := s
     else
-      result := Copy(s,1,p-1) + ExtractFileExt(s);
+      Result := copy(s, 1, p - 1) + ExtractFileExt(s);
   end;
 end;
 
-function addstr(s1,s2: string): string;
+function addstr(s1, s2: string): string;
 var
-  p: integer;
+  p: Integer;
 begin
-  result := '';
-  p := pos('/',s1);
+  Result := '';
+  p := pos('/', s1);
   if p > 0 then
   begin
-    if (length(s1)>p) and (s1[p+1]='/') then
+    if (length(s1) > p) and (s1[p + 1] = '/') then
     begin
-      result := copy(s1,1,p+1);
-      delete(s1,1,p+1);
+      Result := copy(s1, 1, p + 1);
+      Delete(s1, 1, p + 1);
     end;
-    p := pos('/',s1);
+    p := pos('/', s1);
     if p = 0 then
     begin
-      s1 := s1+'/';
+      s1 := s1 + '/';
       p := length(s1);
     end;
-    insert(s2,s1,p+1);
+    insert(s2, s1, p + 1);
   end;
-  result := result + s1;
+  Result := Result + s1;
 end;
 
 function numstr(n: word; s1, s2, s3: string; engstyle: boolean = false): string;
 begin
   if engstyle then
     if (n > 1) or (n = 0) then
-      result := 's'
+      Result := 's'
     else
-      result := ''
+      Result := ''
+  else if ((n mod 100) div 10 = 1) then
+    Result := s3
   else
-    if ((n mod 100) div 10 = 1) then
-      result := s3
-    else
-      case n mod 10 of
-        1: result := s1;
-        2..4: result := s2;
-        5..9,0: result := s3;
-      end;
+    case n mod 10 of
+      1:
+        Result := s1;
+      2 .. 4:
+        Result := s2;
+      5 .. 9, 0:
+        Result := s3;
+    end;
 
 end;
 
-function CreateDirExt(Dir: string): Boolean;
+function CreateDirExt(Dir: string): boolean;
 var
-  I, L: Integer;
+  i, l: Integer;
   CurDir: string;
 begin
   Result := DirectoryExists(Dir);
   if Result then
     Exit;
   if ExcludeTrailingPathDelimiter(Dir) = '' then
-    exit;
+    Exit;
   Dir := IncludeTrailingPathDelimiter(Dir);
-  L := Length(Dir);
-  for I := 1 to L do
+  l := length(Dir);
+  for i := 1 to l do
   begin
-    CurDir := CurDir + Dir[I];
-    if Dir[I] = '\' then
+    CurDir := CurDir + Dir[i];
+    if Dir[i] = '\' then
     begin
       if not DirectoryExists(CurDir) then
         if not CreateDir(CurDir) then
           Exit;
     end;
   end;
-  Result := True;
+  Result := true;
 end;
 
 function GetBtString(n: Extended): string;
@@ -384,14 +457,19 @@ begin
     inc(l);
   end;
 
-  result := FloatToStr(RoundTo(n,-2));
+  Result := FloatToStr(RoundTo(n, -2));
 
   case l of
-    0: result := result + 'b';
-    1: result := result + 'Kb';
-    2: result := result + 'Mb';
-    3: result := result + 'Gb';
-    4: result := result + 'Tb';
+    0:
+      Result := Result + 'b';
+    1:
+      Result := Result + 'Kb';
+    2:
+      Result := Result + 'Mb';
+    3:
+      Result := Result + 'Gb';
+    4:
+      Result := Result + 'Tb';
   end;
 
 end;
@@ -407,14 +485,19 @@ begin
     inc(l);
   end;
 
-  result := FloatToStr(RoundTo(n,-2));
+  Result := FloatToStr(RoundTo(n, -2));
 
   case l of
-    0: result := 'b';
-    1: result := 'Kb';
-    2: result := 'Mb';
-    3: result := 'Gb';
-    4: result := 'Tb';
+    0:
+      Result := 'b';
+    1:
+      Result := 'Kb';
+    2:
+      Result := 'Mb';
+    3:
+      Result := 'Gb';
+    4:
+      Result := 'Tb';
   end;
 
 end;
@@ -422,20 +505,21 @@ end;
 function batchreplace(src: string; substr1: array of string;
   substr2: string): string;
 var
-  i: integer;
+  i: Integer;
 begin
   for i := 0 to length(substr1) - 1 do
-    src := replace(src,substr1[i],substr2);
-  result := src;
+    src := Replace(src, substr1[i], substr2);
+  Result := src;
 end;
 
-function RadioGroupDlg(ACaption,AHint: String; AItems: array of String): Integer;
+function RadioGroupDlg(ACaption, AHint: String;
+  AItems: array of String): Integer;
 var
   F: TForm;
-  L: TLabel;
+  l: TLabel;
   R: TRadioGroup;
-  OkBtn,CancelBtn: TButton;
-  i,n: integer;
+  OkBtn, CancelBtn: TButton;
+  i, n: Integer;
 begin
 
   Result := -1;
@@ -446,27 +530,27 @@ begin
   F.Caption := ACaption;
   F.BorderStyle := bsDialog;
   F.Position := poMainFormCenter;
-  L := TLabel.Create(F);
-  L.Parent := F;
+  l := TLabel.Create(F);
+  l.Parent := F;
   if AHint = '' then
-    L.Caption := 'Select value:'
+    l.Caption := 'Select value:'
   else
-    L.Caption := AHint;
-  L.Left := 4;
-  L.Top := 4;
+    l.Caption := AHint;
+  l.Left := 4;
+  l.Top := 4;
   R := TRadioGroup.Create(F);
   R.Parent := F;
-  R.Top := L.Top + L.Height + 4;
+  R.Top := l.Top + l.Height + 4;
   R.Left := 4;
   n := -1;
-  for i := 0 to length(AItems)-1 do
+  for i := 0 to length(AItems) - 1 do
   begin
     R.Items.Add(AItems[i]);
     if F.Canvas.TextWidth(AItems[i]) > n then
       n := F.Canvas.TextWidth(AItems[i]);
   end;
   R.ItemIndex := 0;
-  R.Width := Max(n + 8 + 24,200);
+  R.Width := Max(n + 8 + 24, 200);
   R.Height := R.Items.Count * 20 + 12;
   F.ClientWidth := R.Left + R.Width + 4;
 
@@ -489,135 +573,172 @@ begin
   F.ClientHeight := OkBtn.Top + OkBtn.Height + 4;
   F.ShowModal;
   case F.ModalResult of
-    mrOk: Result := R.ItemIndex;
-    else Result := -1;
+    mrOk:
+      Result := R.ItemIndex;
+  else
+    Result := -1;
   end;
   OkBtn.Free;
   CancelBtn.Free;
-  L.Free;
+  l.Free;
   R.Free;
   F.Free;
 end;
 
-function DeleteTo(s: String; subs: string; casesens: boolean = true; re: boolean = false): string;
+function DeleteTo(s: String; subs: string; casesens: boolean = true;
+  re: boolean = false): string;
 var
-  p: integer;
+  p: Integer;
 begin
-  result := s;
+  Result := s;
 
-  if casesens  then
+  if casesens then
   begin
-    p := pos(subs,s);
+    p := pos(subs, s);
     if p > 0 then
-      delete(s,1,p+length(subs)-1);
-  end else
-  begin
-    p := pos(UPPERCASE(subs),UPPERCASE(s));
-    if p > 0 then
-      delete(s,1,p+length(subs)-1);
-  end;
-  if re and (result = s) then
-    result := ''
+      Delete(s, 1, p + length(subs) - 1);
+  end
   else
-    result := s;
+  begin
+    p := pos(UPPERCASE(subs), UPPERCASE(s));
+    if p > 0 then
+      Delete(s, 1, p + length(subs) - 1);
+  end;
+  if re and (Result = s) then
+    Result := ''
+  else
+    Result := s;
 end;
 
-function diff(n1, n2: extended): extended;
+function diff(n1, n2: Extended): Extended;
 begin
   if n2 = 0 then
-    result := 0
+    Result := 0
   else
-    result := n1/n2;
+    Result := n1 / n2;
 end;
 
-function STRINGENCODE(S: STRING): STRING;
+function STRINGENCODE(s: STRING): STRING;
 begin
-  RESULT := HTTPENCODE(UTF8ENCODE(S));
+  Result := HTTPENCODE(UTF8ENCODE(s));
 end;
 
-function STRINGDECODE(S: STRING): STRING;
+function STRINGDECODE(s: STRING): STRING;
 begin
-  RESULT := UTF8ToString(HTTPDECODE(S));
+  Result := UTF8ToString(HTTPDECODE(s));
 end;
 
-function getnexts(var s: string; del: char = ';'; ins: char = #0): string;
+function GetNextS(var s: string; del: Char = ';'; ins: Char = #0): string;
 var
-  n: integer;
+  n: Integer;
 begin
   Result := '';
 
   if ins <> #0 then
-  while True do
-  begin
-    n := pos(ins,s);
-    if (n > 0) and (pos(del,s) > n) then
+    while true do
     begin
-      result := result + copy(s,1,n-1);
-      delete (s,1,n);
-      n := pos(ins,s);
-      case n of
-        0: raise Exception.Create('Can''t find 2nd insulator '''+ins+''':'+#13#10+S);
-        1: result := result + copy(s,1,n);
-        else result := result + copy(s,1,n-1);
-      end;
-      delete (s,1,n);
-    end else
-      break;
-  end;
+      n := pos(ins, s);
+      if (n > 0) and (pos(del, s) > n) then
+      begin
+        Result := Result + copy(s, 1, n - 1);
+        Delete(s, 1, n);
+        n := pos(ins, s);
+        case n of
+          0:
+            raise Exception.Create('Can''t find 2nd insulator ''' + ins + ''':'
+              + #13#10 + s);
+          1:
+            Result := Result + copy(s, 1, n);
+        else
+          Result := Result + copy(s, 1, n - 1);
+        end;
+        Delete(s, 1, n);
+      end
+      else
+        break;
+    end;
 
-
-  n := pos(del,s);
+  n := pos(del, s);
   if n > 0 then
   begin
-    result := result + copy(s,1,n-1);
-    delete(s,1,n);
-  end else
+    Result := Result + copy(s, 1, n - 1);
+    Delete(s, 1, n);
+  end
+  else
   begin
-    result := result + s;
+    Result := Result + s;
     s := '';
   end;
 end;
 
-function Trim(S: String; ch: char = ' '): String;
-var
-  I, L: Integer;
+function GetNextSEx(var s: string; del: TSetOfChar = [';'];
+  ins: TSetOfChar = []): string;
 begin
-  L := Length(S);
-  I := 1;
-  while (I <= L) and (S[I] = ch) do Inc(I);
-  if I > L then Result := '' else
+
+end;
+
+function Trim(s: String; ch: Char = ' '): String;
+var
+  i, l: Integer;
+begin
+  l := length(s);
+  i := 1;
+  while (i <= l) and (s[i] = ch) do
+    inc(i);
+  if i > l then
+    Result := ''
+  else
   begin
-    while S[L] = ch do Dec(L);
-    Result := Copy(S, I, L - I + 1);
+    while s[l] = ch do
+      dec(l);
+    Result := copy(s, i, l - i + 1);
+  end;
+end;
+
+function TrimEx(s: String; ch: TSetOfChar): String;
+var
+  i, l: Integer;
+begin
+  l := length(s);
+  i := 1;
+  while (i <= l) and (CharInSet(s[i], ch)) do
+    inc(i);
+  if i > l then
+    Result := ''
+  else
+  begin
+    while CharInSet(s[l], ch) do
+      dec(l);
+    Result := copy(s, i, l - i + 1);
   end;
 end;
 
 function CopyTo(s, substr: string): string;
 var
-  i: integer;
+  i: Integer;
 begin
-  i := pos(substr,S);
+  i := pos(substr, s);
   if i = 0 then
-    result := copy(s,1,length(s))
+    Result := copy(s, 1, length(s))
   else
-    result := copy(s,1,i-1);
+    Result := copy(s, 1, i - 1);
 end;
 
-function CopyFromTo(S, sub1, sub2: String; re: boolean = false): String;
+function CopyFromTo(s, sub1, sub2: String; re: boolean = false): String;
 var
-  l1,l2: integer;
+  l1, l2: Integer;
   tmp: string;
 begin
   tmp := s;
-  result := '';
+  Result := '';
 
-  l1 := pos(LOWERCASE(sub1),LOWERCASE(tmp));
+  l1 := pos(LOWERCASE(sub1), LOWERCASE(tmp));
   if l1 > 0 then
-    delete(tmp,1,l1+length(sub1)-1)
+    Delete(tmp, 1, l1 + length(sub1) - 1)
   else if re then
     Exit;
 
-  l2 := pos(LOWERCASE(sub2),LOWERCASE(tmp));
+  l2 := pos(LOWERCASE(sub2), LOWERCASE(tmp));
   if l2 = 0 then
     if re then
       Exit
@@ -627,135 +748,134 @@ begin
     l2 := l2 + length(s) - length(tmp);
 
   if l1 > 0 then
-    result := Copy(s,l1 + length(sub1),l2 - l1 - length(sub1))
+    Result := copy(s, l1 + length(sub1), l2 - l1 - length(sub1))
   else
-    result := Copy(s,1,l2 - 1);
+    Result := copy(s, 1, l2 - 1);
 end;
 
-function DeleteFromTo(S, sub1, sub2: String; casesens: boolean = true): String;
+function DeleteFromTo(s, sub1, sub2: String; casesens: boolean = true): String;
 var
-  l1,l2: integer;
+  l1, l2: Integer;
   tmp: string;
 begin
   tmp := s;
-  l1 := pos(LOWERCASE(sub1),LOWERCASE(tmp));
+  l1 := pos(LOWERCASE(sub1), LOWERCASE(tmp));
   if l1 > 0 then
-    delete(tmp,1,l1+length(sub1)-1);
+    Delete(tmp, 1, l1 + length(sub1) - 1);
 
-  l2 := pos(LOWERCASE(sub2),LOWERCASE(tmp));
+  l2 := pos(LOWERCASE(sub2), LOWERCASE(tmp));
   if l2 > 0 then
     l2 := l2 + length(s) - length(tmp);
 
-  if (l1>0)and(l2>0) then
-    Delete(s,l1,l2 - l1 + length(sub2));
+  if (l1 > 0) and (l2 > 0) then
+    Delete(s, l1, l2 - l1 + length(sub2));
 
-  result := S;
+  Result := s;
 end;
 
 function ExtractFolder(s: string): string;
 var
-  p1,p2: integer;
+  p1, p2: Integer;
 begin
   p1 := length(s);
-  while (p1 > 0) and not(CharInSet(s[p1],['/','\'])) do
+  while (p1 > 0) and not(CharInSet(s[p1], ['/', '\'])) do
     dec(p1);
   p2 := p1 - 1;
-  while (p2 > 0) and not(CharInSet(s[p2],['/','\'])) do
+  while (p2 > 0) and not(CharInSet(s[p2], ['/', '\'])) do
     dec(p2);
-  result := copy(s,p2+1,p1-p2-1);
+  Result := copy(s, p2 + 1, p1 - p2 - 1);
 end;
 
-function MoveDir(const fromDir, toDir: string): Boolean;
+function MoveDir(const fromDir, toDir: string): boolean;
 var
   fos: TSHFileOpStruct;
 begin
   ZeroMemory(@fos, SizeOf(fos));
   with fos do
   begin
-    wFunc  := FO_MOVE;
+    wFunc := FO_MOVE;
     fFlags := FOF_FILESONLY;
-    pFrom  := PChar(fromDir + #0);
-    pTo    := PChar(toDir)
+    pFrom := PChar(fromDir + #0);
+    pTo := PChar(toDir)
   end;
   Result := (0 = ShFileOperation(fos));
 end;
 
-
 procedure MultWordArrays(var a1: TArrayOfWord; a2: TArrayOfWord);
 var
-  i,la1,la2: integer;
+  i, la1, la2: Integer;
 begin
   la1 := length(a1);
   la2 := length(a2);
-  SetLength(a1,la1+la2);
+  SetLength(a1, la1 + la2);
 
-  for i := 0 to la2-1 do
-    a1[la1+i] := a2[i];
+  for i := 0 to la2 - 1 do
+    a1[la1 + i] := a2[i];
 end;
 
 procedure _Delay(dwMilliseconds: Longint);
- var
-   iStart, iStop: DWORD;
- begin
-   iStart := GetTickCount;
-   repeat
-     iStop := GetTickCount;
-     Application.ProcessMessages;
-   until (iStop - iStart) >= DWORD(dwMilliseconds);
+var
+  iStart, iStop: DWORD;
+begin
+  iStart := GetTickCount;
+  repeat
+    iStop := GetTickCount;
+    Application.ProcessMessages;
+  until (iStop - iStart) >= DWORD(dwMilliseconds);
 end;
 
 function ValidFName(FName: String; bckslsh: boolean): String;
 const
-  n = ['\','/',':','*','"','<','>','|','?'];
+  n = ['\', '/', ':', '*', '"', '<', '>', '|', '?'];
 var
-  i: integer;
+  i: Integer;
 begin
   for i := 1 to length(FName) do
-    if CharInSet(FName[i],n) and (not bckslsh or (FName[i] <> '\')) then
+    if CharInSet(FName[i], n) and (not bckslsh or (FName[i] <> '\')) then
       FName[i] := '_';
   Result := FName;
 end;
 
-function strlisttostr(s: tstringlist; del, ins: char): string;
+function strlisttostr(s: tstringlist; del, ins: Char): string;
 var
-  i,j: integer;
-  s1,s2: string;
+  i, j: Integer;
+  s1, s2: string;
 begin
-  result := '';
+  Result := '';
   for i := 0 to s.Count - 1 do
   begin
     s2 := '';
     s1 := s[i];
-    j := pos(ins,s1);
+    j := pos(ins, s1);
     while j > 0 do
     begin
-      s2 := s2 + copy(s1,1,j)+ins;
-      delete(s1,1,j);
-      j := pos(ins,s1);
+      s2 := s2 + copy(s1, 1, j) + ins;
+      Delete(s1, 1, j);
+      j := pos(ins, s1);
     end;
     s2 := s2 + s1;
 
-    if (ins <> #0) and (pos(del,s2) > 0) then
+    if (ins <> #0) and (pos(del, s2) > 0) then
       s2 := ins + s2 + ins;
-    if i < s.Count-1 then
-      result := result + s2 + del
+    if i < s.Count - 1 then
+      Result := Result + s2 + del
     else
-      result := result + s2;
+      Result := Result + s2;
   end;
 end;
 
-function strtostrlist(s: string; del, ins: char): string;
+function strtostrlist(s: string; del, ins: Char): string;
 var
   ss: string;
 begin
-  result := '';
+  Result := '';
   while s <> '' do
   begin
-    ss := GetNextS(s,del,ins);
+    ss := GetNextS(s, del, ins);
     if s = '' then
-      result := result + ss
+      Result := Result + ss
     else
-      result := result + ss + #13#10;
+      Result := Result + ss + #13#10;
   end;
 end;
 
@@ -763,13 +883,13 @@ procedure DrawImage(AImage: TImage; AStream: TStream; Ext: String);
 var
   Graphic: TGraphic;
 begin
-  Ext := lowercase(Ext);
-  delete(Ext, 1, 1);
+  Ext := LOWERCASE(Ext);
+  Delete(Ext, 1, 1);
   Graphic := nil;
   if (Ext = 'jpeg') or (Ext = 'jpg') then
     Graphic := TJPEGIMAGE.Create;
   if (Ext = 'png') then
-    Graphic := TPNGIMAGE.Create;
+    Graphic := TPngImage.Create;
   if (Ext = 'gif') then
   begin
     Graphic := TGIFIMAGE.Create;
@@ -802,32 +922,31 @@ end;
 
 procedure WriteLWToPChar(n: LongWord; p: PChar);
 begin
-  (p+0)^ := Char(n mod 256);
-  (p+1)^ := Char(n div 256 mod 256);
-  (p+2)^ := Char(n div 256 div 256 mod 256);
-  (p+3)^ := Char(n div 256 div 256 div 256 mod 256);
+  (p + 0)^ := Char(n mod 256);
+  (p + 1)^ := Char(n div 256 mod 256);
+  (p + 2)^ := Char(n div 256 div 256 mod 256);
+  (p + 3)^ := Char(n div 256 div 256 div 256 mod 256);
 end;
 
 function ReadLWFromPChar(p: PChar): LongWord;
 begin
-  result := Ord((p+0)^)
-            + Ord((p+1)^) * 256
-            + Ord((p+2)^) * 256 * 256
-            + Ord((p+3)^) * 256 * 256 * 256;
+  Result := Ord((p + 0)^) + Ord((p + 1)^) * 256 + Ord((p + 2)^) * 256 * 256 +
+    Ord((p + 3)^) * 256 * 256 * 256;
 end;
 
 function PngToIcon(const Png: TPngImage; Background: TColor): HICON;
 const
   MaxRGBQuads = MaxInt div SizeOf(TRGBQuad) - 1;
 type
-  TRGBQuadArray = array[0..MaxRGBQuads] of TRGBQuad;
+  TRGBQuadArray = array [0 .. MaxRGBQuads] of TRGBQuad;
   PRGBQuadArray = ^TRGBQuadArray;
+
   TBitmapInfo4 = packed record
     bmiHeader: TBitmapV4Header;
-    bmiColors: array[0..0] of TRGBQuad;
+    bmiColors: array [0 .. 0] of TRGBQuad;
   end;
 
-  function PngToIcon32(Png: TPngImage): HIcon;
+  function PngToIcon32(Png: TPngImage): HICON;
   var
     ImageBits: PRGBQuadArray;
     BitmapInfo: TBitmapInfo4;
@@ -836,14 +955,15 @@ type
     MaskBitmap: TBitmap;
     X, Y: Integer;
     AlphaLine: PByteArray;
-    HasAlpha, HasBitmask: Boolean;
+    HasAlpha, HasBitmask: boolean;
     Color, TransparencyColor: TColor;
   begin
-    //Convert a PNG object to an alpha-blended icon resource
+    // Convert a PNG object to an alpha-blended icon resource
     ImageBits := nil;
 
-    //Allocate a DIB for the color data and alpha channel
-    with BitmapInfo.bmiHeader do begin
+    // Allocate a DIB for the color data and alpha channel
+    with BitmapInfo.bmiHeader do
+    begin
       bV4Size := SizeOf(BitmapInfo.bmiHeader);
       bV4Width := Png.Width;
       bV4Height := Png.Height;
@@ -863,16 +983,18 @@ type
     AlphaBitmap := CreateDIBSection(0, PBitmapInfo(@BitmapInfo)^,
       DIB_RGB_COLORS, Pointer(ImageBits), 0, 0);
     try
-      //Spin through and fill it with a wash of color and alpha.
+      // Spin through and fill it with a wash of color and alpha.
       AlphaLine := nil;
       HasAlpha := Png.Header.ColorType in [COLOR_GRAYSCALEALPHA,
         COLOR_RGBALPHA];
       HasBitmask := Png.TransparencyMode = ptmBit;
       TransparencyColor := Png.TransparentColor;
-      for Y := 0 to Png.Height - 1 do begin
+      for Y := 0 to Png.Height - 1 do
+      begin
         if HasAlpha then
           AlphaLine := Png.AlphaScanline[Png.Height - Y - 1];
-        for X := 0 to Png.Width - 1 do begin
+        for X := 0 to Png.Width - 1 do
+        begin
           Color := Png.Pixels[X, Png.Height - Y - 1];
           ImageBits^[Y * Png.Width + X].rgbRed := Color and $FF;
           ImageBits^[Y * Png.Width + X].rgbGreen := Color shr 8 and $FF;
@@ -880,12 +1002,12 @@ type
           if HasAlpha then
             ImageBits^[Y * Png.Width + X].rgbReserved := AlphaLine^[X]
           else if HasBitmask then
-            ImageBits^[Y * Png.Width + X].rgbReserved := Integer(Color <>
-              TransparencyColor) * 255;
+            ImageBits^[Y * Png.Width + X].rgbReserved :=
+              Integer(Color <> TransparencyColor) * 255;
         end;
       end;
 
-      //Create an empty mask
+      // Create an empty mask
       MaskBitmap := TBitmap.Create;
       try
         MaskBitmap.Width := Png.Width;
@@ -895,8 +1017,8 @@ type
         MaskBitmap.Canvas.FillRect(Rect(0, 0, MaskBitmap.Width,
           MaskBitmap.Height));
 
-        //Create the alpha blended icon
-        IconInfo.fIcon := True;
+        // Create the alpha blended icon
+        IconInfo.fIcon := true;
         IconInfo.hbmColor := AlphaBitmap;
         IconInfo.hbmMask := MaskBitmap.Handle;
         Result := CreateIconIndirect(IconInfo);
@@ -908,7 +1030,7 @@ type
     end;
   end;
 
-  function PngToIcon24(Png: TPngImage; Background: TColor): HIcon;
+  function PngToIcon24(Png: TPngImage; Background: TColor): HICON;
   var
     ColorBitmap, MaskBitmap: TBitmap;
     X, Y: Integer;
@@ -926,14 +1048,15 @@ type
       MaskBitmap.Height := Png.Height;
       MaskBitmap.PixelFormat := pf32bit;
 
-      //Draw the color bitmap
+      // Draw the color bitmap
       ColorBitmap.Canvas.Brush.Color := Background;
       ColorBitmap.Canvas.FillRect(Rect(0, 0, Png.Width, Png.Height));
       Png.Draw(ColorBitmap.Canvas, Rect(0, 0, Png.Width, Png.Height));
 
-      //Create the mask bitmap
+      // Create the mask bitmap
       if Png.Header.ColorType in [COLOR_GRAYSCALEALPHA, COLOR_RGBALPHA] then
-        for Y := 0 to Png.Height - 1 do begin
+        for Y := 0 to Png.Height - 1 do
+        begin
           AlphaLine := Png.AlphaScanline[Y];
           for X := 0 to Png.Width - 1 do
             if AlphaLine^[X] = 0 then
@@ -941,7 +1064,8 @@ type
             else
               SetPixelV(MaskBitmap.Canvas.Handle, X, Y, clBlack);
         end
-      else if Png.TransparencyMode = ptmBit then begin
+      else if Png.TransparencyMode = ptmBit then
+      begin
         TransparencyColor := Png.TransparentColor;
         for Y := 0 to Png.Height - 1 do
           for X := 0 to Png.Width - 1 do
@@ -951,8 +1075,8 @@ type
               SetPixelV(MaskBitmap.Canvas.Handle, X, Y, clBlack);
       end;
 
-      //Create the icon
-      IconInfo.fIcon := True;
+      // Create the icon
+      IconInfo.fIcon := true;
       IconInfo.hbmColor := ColorBitmap.Handle;
       IconInfo.hbmMask := MaskBitmap.Handle;
       Result := CreateIconIndirect(IconInfo);
@@ -963,37 +1087,43 @@ type
   end;
 
 begin
-  if GetComCtlVersion >= ComCtlVersionIE6 then begin
-    //Windows XP or later, using the modern method: convert every PNG to
-    //an icon resource with alpha channel
+  if GetComCtlVersion >= ComCtlVersionIE6 then
+  begin
+    // Windows XP or later, using the modern method: convert every PNG to
+    // an icon resource with alpha channel
     Result := PngToIcon32(Png);
   end
-  else begin
-    //No Windows XP, using the legacy method: copy every PNG to a normal
-    //bitmap using a fixed background color
+  else
+  begin
+    // No Windows XP, using the legacy method: copy every PNG to a normal
+    // bitmap using a fixed background color
     Result := PngToIcon24(Png, Background);
   end;
 end;
 
 function ImageFormat(Start: Pointer): string;
 type
-  ByteArray = array[0..10] of byte;
+  ByteArray = array [0 .. 10] of byte;
 
 var
   PB: ^ByteArray absolute Start;
-  PW: ^Word absolute Start;
-  PL: ^DWord absolute Start;
+  PW: ^word absolute Start;
+  PL: ^DWORD absolute Start;
 
 begin
   if PL^ = $38464947 then
-    begin
-{    if PB^[4] = Ord('9') then Result := '.gif'
-    else }Result := '.gif';
-    end
-  else if PW^ = $4D42 then Result := '.bmp'
-  else if PL^ = $474E5089 then Result := '.png'
-  else if PW^ = $D8FF then Result := '.jpeg'
-  else Result := '';
+  begin
+    { if PB^[4] = Ord('9') then Result := '.gif'
+      else } Result := '.gif';
+  end
+  else if PW^ = $4D42 then
+    Result := '.bmp'
+  else if PL^ = $474E5089 then
+    Result := '.png'
+  else if PW^ = $D8FF then
+    Result := '.jpeg'
+  else
+    Result := '';
 end;
 
 function GetWinVersion: string;
@@ -1002,22 +1132,26 @@ var
   OSName: string;
 begin
   // устанавливаем размер записи
-  VersionInfo.dwOSVersionInfoSize := SizeOf( TOSVersionInfo );
-  if Windows.GetVersionEx( VersionInfo ) then
+  VersionInfo.dwOSVersionInfoSize := SizeOf(TOSVersionInfo);
+  if Windows.GetVersionEx(VersionInfo) then
   begin
     with VersionInfo do
     begin
       case dwPlatformId of
-        VER_PLATFORM_WIN32s: OSName := 'Win32s';
-        VER_PLATFORM_WIN32_WINDOWS: OSName := 'Windows 95';
-        VER_PLATFORM_WIN32_NT: OSName := 'Windows NT';
+        VER_PLATFORM_WIN32s:
+          OSName := 'Win32s';
+        VER_PLATFORM_WIN32_WINDOWS:
+          OSName := 'Windows 95';
+        VER_PLATFORM_WIN32_NT:
+          OSName := 'Windows NT';
       end; // case dwPlatformId
-      Result := OSName + ' Version ' + IntToStr( dwMajorVersion ) + '.' + IntToStr( dwMinorVersion ) +
-      #13#10' (Build ' + IntToStr( dwBuildNumber ) + ': ' + szCSDVersion + ')';
+      Result := OSName + ' Version ' + IntToStr(dwMajorVersion) + '.' +
+        IntToStr(dwMinorVersion) + #13#10' (Build ' + IntToStr(dwBuildNumber) +
+        ': ' + szCSDVersion + ')';
     end; // with VersionInfo
   end // if GetVersionEx
   else
-  Result := '';
+    Result := '';
 end;
 
 procedure ShutDown;
@@ -1029,23 +1163,27 @@ var
   tkpo: TTokenPrivileges;
   zero: DWORD;
 begin
-  if Pos('Windows NT', GetWinVersion) = 1 then // we've got to do a whole buch of things
+  if pos('Windows NT', GetWinVersion) = 1 then
+  // we've got to do a whole buch of things
   begin
     zero := 0;
-    if not OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES or TOKEN_QUERY, hToken) then
+    if not OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES or
+      TOKEN_QUERY, hToken) then
     begin
       MessageBox(0, 'Exit Error', 'OpenProcessToken() Failed', MB_OK);
       Exit;
     end; // if not OpenProcessToken( GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES or TOKEN_QUERY, hToken)
 
-    if not OpenProcessToken( GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES or TOKEN_QUERY, hToken) then
+    if not OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES or
+      TOKEN_QUERY, hToken) then
     begin
       MessageBox(0, 'Exit Error', 'OpenProcessToken() Failed', MB_OK);
       Exit;
     end; // if not OpenProcessToken( GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES or TOKEN_QUERY, hToken)
 
     // SE_SHUTDOWN_NAME
-    if not LookupPrivilegeValue( nil, 'SeShutdownPrivilege' , tkp.Privileges[0].Luid ) then
+    if not LookupPrivilegeValue(nil, 'SeShutdownPrivilege',
+      tkp.Privileges[0].Luid) then
     begin
       MessageBox(0, 'Exit Error', 'LookupPrivilegeValue() Failed', MB_OK);
       Exit;
@@ -1054,20 +1192,146 @@ begin
     tkp.PrivilegeCount := 1;
     tkp.Privileges[0].Attributes := SE_PRIVILEGE_ENABLED;
 
-    AdjustTokenPrivileges(hToken, False, tkp, SizeOf( TTokenPrivileges ), tkpo, zero);
-    if Boolean(GetLastError()) then
+    AdjustTokenPrivileges(hToken, false, tkp, SizeOf(TTokenPrivileges),
+      tkpo, zero);
+    if boolean(GetLastError()) then
     begin
       MessageBox(0, 'Exit Error', 'AdjustTokenPrivileges() Failed', MB_OK);
       Exit;
     end // if Boolean( GetLastError() )
     else
-      ExitWindowsEx( EWX_FORCE or EWX_SHUTDOWN, 0 );
+      ExitWindowsEx(EWX_FORCE or EWX_SHUTDOWN, 0);
 
   end // if OSVersion = 'Windows NT'
   else
   begin // just shut the machine down
-    ExitWindowsEx( EWX_FORCE or EWX_SHUTDOWN, 0 );
+    ExitWindowsEx(EWX_FORCE or EWX_SHUTDOWN, 0);
   end; // else
+end;
+
+function CheckStr(s: string; a: TSetOfChar; inv: boolean = false): boolean;
+var
+  i: Integer;
+begin
+  for i := 1 to length(s) do
+    if inv and CharInSet(s[i], a) or not inv and not CharInSet(s[i], a) then
+    begin
+      Result := true;
+      Exit;
+    end;
+
+  Result := false;
+end;
+
+function CheckStrPos(s: string; a: TSetOfChar; inv: boolean = false): Integer;
+var
+  i: Integer;
+begin
+  for i := 1 to length(s) do
+    if inv and CharInSet(s[i], a) or not inv and not CharInSet(s[i], a) then
+    begin
+      Result := i;
+      Exit;
+    end;
+
+  Result := 0;
+end;
+
+function CharPos(str: string; ch: Char; Isolators: array of string;
+  From: Integer = 1): Integer;
+var
+  i, j: Integer;
+  n: boolean;
+  s: Char;
+  st: TSetOfChar;
+begin
+  st := [];
+  for i := 0 to length(Isolators) - 1 do
+    st := st + [Isolators[i][1]];
+
+  n := false;
+  s := #0;
+
+  for i := From to length(str) do
+    if n then
+      if str[i] = s then
+        n := false
+      else
+    else if str[i] = ch then
+    begin
+      Result := i;
+      Exit;
+    end
+    else if CharInSet(str[i], st) then
+    begin
+      for j := 0 to length(Isolators) - 1 do
+        if (str[i] = Isolators[j][1]) then
+        begin
+          s := Isolators[j][2];
+          break;
+        end;
+      n := true;
+    end;
+  Result := 0;
+end;
+
+function CharPosEx(str: string; ch: TSetOfChar; Isolators: array of string;
+  From: Integer = 1): Integer;
+var
+  i, j: Integer;
+  n: boolean;
+  s: Char;
+  st: TSetOfChar;
+begin
+  st := [];
+  for i := 0 to length(Isolators) - 1 do
+    st := st + [Isolators[i][1]];
+
+  n := false;
+  s := #0;
+
+  for i := From to length(str) do
+    if n then
+      if str[i] = s then
+        n := false
+      else
+    else if CharInSet(str[i],ch) then
+    begin
+      Result := i;
+      Exit;
+    end
+    else if CharInSet(str[i], st) then
+    begin
+      for j := 0 to length(Isolators) - 1 do
+        if (str[i] = Isolators[j][1]) then
+        begin
+          s := Isolators[j][2];
+          break;
+        end;
+      n := true;
+    end;
+  Result := 0;
+end;
+
+function FileToString(AFileName: string): string;
+var
+  vStream: TFileStream;
+  vString: string;
+begin
+  if AFileName = '' then
+  begin
+    Result := '';
+    Exit;
+  end;
+  vStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyNone);
+  try
+    vStream.Position := 0;
+    SetLength(vString, vStream.Size);
+    vStream.ReadBuffer(Pointer(vString)^, vStream.Size);
+  finally
+    vStream.Free;
+  end;
+  Result := vString;
 end;
 
 end.

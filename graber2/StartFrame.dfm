@@ -1,11 +1,13 @@
 object fStart: TfStart
   Left = 0
   Top = 0
-  Width = 451
-  Height = 304
+  Width = 605
+  Height = 415
   Align = alClient
   TabOrder = 0
   OnResize = FrameResize
+  ExplicitWidth = 451
+  ExplicitHeight = 304
   object iIcon: TImage
     Left = 32
     Top = 85
@@ -19,7 +21,7 @@ object fStart: TfStart
     Top = 85
     Width = 169
     Height = 25
-    Caption = 'Create new list'
+    Caption = 'bNew'
     TabOrder = 0
     OnClick = bNewClick
   end
@@ -28,7 +30,7 @@ object fStart: TfStart
     Top = 129
     Width = 169
     Height = 25
-    Caption = 'Load saved list'
+    Caption = 'bLoad'
     TabOrder = 1
   end
   object bSettings: TcxButton
@@ -36,7 +38,16 @@ object fStart: TfStart
     Top = 176
     Width = 169
     Height = 25
-    Caption = 'Settings'
+    Caption = 'bSettings'
     TabOrder = 2
+  end
+  object bExit: TcxButton
+    Left = 360
+    Top = 216
+    Width = 169
+    Height = 25
+    Caption = 'bExit'
+    TabOrder = 3
+    OnClick = bExitClick
   end
 end
