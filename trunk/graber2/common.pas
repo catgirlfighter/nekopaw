@@ -2,21 +2,9 @@
 
 interface
 
-uses Classes, SysUtils, Math, Forms, StdCtrls, ExtCtrls, ComCtrls, Controls,
-  HTTPApp,
-  ShellAPI, Windows, Graphics, JPEG, GIFImg, PNGImage, Messages;
-
-const
-  UNIQUE_ID = 'GRABER2LOCK';
-
-  CM_EXPROW = WM_USER + 1;
-  CM_NEWLIST = WM_USER + 2;
-  CM_APPLYNEWLIST = WM_USER + 3;
-  CM_CANCELNEWLIST = WM_USER + 4;
-  CM_EDITLIST = WM_USER + 5;
-  CM_APPLYEDITLIST = WM_USER + 6;
-
-  SAVEFILE_VERSION = 0;
+uses Classes, Variants, SysUtils, Math, Forms, StdCtrls, ExtCtrls, ComCtrls,
+  Controls,
+  HTTPApp, ShellAPI, Windows, Graphics, JPEG, GIFImg, PNGImage;
 
 type
   TArrayOfWord = array of word;
@@ -72,9 +60,12 @@ function CharPosEx(str: string; ch: TSetOfChar; Isolators: array of string;
 function GetNextS(var s: string; del: Char = ';'; ins: Char = #0): string;
 function GetNextSEx(var s: string; del: TSetOfChar = [';'];
   ins: TSetOfChar = []): string;
-function FileToString(AFileName: string): string;
+procedure FileToString(FileName: String; var AValue: AnsiString);
+function MathCalcStr(const s: string): variant;
 
 implementation
+
+uses LangString;
 
 function ClearHTML(s: string): string; // Заебись
 
@@ -1295,7 +1286,7 @@ begin
       if str[i] = s then
         n := false
       else
-    else if CharInSet(str[i],ch) then
+    else if CharInSet(str[i], ch) then
     begin
       Result := i;
       Exit;
@@ -1313,25 +1304,182 @@ begin
   Result := 0;
 end;
 
-function FileToString(AFileName: string): string;
+procedure FileToString(FileName: String; var AValue: AnsiString);
 var
-  vStream: TFileStream;
-  vString: string;
+  AStream: TFileStream;
 begin
-  if AFileName = '' then
-  begin
-    Result := '';
-    Exit;
-  end;
-  vStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyNone);
+  AStream := TFileStream.Create(FileName, fmOpenRead);
   try
-    vStream.Position := 0;
-    SetLength(vString, vStream.Size);
-    vStream.ReadBuffer(Pointer(vString)^, vStream.Size);
+    AStream.Position := 0;
+    SetLength(AValue, AStream.Size);
+    AStream.ReadBuffer(AValue[1], AStream.Size);
   finally
-    vStream.Free;
+    AStream.Free;
   end;
-  Result := vString;
+end;
+
+function MathCalcStr(const s: string): variant;
+const
+  ops = ['+', '-', '/', '|', '\', '*', '<', '=', '>', '!'];
+  { lvl1 = ['+', '-'];
+    lvl2 = ['*', '/', '|', '\'];
+    lvl3 = ['<', '>', '!', '=']; }
+  { p = 0 root
+    p = 1 + -
+    p = 2 * / | \
+    p = 3 < = > ! }
+  function Proc(const p: byte; const s: string; var i: Integer;
+    isstring: boolean = false): variant;
+  var
+    n, tmp, l, lvl: Integer;
+    op: boolean;
+    d: variant;
+  label cc; // looooool
+
+  begin
+    Result := null;
+    l := length(s);
+    op := false;
+    d := null;
+    while i <= l do
+      case s[i] of
+        ' ',#13,#10,#9:
+          inc(i);
+        '"', '''':
+          begin
+            if op then
+              raise Exception.Create(Format(_OPERATOR_MISSED_, [i]));
+
+            n := CharPos(s, s[i], [], i + 1);
+
+            if n = 0 then
+              raise Exception.Create(Format(_SYMBOL_MISSED_, [s[i], i]));
+
+            Result := copy(s, i + 1, n - i - 1);
+
+            i := n + 1;
+
+            if p > 0 then
+              break;
+
+            op := true;
+          end;
+        '+', '-', '/', '|', '\', '*', '<', '=', '>', '!', '&':
+          begin
+            if not op and (s[i] <> '!') then
+              if s[i] = '-' then
+                goto cc
+              else
+                raise Exception.Create(Format(_OPERAND_MISSED_, [i]));
+
+            lvl := 0;
+            case s[i] of
+              '|':
+                lvl := 1;
+              '&':
+                lvl := 2;
+              '<', '>', '!', '=':
+                lvl := 3;
+              '+', '-':
+                lvl := 4;
+              '*', '/':
+                lvl := 5;
+            end;
+
+            if (lvl <= p) and not isstring then
+              break;
+
+            tmp := i;
+            inc(i);
+            d := Proc(lvl, s, i, VarIsStr(Result));
+
+            if VarIsStr(d) and (p <> 0) then
+            begin
+              i := tmp;
+              break;
+            end;
+
+            try
+            case s[tmp] of
+              '&':
+                Result := Result and d;
+              '|':
+                Result := Result or d;
+              '+':
+                if VarIsStr(Result) or VarIsStr(d) then
+                  Result := VarToStr(Result) + VarToStr(d)
+                else
+                  Result := Result + d;
+              '-':
+                Result := Result - d;
+              '*':
+                Result := Result * d;
+              '/':
+                Result := Result / d;
+              '<':
+                Result := Result < d;
+              '>':
+                Result := Result > d;
+              '=':
+                Result := Result = d;
+              '!':
+                if op then
+                  Result := Result <> d
+                else
+                  Result := not Result;
+            end;
+            except
+              on e: exception do
+              begin
+                e.Message := Format(_INVALID_TYPECAST_,[Result,s[tmp],d,tmp]) +
+                  #13#10 + e.Message;
+                raise e;
+              end;
+            end;
+          end;
+        '(':
+          begin
+            if op then
+              raise Exception.Create(Format(_OPERATOR_MISSED_, [i]));
+
+            n := CharPos(s, ')', [], i + 1);
+
+            if n = 0 then
+              raise Exception.Create(Format(_SYMBOL_MISSED_, [')', i]));
+
+            tmp := 1;
+            Result := Proc(0, copy(s, i + 1, n - i - 1), tmp);
+
+            i := n + 1;
+
+            op := true;
+          end;
+      else
+        begin
+        cc:
+          if op then
+            raise Exception.Create(Format(_OPERATOR_MISSED_, [i]));
+
+          n := CharPosEx(s, ops + [' '], ['''''', '""', '()'], i + 1);
+
+          if n = 0 then
+            n := l + 1;
+
+          Result := copy(s, i, n - i);
+          Result := Result + 0;
+          i := n;
+          op := true;
+        end;
+      end;
+
+  end;
+
+var
+  i: Integer;
+
+begin
+  i := 1;
+  Result := Proc(0, s, i);
 end;
 
 end.

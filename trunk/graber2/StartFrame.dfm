@@ -1,13 +1,11 @@
 object fStart: TfStart
   Left = 0
   Top = 0
-  Width = 605
-  Height = 415
+  Width = 451
+  Height = 304
   Align = alClient
   TabOrder = 0
   OnResize = FrameResize
-  ExplicitWidth = 451
-  ExplicitHeight = 304
   object iIcon: TImage
     Left = 32
     Top = 85
@@ -40,6 +38,7 @@ object fStart: TfStart
     Height = 25
     Caption = 'bSettings'
     TabOrder = 2
+    OnClick = bSettingsClick
   end
   object bExit: TcxButton
     Left = 360
