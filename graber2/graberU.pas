@@ -25,7 +25,7 @@ type
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
     destructor Destroy; override;
-    procedure Assign(List: TValueList);
+    procedure Assign(List: TValueList; AOperator: TListAssignOp = laCopy);
     property Items[Index: Integer]: TListValue read Get;
     property ItemByName[ItemName: String]: TListValue read FindItem;
     property Values[ItemName: String]: Variant read GetValue
@@ -132,12 +132,18 @@ type
 
   TLoginDSettings = class(TDownloadSettings)
   private
+    FAuth: Boolean;
     FLogin: String;
     FPassword: String;
   public
     constructor Create;
+    property NeedAuth: Boolean read FAuth write FAuth;
     property Login: String read FLogin write FLogin;
     property Password: String read FLogin write FLogin;
+  end;
+
+  TResourceFields = class(TList)
+
   end;
 
   TResource = class(TObject)
@@ -146,9 +152,12 @@ type
     FResName: String;
     FURL: String;
     FIconFile: String;
+    FParent: TResource;
+    FFields: TResourceFields;
     FLoginPage: TLoginDSettings;
     FFirstPage: TDownloadSettings;
     FThread: TThreadDSettings;
+    FInherit: Boolean;
   protected
     procedure ScriptEvent(const Parent: String; const Parametres: TValueList;
       var LinkedObj: TObject);
@@ -160,12 +169,15 @@ type
     destructor Destroy; override;
     procedure LoadFromFile(FName: String);
     property FileName: String read FFileName;
-    property Name: String read FResName;
+    property Name: String read FResName write FResName;
     property URL: String read FURL;
     property IconFile: String read FIconFile;
+    property Fields: TResourceFields read FFields;
     property LoginPage: TLoginDSettings read FLoginPage;
     property FirstPage: TDownloadSettings read FFirstPage;
     property Thread: TThreadDSettings read FThread;
+    property Parent: TResource read FParent write FParent;
+    property Inherit: Boolean read FInherit write FInherit;
   end;
 
   TResourceLinkList = class(TList)
@@ -359,20 +371,39 @@ begin
   Result := nil;
 end;
 
-procedure TValueList.Assign(List: TValueList);
+procedure TValueList.Assign(List: TValueList; AOperator: TListAssignOp);
 var
   i: Integer;
   p: TListValue;
 begin
-  Clear;
-  Capacity := List.Capacity;
-  for i := 0 to List.Count - 1 do
-  begin
-    p := TListValue.Create;
-    p.Name := List.Items[i].Name;
-    p.Value := List.Items[i].Value;
-    Add(p);
+  case AOperator of
+    laCopy:
+      begin
+        Clear;
+        Capacity := List.Capacity;
+        for i := 0 to List.Count - 1 do
+        begin
+          p := TListValue.Create;
+          p.Name := List.Items[i].Name;
+          p.Value := List.Items[i].Value;
+          Add(p);
+        end;
+      end;
+    laAnd:
+      ;
+    laOr:
+      begin
+        for i := 0 to List.Count - 1 do
+          Values[List.Items[i].Name] := List.Items[i].Value;
+      end;
+    laXor:
+      ;
+    laSrcUnique:
+      ;
+    laDestUnique:
+      ;
   end;
+
 end;
 // TPictureValueList
 
@@ -449,7 +480,8 @@ procedure TScriptSection.ParseValues(s: string);
 const
   EmptyS = [#9, #10, #13, ' ', '$'];
 
-  isl: array [0 .. 7] of string = ('''''', '""', '()', '=;', '^.', '?.', '{}','$=');
+  isl: array [0 .. 7] of string = ('''''', '""', '()', '=;', '^.', '?.',
+    '{}', '$=');
 
   Cons = ['=', '<', '>', '!'];
 
@@ -586,47 +618,57 @@ var
 
   function CalcValue(s: String): Variant;
   const
-    op = ['(', ')', '{', '}', '+', '-', '<', '>', '=', '!', '/', '\', '&',
-      ',', '~'];
+    op = ['(', ')', '+', '-', '<', '>', '=', '!', '/', '\', '&', ',',
+      '?', '~', '|', ' '];
     p = ['$', '%', '#', '@'];
-    isl: array [0 .. 2] of string = ('""', '''''', '{}');
+    isl: array [0 .. 1] of string = ('""', '''''');
 
   var
-    i, n1, n2: Integer;
+    n1, n2: Integer;
     cstr: string;
     rstr: Variant;
 
   begin
 
-    if Assigned(VE) then
+    if not Assigned(VE) then
+      Exit;
+
+    n1 := CharPos(s, '{', isl);
+
+    while n1 > 0 do
     begin
-      n2 := 0;
-
-      while true do
-      begin
-        n1 := CharPosEx(s, p, isl, n2 + 1);
-
-        if n1 = 0 then
-          Break;
-
-        n2 := CharPosEx(s, op, [], n1 + 1);
-
-        if n2 = 0 then
-          cstr := Copy(s, n1 + 1, length(s) - n1 - 1)
-        else
-          cstr := Copy(s, n1 + 1, n2 - n1 - 2);
-
-        rstr := null;
-        VE(s[n1], cstr, rstr, Lnk);
-        cstr := s[n1] + cstr;
-        Replace(s, cstr, rstr, false, true);
-
-        n2 := n1 + length(rstr) - 1;
-
-      end;
+      n2 := CharPos(s, '}', [], n1 + 1);
+      if n2 = 0 then
+        raise Exception.Create(Format(_SYMBOL_MISSED_, ['}', n1]));
+      Delete(s, n1, n2 - n1 + 1);
+      n1 := CharPos(s, '{', isl);
     end;
 
-    Result := TrimEx(s,['''','"']);
+    while true do
+    begin
+      n1 := CharPosEx(s, p, isl, n2 + 1);
+
+      if n1 = 0 then
+        Break;
+
+      n2 := CharPosEx(s, op, [], n1 + 1);
+
+      if n2 = 0 then
+        cstr := Copy(s, n1 + 1, length(s) - n1 - 1)
+      else
+        cstr := Copy(s, n1 + 1, n2 - n1 - 2);
+
+      rstr := null;
+      VE(s[n1], cstr, rstr, Lnk);
+      cstr := s[n1] + cstr;
+      Replace(s, cstr, rstr, false, true);
+
+      n2 := n1 + length(rstr) - 1;
+
+    end;
+
+    Result := MathCalcStr(s);
+
   end;
 
 var
@@ -662,9 +704,9 @@ begin
     FreeAndNil(Calced);
   end;
 
-  (* Œœ»—¿“‹ ¬€œŒÀÕ≈Õ»≈ ”—ÀŒ¬»… CONDITIONS *)
+  (* FINISH CONDITIONS DECLORATION *)
 
-  (* Œœ»—¿“‹ ¬€œŒÀÕ≈Õ»≈ ƒŒ◊≈–Õ»’ –¿«ƒ≈ÀŒ¬ CHILDSECTIONS *)
+  (* FINISH CHILDSECTIONS DECLORATION *)
 
 end;
 
@@ -717,6 +759,7 @@ end;
 constructor TLoginDSettings.Create;
 begin
   inherited;
+  FAuth := false;
   FLogin := '';
   FPassword := '';
 end;
@@ -729,6 +772,9 @@ begin
   FFileName := '';
   FURL := '';
   FIconFile := '';
+  FParent := nil;
+  FInherit := true;
+  FFields := TResourceFields.Create;
   FLoginPage := TLoginDSettings.Create;
   FFirstPage := TDownloadSettings.Create;
   FThread := TThreadDSettings.Create;
@@ -739,6 +785,7 @@ begin
   FLoginPage.Free;
   FFirstPage.Free;
   FThread.Free;
+  FFields.Free;
   inherited;
 end;
 
@@ -762,7 +809,9 @@ procedure TResource.DeclorationEvent(Values: TValueList);
       FURL := ItemValue
     else if ItemName = 'icon' then
       FIconFile := ItemValue
-    else if ItemName = 'loginpage.login' then // LoginPage
+    else if ItemName = 'loginpage.authorazation' then // LoginPage
+      LoginPage.NeedAuth := StrToBool(ItemValue)
+    else if ItemName = 'loginpage.login' then
       LoginPage.Login := ItemValue
     else if ItemName = 'loginpage.password' then
       LoginPage.Password := ItemValue
@@ -852,14 +901,14 @@ const
     end;
   end;
 
-  function nullstr(n: variant): string;
+  function nullstr(n: Variant): string;
   begin
     if n = null then
-      result := ''
+      Result := ''
     else
-      result := n;
+      Result := n;
   end;
-  
+
 var
   mainscript: TScriptSection;
   sectors: TValueList;
@@ -936,13 +985,20 @@ procedure TResourceList.LoadList(Dir: String);
 var
   a: TSearchRec;
   r: TResource;
+
 begin
   Clear;
+
+  r := TResource.Create;
+  r.Inherit := false;
+  r.Name := _ALL_;
+  Add(r);
+
+  r := nil;
 
   if not DirectoryExists(Dir) then
     raise Exception.Create(Format(_NO_DIRECTORY_, [Dir]));
 
-  r := nil;
   Dir := IncludeTrailingPathDelimiter(Dir);
 
   if FindFirst(Dir + '*.cfg', faAnyFile, a) = 0 then

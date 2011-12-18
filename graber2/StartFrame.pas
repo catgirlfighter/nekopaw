@@ -30,6 +30,7 @@ type
     procedure FrameResize(Sender: TObject);
     procedure bNewClick(Sender: TObject);
     procedure bExitClick(Sender: TObject);
+    procedure bSettingsClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -38,7 +39,7 @@ type
 
 implementation
 
-uses MainForm;
+uses MainForm, OpBase;
 
 {$R *.dfm}
 
@@ -50,6 +51,11 @@ end;
 procedure TfStart.bNewClick(Sender: TObject);
 begin
   PostMessage(mf.Handle,CM_NEWLIST,0,0);
+end;
+
+procedure TfStart.bSettingsClick(Sender: TObject);
+begin
+  PostMessage(Application.MainForm.Handle,CM_SHOWSETTINGS,0,0);
 end;
 
 procedure TfStart.FrameResize(Sender: TObject);

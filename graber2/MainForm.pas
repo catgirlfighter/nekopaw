@@ -5,16 +5,17 @@ interface
 uses
   {base}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, DB, ActnList,
+  Dialogs, DB, ActnList, ExtCtrls,
   {devex}
   dxDockControl, dxDockPanel, cxGraphics, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxStyles, dxSkinsCore, dxSkinscxPCPainter,
   cxCustomData, cxFilter, cxData, cxDataStorage, cxEdit, cxDBData,
   cxGridLevel, cxClasses, cxGridCustomView, cxGridCustomTableView,
   cxGridTableView, cxGridDBTableView, cxGrid, dxSkinsdxDockControlPainter,
-  cxCheckBox, cxTextEdit, cxImage,
+  cxCheckBox, cxTextEdit, cxPC, dxBar, dxBarExtItems, cxContainer,
+  cxMemo,
   {graber2}
-  common;
+  common, OpBase;
 
 type
 
@@ -45,42 +46,22 @@ type
 
   Tmf = class(TForm)
     ActionList: TActionList;
-    aLNew: TAction;
     aLLoad: TAction;
     aSettings: TAction;
     aIAdvanced: TAction;
     aISimple: TAction;
-    ds: TdxDockSite;
-    DockManager: TdxDockingManager;
-    dpTags: TdxDockPanel;
-    dxLayoutDockSite1: TdxLayoutDockSite;
-    dpProgressLog: TdxDockPanel;
-    dpErrorLog: TdxDockPanel;
-    dxTabContainerDockSite1: TdxTabContainerDockSite;
-    dpPicInfo: TdxDockPanel;
-    dpGrid: TdxDockPanel;
-    dxLayoutDockSite5: TdxLayoutDockSite;
-    gLevel1: TcxGridLevel;
-    Grid: TcxGrid;
-    tvmMain: TcxGridTableView;
-    gLevel2: TcxGridLevel;
-    tvChild: TcxGridTableView;
-    tvmMainChck: TcxGridColumn;
-    tvmMainDName: TcxGridColumn;
-    tvChildChck: TcxGridColumn;
-    tvChildDName: TcxGridColumn;
-    dxLayoutDockSite3: TdxLayoutDockSite;
-    dxVertContainerDockSite2: TdxVertContainerDockSite;
     aLApplyNew: TAction;
     aLCancel: TAction;
     aStart: TAction;
-    deStyleRepository: TcxStyleRepository;
+    ds: TdxDockSite;
+    DockManager: TdxDockingManager;
+    BarManager: TdxBarManager;
+    bmbMain: TdxBar;
+    dxBarButton1: TdxBarButton;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure aLNewExecute(Sender: TObject);
     procedure gLevel2GetGridView(Sender: TcxGridLevel;
       AMasterRecord: TcxCustomGridRecord; var AGridView: TcxCustomGridView);
-    procedure aLCancelExecute(Sender: TObject);
     procedure aStartExecute(Sender: TObject);
     procedure dpGridCloseQuery(Sender: TdxCustomDockControl;
       var CanClose: Boolean);
@@ -92,14 +73,36 @@ type
     procedure NEWLIST(var Msg: TMessage); message CM_NEWLIST;
     procedure APPLYNEWLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
     procedure CANCELNEWLIST(var Msg: TMessage); message CM_CANCELNEWLIST;
-    procedure ShowGrid;
+    procedure TABCLOSE(var Msg: TMessage); message CM_CLOSETAB;
+    procedure SHOWSETTINGS(var Msg: TMessage); message CM_SHOWSETTINGS;
+    procedure CANCELSETTINGS(var Msg: TMessage); message CM_CANCELSETTINGS;
+    procedure APPLYSETTINGS(var Msg: TMessage); message CM_APPLYSETTINGS;
+    procedure dxTabClose(Sender: TdxCustomDockControl);
     // procedure APPLYEDITLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
   private
+    tagds: tdxTabContainerDockSite;
+    tableds: tdxTabContainerDockSite;
+    logds: tdxTabContainerDockSite;
+    TabList: TList;
+    pTags: TdxDockPanel;
+    pCTags: TdxDockPanel;
+    pLog, pErrors: TdxDockPanel;
+    mmLog: TcxMemo;
+    mmErrors: TcxMemo;
+    dsFirstShow: Boolean;
+    SttPanel: TdxDockPanel;
     { Private declarations }
   public
     OldState: TmfState;
     procedure tvMainRecordExpandable(MasterDataRow: TcxGridMasterDataRow;
       var Expandable: Boolean);
+    function CreateTab(ds: TdxCustomDockControl): TdxDockPanel;
+    function CreateTags(ds: TdxCustomDockControl): tdxTabContainerDockSite;
+    procedure ShowDs;
+    procedure HideDs;
+    procedure CloseTab(n: TdxDockPanel);
+    function CreateLogs(ds: TdxCustomDockControl): tdxTabContainerDockSite;
+
     { Public declarations }
   end;
 
@@ -108,7 +111,7 @@ var
 
 implementation
 
-uses StartFrame, NewListFrame, OpBase;
+uses StartFrame, NewListFrame, LangString, SettingsFrame;
 {$R *.dfm}
 { TmycxGridTableView }
 
@@ -179,29 +182,239 @@ begin
 end;
 
 procedure Tmf.NEWLIST(var Msg: TMessage);
+var
+  // pic: TPicture;
+  S: AnsiString;
+  n: TdxDockPanel;
+  f: TfNewList;
+  i: integer;
+
 begin
-  aLNewExecute(nil);
+  if Assigned(mFrame) then
+    FreeAndNil(mFrame);
+
+  n := CreateTab(tableds);
+  f := TfNewList.Create(n);
+  f.State := lfsNew;
+  f.Tag := integer(n);
+  n.Tag := integer(f);
+
+  with f do
+  begin
+    gFull.BeginUpdate;
+
+    // pic := TPicture.Create;
+
+    with tvRes.DataController do
+    begin
+      RecordCount := 1;
+      Values[0, 0] := 0;
+      Values[0, 2] := _ALL_;
+    end;
+
+    with tvFull.DataController do
+    begin
+      RecordCount := FullResList.Count - 1;
+      for i := 1 to FullResList.Count - 1 do
+      begin
+        Values[i - 1, 1] := i;
+        if FullResList[i].IconFile <> '' then
+        begin
+          { pic.LoadFromFile(rootdir + '\resources\icons\' + FullResList[i]
+            .IconFile);
+            SavePicture(pic, S); }
+          FileToString(rootdir + '\resources\icons\' + FullResList[i]
+            .IconFile, S);
+          Values[i - 1, 2] := S;
+        end;
+        { FileToString(rootdir+'\resources\icons\'+FullResLIst[i].IconFile) };
+        Values[i - 1, 3] := FullResList[i].Name;
+        // tvFull.DataController.
+      end;
+
+    end;
+
+    // pic.Free;
+    gFull.EndUpdate;
+  end;
+
+  f.Parent := n;
+  ShowDs;
 end;
 
 procedure Tmf.APPLYNEWLIST(var Msg: TMessage);
 begin
-  ShowGrid;
+
+end;
+
+procedure Tmf.APPLYSETTINGS(var Msg: TMessage);
+var
+//  n: TdxDockPanel;
+  f: TfSettings;
+begin
+//  n := Pointer(Msg.WParam);
+  f := TfSettings(SttPanel.Tag);
+
+  with f,GlobalSettings do
+  begin
+    Proxy.UseProxy := chbProxy.Checked;
+    Proxy.Host := eHost.Text;
+    Proxy.Port := ePort.Value;
+    Proxy.Auth := chbProxyAuth.Checked;
+    Proxy.Login := eProxyLogin.Text;
+    Proxy.Password := eProxyPassword.Text;
+    Proxy.SavePWD := chbProxySavePWD.Checked;
+
+    Downl.ThreadCount := eThreads.Value;
+    Downl.Retries := eRetries.Value;
+    Downl.Debug := chbDebug.Checked;
+
+    Downl.Interval := eInterval.Value;
+    Downl.BeforeU := chbBeforeU.Checked;
+    Downl.BeforeP := chbBeforeP.Checked;
+    Downl.AfterP := chbAfterP.Checked;
+
+    TrayIcon := chbTrayIcon.Checked;
+    HideToTray := chbHideToTray.Checked;
+    OneInstance := chbOneInstance.Checked;
+    SaveConfirm := chbSaveConfirm.Checked;
+  end;
+
+  f.Free;
+  SttPanel.Close;
+  SttPanel := nil;
 end;
 
 procedure Tmf.aStartExecute(Sender: TObject);
 begin
-  if ds.Visible then
-    ds.Hide;
   if Assigned(mFrame) and not(mFrame is TfStart) then
     FreeAndNil(mFrame);
+
+  ds.Hide;
 
   mFrame := TfStart.Create(Self);
   mFrame.Parent := Self;
 end;
 
 procedure Tmf.CANCELNEWLIST(var Msg: TMessage);
+var
+  n: TdxDockPanel;
+  f: TfNewList;
+
 begin
-  aLCancelExecute(nil);
+  n := Pointer(Msg.WParam);
+  f := TfNewList(n.Tag);
+  f.Free;
+  n.Close;
+end;
+
+procedure Tmf.CANCELSETTINGS(var Msg: TMessage);
+var
+  f: TfSettings;
+
+begin
+//  n := Pointer(Msg.WParam);
+  f := TfSettings(SttPanel.Tag);
+  f.Free;
+  SttPanel.Close;
+  SttPanel := nil;
+end;
+
+procedure Tmf.TABCLOSE(var Msg: TMessage);
+begin
+  CloseTab(Pointer(Msg.WParam));
+  if TabList.Count = 0 then
+    HideDs;
+end;
+
+procedure Tmf.CloseTab(n: TdxDockPanel);
+begin
+  // n.DockTo(ds,dtBottom,-1);
+  try
+    n.Free;
+  except
+  end;
+  // ShowMessage(n.Caption);
+  TabList.Remove(n);
+end;
+
+function Tmf.CreateLogs(ds: TdxCustomDockControl): tdxTabContainerDockSite;
+var
+  n: tdxTabContainerDockSite;
+begin
+  n := tdxTabContainerDockSite.Create(Self);
+  n.Height := 100;
+  // n.ShowCaption := false;
+  n.CaptionButtons := [cbHide];
+  n.Dockable := false;
+  // n.AutoHide := true;
+
+  pErrors := TdxDockPanel.Create(Self);
+  pErrors.Caption := 'pErrors';
+  pErrors.Dockable := false;
+  pErrors.DockTo(n, dtClient, 0);
+  mmErrors := TcxMemo.Create(pErrors);
+  mmErrors.Parent := pErrors;
+  mmErrors.Align := alClient;
+  mmErrors.Properties.ReadOnly := true;
+  pLog := TdxDockPanel.Create(Self);
+  pLog.Caption := 'pLog';
+  pLog.Dockable := false;
+  pLog.DockTo(n, dtClient, 0);
+  mmLog := TcxMemo.Create(pLog);
+  mmLog.Parent := pLog;
+  mmLog.Align := alClient;
+  mmLog.Properties.ReadOnly := true;
+
+  n.DockTo(ds, dtBottom, 0);
+  Result := n;
+  // n.Visible := false;
+  n.AutoHide := true;
+  n.Hide;
+  // mmLog := TcxMemo.
+end;
+
+function Tmf.CreateTab(ds: TdxCustomDockControl): TdxDockPanel;
+
+var
+  n: TdxDockPanel;
+
+begin
+  n := TdxDockPanel.Create(Self);
+  n.Caption := 'tablepanel' + IntToStr(TabList.Count + 1);
+  n.OnClose := dxTabClose;
+  n.Dockable := false;
+  n.ShowCaption := false;
+  n.CaptionButtons := [cbClose];
+  n.DockTo(ds, dtClient, TabList.Count);
+
+  TabList.Add(n);
+  Result := n;
+end;
+
+function Tmf.CreateTags(ds: TdxCustomDockControl): tdxTabContainerDockSite;
+var
+  ts: tdxTabContainerDockSite;
+begin
+  ts := tdxTabContainerDockSite.Create(Self);
+  ts.Caption := 'tagpanel';
+  ts.ShowCaption := false;
+  ts.TabsPosition := tctpTop;
+  ts.Width := 150;
+  ts.Visible := false;
+  ts.DockTo(ds, dtLeft, 0);
+
+  if not Assigned(pCTags) then
+    pCTags := TdxDockPanel.Create(Self);
+  pCTags.Caption := 'pCTags';
+  pCTags.DockTo(ts, dtClient, 0);
+
+  if not Assigned(pTags) then
+    pTags := TdxDockPanel.Create(Self);
+  pTags.Caption := 'pTags';
+  pTags.DockTo(ts, dtClient, 0);
+
+  Result := ts;
 end;
 
 procedure Tmf.dpGridCloseQuery(Sender: TdxCustomDockControl;
@@ -211,89 +424,126 @@ begin
   aStartExecute(nil);
 end;
 
-procedure Tmf.aLCancelExecute(Sender: TObject);
+procedure Tmf.dxTabClose(Sender: TdxCustomDockControl);
 begin
-  if tvMain.DataController.RecordCount > 0 then
-    ShowGrid
-  else
-    aStartExecute(nil);
+  PostMessage(Application.MainForm.Handle, CM_CLOSETAB, integer(Sender), 0);
 end;
 
-procedure Tmf.aLNewExecute(Sender: TObject);
-var
-  i: integer;
-  pic: TPicture;
-  S: AnsiString;
+procedure Tmf.ShowDs;
 begin
-  if ds.Visible then
-    ds.Hide;
-
-  if Assigned(mFrame) and not(mFrame is TfNewList) then
-    FreeAndNil(mFrame);
-
-  mFrame := TfNewList.Create(Self);
-  
-  with (mFrame as TfNewList) do
+  if not ds.Visible then
   begin
-    gFull.BeginUpdate;
+//    bmbMain.Visible := true;
+    ds.Show;
+  end;
+end;
 
-    pic := TPicture.Create;
+procedure Tmf.SHOWSETTINGS(var Msg: TMessage);
+var
+//  n: TdxDockPanel;
+  f: TfSettings;
 
-    with tvFull.DataController do
-    begin
-      RecordCount := FullResList.Count;
-      for i := 0 to FullResList.Count - 1 do
-      begin
-        Values[i, 0] := i;
-        pic.LoadFromFile(rootdir+'\resources\icons\'+FullResLIst[i].IconFile);
-        SavePicture(pic,s);
-        Values[i, 2] := s;
-        {FileToString(rootdir+'\resources\icons\'+FullResLIst[i].IconFile)};
-        Values[i, 3] := FullResList[i].Name;
-//        tvFull.DataController.
-      end;
+begin
 
-    end;
-
-    pic.Free;
-
-    gFull.EndUpdate;
+  if Assigned(SttPanel) then
+  begin
+    SttPanel.Activate;
+    Exit;
   end;
 
-  mFrame.Parent := Self;
+  if Assigned(mFrame) then
+    FreeAndNil(mFrame);
+
+  SttPanel := CreateTab(tableds);
+  f := TfSettings.Create(SttPanel);
+
+  with f,GlobalSettings do
+  begin
+    chbProxy.Checked := Proxy.UseProxy;
+    eHost.Text := Proxy.Host;
+    ePort.Value := Proxy.Port;
+    chbProxyAuth.Checked := Proxy.Auth;
+    eProxyLogin.Text := Proxy.Login;
+    eProxyPassword.Text := Proxy.Password;
+    chbProxySavePWD.Checked := Proxy.SavePWD;
+
+    eThreads.Value := Downl.ThreadCount;
+    eRetries.Value := Downl.Retries;
+    chbDebug.Checked := Downl.Debug;
+
+    eInterval.Value := Downl.Interval;
+    chbBeforeU.Checked := Downl.BeforeU;
+    chbBeforeP.Checked := Downl.BeforeP;
+    chbAfterP.Checked := Downl.AfterP;
+
+    chbTrayIcon.Checked := TrayIcon;
+    chbHideToTray.Checked := HideToTray;
+    chbOneInstance.Checked  := OneInstance;
+    chbSaveConfirm.Checked := SaveConfirm;
+  end;
+
+  f.Tag := integer(SttPanel);
+  SttPanel.Tag := integer(f);
+  f.ResetButons;
+  f.Parent := SttPanel;
+  ShowDs;
 end;
 
 procedure Tmf.FormCreate(Sender: TObject);
 begin
+  dsFirstShow := true;
+  SttPanel := nil;
+
   mFrame := TfStart.Create(Self);
   mFrame.Parent := Self;
 
-  tvMain := TmycxGridTableView(Grid.CreateView(TmycxGridTableView));
-  tvMain.OnGetExpandable := tvMainRecordExpandable;
-  tvMain.Assign(tvmMain);
-  gLevel1.GridView := tvMain;
-  tvmMain.Free;
+  // globalpanel := tdxDockPanel.Create(Self);
+  // globalpanel.Caption := 'globalpanel';
+  // globalpanel.DockTo(ds,dtClient,1);
+
+  pTags := nil;
+  pCTags := nil;
+  TabList := TList.Create;
+
+  tableds := tdxTabContainerDockSite.Create(Self);
+  // tableds.
+
+  tableds.Dockable := false;
+  tableds.TabsPosition := tctpTop;
+  tableds.ShowCaption := false;
+  tableds.DockTo(ds, dtClient, 0);
+
+  tagds := CreateTags(ds);
+  tagds.Visible := false;
+
+  logds := CreateLogs(ds);
+
 end;
 
 procedure Tmf.FormDestroy(Sender: TObject);
 begin
   if Assigned(mFrame) then
     mFrame.Free;
+  TabList.Free;
 end;
 
 procedure Tmf.gLevel2GetGridView(Sender: TcxGridLevel;
   AMasterRecord: TcxCustomGridRecord; var AGridView: TcxCustomGridView);
 
 begin
-  PostMessage(handle, CM_EXPROW, integer(AMasterRecord), integer(AGridView));
+  PostMessage(Handle, CM_EXPROW, integer(AMasterRecord), integer(AGridView));
 end;
 
-procedure Tmf.ShowGrid;
+procedure Tmf.HideDs;
 begin
-  if Assigned(mFrame) then
-    FreeAndNil(mFrame);
-
-  ds.Show;
+  if ds.Visible then
+  begin
+    ds.Hide;
+    tagds.Hide;
+    bmbMain.Visible := false;
+    mFrame := TfStart.Create(Self);
+    mFrame.Parent := Self;
+  end;
 end;
 
 end.
