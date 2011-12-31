@@ -5,7 +5,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Controls, Forms,
   Dialogs, pngimage, GIFImg, ExtCtrls, IdHTTP, Graphics, StdCtrls, ComCtrls, math,
-  types;
+  types, hacks;
 
 type
 
@@ -14,7 +14,7 @@ type
   TPreviewThread = class(TThread)
   private
     // atime: TDateTime;
-    FHTTP: TIdHTTP;
+    FHTTP: TMyIdHTTP;
     Form: TfPreview;
     furl: string;
     FImage: TImage;
@@ -252,11 +252,11 @@ begin
 
   furl := AURL;
 
-  if MainForm.chbdebug.Checked then
+{  if MainForm.chbdebug.Checked then
   begin
     MainForm.log('preview = '+furl);
     MainForm.log('referer = ' + AReferer);
-  end;
+  end;   }
 
 
   if furl <> '' then
