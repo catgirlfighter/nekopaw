@@ -6,16 +6,17 @@ uses
   Forms,
   SysUtils,
   Dialogs,
-  Unit1 in 'Unit1.pas' { MainForm },
+  Unit1 in 'Unit1.pas' {MainForm},
   rpVersionInfo in 'rpVersionInfo.pas',
-  Unit3 in 'Unit3.pas' { fPreview },
+  Unit3 in 'Unit3.pas' {fPreview},
   MyXMLParser in 'MyXMLParser.pas',
   Unit_Win7Taskbar in 'Unit_Win7Taskbar.pas',
   common in 'common.pas',
   hacks in 'hacks.pas',
   DownloadThreads in 'DownloadThreads.pas',
   stoping_u in 'stoping_u.pas' {fStoping},
-  Unit5 in 'Unit5.pas' {fmLogin};
+  Unit5 in 'Unit5.pas' {fmLogin},
+  AboutForm in 'AboutForm.pas' {fmAbout};
 
 {$R *.res}
 
@@ -44,6 +45,7 @@ begin
   Application.CreateForm(TfPreview, fPreview);
   Application.CreateForm(TfStoping, fStoping);
   Application.CreateForm(TfmLogin, fmLogin);
+  Application.CreateForm(TfmAbout, fmAbout);
   if ParamCount > 0 then
       begin
         gt := false;
