@@ -275,6 +275,8 @@ type
     cbByAuthor: TComboBox;
     lblCaption: TSpTBXLabelItem;
     SpTBXItem1: TSpTBXItem;
+    btnFindTag: TSpeedButton;
+    fdTag: TFindDialog;
     procedure btnBrowseClick(Sender: TObject);
     procedure btnGrabClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -379,6 +381,8 @@ type
     procedure cbByAuthorChange(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure SpTBXItem1Click(Sender: TObject);
+    procedure btnFindTagClick(Sender: TObject);
+    procedure fdTagFind(Sender: TObject);
 
   private
     FThreadList: TThreadList;
@@ -633,10 +637,10 @@ procedure TDownloadThread.Execute;
     result := (s = '.JPG') or (s = '.JPEG');
   end;
 
-  function GetTagString(intTags: TArrayOfWord; del: char = ';';
+  function GetTagString(intTags: TArrayOfWord; ignore: array of string; del: char = ';';
     emp: char = ' '): string;
   var
-    i, l: Integer;
+    i, j, l: Integer;
     s: string;
   begin
     result := '';
@@ -644,6 +648,10 @@ procedure TDownloadThread.Execute;
     for i := 0 to l do
     begin
       s := tags[intTags[i]].Name;
+      for j := 0 to length(ignore) do
+        if pos(ignore[j],s) = 1 then
+          Continue;
+
       REPLACE(s, del, emp, false, true);
       if i < l then
         result := result + s + del
@@ -773,7 +781,7 @@ begin
       es := '';
       if tagsinfname then
       begin
-        tagstr := ' ' + ValidFName(GetTagString(n[num].tags, ' ', '_'))
+        tagstr := ' ' + ValidFName(GetTagString(n[num].tags, ['rating:'],' ', '_'))
       end
       else
         tagstr := '';
@@ -929,7 +937,8 @@ begin
 
           dwnld := true;
 
-          HTTP.Head(o);
+//          HTTP.Head(o);
+//          HTTP.
 //          fsize := HTTP.Response.ContentLength;
           HTTP.Get(o, f);
           if HTTP.Connected then
@@ -976,7 +985,7 @@ begin
                   '/' + n[num].Params, ''), n[num].title))
               else
                 EXIF.title := ClearHTML(n[num].title);
-              EXIF.Keywords := ClearHTML(GetTagString(n[num].tags));
+              EXIF.Keywords := ClearHTML(GetTagString(n[num].tags,['rating:']));
               case curdest of
                 RP_DEVIANTART:
                   EXIF.Subject := es;
@@ -3272,6 +3281,11 @@ begin
   end;
 end;
 
+procedure TMainForm.btnFindTagClick(Sender: TObject);
+begin
+  fdTag.Execute(Self.Handle);
+end;
+
 procedure TMainForm.btnSelInverseClick(Sender: TObject);
 begin
   case pcTags.ActivePageIndex of
@@ -3995,7 +4009,7 @@ begin
                 n[xml_tmpi].Preview := RESOURCE_URLS[cbSite.ItemIndex] +
                   trim(Attrs.Value('src'), '/');
               n[xml_tmpi].tags :=
-                AddTags(CopyTo(Attrs.Value('alt'), ' rating:'));
+                AddTags(CopyTo(Attrs.Value('alt'), ' score:'));
             end
             else
           end
@@ -4024,7 +4038,7 @@ begin
           else
             n[xml_tmpi].Preview := RESOURCE_URLS[cbSite.ItemIndex] +
               trim(Attrs.Value('src'), '/');
-          n[xml_tmpi].tags := AddTags(CopyTo(Attrs.Value('alt'), ' rating:'));
+          n[xml_tmpi].tags := AddTags(CopyTo(Attrs.Value('alt'), ' score:'));
           n[xml_tmpi].pageurl := tmpurl;
         end;
       end
@@ -4243,7 +4257,7 @@ begin
               n[xml_tmpi].pageurl := tmpurl;
               n[xml_tmpi].Preview := Attrs.Value('src');
               n[xml_tmpi].tags :=
-                AddTags(CopyTo(Attrs.Value('alt'), ' rating:'));
+                AddTags(CopyTo(Attrs.Value('alt'), ' score:'));
             end
             else
           end
@@ -4269,7 +4283,7 @@ begin
             begin
               n[xml_tmpi].Preview := Attrs.Value('src');
               n[xml_tmpi].tags :=
-                AddTags(CopyTo(Attrs.Value('title'), ' rating:'));
+                AddTags(CopyTo(Attrs.Value('title'), ' score:'));
               n[xml_tmpi].pageurl := tmpurl;
             end;
           end
@@ -4471,7 +4485,7 @@ begin
               n[xml_tmpi].Preview := RESOURCE_URLS[cbSite.ItemIndex] +
                 trim(Attrs.Value('src'), '/');
               n[xml_tmpi].tags :=
-                AddTags(CopyTo(Attrs.Value('alt'), ' rating:'));
+                AddTags(CopyTo(Attrs.Value('alt'), ' score:'));
             end
             else
           end
@@ -4509,7 +4523,7 @@ begin
               n[xml_tmpi].Preview := RESOURCE_URLS[cbSite.ItemIndex] +
                 trim(Attrs.Value('src'), '/');
               n[xml_tmpi].tags :=
-                AddTags(CopyTo(Attrs.Value('alt'), ' rating:'));
+                AddTags(CopyTo(Attrs.Value('alt'), ' score:'));
               n[xml_tmpi].pageurl := RESOURCE_URLS[cbSite.ItemIndex] +
                 trim(tmpurl, '/');
             end;
@@ -5737,6 +5751,7 @@ begin
   tbiLoad.Enabled := n;
   tbiGridClose.Enabled := n;
 
+  btnFindTag.Enabled := n;
   btnSelAll.Enabled := n;
   btnDeselAll.Enabled := n;
   btnSelInverse.Enabled := n;
@@ -5749,9 +5764,9 @@ begin
 
   tbsiCheck.Enabled := n and ((Length(Unit1.n) > 0) or (Length(PreList) > 0));
   tbsiUncheck.Enabled := n and ((Length(Unit1.n) > 0) or (Length(PreList) > 0));
-  tbiPrevious.Enabled := n and (Length(Unit1.n) > 0);
-  tbiNext.Enabled := n and (Length(Unit1.n) > 0);
-  tbiGoto.Enabled := n and (Length(Unit1.n) > 0);
+  tbiPrevious.Enabled :=(Length(Unit1.n) > 0);
+  tbiNext.Enabled := (Length(Unit1.n) > 0);
+  tbiGoto.Enabled := (Length(Unit1.n) > 0);
 
   // btnUpdTags.Enabled := n and (length(tags) > 0) and (curdest > -1);
   chbTagsIn.Enabled := n and (Length(tags) > 0);
@@ -6105,6 +6120,32 @@ procedure TMainForm.eCFilterChange(Sender: TObject);
 begin
   if (Sender as TJvSpinEdit).Text <> '' then
     GenTags;
+end;
+
+procedure TMainForm.fdTagFind(Sender: TObject);
+
+  function s(s,e: integer): boolean;
+  var
+    i: integer;
+  begin
+    for i := s to e do
+      if pos(fdTag.FindText,chblTagsCloud.Items[i]) > 0 then
+      begin  
+        chblTagsCloud.ItemIndex := i;
+        Result := true;
+        Exit;
+      end;
+    Result := false;
+  end;
+  
+begin
+  fdTag.FindText := lowercase(fdTag.FindText);
+  with  chblTagsCloud do
+  begin
+    if not s(ItemIndex + 1,Count - 1) then
+      if not s(0,ItemIndex - 1) then
+        MessageDlg('Nothing found',mtInformation,[mbOk],0);
+  end;
 end;
 
 procedure TDownloadThread.DwnldHTTPWorkBegin(ASender: TObject;
