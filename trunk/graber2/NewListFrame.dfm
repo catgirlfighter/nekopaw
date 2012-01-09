@@ -54,6 +54,7 @@ object fNewList: TfNewList
     TabOrder = 2
     object tvRes: TcxGridTableView
       NavigatorButtons.ConfirmDelete = False
+      OnFocusedRecordChanged = tvResFocusedRecordChanged
       DataController.Summary.DefaultGroupSummaryItems = <>
       DataController.Summary.FooterSummaryItems = <>
       DataController.Summary.SummaryGroups = <>
@@ -118,18 +119,18 @@ object fNewList: TfNewList
     Align = alClient
     TabOrder = 3
     OnChange = pcMainChange
-    ClientRectBottom = 273
-    ClientRectRight = 261
+    ClientRectBottom = 269
+    ClientRectLeft = 4
+    ClientRectRight = 257
     ClientRectTop = 24
     object tsList: TcxTabSheet
       Caption = 'tsList'
       ImageIndex = 0
       object gFull: TcxGrid
-        AlignWithMargins = True
-        Left = 3
-        Top = 3
-        Width = 258
-        Height = 243
+        Left = 0
+        Top = 0
+        Width = 253
+        Height = 245
         Margins.Right = 0
         Align = alClient
         TabOrder = 0
@@ -194,20 +195,20 @@ object fNewList: TfNewList
     object tsSettings: TcxTabSheet
       Caption = 'tsSettings'
       ImageIndex = 1
-      object cxVerticalGrid1: TcxVerticalGrid
+      OnShow = tsSettingsShow
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
+      object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0
-        Width = 261
-        Height = 249
-        Align = alClient
+        Width = 353
+        Height = 245
+        Align = alLeft
+        OptionsView.RowHeaderWidth = 157
         TabOrder = 0
         Version = 1
-        object cxVerticalGrid1CategoryRow1: TcxCategoryRow
-          ID = 0
-          ParentID = -1
-          Index = 0
-          Version = 1
-        end
       end
     end
   end
@@ -261,6 +262,14 @@ object fNewList: TfNewList
       Properties.ClickKey = 0
       Properties.ReadOnly = True
       Properties.ViewStyle = vsHideCursor
+    end
+    object erCheckBox: TcxEditRepositoryCheckBoxItem
+      Properties.Alignment = taLeftJustify
+    end
+    object erSpinEdit: TcxEditRepositorySpinItem
+    end
+    object erCombo: TcxEditRepositoryComboBoxItem
+      Properties.DropDownListStyle = lsFixedList
     end
   end
 end

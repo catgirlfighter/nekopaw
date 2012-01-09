@@ -95,8 +95,10 @@ object fSettings: TfSettings
     object eInterval: TcxSpinEdit
       Left = 72
       Top = 166
+      Properties.MinValue = 1.000000000000000000
       Style.HotTrack = False
       TabOrder = 7
+      Value = 1
       Width = 75
     end
     object chbBeforeU: TcxCheckBox
@@ -177,6 +179,7 @@ object fSettings: TfSettings
     object eRetries: TcxSpinEdit
       Left = 330
       Top = 193
+      Properties.AssignedValues.MinValue = True
       Properties.MaxValue = 50.000000000000000000
       Style.HotTrack = False
       TabOrder = 16
@@ -528,8 +531,7 @@ object fSettings: TfSettings
       Properties.PopupMenuLayout.MenuItems = []
       Properties.ReadOnly = True
       Properties.ShowFocusRect = False
-      Style.Edges = []
-      Style.HotTrack = False
+      Style.TransparentBorder = True
       TabOrder = 18
       Transparent = True
     end

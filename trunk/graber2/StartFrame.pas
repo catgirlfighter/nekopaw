@@ -39,7 +39,7 @@ type
 
 implementation
 
-uses MainForm, OpBase;
+uses MainForm, GraberU;
 
 {$R *.dfm}
 

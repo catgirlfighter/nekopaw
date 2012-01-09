@@ -62,8 +62,13 @@
 			</DCCReference>
 			<DCCReference Include="LangString.pas"/>
 			<DCCReference Include="OpBase.pas"/>
+			<DCCReference Include="MyXMLParser.pas"/>
 			<DCCReference Include="SettingsFrame.pas">
 				<Form>fSettings</Form>
+				<DesignClass>TFrame</DesignClass>
+			</DCCReference>
+			<DCCReference Include="GridFrame.pas">
+				<Form>fGrid</Form>
 				<DesignClass>TFrame</DesignClass>
 			</DCCReference>
 			<BuildConfiguration Include="Debug">

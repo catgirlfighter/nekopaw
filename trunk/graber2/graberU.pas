@@ -2,9 +2,74 @@ unit graberU;
 
 interface
 
-uses Classes, SysUtils, Variants, Windows, idHTTP, MyXMLParser;
+uses Classes, Messages, SysUtils, Variants, Windows, idHTTP, MyXMLParser, DateUtils;
+
+const
+  UNIQUE_ID = 'GRABER2LOCK';
+
+  CM_EXPROW = WM_USER + 1;
+  CM_NEWLIST = WM_USER + 2;
+  CM_APPLYNEWLIST = WM_USER + 3;
+  CM_CANCELNEWLIST = WM_USER + 4;
+  CM_EDITLIST = WM_USER + 5;
+  CM_APPLYEDITLIST = WM_USER + 6;
+  CM_CLOSETAB = WM_USER + 7;
+  CM_SHOWSETTINGS = WM_USER + 8;
+  CM_APPLYSETTINGS = WM_USER + 9;
+  CM_CANCELSETTINGS = WM_USER + 10;
+
+  THREAD_STOP = 0;
+  THREAD_START = 1;
+  THREAD_FINISH = 2;
+
+  JOB_STOPDOWNLOAD = 0;
+  JOB_GETPICTURES = 1;
+  JOB_DOWNLOADPICTURES = 2;
+
+  SAVEFILE_VERSION = 0;
+
+  LIST_SCRIPT = 'listscript';
+  DOWNLOAD_SCRIPT = 'downloadscript';
 
 type
+
+  TProxyRec = record
+    UseProxy: boolean;
+    Host: string;
+    Port: longint;
+    Auth: boolean;
+    Login: string;
+    Password: string;
+    SavePWD: boolean;
+  end;
+
+  TDownloadRec = record
+    ThreadCount: integer;
+    Retries: integer;
+    Interval: integer;
+    BeforeU: boolean;
+    BeforeP: boolean;
+    AfterP: boolean;
+    Debug: boolean;
+  end;
+
+  TSettingsRec = record
+    Proxy: TProxyRec;
+    Downl: TDownloadRec;
+    OneInstance: boolean;
+    TrayIcon: boolean;
+    HideToTray: boolean;
+    SaveConfirm: boolean;
+  end;
+
+  THTTPMethod = (hmGet, hmPost);
+
+  THTTPRec = record
+    DefUrl: String;
+    Url: string;
+    Method: THTTPMethod;
+    Counter, Count: integer;
+  end;
 
   TListValue = class(TObject)
   private
@@ -18,7 +83,7 @@ type
 
   TValueList = class(TList)
   protected
-    function Get(Index: Integer): TListValue;
+    function Get(Index: integer): TListValue;
     function GetValue(ItemName: String): Variant;
     procedure SetValue(ItemName: String; Value: Variant); virtual;
     function FindItem(ItemName: String): TListValue;
@@ -26,36 +91,36 @@ type
   public
     destructor Destroy; override;
     procedure Assign(List: TValueList; AOperator: TListAssignOp = laCopy);
-    property Items[Index: Integer]: TListValue read Get;
+    property Items[Index: integer]: TListValue read Get;
     property ItemByName[ItemName: String]: TListValue read FindItem;
     property Values[ItemName: String]: Variant read GetValue
       write SetValue; default;
     property Count;
   end;
 
-  TPictureValueState = (pvsNone, pvsKey, pvsNoduble);
+  { TPictureValueState = (pvsNone, pvsKey, pvsNoduble);
 
-  TPictureValue = class(TListValue)
-  private
+    TPictureValue = class(TListValue)
+    private
     FState: TPictureValueState;
-  public
+    public
     constructor Create;
     property State: TPictureValueState read FState write FState;
-  end;
+    end;
 
-  TPictureValueList = class(TValueList)
-  protected
-    function Get(Index: Integer): TPictureValue;
+    TPictureValueList = class(TValueList)
+    protected
+    function Get(Index: integer): TPictureValue;
     procedure SetValue(ItemName: String; Value: Variant); override;
     function FindItem(ItemName: String): TPictureValue;
     function GetState(ItemName: String): TPictureValueState;
     procedure SetState(ItemName: String; Value: TPictureValueState);
-  public
-    property Items[Index: Integer]: TPictureValue read Get;
+    public
+    property Items[Index: integer]: TPictureValue read Get;
     property ItemByName[ItemName: String]: TPictureValue read FindItem;
     property State[ItemName: String]: TPictureValueState read GetState
-      write SetState;
-  end;
+    write SetState;
+    end; }
 
   TScriptSection = class;
   TScriptSectionList = class;
@@ -66,12 +131,13 @@ type
   TValueEvent = procedure(const ValS: Char; const Value: String;
     var Result: Variant; var LinkedObj: TObject) of object;
 
-  TDeclorationEvent = procedure(Values: TValueList) of object;
+  TDeclorationEvent = procedure(Values: TValueList; LinkedObj: TObject) of object;
+
+  TFinishEvent = procedure(Parent: String; LinkedObj: TObject) of object;
 
   TScriptSection = class(TObject)
   private
     FParent: String;
-    FCondition: String;
     FParametres: TValueList;
     FDeclorations: TValueList;
     FConditions: TScriptSectionList;
@@ -80,11 +146,13 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure ParseValues(s: string);
-    procedure Process(const SE: TScriptEvent; const VE: TValueEvent;
-      const DE: TDeclorationEvent; LinkedObj: TObject = nil);
+    procedure Process(const SE: TScriptEvent; const DE: TDeclorationEvent;
+      FE: TFinishEvent; const VE: TValueEvent; PVE: TValueEvent = nil;
+      LinkedObj: TObject = nil);
     procedure Clear;
+    procedure Assign(s: TScriptSection);
+    function NotEmpty: boolean;
     property Parent: String read FParent write FParent;
-    property Condition: String read FCondition write FCondition;
     property Parametres: TValueList read FParametres;
     property Conditions: TScriptSectionList read FConditions;
     property Declorations: TValueList read FDeclorations;
@@ -93,116 +161,135 @@ type
 
   TScriptSectionList = class(TList)
   private
-    function Get(Index: Integer): TScriptSection;
+    function Get(Index: integer): TScriptSection;
   public
-    property Items[Index: Integer]: TScriptSection read Get; default;
+    procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+    procedure Assign(s: TScriptSectionList);
+    property Items[Index: integer]: TScriptSection read Get; default;
   end;
 
-  THTTPRequestMethod = (rmGET, rmPOST);
+  TDownloadThread = class;
+  TResourceLinkList = class;
+  TResource = class;
+  TTPicture = class;
+  TPictureLinkList = class;
+  TPictureList = class;
 
-  TDownloadSettings = class(TObject)
-  private
-    FURL: String;
-    FAbsoluteURL: Boolean;
-    FRequestMethod: THTTPRequestMethod;
-    FPostString: String;
-    FScript: TScriptSection;
-  public
-    constructor Create;
-    destructor Destroy; override;
-    property URL: String read FURL write FURL;
-    property AbsoluteURL: Boolean read FAbsoluteURL write FAbsoluteURL;
-    property RequestMethod: THTTPRequestMethod read FRequestMethod
-      write FRequestMethod;
-    property PostString: String read FPostString write FPostString;
-    property Script: TScriptSection read FScript;
-  end;
+  TFieldType = (ftNone, ftString, ftNumber, ftCombo, ftCheck);
 
-  TThreadDSettings = class(TDownloadSettings)
-  private
-    FPage: Integer;
-    FCount: Integer;
-    FCounter: Integer;
-  public
-    constructor Create;
-    property Page: Integer read FPage write FPage;
-    property Count: Integer read FCount write FCount;
-    property Counter: Integer read FCounter write FCounter;
-  end;
+  PResourceField = ^TResourceField;
 
-  TLoginDSettings = class(TDownloadSettings)
-  private
-    FAuth: Boolean;
-    FLogin: String;
-    FPassword: String;
-  public
-    constructor Create;
-    property NeedAuth: Boolean read FAuth write FAuth;
-    property Login: String read FLogin write FLogin;
-    property Password: String read FLogin write FLogin;
+  TResourceField = record
+    resname: string;
+    restype: TFieldType;
+    resvalue: Variant;
+    resitems: string;
   end;
 
   TResourceFields = class(TList)
-
-  end;
-
-  TResource = class(TObject)
-  private
-    FFileName: String;
-    FResName: String;
-    FURL: String;
-    FIconFile: String;
-    FParent: TResource;
-    FFields: TResourceFields;
-    FLoginPage: TLoginDSettings;
-    FFirstPage: TDownloadSettings;
-    FThread: TThreadDSettings;
-    FInherit: Boolean;
   protected
-    procedure ScriptEvent(const Parent: String; const Parametres: TValueList;
-      var LinkedObj: TObject);
-    procedure ValueEvent(const ValS: Char; const Value: String;
-      var Result: Variant; var LinkedObj: TObject);
-    procedure DeclorationEvent(Values: TValueList);
-  public
-    constructor Create;
-    destructor Destroy; override;
-    procedure LoadFromFile(FName: String);
-    property FileName: String read FFileName;
-    property Name: String read FResName write FResName;
-    property URL: String read FURL;
-    property IconFile: String read FIconFile;
-    property Fields: TResourceFields read FFields;
-    property LoginPage: TLoginDSettings read FLoginPage;
-    property FirstPage: TDownloadSettings read FFirstPage;
-    property Thread: TThreadDSettings read FThread;
-    property Parent: TResource read FParent write FParent;
-    property Inherit: Boolean read FInherit write FInherit;
-  end;
-
-  TResourceLinkList = class(TList)
-  protected
-    function Get(Index: Integer): TResource;
-  public
-    property Items[Index: Integer]: TResource read Get; default;
-  end;
-
-  TResourceList = class(TResourceLinkList)
-  protected
+    function Get(Index: integer): TResourceField;
+    procedure Put(Index: integer; Value: TResourceField);
+    function GetValue(ItemName: String): Variant;
+    procedure SetValue(ItemName: String; Value: Variant);
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
-    procedure LoadList(Dir: String);
+    procedure Assign(List: TResourceFields; AOperator: TListAssignOp = laCopy);
+    function AddField(resname: string; restype: TFieldType; resvalue: Variant;
+      resitems: String): integer;
+    property Items[Index: integer]: TResourceField read Get write Put;
+    property Values[ItemName: String]: Variant read GetValue
+      write SetValue; default;
   end;
+
+  TThreadEvent = function(t: TDownloadThread): integer of object;
 
   TDownloadThread = class(TThread)
   private
     FHTTP: TIdHTTP;
+    FEventHandle: THandle;
+    FJob: integer;
+    FJobComplete: TThreadEvent;
+    FFinish: TThreadEvent;
+    FErrorString: String;
+    FErrorCode: integer;
+    FInitialScript: TScriptSection;
+    FBeforeScript: TScriptSection;
+    FAfterScript: TScriptSection;
+    FXMLScript: TScriptSection;
+    FFields: TResourceFields;
+    FDownloadRec: TDownloadRec;
+    FHTTPRec: THTTPRec;
+    FPictureList: TPictureList;
+    FSectors: TValueList;
+    FXML: TMyXMLParser;
+    FPicture: TTPicture;
+    FPicLink: TTPicture;
+    // FCookie: TCookieList;
+  protected
+    procedure SetInitialScript(Value: TScriptSection);
+    procedure SetBeforeScript(Value: TScriptSection);
+    procedure SetAfterScript(Value: TScriptSection);
+    procedure SetXMLScript(Value: TScriptSection);
+    procedure SeFields(Value: TResourceFields);
+    procedure DoJobComplete;
+    procedure DoFinish;
+    procedure SE(const Parent: String; const Parametres: TValueList;
+      var LinkedObj: TObject);
+    procedure VE(const ValS: Char; const Value: String; var Result: Variant;
+      var LinkedObj: TObject);
+    procedure DE(Values: TValueList; LinkedObj: TObject);
+    procedure FE(Parent: String; LinkedObj: TObject);
   public
     procedure Execute; override;
+    constructor Create;
+    destructor Destroy; override;
+    procedure AddPicture;
     property HTTP: TIdHTTP read FHTTP;
+    property Job: integer read FJob write FJob;
+    property EventHandle: THandle read FEventHandle;
+    property Error: String read FErrorString;
+    property ErrorCode: integer read FErrorCode;
+    property Finish: TThreadEvent read FFinish write FFinish;
+    property InitialScript: TScriptSection read FInitialScript
+      write SetInitialScript;
+    property BeforeScript: TScriptSection read FBeforeScript
+      write SetBeforeScript;
+    property AfterScript: TScriptSection read FBeforeScript
+      write SetAfterScript;
+    property XMLScript: TScriptSection read FXMLScript write SetXMLScript;
+    property Fields: TResourceFields read FFields write SeFields;
+    property DownloadRec: TDownloadRec read FDownloadRec write FDownloadRec;
+    property HTTPRec: THTTPRec read FHTTPRec write FHTTPRec;
+    property JobComplete: TThreadEvent read FJobComplete write FJobComplete;
   end;
 
-  TPictureLinkList = class;
+  TJobEvent = procedure(t: TDownloadThread) of object;
+
+  TThreadHandler = class(TThreadList)
+  private
+    FQueue: TResourceLinkList;
+    FCount: integer;
+    FFinishThreads: boolean;
+    FFinishQueue: boolean;
+    FCreateJob: TJobEvent;
+    FProxy: TProxyRec;
+  protected
+    function Finish(t: TDownloadThread): integer;
+    procedure CheckIdle;
+    procedure AddToQueue(R: TResource);
+    procedure ThreadTerminate(ASender: TObject);
+  public
+    procedure CreateThreads(acount: integer);
+    procedure FinishThreads(Force: boolean = false);
+    constructor Create;
+    destructor Destroy; override;
+    procedure FinishQueue;
+    property CreateJob: TJobEvent read FCreateJob write FCreateJob;
+    property Count: integer read FCount;
+    property Proxy: TProxyRec read FProxy write FProxy;
+    // property FinishThreads: boolean read FFinishThread;
+  end;
 
   TTagAttribute = (taNone, taArtist, taCharacter, taCopyright, taAmbiguous);
 
@@ -219,10 +306,10 @@ type
 
   TPictureTagLinkList = class(TList)
   protected
-    function Get(Index: Integer): TPictureTag;
-    procedure Put(Index: Integer; Item: TPictureTag);
+    function Get(Index: integer): TPictureTag;
+    procedure Put(Index: integer; Item: TPictureTag);
   public
-    property Items[Index: Integer]: TPictureTag read Get write Put; default;
+    property Items[Index: integer]: TPictureTag read Get write Put; default;
     property Count;
   end;
 
@@ -233,7 +320,7 @@ type
     constructor Create;
     destructor Destroy; override;
     function Add(TagName: String): TPictureTag;
-    function Find(TagName: String): Integer;
+    function Find(TagName: String): integer;
     procedure ClearZeros;
     property Items;
     property Count;
@@ -242,33 +329,35 @@ type
   TTPicture = class(TObject)
   private
     FParent: TTPicture;
-    FMeta: TPictureValueList;
+    FMeta: TValueList;
     FLinked: TPictureLinkList;
     FTags: TPictureTagLinkList;
-    FChecked: Boolean;
-    FFinished: Boolean;
-    FRemoved: Boolean;
+    FChecked: boolean;
+    FFinished: boolean;
+    FRemoved: boolean;
   protected
     procedure SetParent(Item: TTPicture);
-    procedure SetRemoved(Value: Boolean);
+    procedure SetRemoved(Value: boolean);
   public
     constructor Create;
     destructor Destroy; override;
-    property Removed: Boolean read FRemoved write SetRemoved;
-    property Finished: Boolean read FFinished;
-    property Checked: Boolean read FChecked write FChecked;
+    procedure Clear;
+    procedure Assign(Value: TTPicture);
+    property Removed: boolean read FRemoved write SetRemoved;
+    property Finished: boolean read FFinished;
+    property Checked: boolean read FChecked write FChecked;
     property Parent: TTPicture read FParent write SetParent;
     property Tags: TPictureTagLinkList read FTags;
-    property Meta: TPictureValueList read FMeta;
+    property Meta: TValueList read FMeta;
     property Linked: TPictureLinkList read FLinked;
   end;
 
   TPictureLinkList = class(TList)
   protected
-    function Get(Index: Integer): TTPicture;
-    procedure Put(Index: Integer; Item: TTPicture);
+    function Get(Index: integer): TTPicture;
+    procedure Put(Index: integer; Item: TTPicture);
   public
-    property Items[Index: Integer]: TTPicture read Get write Put; default;
+    property Items[Index: integer]: TTPicture read Get write Put; default;
   end;
 
   TPictureList = class(TPictureLinkList)
@@ -284,9 +373,147 @@ type
     property Count;
   end;
 
+  TResourceEvent = procedure(R: TResource) of object;
+
+  TResource = class(TObject)
+  private
+    FFileName: String;
+    FResName: String;
+    // FURL: String;
+    FIconFile: String;
+    FParent: TResource;
+    FLoginPrompt: boolean;
+    FInherit: boolean;
+    FJobInitiated: boolean;
+    FFields: TResourceFields;
+    FSectors: TValueList;
+    FInitialScript: TScriptSection;
+    FBeforeScript: TScriptSection;
+    FAfterScript: TScriptSection;
+    FXMLScript: TScriptSection;
+    FDownloadSet: TDownloadRec;
+    FPictureList: TPictureList;
+    FHTTPRec: THTTPRec;
+    FAddToQueue: TResourceEvent;
+    FOnJobFinished: TResourceEvent;
+    FJobFinished: boolean;
+  protected
+    procedure DeclorationEvent(Values: TValueList; LinkedObj: TObject);
+    function JobComplete(t: TDownloadThread): integer;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure LoadFromFile(FName: String);
+    function CreateFullFieldList: TStringList;
+    procedure CreateJob(t: TDownloadThread);
+    procedure StartJob(JobType: integer);
+    procedure Assign(R: TResource);
+    property FileName: String read FFileName;
+    property Name: String read FResName write FResName;
+    // property Url: String read FURL;
+    property IconFile: String read FIconFile;
+    property Fields: TResourceFields read FFields;
+    property Parent: TResource read FParent write FParent;
+    property Inherit: boolean read FInherit write FInherit;
+    property Sectors: TValueList read FSectors;
+    property LoginPrompt: boolean read FLoginPrompt;
+    property DownloadSet: TDownloadRec read FDownloadSet write FDownloadSet;
+    property HTTPRec: THTTPRec read FHTTPRec write FHTTPRec;
+    property PictureList: TPictureList read FPictureList;
+    property JobInitiated: boolean read FJobInitiated;
+    property InitialScript: TScriptSection read FInitialScript;
+    property BeforeScript: TScriptSection read FBeforeScript;
+    property AfterScript: TScriptSection read FBeforeScript;
+    property XMLScript: TScriptSection read FXMLScript;
+    property AddToQueue: TResourceEvent read FAddToQueue write FAddToQueue;
+    property JobFinished: boolean read FJobFinished;
+    property OnJobFinished: TResourceEvent read FOnJobFinished
+      write FOnJobFinished;
+  end;
+
+  TResourceLinkList = class(TList)
+  protected
+    function Get(Index: integer): TResource;
+  public
+    property Items[Index: integer]: TResource read Get; default;
+  end;
+
+  TResourceList = class(TResourceLinkList)
+  private
+    FThreadHandler: TThreadHandler;
+  protected
+    procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+    procedure JobFinished(R: TResource);
+    procedure AddToQueue(R: TResource);
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure StartJob(JobType: integer);
+    procedure CopyResource(R: TResource);
+    property ThreadHandler: TThreadHandler read FThreadHandler;
+    procedure LoadList(Dir: String);
+  end;
+
 implementation
 
 uses LangString, common;
+
+function CalcValue(s: String; VE: TValueEvent; Lnk: TObject): Variant;
+const
+  op = ['(', ')', '+', '-', '<', '>', '=', '!', '/', '\', '&', ',', '?', '~',
+    '|', ' ', #9, #13, #10];
+  p = ['$', '#'];
+  isl: array [0 .. 1] of string = ('""', '''''');
+
+var
+  n1, n2: integer;
+  cstr: string;
+  rstr: Variant;
+
+begin
+  if Assigned(VE) then
+  begin
+    n1 := CharPos(s, ';', isl);
+
+    while n1 > 0 do
+    begin
+      n2 := CharPos(s, #13, [], n1 + 1);
+      if n2 = 0 then
+        raise Exception.Create(Format(_SCRIPT_READ_ERROR_,
+          [_INCORRECT_DECLORATION_ + '''' + s + '''']));
+      Delete(s, n1, n2 - n1);
+      n1 := CharPos(s, ';', isl);
+    end;
+
+    n2 := 0;
+
+    while true do
+    begin
+      n1 := CharPosEx(s, p, isl, n2 + 1);
+
+      if n1 = 0 then
+        Break;
+
+      n2 := CharPosEx(s, op, [], n1 + 1);
+
+      if n2 = 0 then
+        cstr := Copy(s, n1 + 1, length(s) - n1 - 1)
+      else
+        cstr := Copy(s, n1 + 1, n2 - n1 - 2);
+
+      rstr := null;
+
+      VE(s[n1], cstr, rstr, Lnk);
+
+      cstr := s[n1] + cstr;
+      Replace(s, cstr, rstr, false, true);
+
+      n2 := n1 + length(rstr) - 1;
+    end;
+  end;
+
+  Result := MathCalcStr(s);
+end;
 
 // TListValue
 
@@ -299,11 +526,11 @@ end;
 
 // TPictureValue
 
-constructor TPictureValue.Create;
-begin
+{ constructor TPictureValue.Create;
+  begin
   inherited;
   FState := pvsNone;
-end;
+  end; }
 
 // TValueList
 
@@ -325,7 +552,7 @@ begin
   end;
 end;
 
-function TValueList.Get(Index: Integer): TListValue;
+function TValueList.Get(Index: integer): TListValue;
 begin
   Result := inherited Get(Index);
 end;
@@ -345,6 +572,8 @@ procedure TValueList.SetValue(ItemName: String; Value: Variant);
 var
   p: TListValue;
 begin
+  if ItemName = '' then
+    Exit;
   p := FindItem(ItemName);
   if p = nil then
   begin
@@ -359,7 +588,7 @@ end;
 
 function TValueList.FindItem(ItemName: String): TListValue;
 var
-  i: Integer;
+  i: integer;
 begin
   ItemName := LowerCase(ItemName);
   for i := 0 to Count - 1 do
@@ -373,7 +602,7 @@ end;
 
 procedure TValueList.Assign(List: TValueList; AOperator: TListAssignOp);
 var
-  i: Integer;
+  i: integer;
   p: TListValue;
 begin
   case AOperator of
@@ -407,51 +636,51 @@ begin
 end;
 // TPictureValueList
 
-function TPictureValueList.Get(Index: Integer): TPictureValue;
-begin
+{ function TPictureValueList.Get(Index: integer): TPictureValue;
+  begin
   Result := ( inherited Get(Index)) as TPictureValue;
-end;
+  end;
 
-procedure TPictureValueList.SetValue(ItemName: String; Value: Variant);
-var
+  procedure TPictureValueList.SetValue(ItemName: String; Value: Variant);
+  var
   p: TPictureValue;
-begin
+  begin
   p := FindItem(ItemName);
   if p = nil then
   begin
-    p := TPictureValue.Create;
-    p.Name := ItemName;
-    p.Value := Value;
+  p := TPictureValue.Create;
+  p.Name := ItemName;
+  p.Value := Value;
   end
   else
-    p.Value := Value;
-end;
+  p.Value := Value;
+  end;
 
-function TPictureValueList.FindItem(ItemName: String): TPictureValue;
-begin
+  function TPictureValueList.FindItem(ItemName: String): TPictureValue;
+  begin
   Result := ( inherited FindItem(ItemName)) as TPictureValue;
-end;
+  end;
 
-function TPictureValueList.GetState(ItemName: String): TPictureValueState;
-var
+  function TPictureValueList.GetState(ItemName: String): TPictureValueState;
+  var
   p: TPictureValue;
-begin
+  begin
   p := FindItem(ItemName);
   if p <> nil then
-    Result := p.State
+  Result := p.State
   else
-    Result := pvsNone;
-end;
+  Result := pvsNone;
+  end;
 
-procedure TPictureValueList.SetState(ItemName: String;
+  procedure TPictureValueList.SetState(ItemName: String;
   Value: TPictureValueState);
-var
+  var
   p: TPictureValue;
-begin
+  begin
   p := FindItem(ItemName);
   if p <> nil then
-    p.State := Value;
-end;
+  p.State := Value;
+  end; }
 
 // TScriptSection
 
@@ -459,7 +688,6 @@ constructor TScriptSection.Create;
 begin
   inherited;
   FParent := '';
-  FCondition := '';
   FParametres := TValueList.Create;
   FDeclorations := TValueList.Create;
   FConditions := TScriptSectionList.Create;
@@ -475,47 +703,61 @@ begin
   inherited;
 end;
 
+function TScriptSection.NotEmpty: boolean;
+begin
+  Result := (Declorations.Count > 0) or (Conditions.Count > 0) or
+    (ChildSections.Count > 0);
+end;
+
 procedure TScriptSection.ParseValues(s: string);
 
 const
-  EmptyS = [#9, #10, #13, ' ', '$'];
+  EmptyS = [#9, #10, #13, ' '];
 
-  isl: array [0 .. 7] of string = ('''''', '""', '()', '=;', '^.', '?.',
-    '{}', '$=');
+  isl: array [0 .. 4] of string = ('''''', '""', '()', '=;', '{}');
 
   Cons = ['=', '<', '>', '!'];
 
 var
-  i, l, n, p: Integer;
+  i, l, n, p: integer;
   v1, v2, tmp: string;
   Child: TScriptSection;
+  newstring: boolean;
 begin
+  Clear;
   i := 1;
   l := length(s);
+  newstring := true;
   while i <= l do
   begin
     case s[i] of
-      #9, #10, #13, ' ':
-        inc(i);
-      '{':
+      #10:
         begin
-          n := CharPos(s, '}', isl, i + 1);
+          newstring := true;
+          inc(i);
+        end;
+      #9, #13, ' ':
+        inc(i);
+      ';':
+        if newstring then
+        begin
+          n := CharPos(s, #13, [], i + 1);
 
           if n = 0 then
-            raise Exception.Create(Format(_SCRIPT_READ_ERROR_,
-              [_INCORRECT_DECLORATION_ + IntToStr(i)]));
+            n := l;
 
           i := n + 1;
         end;
       '^':
         begin
-          n := CharPos(s, ':', isl, i + 1);
+          newstring := false;
+          n := CharPos(s, '{', isl, i + 1);
 
           if n = 0 then
             raise Exception.Create(Format(_SCRIPT_READ_ERROR_,
               [_INCORRECT_DECLORATION_ + IntToStr(i)]));
 
-          tmp := TrimEx(Copy(s, i + 1, n - i - 1), EmptyS);
+          tmp := TrimEx(Copy(s, i, n - i), EmptyS);
 
           Child := TScriptSection.Create;
           Child.Parent := GetNextS(tmp, '#');
@@ -528,7 +770,7 @@ begin
 
             if v2 <> '' then
               if p = 0 then
-                Child.Parametres[v2] := '!'
+                Child.Parametres[v2] := ''
               else
                 Child.Parametres[v2] :=
                   TrimEx(Copy(s, p + 1, length(v2) - p - 1), EmptyS);
@@ -536,7 +778,7 @@ begin
 
           i := n + 1;
 
-          n := CharPos(s, '.', isl, i);
+          n := CharPos(s, '}', isl, i);
 
           if n = 0 then
           begin
@@ -551,22 +793,22 @@ begin
         end;
       '?':
         begin
-          n := CharPos(s, ':', isl, i + 1);
+          n := CharPos(s, '{', isl, i + 1);
 
           if n = 0 then
             raise Exception.Create(Format(_SCRIPT_READ_ERROR_,
               [_INCORRECT_DECLORATION_ + IntToStr(i)]));
 
-          tmp := TrimEx(Copy(s, i + 1, n - i - 1), EmptyS);
+          tmp := TrimEx(Copy(s, i, n - i), EmptyS);
 
           Child := TScriptSection.Create;
           Child.Parent := Parent;
           Child.Parametres.Assign(Parametres);
-          Child.Condition := tmp;
+          Child.Parent := tmp;
 
           i := n + 1;
 
-          n := CharPos(s, '.', isl, i);
+          n := CharPos(s, '}', isl, i);
 
           if n = 0 then
           begin
@@ -584,107 +826,87 @@ begin
         n := CharPos(s, '=', isl, i + 1);
 
         if n = 0 then
-          raise Exception.Create(Format(_SCRIPT_READ_ERROR_,
-            [_INCORRECT_DECLORATION_ + IntToStr(i)]));
+        begin
+          n := CharPos(s, '(', isl, i + 1);
 
-        v1 := TrimEx(Copy(s, i, n - i), EmptyS);
-        i := n + 1;
+          if n = 0 then
+            raise Exception.Create(Format(_SCRIPT_READ_ERROR_,
+              [_INCORRECT_DECLORATION_ + IntToStr(i)]));
 
-        n := CharPos(s, ';', isl, i);
+          v1 := TrimEx(Copy(s, i, n - i), EmptyS);
+          if CharInSet(v1[1], ['$', '#']) then
+            v1[1] := '@'
+          else
+            v1 := '@' + v1;
+          i := n;
 
-        if n = 0 then
-          raise Exception.Create(Format(_SCRIPT_READ_ERROR_,
-            [_INCORRECT_DECLORATION_ + IntToStr(i)]));
+          n := CharPos(s, ')', isl, i + 1);
 
-        v2 := TrimEx(Copy(s, i, n - i), EmptyS);
+          if n = 0 then
+            raise Exception.Create(Format(_SCRIPT_READ_ERROR_,
+              [_INCORRECT_DECLORATION_ + IntToStr(i)]));
 
-        if v2 = '' then
-          raise Exception.Create(Format(_SCRIPT_READ_ERROR_,
-            [_INCORRECT_DECLORATION_ + IntToStr(i)]));
+          v2 := TrimEx(Copy(s, i + 1, n - i - 1), EmptyS);
+
+          if v2 = '' then
+            raise Exception.Create(Format(_SCRIPT_READ_ERROR_,
+              [_INCORRECT_DECLORATION_ + IntToStr(i)]));
+
+          v2 := v2;
+
+        end
+        else
+        begin
+          v1 := TrimEx(Copy(s, i, n - i), EmptyS);
+          i := n + 1;
+
+          n := CharPos(s, ';', isl, i);
+
+          if n = 0 then
+            raise Exception.Create(Format(_SCRIPT_READ_ERROR_,
+              [_INCORRECT_DECLORATION_ + IntToStr(i)]));
+
+          v2 := TrimEx(Copy(s, i, n - i), EmptyS);
+
+          if v2 = '' then
+            raise Exception.Create(Format(_SCRIPT_READ_ERROR_,
+              [_INCORRECT_DECLORATION_ + IntToStr(i)]));
+        end;
 
         Declorations[v1] := v2;
 
         i := n + 1;
+
       end;
     end;
   end;
 end;
 
-procedure TScriptSection.Process(const SE: TScriptEvent; const VE: TValueEvent;
-  const DE: TDeclorationEvent; LinkedObj: TObject);
-
-var
-  Lnk: TObject;
-
-  function CalcValue(s: String): Variant;
-  const
-    op = ['(', ')', '+', '-', '<', '>', '=', '!', '/', '\', '&', ',',
-      '?', '~', '|', ' '];
-    p = ['$', '%', '#', '@'];
-    isl: array [0 .. 1] of string = ('""', '''''');
-
-  var
-    n1, n2: Integer;
-    cstr: string;
-    rstr: Variant;
-
-  begin
-
-    if not Assigned(VE) then
-      Exit;
-
-    n1 := CharPos(s, '{', isl);
-
-    while n1 > 0 do
-    begin
-      n2 := CharPos(s, '}', [], n1 + 1);
-      if n2 = 0 then
-        raise Exception.Create(Format(_SYMBOL_MISSED_, ['}', n1]));
-      Delete(s, n1, n2 - n1 + 1);
-      n1 := CharPos(s, '{', isl);
-    end;
-
-    while true do
-    begin
-      n1 := CharPosEx(s, p, isl, n2 + 1);
-
-      if n1 = 0 then
-        Break;
-
-      n2 := CharPosEx(s, op, [], n1 + 1);
-
-      if n2 = 0 then
-        cstr := Copy(s, n1 + 1, length(s) - n1 - 1)
-      else
-        cstr := Copy(s, n1 + 1, n2 - n1 - 2);
-
-      rstr := null;
-      VE(s[n1], cstr, rstr, Lnk);
-      cstr := s[n1] + cstr;
-      Replace(s, cstr, rstr, false, true);
-
-      n2 := n1 + length(rstr) - 1;
-
-    end;
-
-    Result := MathCalcStr(s);
-
-  end;
+procedure TScriptSection.Process(const SE: TScriptEvent;
+  const DE: TDeclorationEvent; FE: TFinishEvent; const VE: TValueEvent;
+  PVE: TValueEvent = nil; LinkedObj: TObject = nil);
 
 var
   Calced: TValueList;
-  i: Integer;
+  i, j: integer;
+  Lnk: TObject;
 
 begin
+  Lnk := LinkedObj;
+
   if Assigned(SE) then
   begin
     Calced := TValueList.Create;
     Calced.Assign(Parametres);
 
-    for i := 0 to Calced.Count - 1 do
-      Calced.Items[i].Value := CalcValue(Calced.Items[i].Value);
+    if Assigned(PVE) then
+      for i := 0 to Calced.Count - 1 do
+      begin
+        if not CharInSet(Calced.Items[i].Name[1], ['@']) then
+          Calced.Items[i].Value := CalcValue(Calced.Items[i].Value, PVE, Lnk);
+      end;
 
-    SE(Parent, Calced, LinkedObj);
+    SE(Parent, Calced, Lnk);
 
     if not Assigned(DE) then
       FreeAndNil(Calced);
@@ -694,26 +916,61 @@ begin
   begin
     if not Assigned(SE) then
       Calced := TValueList.Create;
-    Calced.Assign(Declorations);
 
-    for i := 0 to Calced.Count - 1 do
-      Calced.Items[i].Value := CalcValue(Calced.Items[i].Value);
+    if Assigned(Lnk) and (Lnk is TList) then
+      for j := 0 to (Lnk as TList).Count - 1 do
+      begin
+        Calced.Assign(Declorations);
+        for i := 0 to Calced.Count - 1 do
+          Calced.Items[i].Value := CalcValue(Declorations.Items[i].Value, VE,
+            (Lnk as TList)[j]);
+      end
+    else
+    begin
+      Calced.Assign(Declorations);
+      for i := 0 to Calced.Count - 1 do
+        Calced.Items[i].Value := CalcValue(Declorations.Items[i].Value,
+          VE, Lnk);
+    end;
 
-    DE(Calced);
+    DE(Calced,Lnk);
 
     FreeAndNil(Calced);
   end;
 
-  (* FINISH CONDITIONS DECLORATION *)
+  for i := 0 to Conditions.Count - 1 do
+    with Conditions[i] do
+      if (length(Parent) > 0) then
+      begin
+        if CalcValue(Parent, VE, Lnk) then
+          Conditions[i].Process(SE, DE, FE, VE, PVE, Lnk);
+      end;
 
-  (* FINISH CHILDSECTIONS DECLORATION *)
+  for i := 0 to ChildSections.Count - 1 do
+    ChildSections[i].Process(SE, DE, FE, VE, PVE, Lnk);
 
+  if Assigned(FE) then
+    FE(Parent, Lnk);
+
+end;
+
+procedure TScriptSection.Assign(s: TScriptSection);
+begin
+  if s = nil then
+    Clear
+  else
+  begin
+    FParent := s.Parent;
+    FParametres.Assign(s.Parametres);
+    FDeclorations.Assign(s.Declorations);
+    FConditions.Assign(s.Conditions);
+    FChildSections.Assign(s.ChildSections);
+  end;
 end;
 
 procedure TScriptSection.Clear;
 begin
   FParent := '';
-  FCondition := '';
   Conditions.Clear;
   Declorations.Clear;
   ChildSections.Clear;
@@ -721,130 +978,146 @@ end;
 
 // TScriptSectionList
 
-function TScriptSectionList.Get(Index: Integer): TScriptSection;
+procedure TScriptSectionList.Notify(Ptr: Pointer; Action: TListNotification);
+var
+  p: TScriptSection;
+begin
+  case Action of
+    lnAdded:
+      ;
+    lnExtracted:
+      ;
+    lnDeleted:
+      begin
+        p := Ptr;
+        p.Free;
+      end;
+  end;
+end;
+
+procedure TScriptSectionList.Assign(s: TScriptSectionList);
+var
+  i: integer;
+  p: TScriptSection;
+begin
+  Clear;
+  if Assigned(s) then
+    for i := 0 to s.Count - 1 do
+    begin
+      p := TScriptSection.Create;
+      p.Assign(s[i]);
+      Add(p);
+    end;
+end;
+
+function TScriptSectionList.Get(Index: integer): TScriptSection;
 begin
   Result := inherited Get(Index);
 end;
 
-// TDownloadSettings
-
-constructor TDownloadSettings.Create;
-begin
-  inherited;
-  FURL := '';
-  FAbsoluteURL := false;
-  FRequestMethod := rmGET;
-  FPostString := '';
-  FScript := TScriptSection.Create;
-end;
-
-destructor TDownloadSettings.Destroy;
-begin
-  FScript.Free;
-  inherited;
-end;
-
-// TThreadDSettings
-
-constructor TThreadDSettings.Create;
-begin
-  inherited;
-  FPage := 0;
-  FCount := 0;
-  FCounter := 0;
-end;
-
-// TLoginDSettings
-
-constructor TLoginDSettings.Create;
-begin
-  inherited;
-  FAuth := false;
-  FLogin := '';
-  FPassword := '';
-end;
-
 // TResource
+
+procedure TResource.Assign(R: TResource);
+begin
+  // FDownloadSet := R.DownloadSet;
+  FFileName := R.FileName;
+  FIconFile := R.IconFile;
+  FInherit := R.Inherit;
+  FFields.Assign(R.Fields);
+  if FInherit then
+    FFields.Assign(R.Parent.Fields, laOr);
+  FLoginPrompt := R.LoginPrompt;
+  FResName := R.Name;
+  FSectors.Assign(R.Sectors);
+  // FURL := R.Url;
+
+  FHTTPRec.DefUrl := R.HTTPRec.DefUrl;
+  FHTTPRec.Url := '';
+  FHTTPRec.Method := hmGet;
+  FHTTPRec.Counter := 0;
+  FHTTPRec.Count := 0;
+end;
 
 constructor TResource.Create;
 begin
   inherited;
   FFileName := '';
-  FURL := '';
+  // FURL := '';
   FIconFile := '';
   FParent := nil;
+  FPictureList := nil;
   FInherit := true;
+  FLoginPrompt := false;
   FFields := TResourceFields.Create;
-  FLoginPage := TLoginDSettings.Create;
-  FFirstPage := TDownloadSettings.Create;
-  FThread := TThreadDSettings.Create;
+  FFields.AddField('tag', ftString, null, '');
+  FSectors := TValueList.Create;
+  FInitialScript := TScriptSection.Create;
+  FBeforeScript := nil;
+  FAfterScript := nil;
+  FXMLScript := nil;
+  FAddToQueue := nil;
+  FJobFinished := false;
 end;
 
 destructor TResource.Destroy;
 begin
-  FLoginPage.Free;
-  FFirstPage.Free;
-  FThread.Free;
+  FSectors.Free;
   FFields.Free;
+  if Assigned(FPictureList) then
+    FPictureList.Free;
   inherited;
 end;
 
-procedure TResource.ScriptEvent(const Parent: String;
-  const Parametres: TValueList; var LinkedObj: TObject);
+procedure TResource.StartJob(JobType: integer);
 begin
+  FJobInitiated := false;
+  FJobFinished := false;
+  if not Assigned(FInitialScript) then
+    FInitialScript := TScriptSection.Create;
 
+  case JobType of
+    JOB_GETPICTURES:
+      FInitialScript.ParseValues(FSectors[LIST_SCRIPT]);
+    JOB_DOWNLOADPICTURES:
+      FInitialScript.ParseValues(FSectors[DOWNLOAD_SCRIPT]);
+  end;
+  AddToQueue(Self);
 end;
 
-procedure TResource.ValueEvent(const ValS: Char; const Value: String;
-  var Result: Variant; var LinkedObj: TObject);
+function TResource.CreateFullFieldList: TStringList;
 begin
-  Result := ValS + Value;
+  Result := nil;
 end;
 
-procedure TResource.DeclorationEvent(Values: TValueList);
+procedure TResource.CreateJob(t: TDownloadThread);
+begin
+  t.JobComplete := JobComplete;
+  if not JobInitiated then
+  begin
+    t.InitialScript := InitialScript;
+  end;
+  t.BeforeScript := BeforeScript;
+  t.AfterScript := AfterScript;
+  t.XMLScript := XMLScript;
+  t.HTTPRec := HTTPRec;
+  t.DownloadRec := DownloadSet;
+  inc(FHTTPRec.Counter);
+end;
+
+procedure TResource.DeclorationEvent(Values: TValueList; LinkedObj: TObject);
 
   procedure ProcValue(ItemName: String; ItemValue: Variant);
   begin
-    if ItemName = 'url' then
-      FURL := ItemValue
-    else if ItemName = 'icon' then
+    if ItemName = '$main.url' then
+      FHTTPRec.DefUrl := ItemValue
+    else if ItemName = '$main.icon' then
       FIconFile := ItemValue
-    else if ItemName = 'loginpage.authorazation' then // LoginPage
-      LoginPage.NeedAuth := StrToBool(ItemValue)
-    else if ItemName = 'loginpage.login' then
-      LoginPage.Login := ItemValue
-    else if ItemName = 'loginpage.password' then
-      LoginPage.Password := ItemValue
-    else if ItemName = 'loginpage.url' then
-      LoginPage.URL := ItemValue
-    else if ItemName = 'loginpage.absoluteurl' then
-      LoginPage.AbsoluteURL := ItemValue
-    else if ItemName = 'loginpage.method' then
-      if LowerCase(ItemValue) = 'post' then
-        LoginPage.RequestMethod := rmPOST
-      else
-        LoginPage.RequestMethod := rmGET
-    else if ItemName = 'firstpage.url' then // FirstPage
-      FirstPage.URL := ItemValue
-    else if ItemName = 'firstpage.absoluteurl' then
-      FirstPage.AbsoluteURL := ItemValue
-    else if ItemName = 'firstpage.method' then
-      if LowerCase(ItemValue) = 'post' then
-        FirstPage.RequestMethod := rmPOST
-      else
-        FirstPage.RequestMethod := rmGET
-    else if ItemName = 'thread.url' then // Thread
-      Thread.URL := ItemValue
-    else if ItemName = 'thread.absoluteurl' then
-      Thread.AbsoluteURL := ItemValue
-    else if ItemName = 'thread.page' then
-      Thread.Page := ItemValue
-    else if ItemName = 'thread.count' then
-      Thread.Count := ItemValue;
+    else if ItemName = '$main.authorization' then
+      FLoginPrompt := true;
   end;
 
 var
-  i: Integer;
+  i: integer;
   t: TListValue;
 begin
   for i := 0 to Values.Count - 1 do
@@ -854,18 +1127,60 @@ begin
   end;
 end;
 
+function TResource.JobComplete(t: TDownloadThread): integer;
+var
+  i: integer;
+
+begin
+  if not JobInitiated then
+  begin
+    if t.BeforeScript.NotEmpty then
+    begin
+      if not Assigned(FBeforeScript) then
+        FBeforeScript := TScriptSection.Create;
+      FBeforeScript.Assign(t.BeforeScript);
+    end;
+    if t.AfterScript.NotEmpty then
+    begin
+      if not Assigned(FAfterScript) then
+        FAfterScript := TScriptSection.Create;
+      FAfterScript.Assign(t.AfterScript);
+    end;
+    if t.XMLScript.NotEmpty then
+    begin
+      if not Assigned(FXMLScript) then
+        FXMLScript := TScriptSection.Create;
+      FXMLScript.Assign(t.XMLScript);
+    end;
+    FFields.Assign(t.Fields);
+    HTTPRec := t.HTTPRec;
+
+    for i := HTTPRec.Counter to HTTPRec.Count - 1 do
+      AddToQueue(Self);
+
+    if { (HTTPRec.Count > 0) and } (HTTPRec.Counter >= HTTPRec.Count) then
+    begin
+      FJobFinished := true;
+      FOnJobFinished(Self);
+    end;
+
+    FJobInitiated := true;
+  end;
+  Result := THREAD_START;
+end;
+
 procedure TResource.LoadFromFile(FName: String);
 
 const
   isl: array [0 .. 2] of string = ('""', '''''', '{}');
 
-  function GetSectors(var s: string): TValueList;
+  procedure GetSectors(s: string; R: TValueList);
   var
-    n1, n2: Integer;
+    n1, n2: integer;
     pr: String;
   begin
     pr := '';
-    Result := TValueList.Create;
+    R.Clear;
     n2 := 0;
     while true do
     begin
@@ -874,12 +1189,12 @@ const
       if n1 = 0 then
       begin
         if pr <> '' then
-          Result[pr] := Copy(s, n2 + 1, length(s) - n2);
+          R[pr] := Copy(s, n2 + 1, length(s) - n2);
         Break;
       end;
 
       if pr <> '' then
-        Result[pr] := Copy(s, n2 + 1, n1 - n2 - 1);
+        R[pr] := Copy(s, n2 + 1, n1 - n2 - 1);
 
       // Delete(s, 1, n1);
 
@@ -891,11 +1206,8 @@ const
       pr := Copy(s, n1 + 1, n2 - n1 - 1);
 
       if CheckStr(pr, ['A' .. 'Z', 'a' .. 'z']) then
-      begin
-        FreeAndNil(Result);
         raise Exception.Create(Format(_SCRIPT_READ_ERROR_,
           [_SYMBOLS_IN_SECTOR_NAME_]));
-      end;
 
       // Delete(s, 1, n2);
     end;
@@ -911,7 +1223,6 @@ const
 
 var
   mainscript: TScriptSection;
-  sectors: TValueList;
   s, tmps: String;
   f: textfile;
 begin
@@ -930,43 +1241,70 @@ begin
     CloseFile(f);
   end;
 
-  sectors := GetSectors(s);
+  GetSectors(s, FSectors);
 
   mainscript := nil;
 
   try
     mainscript := TScriptSection.Create;
-    mainscript.ParseValues(sectors['main']);
-    mainscript.Process(ScriptEvent, ValueEvent, DeclorationEvent);
+    mainscript.ParseValues(Sectors['main']);
+    mainscript.Process(nil, DeclorationEvent, nil, nil);
   except
     on e: Exception do
     begin
       if Assigned(mainscript) then
         mainscript.Free;
-      sectors.Free;
-      raise e;
+      raise Exception.Create(e.Message);
     end;
   end;
 
   FFileName := FName;
   FResName := ChangeFileExt(ExtractFileName(FName), '');
-
-  LoginPage.Script.ParseValues(nullstr(sectors['loginpage']));
-  FirstPage.Script.ParseValues(nullstr(sectors['firstpage']));
-  Thread.Script.ParseValues(nullstr(sectors['thread']));
-
-  sectors.Free;
-
 end;
 
 // TResourceLinkList
 
-function TResourceLinkList.Get(Index: Integer): TResource;
+function TResourceLinkList.Get(Index: integer): TResource;
 begin
   Result := inherited Get(Index);
 end;
 
 // TResourceList
+
+procedure TResourceList.CopyResource(R: TResource);
+var
+  NR: TResource;
+begin
+  NR := TResource.Create;
+  NR.AddToQueue := AddToQueue;
+  NR.OnJobFinished := JobFinished;
+  NR.Assign(R);
+  Add(NR);
+end;
+
+constructor TResourceList.Create;
+begin
+  inherited;
+  FThreadHandler := TThreadHandler.Create;
+end;
+
+destructor TResourceList.Destroy;
+begin
+  FThreadHandler.Free;
+  inherited;
+end;
+
+procedure TResourceList.JobFinished(R: TResource);
+var
+  i: integer;
+
+begin
+  for i := 0 to Count - 1 do
+    if not Items[i].JobFinished then
+      Exit;
+  ThreadHandler.FinishQueue;
+
+end;
 
 procedure TResourceList.Notify(Ptr: Pointer; Action: TListNotification);
 var
@@ -981,20 +1319,38 @@ begin
   end;
 end;
 
+procedure TResourceList.StartJob(JobType: integer);
+var
+  i: integer;
+
+begin
+  case JobType of
+    JOB_STOPDOWNLOAD:
+      FThreadHandler.FinishThreads(false);
+    JOB_GETPICTURES, JOB_DOWNLOADPICTURES:
+      for i := 0 to Count - 1 do
+        Items[i].StartJob(JobType);
+  end;
+end;
+
+procedure TResourceList.AddToQueue(R: TResource);
+begin
+  FThreadHandler.AddToQueue(R);
+end;
+
 procedure TResourceList.LoadList(Dir: String);
 var
   a: TSearchRec;
-  r: TResource;
+  R: TResource;
 
 begin
   Clear;
+  R := TResource.Create;
+  R.Inherit := false;
+  R.Name := _GENERAL_;
+  Add(R);
 
-  r := TResource.Create;
-  r.Inherit := false;
-  r.Name := _ALL_;
-  Add(r);
-
-  r := nil;
+  R := nil;
 
   if not DirectoryExists(Dir) then
     raise Exception.Create(Format(_NO_DIRECTORY_, [Dir]));
@@ -1005,15 +1361,16 @@ begin
   begin
     repeat
       try
-        r := TResource.Create;
-        r.LoadFromFile(Dir + a.Name);
-        Add(r);
+        R := TResource.Create;
+        R.LoadFromFile(Dir + a.Name);
+        R.Parent := Items[0];
+        Add(R);
       except
         on e: Exception do
         begin
-          (* /*/*/ Надо сделать уведомление об ошибке /*/*/ *)
-          if Assigned(r) then
-            r.Free;
+          { /*/*/ Надо сделать уведомление об ошибке /*/*/ }
+          if Assigned(R) then
+            R.Free;
         end;
 
       end;
@@ -1027,8 +1384,256 @@ end;
 
 procedure TDownloadThread.Execute;
 begin
+  while not terminated do
+  begin
+    Synchronize(DoFinish);
+    case Job of
+      THREAD_STOP:
+        begin
+          ResetEvent(FEventHandle);
+          WaitForSingleObject(FEventHandle, INFINITE);
+          Continue;
+        end;
+      THREAD_FINISH:
+        Break;
+    end;
 
+    Synchronize(DoJobComplete);
+  end;
 end;
+
+procedure TDownloadThread.AddPicture;
+begin
+  FPicLink := TTPicture.Create;
+  FPicLink.Assign(FPicture);
+  FPictureList.Add(FPicLink);
+end;
+
+constructor TDownloadThread.Create;
+begin
+  FEventHandle := CreateEvent(nil,true,false,nil);
+  FFinish := nil;
+  inherited Create(false);
+  FHTTP := TIdHTTP.Create;
+  FInitialScript := TScriptSection.Create;
+  FBeforeScript := TScriptSection.Create;
+  FAfterScript := TScriptSection.Create;
+  FXMLScript := TScriptSection.Create;
+  FFields := TResourceFields.Create;
+  FXML := TMyXMLParser.Create;
+  FPictureList := nil;
+  FSectors := TValueList.Create;
+  FPicture := nil;
+end;
+
+destructor TDownloadThread.Destroy;
+begin
+  CloseHandle(FEventHandle);
+  FInitialScript.Free;
+  FBeforeScript.Free;
+  FAfterScript.Free;
+  FXMLScript.Free;
+  FFields.Free;
+  FXML.Free;
+  inherited;
+end;
+
+procedure TDownloadThread.DoJobComplete;
+begin
+  FJobComplete(Self);
+end;
+
+procedure TDownloadThread.DoFinish;
+begin
+  FJob := Finish(Self);
+end;
+
+procedure TDownloadThread.SE(const Parent: String; const Parametres: TValueList;
+  var LinkedObj: TObject);
+var
+  l, s: TTagList;
+  i: integer;
+  a: TAttrList;
+
+begin
+  if (Parent <> '') and (Parent[1] = '^') and Assigned(LinkedObj) and
+    (LinkedObj is TTagList) then
+  begin
+    l := TTagList.Create;
+    s := LinkedObj as TTagList;
+
+    a := TAttrList.Create;
+
+    for i := 0 to Parametres.Count - 1 do
+      a.Add(Parametres.Items[i].Name, Parametres.Items[i].Value);
+
+    s.GetList(Copy(Parent, 2, length(Parent) - 1), a, l);
+
+    a.Free;
+
+    LinkedObj := l;
+  end;
+end;
+
+procedure TDownloadThread.VE(const ValS: Char; const Value: String;
+  var Result: Variant; var LinkedObj: TObject);
+var
+  t: TTag;
+  s: string;
+  // i: integer;
+
+begin
+//  Value := lowrcase(Value);
+  Result := '';
+  case ValS of
+    '#':
+      if Assigned(LinkedObj) and (LinkedObj is TTag) then
+      begin
+        t := LinkedObj as TTag;
+        Result := t.Attrs.Value(Value);
+      end;
+    '$':
+      if Value = 'main.url' then
+        Result := HTTPRec.DefUrl
+      else if Value = 'thread.count' then
+        Result := HTTPRec.Count
+      else if Value = 'thread.counter' then
+        Result := HTTPRec.Counter
+      else
+        Result := Fields[Value];
+    '@':
+    begin
+      s := CopyTo(Value,'(');
+      if s = 'unixtime' then
+        Result := UnixToDateTime(CalcValue(CopyFromTo(Value,'(',')'),VE,LinkedObj));
+    end;
+
+  end;
+end;
+
+procedure TDownloadThread.DE(Values: TValueList; LinkedObj: TObject);
+
+  procedure PicValue(p: TTPicture; const Name: String; Value: Variant);
+  var
+    s,v1,v2: string;
+    del,ins: char;
+  begin
+    case Name[1] of
+      '%':
+      if Name = '%tags' then begin
+        s := lowercase(Value);
+        v1 := GetNextS(s,',');
+        if v1 = 'csv' then
+        begin
+          v1 := GetNextS(s,',');
+          v1 := CalcValue(v1,VE,LinkedObj);
+          v2 := GetNextS(s,',');
+          if v2 = '' then
+            del:= #0
+          else
+            del := v2[1];
+          v2 := GetNextS(s,',');
+          if v2 = '' then
+            ins := #0
+          else
+            ins := v2[1];
+          while v1 <> '' do
+          begin
+            s := GetNextS(v1,del,ins);
+            FPicture.Tags.Add(FPictureList.Tags.Add(s));
+          end;
+        end;
+      end else
+        p.Meta[Copy(Name,2,length(Name)-1)] := CalcValue(Value,VE,LinkedObj);
+    end;
+
+  end;
+
+  procedure ProcValue(const Name: String; Value: Variant);
+  var
+    //p: TTPicture;
+    s,v1,v2: string;
+  begin
+    if Name = '$thread.url' then
+      FHTTPRec.Url := Value
+    else if Name = '$thread.xml' then
+      FXMLScript.ParseValues(FSectors[Value])
+    else if Name = '$thread.count' then
+      FHTTPRec.Count := Value
+    else if Name = '$thread.counter' then
+      FHTTPRec.Counter := Value
+    else if Name = '@addpicture' then
+    begin
+      s := Value;
+      while s <> '' do
+      begin
+        v1 := GetNextS(s,',','"');
+        v2 := GetNextS(v1,'=');
+        if v1 = '' then
+        begin
+          v1 := CopyFromTo(v2,'(',')',true);
+          v2 := '@' + CopyTo(v2,'(');
+        end;
+        PicValue(FPicture,v2,v1);
+        Synchronize(AddPicture);
+      end;
+    end;
+  end;
+
+var
+  i: integer;
+
+begin
+  for i := 0 to Values.Count-1 do
+    ProcValue(Values.Items[i].Name,Values.Items[i].Value);
+end;
+
+procedure TDownloadThread.FE(Parent: String; LinkedObj: TObject);
+begin
+  if (Parent <> '') and (Parent[1] = '^') and Assigned(LinkedObj) then
+    LinkedObj.Free;
+end;
+
+procedure TDownloadThread.SetInitialScript(Value: TScriptSection);
+begin
+  if Value = nil then
+    FInitialScript.Clear
+  else
+    FInitialScript.Assign(Value);
+end;
+
+procedure TDownloadThread.SetBeforeScript(Value: TScriptSection);
+begin
+  if Value = nil then
+    FBeforeScript.Clear
+  else
+    FBeforeScript.Assign(Value);
+end;
+
+procedure TDownloadThread.SetAfterScript(Value: TScriptSection);
+begin
+  if Value = nil then
+    FAfterScript.Clear
+  else
+    FAfterScript.Assign(Value);
+end;
+
+procedure TDownloadThread.SetXMLScript(Value: TScriptSection);
+begin
+  if Value = nil then
+    FXMLScript.Clear
+  else
+    FXMLScript.Assign(Value);
+end;
+
+procedure TDownloadThread.SeFields(Value: TResourceFields);
+begin
+  if Value = nil then
+    Fields.Clear
+  else
+    Fields.Assign(Value);
+end;
+
 
 // TPictureTag
 
@@ -1046,12 +1651,12 @@ end;
 
 // TPictureTagLinkList
 
-function TPictureTagLinkList.Get(Index: Integer): TPictureTag;
+function TPictureTagLinkList.Get(Index: integer): TPictureTag;
 begin
   Result := inherited Get(Index);
 end;
 
-procedure TPictureTagLinkList.Put(Index: Integer; Item: TPictureTag);
+procedure TPictureTagLinkList.Put(Index: integer; Item: TPictureTag);
 begin
   inherited Put(Index, Item);
 end;
@@ -1065,7 +1670,7 @@ end;
 
 destructor TPictureTagList.Destroy;
 var
-  i: Integer;
+  i: integer;
 begin
   for i := 0 to Count - 1 do
     Items[i].Free;
@@ -1087,9 +1692,9 @@ begin
   inherited Add(Result);
 end;
 
-function TPictureTagList.Find(TagName: String): Integer;
+function TPictureTagList.Find(TagName: String): integer;
 var
-  i: Integer;
+  i: integer;
 begin
   TagName := LowerCase(TagName);
   for i := 0 to Count - 1 do
@@ -1103,7 +1708,7 @@ end;
 
 procedure TPictureTagList.ClearZeros;
 var
-  i: Integer;
+  i: integer;
 begin
   i := 0;
   while i < Count - 1 do
@@ -1126,6 +1731,25 @@ end;
 
 // TTPicture
 
+procedure TTPicture.Assign(Value: TTPicture);
+begin
+  FChecked := Value.Checked;
+  FFinished := Value.Finished;
+  FLinked.Assign(Value.Linked);
+  FMeta.Assign(Value.Meta);
+  FParent := Value.Parent;
+  FRemoved := false;
+  FTags.Assign(Value.Tags);
+end;
+
+procedure TTPicture.Clear;
+begin
+  FLinked.Clear;
+  FParent := nil;
+  FMeta.Clear;
+  FTags.Clear;
+end;
+
 constructor TTPicture.Create;
 begin
   inherited;
@@ -1133,7 +1757,7 @@ begin
   FRemoved := false;
   FFinished := false;
   FParent := nil;
-  FMeta := TPictureValueList.Create;
+  FMeta := TValueList.Create;
   FLinked := TPictureLinkList.Create;
   FTags := TPictureTagLinkList.Create;
 end;
@@ -1157,19 +1781,19 @@ begin
     Parent.Linked.Add(Self);
 end;
 
-procedure TTPicture.SetRemoved(Value: Boolean);
+procedure TTPicture.SetRemoved(Value: boolean);
 begin
   FRemoved := Value;
 end;
 
 // TTPictureLinkList
 
-function TPictureLinkList.Get(Index: Integer): TTPicture;
+function TPictureLinkList.Get(Index: integer): TTPicture;
 begin
   Result := inherited Get(Index);
 end;
 
-procedure TPictureLinkList.Put(Index: Integer; Item: TTPicture);
+procedure TPictureLinkList.Put(Index: integer; Item: TTPicture);
 begin
   inherited Put(Index, Item);
 end;
@@ -1191,7 +1815,7 @@ end;
 procedure TPictureList.Notify(Ptr: Pointer; Action: TListNotification);
 var
   p: TTPicture;
-  i: Integer;
+  i: integer;
 begin
   case Action of
     lnDeleted:
@@ -1210,6 +1834,252 @@ begin
         p.Free;
       end;
   end;
+end;
+
+procedure TResourceFields.Assign(List: TResourceFields;
+  AOperator: TListAssignOp);
+var
+  i: integer;
+  p: PResourceField;
+
+begin
+  case AOperator of
+    laCopy:
+      begin
+        Clear;
+        Capacity := List.Capacity;
+        for i := 0 to List.Count - 1 do
+        begin
+          New(p);
+          with List.Items[i] do
+            AddField(resname, restype, resvalue, resitems);
+          Add(p);
+        end;
+      end;
+    laAnd:
+      ;
+    laOr:
+      begin
+        for i := 0 to List.Count - 1 do
+          Values[List.Items[i].resname] := List.Items[i].resvalue;
+      end;
+    laXor:
+      ;
+    laSrcUnique:
+      ;
+    laDestUnique:
+      ;
+  end;
+
+end;
+
+procedure TResourceFields.Notify(Ptr: Pointer; Action: TListNotification);
+begin
+  case Action of
+    lnDeleted:
+      Dispose(Ptr);
+  end;
+end;
+
+function TResourceFields.Get(Index: integer): TResourceField;
+var
+  p: PResourceField;
+begin
+  p := inherited Items[Index];
+  Result := p^;
+end;
+
+procedure TResourceFields.Put(Index: integer; Value: TResourceField);
+var
+  p: PResourceField;
+begin
+  p := inherited Items[Index];
+  p^ := Value;
+end;
+
+function TResourceFields.GetValue(ItemName: String): Variant;
+var
+  i: integer;
+begin
+  ItemName := LowerCase(ItemName);
+  for i := 0 to Count - 1 do
+    if Items[i].resname = ItemName then
+    begin
+      Result := Items[i].resvalue;
+      Exit;
+    end;
+  Result := null;
+end;
+
+procedure TResourceFields.SetValue(ItemName: String; Value: Variant);
+var
+  i: integer;
+  p: TResourceField;
+begin
+  ItemName := LowerCase(ItemName);
+  for i := 0 to Count - 1 do
+    if Items[i].resname = ItemName then
+    begin
+      p := Items[i];
+      p.resvalue := Value;
+      Items[i] := p;
+      Exit;
+    end;
+  raise Exception.Create(Format(_NO_FIELD_, [ItemName]));
+end;
+
+function TResourceFields.AddField(resname: string; restype: TFieldType;
+  resvalue: Variant; resitems: String): integer;
+var
+  p: PResourceField;
+begin
+  if resname = '' then
+  begin
+    Result := -1;
+    Exit;
+  end;
+  New(p);
+  p.resname := LowerCase(resname);
+  p.restype := restype;
+  p.resvalue := resvalue;
+  p.resitems := resitems;
+  Result := Add(p);
+end;
+
+procedure TThreadHandler.CreateThreads(acount: integer);
+var
+  d: TDownloadThread;
+
+begin
+  FFinishQueue := false;
+  FFinishThreads := false;
+  FQueue.Clear;
+  while Count < acount do
+  begin
+    inc(FCount);
+    d := TDownloadThread.Create;
+    d.FreeOnTerminate := true;
+    d.Finish := Finish;
+    d.OnTerminate := ThreadTerminate;
+    with d.HTTP.ProxyParams do
+    begin
+      ProxyServer := Proxy.Host;
+      ProxyPort := Proxy.Port;
+      BasicAuthentication := Proxy.Auth;
+      ProxyUserName := Proxy.Login;
+      ProxyPassword := Proxy.Password;
+    end;
+    Add(d);
+  end;
+end;
+
+function TThreadHandler.Finish(t: TDownloadThread): integer;
+begin
+  if FFinishThreads then
+    Result := THREAD_FINISH
+  else if FQueue.Count > 0 then
+  begin
+    FQueue[0].CreateJob(t);
+    FQueue.Delete(0);
+    Result := THREAD_START;
+  end
+  else if FFinishQueue then
+    Result := THREAD_FINISH
+  else
+    Result := THREAD_STOP;
+end;
+
+procedure TThreadHandler.FinishQueue;
+var
+  i: integer;
+  l: TList;
+  p: TDownloadThread;
+
+begin
+  FFinishQueue := true;
+  l := LockList;
+  try
+    for i := 0 to l.Count - 1 do
+    begin
+      p := l[i];
+      if p.Job = THREAD_STOP then
+        SetEvent(p.EventHandle);
+    end;
+  finally
+    UnlockList;
+  end;
+end;
+
+procedure TThreadHandler.FinishThreads(Force: boolean);
+var
+  i: integer;
+  p: TDownloadThread;
+  l: TList;
+
+begin
+  FFinishThreads := true;
+  l := LockList;
+  try
+    for i := 0 to l.Count - 1 do
+    begin
+      p := l[i];
+      if p.Job = THREAD_STOP then
+        SetEvent(p.EventHandle);
+      if Force and p.HTTP.Connected then
+        p.HTTP.Disconnect;
+    end;
+  finally
+    UnlockList;
+  end;
+end;
+
+procedure TThreadHandler.ThreadTerminate(ASender: TObject);
+begin
+  Remove(ASender);
+  dec(FCount);
+end;
+
+procedure TThreadHandler.AddToQueue(R: TResource);
+begin
+  FQueue.Add(R);
+  CheckIdle;
+end;
+
+procedure TThreadHandler.CheckIdle;
+var
+  l: TList;
+  i: integer;
+  p: TDownloadThread;
+
+begin
+  l := LockList;
+  try
+    for i := 0 to l.Count - 1 do
+    begin
+      p := l[i];
+      if p.Job = THREAD_STOP then
+      begin
+        SetEvent(p.EventHandle);
+        Break;
+      end;
+    end;
+  finally
+    UnlockList;
+  end;
+end;
+
+constructor TThreadHandler.Create;
+begin
+  inherited;
+  FCount := 0;
+  FQueue := TResourceLinkList.Create;
+  FFinishThreads := true;
+end;
+
+destructor TThreadHandler.Destroy;
+begin
+  FQueue.Free;
+  inherited;
 end;
 
 end.
