@@ -1,15 +1,18 @@
 program Graber2;
 
 uses
-  Forms, SysUtils,
+  Forms,
+  SysUtils,
   common in 'common.pas',
-  MainForm in 'MainForm.pas' {mf} ,
-  graberU in 'graberU.pas' {graber comps} ,
-  StartFrame in 'StartFrame.pas' {fStart: TFrame} ,
-  NewListFrame in 'NewListFrame.pas' {fNewList: TFrame} ,
+  MainForm in 'MainForm.pas' {mf},
+  graberU in 'graberU.pas' {graber comps},
+  StartFrame in 'StartFrame.pas' {fStart: TFrame},
+  NewListFrame in 'NewListFrame.pas' {fNewList: TFrame},
   LangString in 'LangString.pas',
   OpBase in 'OpBase.pas',
-  SettingsFrame in 'SettingsFrame.pas' {fSettings: TFrame};
+  MyXMLParser in 'MyXMLParser.pas',
+  SettingsFrame in 'SettingsFrame.pas' {fSettings: TFrame},
+  GridFrame in 'GridFrame.pas' {fGrid: TFrame};
 
 {$R *.res}
 

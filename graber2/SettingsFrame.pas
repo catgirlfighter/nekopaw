@@ -77,20 +77,20 @@ type
 
 implementation
 
-uses OpBase;
+uses GraberU;
 
 {$R *.dfm}
 
 procedure TfSettings.btnCancelClick(Sender: TObject);
 begin
   PostMessage(Application.MainForm.Handle, CM_CANCELSETTINGS,
-    pButtons.Parent.Tag, 0);
+    Tag, 0);
 end;
 
 procedure TfSettings.btnOkClick(Sender: TObject);
 begin
   PostMessage(Application.MainForm.Handle, CM_APPLYSETTINGS,
-    pButtons.Parent.Tag, 0);
+    Tag, 0);
 end;
 
 procedure TfSettings.chbProxyAuthPropertiesEditValueChanged(Sender: TObject);

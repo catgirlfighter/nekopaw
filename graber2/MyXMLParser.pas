@@ -17,9 +17,11 @@ type
   TAttrList = class(TObject)
   private
     FAttrs: TAttrs;
-    function GetAttr(AValue: Integer): TAttr;
     function GetCount: Integer;
+  protected
+    function GetAttr(AValue: Integer): TAttr;
   public
+    procedure Assign(AAttrs: TAttrList);
     property Attribute[AValue: Integer]: TAttr read GetAttr; default;
     property Count: Integer read GetCount;
     procedure Add(AName: String; AValue: String);
@@ -30,26 +32,194 @@ type
     destructor Destroy; override;
   end;
 
-  TXMLOnTagEvent = procedure(ATag: String; Attrs: TAttrList) of object;
+  TTagList = class;
+
+  TTag = class(TObject)
+  private
+    FParent: TTag;
+    FName: String;
+    FAttrList: TAttrList;
+    FText: String;
+    FChilds: TTagList;
+  protected
+    procedure SetName(Value: String);
+    procedure SetText(Value: String);
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function FindParent(TagString: String): TTag;
+    property Name: String read FName write SetName;
+    property Attrs: TAttrList read FAttrList write FAttrList;
+    property Text: String read FText write SetText;
+    property Childs: TTagList read FChilds;
+    property Parent: TTag read FParent write FParent;
+  end;
+
+  TTagList = class(TList)
+    protected
+      function Get(ItemIndex: Integer): TTag;
+      procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+    public
+    procedure GetList(Tag: String; AAttrs: TAttrList; AList: TTagList);
+    procedure CopyList(AList: TTagList; Parent: TTag);
+      property Items[ItemName: integer]: TTag read Get;
+      function CreateChild(Parent: TTag): TTag;
+      procedure CopyTag(ATag: TTag; Parent: TTag = nil);
+  end;
+
+  TXMLOnTagEvent = procedure(ATag: TTag) of object;
   TXMLOnEndTagEvent = procedure(ATag: String) of object;
-  TXMLOnContentEvent = procedure(AContent: String) of object;
+  TXMLOnContentEvent = procedure(ATag: TTag; AContent: String) of object;
 
   TMyXMLParser = class(TObject)
   private
-    FOnStartTag, FOnEmptyTag: TXMLOnTagEvent;
-    FOnEndTag: TXMLOnEndTagEvent;
+    FOnStartTag, FOnEmptyTag, FOnEndTag: TXMLOnTagEvent;
     FOnContent: TXMLOnContentEvent;
+//    : TXMLOnEndTagEvent;
+//    : TXMLOnContentEvent;
+    FTagList: TTagList;
   protected
   public
     property OnStartTag: TXMLOnTagEvent read FOnStartTag write FOnStartTag;
     property OnEmptyTag: TXMLOnTagEvent read FOnEmptyTag write FOnEmptyTag;
-    property OnEndTag: TXMLOnEndTagEvent read FOnEndTag write FOnEndTag;
+    property OnEndTag: TXMLOnTagEvent read FOnEndTag write FOnEndTag;
     property OnContent: TXMLOnContentEvent read FOnContent write FOnContent;
     procedure Parse(S: String); overload;
     procedure Parse(S: TStrings); overload;
+    property TagList: TTagList read FTagList;
   end;
 
 implementation
+
+procedure TTagList.Notify(Ptr: Pointer; Action: TListNotification);
+var
+  p: TTag;
+
+begin
+  case Action of
+    lnDeleted:
+      begin
+        p := Ptr;
+        p.Free;
+      end;
+  end;
+end;
+
+function TTagList.Get(ItemIndex: Integer): TTag;
+begin
+  Result := inherited Get(ItemIndex);
+end;
+
+procedure TTagList.GetList(Tag: String; AAttrs: TAttrList; AList: TTagList);
+var
+  i,j: integer;
+  b: boolean;
+begin
+  Tag := lowercase(Tag);
+  for i := 0 to Count -1 do
+  begin
+    if Items[i].Name = Tag then
+    begin
+      b := true;
+      for j := 0 to AAttrs.Count -1 do
+        if (Items[i].Attrs.Value(AAttrs[j].Name) <> AAttrs[j].Value) or
+          not ((AAttrs[j].Value = '') and (Items[i].Attrs.Value(AAttrs[j].Name) <> '')) then
+        begin
+          b := false;
+          Break;
+        end;
+
+      if b then
+        AList.CopyTag(Items[i])
+      else
+        Items[i].Childs.GetList(Tag,AAttrs,AList);
+    end else
+      Items[i].Childs.GetList(Tag,AAttrs,AList);
+  end;
+end;
+
+function TTagList.CreateChild(Parent: TTag): TTag;
+begin
+  Result := TTag.Create;
+  Result.Parent := Parent;
+  if Parent <> nil then
+    Parent.Childs.Add(Result)
+  else
+    Add(Result);
+end;
+
+procedure TTagList.CopyList(AList: TTagList; Parent: TTag);
+var
+  i: integer;
+
+begin
+  for i := 0 to AList.Count -1 do
+    CopyTag(AList[i],Parent);
+end;
+
+procedure TTagList.CopyTag(ATag: TTag; Parent: TTag = nil);
+var
+  p: TTag;
+
+begin
+  p := CreateChild(Parent);
+  p.Name := ATag.Name;
+  p.Text := ATag.Text;
+  p.Attrs.Assign(ATag.Attrs);
+  p.Childs.CopyList(ATag.Childs,p);
+  Add(p);
+end;
+
+constructor TTag.Create;
+begin
+  inherited;
+  FChilds := TTagList.Create;
+  FParent := nil;
+  FText := '';
+  //FAttrList := TAttrList.Create;
+end;
+
+destructor TTag.Destroy;
+begin
+  FChilds.Free;
+  inherited;
+end;
+
+function TTag.FindParent(TagString: String): TTag;
+var
+  P: TTag;
+
+begin
+  TagString := lowercase(TagString);
+  if Name = TagString then
+  begin
+    Result := Self;
+    Exit;
+  end else
+  begin
+    p := Parent;
+    while p <> nil do
+      if p.Name = TagString then
+      begin
+        Result := p;
+        Exit;
+      end else
+        p := p.Parent;
+  end;
+  Result := nil;
+end;
+
+procedure TTag.SetName(Value: String);
+begin
+  FName := lowercase(Value);
+end;
+
+procedure TTag.SetText(Value: String);
+begin
+  FText := Value;
+  if Assigned(FParent) then
+    FParent.Text := FParent.Text + Value;
+end;
 
 function TAttrList.GetAttr(AValue: Integer): TAttr;
 begin
@@ -68,6 +238,19 @@ begin
   begin
     Name := AName;
     Value := AValue;
+  end;
+end;
+
+procedure TAttrList.Assign(AAttrs: TAttrList);
+var
+  i: integer;
+
+begin
+  SetLength(FAttrs, AAttrs.Count);
+  for i := 0 to AAttrs.Count-1 do
+  begin
+    FAttrs[i].Name := AAttrs[i].Name;
+    FAttrs[i].Value := AAttrs[i].Value;
   end;
 end;
 
@@ -115,6 +298,8 @@ begin
 end;
 
 procedure TMyXMLParser.Parse(S: String);
+var
+  FTag: TTag;
 
   procedure parsetag(adata: string);
 
@@ -253,16 +438,39 @@ procedure TMyXMLParser.Parse(S: String);
     end;
     case stat of
       - 1:
+      begin
         if Assigned(FOnEndTag) then
-          FOnEndTag(copy(adata, li, length(adata) - li));
+          //FOnEndTag(copy(adata, li, length(adata) - li));
+          FOnEndTag(FTag);
+
+        if Assigned(FTag) then
+          FTag := FTag.FindParent(copy(adata, li, length(adata) - li));
+
+      end;
       0:
+      begin
+        FTag := TagList.CreateChild(FTag);
+        FTag.Name := tagname;
+        FTag.Attrs := Attrs;
+
         if Assigned(FOnEmptyTag) then
-          FOnEmptyTag(tagname, Attrs);
+          //FOnEmptyTag(tagname, Attrs);
+          FOnEmptyTag(FTag);
+
+        FTag := FTag.Parent;
+      end;
       1:
+      begin
+        FTag := TagLIst.CreateChild(FTag);
+        FTag.Name := tagname;
+        FTag.Attrs := Attrs;
+
         if Assigned(FOnStartTag) then
-          FOnStartTag(tagname, Attrs);
+          //FOnStartTag(tagname, Attrs);
+          FOnStartTag(FTag);
+      end;
     end;
-    Attrs.Free;
+    //Attrs.Free;
   end;
 
   function checkstr(S: string): boolean;
@@ -283,48 +491,59 @@ var
   sr: string;
 
 begin
-  txt := '';
-  state := 0;
-  l := length(S);
-  i := 1;
-  li := 1;
-  while true do
-  begin
-    while (i <= l) and (S[i] <> '<') do
-      inc(i);
-    txt := copy(S, li, i - li);
-    if Assigned(FOnContent) and (checkstr(txt)) then
-      FOnContent(txt);
-    inc(i);
-    li := i;
-    if i >= l then
-      Break;
-    while (i <= l) and ((S[i] <> '>') or (state <> 0)) do
+  if not Assigned(FTagList) then
+    FTagList := TTagList.Create;
+
+  FTag := nil;
+
+  try
+    txt := '';
+    state := 0;
+    l := length(S);
+    i := 1;
+    li := 1;
+    while true do
     begin
-      case S[i] of
-        '"':
-          case state of
-            0:
-              state := 1;
-            1:
-              state := 0;
-          end;
-        '''':
-          case state of
-            0:
-              state := 2;
-            2:
-              state := 0;
-          end;
+      while (i <= l) and (S[i] <> '<') do
+        inc(i);
+      txt := copy(S, li, i - li);
+      if Assigned(FTag) then
+        FTag.Text := FTag.Text + txt;
+      if Assigned(FOnContent) and (checkstr(txt)) then
+        FOnContent(FTag,txt);
+      inc(i);
+      li := i;
+      if i >= l then
+        Break;
+      while (i <= l) and ((S[i] <> '>') or (state <> 0)) do
+      begin
+        case S[i] of
+          '"':
+            case state of
+              0:
+                state := 1;
+              1:
+                state := 0;
+            end;
+          '''':
+            case state of
+              0:
+                state := 2;
+              2:
+                state := 0;
+            end;
+        end;
+        inc(i)
       end;
-      inc(i)
+      if i > l then
+        Break;
+      sr := copy(S, li, i - li);
+      parsetag(sr);
+      inc(i);
+      li := i;
     end;
-    if i > l then
-      Break;
-    sr := copy(S, li, i - li);
-    parsetag(sr);
-    inc(i);
-    li := i;
+  finally
+    FTag.Free;
   end;
 end;
 

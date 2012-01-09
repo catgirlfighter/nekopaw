@@ -61,7 +61,7 @@ function GetNextS(var s: string; del: Char = ';'; ins: Char = #0): string;
 function GetNextSEx(var s: string; del: TSetOfChar = [';'];
   ins: TSetOfChar = []): string;
 procedure FileToString(FileName: String; var AValue: AnsiString);
-function MathCalcStr(const s: string): variant;
+function MathCalcStr(s: string): variant;
 
 implementation
 
@@ -1318,7 +1318,7 @@ begin
   end;
 end;
 
-function MathCalcStr(const s: string): variant;
+function MathCalcStr(s: string): variant;
 const
   ops = ['+', '-', '/', '|', '\', '*', '<', '=', '>', '!'];
   { lvl1 = ['+', '-'];
@@ -1328,17 +1328,17 @@ const
     p = 1 + -
     p = 2 * / | \
     p = 3 < = > ! }
-  function Proc(const p: byte; const s: string; var i: Integer;
-    isstring: boolean = false): variant;
+  function Proc(const p: byte; var s: string; var i: Integer; const l: integer; var ls: variant;
+    const isstring: boolean = false): variant;
   var
-    n, tmp, l, lvl: Integer;
+    n, tmp, lvl: Integer;
     op: boolean;
     d: variant;
+    tmpls: variant;
   label cc; // looooool
 
   begin
     Result := null;
-    l := length(s);
     op := false;
     d := null;
     while i <= l do
@@ -1348,12 +1348,12 @@ const
         '"', '''':
           begin
             if op then
-              raise Exception.Create(Format(_OPERATOR_MISSED_, [i]));
+              raise Exception.Create(Format(_OPERATOR_MISSED_, [i,s[i],s]));
 
             n := CharPos(s, s[i], [], i + 1);
 
             if n = 0 then
-              raise Exception.Create(Format(_SYMBOL_MISSED_, [s[i], i]));
+              raise Exception.Create(Format(_SYMBOL_MISSED_, [s[i], i, s[i], s]));
 
             Result := copy(s, i + 1, n - i - 1);
 
@@ -1370,7 +1370,7 @@ const
               if s[i] = '-' then
                 goto cc
               else
-                raise Exception.Create(Format(_OPERAND_MISSED_, [i]));
+                raise Exception.Create(Format(_OPERAND_MISSED_, [i,s[i],s]));
 
             lvl := 0;
             case s[i] of
@@ -1391,64 +1391,78 @@ const
 
             tmp := i;
             inc(i);
-            d := Proc(lvl, s, i, VarIsStr(Result));
+            d := Proc(lvl, s, i, l, ls, VarIsStr(Result));
+
+            if d = null then
+              break;
 
             if VarIsStr(d) and (p <> 0) then
             begin
-              i := tmp;
-              break;
+              ls := d;
+              Break;
             end;
 
             try
-            case s[tmp] of
-              '&':
-                Result := Result and d;
-              '|':
-                Result := Result or d;
-              '+':
-                if VarIsStr(Result) or VarIsStr(d) then
-                  Result := VarToStr(Result) + VarToStr(d)
+              case s[tmp] of
+                '&':
+                  Result := Result and d;
+                '|':
+                  Result := Result or d;
+                '+':
+                  if VarIsStr(Result) or VarIsStr(d) then
+                    Result := VarToStr(Result) + VarToStr(d)
+                  else
+                    Result := Result + d;
+                '-':
+                  Result := Result - d;
+                '*':
+                  Result := Result * d;
+                '/':
+                  Result := Result / d;
+                '<':
+                  Result := Result < d;
+                '>':
+                  Result := Result > d;
+                '=':
+                  Result := Result = d;
+                '!':
+                  if op then
+                    Result := Result <> d
+                  else
+                    Result := not Result;
+              end;
+
+              if (ls <> null) then
+                if (p <> 0) then
+                  break
                 else
-                  Result := Result + d;
-              '-':
-                Result := Result - d;
-              '*':
-                Result := Result * d;
-              '/':
-                Result := Result / d;
-              '<':
-                Result := Result < d;
-              '>':
-                Result := Result > d;
-              '=':
-                Result := Result = d;
-              '!':
-                if op then
-                  Result := Result <> d
-                else
-                  Result := not Result;
-            end;
+                begin
+                  Result := VarToStr(Result) + VarToStr(ls);
+                  ls := null;
+                end;
+
             except
               on e: exception do
               begin
-                e.Message := Format(_INVALID_TYPECAST_,[Result,s[tmp],d,tmp]) +
+                e.Message := Format(_INVALID_TYPECAST_,[VarToStr(Result),s[tmp],VarToStr(d),tmp,s]) +
                   #13#10 + e.Message;
-                raise e;
+                raise exception.Create(e.Message);
               end;
             end;
           end;
         '(':
           begin
             if op then
-              raise Exception.Create(Format(_OPERATOR_MISSED_, [i]));
+              raise Exception.Create(Format(_OPERATOR_MISSED_, [i,s[i],s]));
 
             n := CharPos(s, ')', [], i + 1);
 
             if n = 0 then
-              raise Exception.Create(Format(_SYMBOL_MISSED_, [')', i]));
+              raise Exception.Create(Format(_SYMBOL_MISSED_, [')', i, s[i], s]));
 
-            tmp := 1;
-            Result := Proc(0, copy(s, i + 1, n - i - 1), tmp);
+            inc(i);
+            tmpls := null;
+            Result := Proc(0, s, i, n - 1, tmpls);
 
             i := n + 1;
 
@@ -1458,15 +1472,19 @@ const
         begin
         cc:
           if op then
-            raise Exception.Create(Format(_OPERATOR_MISSED_, [i]));
+            raise Exception.Create(Format(_OPERATOR_MISSED_, [i,s[i],s]));
 
           n := CharPosEx(s, ops + [' '], ['''''', '""', '()'], i + 1);
 
-          if n = 0 then
+          if (n = 0) or (n > l) then
             n := l + 1;
 
           Result := copy(s, i, n - i);
-          Result := Result + 0;
+          try
+            Result := Result + 0;
+          except
+            raise Exception.Create(Format(_INCORRECT_SYMBOL_,[result,i,s]));
+          end;
           i := n;
           op := true;
         end;
@@ -1476,10 +1494,12 @@ const
 
 var
   i: Integer;
-
+//  s: variant;
+  ls: variant;
 begin
   i := 1;
-  Result := Proc(0, s, i);
+  ls := null;
+  Result := Proc(0, s, i, length(s), ls);
 end;
 
 end.

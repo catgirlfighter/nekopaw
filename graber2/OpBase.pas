@@ -2,34 +2,21 @@ unit OpBase;
 
 interface
 
-uses SysUtils, Messages, GraberU;
+uses SysUtils, Messages, GraberU, INIFiles;
 
-const
-  UNIQUE_ID = 'GRABER2LOCK';
+var
+  FullResList: TResourceList;
+  GlobalSettings: TSettingsRec;
+  rootdir: string;
 
-  CM_EXPROW = WM_USER + 1;
-  CM_NEWLIST = WM_USER + 2;
-  CM_APPLYNEWLIST = WM_USER + 3;
-  CM_CANCELNEWLIST = WM_USER + 4;
-  CM_EDITLIST = WM_USER + 5;
-  CM_APPLYEDITLIST = WM_USER + 6;
-  CM_CLOSETAB = WM_USER + 7;
-  CM_SHOWSETTINGS = WM_USER + 8;
-  CM_APPLYSETTINGS = WM_USER + 9;
-  CM_CANCELSETTINGS = WM_USER + 10;
-
-  SAVEFILE_VERSION = 0;
-
-type
-
-  TProxyRec = record
+{  TProxyRec = record
     UseProxy: boolean;
     Host: string;
     Port: longint;
     Auth: boolean;
     Login: string;
     Password: string;
-    SavePWD: Boolean;
+    SavePWD: boolean;
   end;
 
   TDownloadRec = record
@@ -45,26 +32,61 @@ type
   TSettingsRec = record
     Proxy: TProxyRec;
     Downl: TDownloadRec;
-    OneInstance: Boolean;
-    TrayIcon: Boolean;
-    HideToTray: Boolean;
-    SaveConfirm: Boolean;
-  end;
+    OneInstance: boolean;
+    TrayIcon: boolean;
+    HideToTray: boolean;
+    SaveConfirm: boolean;
+  end;}
 
-var
-  FullResList: TResourceList;
-  GlobalSettings: TSettingsRec;
-  rootdir: string;
+procedure LoadGlobalSettings;
 
 implementation
 
+procedure LoadGlobalSettings;
+var
+  INI: TINIFile;
+begin
+  INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + 'settings.ini');
+  with GlobalSettings do
+  begin
+    OneInstance := INI.ReadBool('global','oneinstance',true);
+    Trayicon := INI.ReadBool('GUI','trayicon',true);
+    HideToTray := INI.ReadBool('GUI','hidetotray',true);
+    SaveConfirm := INI.ReadBool('GUI','saveconfirm',true);
+
+    with Downl do
+    begin
+      ThreadCount := INI.ReadInteger('download','threadcount',1);
+      Retries := INI.ReadInteger('download','retires',5);
+      Interval := INI.ReadInteger('download','interval',3);
+      BeforeU := INI.ReadBool('download','beforeurl',true);
+      BeforeP := INI.ReadBool('download','beforepicture',false);
+      AfterP := INI.ReadBool('download','afterpicture',false);
+      Debug := false;
+    end;
+
+    with Proxy do
+    begin
+      UseProxy := INI.ReadBool('proxy','useproxy',false);
+      Host := INI.ReadString('proxy','host','');
+      Port := INI.ReadInteger('proxy','port',0);
+      Auth := INI.ReadBool('proxy','authetication',false);
+      Login := INI.ReadString('proxy','login','');
+      Password := INI.ReadString('proxy','password','');
+    end;
+  end;
+  INI.Free;
+end;
+
 initialization
 
-  FullResList := TResourceList.Create;
-  rootdir := ExtractFileDir(paramstr(0));
+FullResList := TResourceList.Create;
+rootdir := ExtractFileDir(paramstr(0));
+
+LoadGlobalSettings;
 
 finalization
 
-  FullResList.Free;
+FullResList.Free;
 
 end.
