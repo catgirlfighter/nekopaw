@@ -93,7 +93,7 @@ type
     // LogErr, updatecaption: TLogProc;
     existingfile: Integer;
     tstart: Integer;
-    nxt: string;
+    nxt,tmp: string;
     procedure DwnldHTTPWork(ASender: TObject; AWorkMode: TWorkMode;
       AWorkCount: Int64);
     procedure DwnldHTTPWorkBegin(ASender: TObject; AWorkMode: TWorkMode;
@@ -727,7 +727,7 @@ begin
 
       case curdest of
         RP_BEHOIMI, RP_PIXIV, RP_PAHEAL_RULE34, RP_PAHEAL_RULE63,
-          RP_PAHEAL_COSPLAY:
+          RP_PAHEAL_COSPLAY, RP_TENTACLERAPE:
           HTTP.Request.Referer := RESOURCE_URLS[curdest] + n[num].pageurl;
         RP_EHENTAI_G, RP_EXHENTAI:
           HTTP.Request.Referer := n[num].URL;
@@ -752,6 +752,9 @@ begin
         end;
         SMSG(msGET);
 
+        nxt := '';
+        tmp := '';
+
         s := HTTP.Get(n[num].URL);
         if HTTP.Connected then
           HTTP.Disconnect;
@@ -768,7 +771,11 @@ begin
         Synchronize(ProcStack);
 
         XML.Parse(s);
+
         o := ClearHTML(nxt);
+
+{        if tmp <> '' then
+          o := ClearHTML(tmp); }
 
       end
       else
@@ -870,6 +877,9 @@ begin
             (incfname) and (n[num].title <> '') then
             fname := ExtractFilePath(fname) + AddZeros(n[num].title, zerocount)
               + '_' + ExtractFileName(fname);
+
+          if (curdest in [RP_EHENTAI_G,RP_EXHENTAI]) and (tmp <> '') then
+            o := ClearHTML(tmp);
 
           CSection.Enter;
           try
@@ -1133,10 +1143,20 @@ procedure TDownloadThread.XMLStartTagEvent(ATag: String; Attrs: TAttrList);
 begin
   case curdest of
     RP_EHENTAI_G, RP_EXHENTAI:
-      if (tstart = 8) and (ATag = 'div') and
-        ((Attrs.Value('class') = 'sn') or (Attrs.Value('class') = 'sb') or
-        (Attrs.Value('class') = 'sa')) then
-        tstart := 9
+      if (tstart = 8) then
+        if(ATag = 'div') then
+          if ((Attrs.Value('class') = 'sn')
+          or (Attrs.Value('class') = 'sb') or (Attrs.Value('class') = 'sa')) then
+            tstart := 9
+          else if (Attrs.Value('class') = 'if') then
+            tstart := 7
+          else
+        else
+      else if (tstart = 7) and (ATag = 'a') then
+      begin
+        tstart := 6;
+        tmp := Attrs.Value('href');
+      end
       else if (tstart > 8) and (ATag = 'div') then
         inc(tstart);
   end;
@@ -1149,10 +1169,10 @@ begin
     RP_EHENTAI_G, RP_EXHENTAI:
       if (tstart = 8) and (ATag = 'img') and (Attrs.Value('class') = '') then
         nxt := Attrs.Value('src');
-    RP_RMART:
+{    RP_RMART:
       if (tstart = 8) and (ATag = 'img') and
         (Attrs.Value('class') = 'view-image') then
-        nxt := Attrs.Value('src');
+        nxt := Attrs.Value('src');    }
   end;
 end;
 
@@ -1160,15 +1180,23 @@ procedure TDownloadThread.XMLEndTagEvent(ATag: String);
 begin
   case curdest of
     RP_EHENTAI_G, RP_EXHENTAI:
-      if (tstart > 8) and (ATag = 'div') then
-        dec(tstart);
+      if (ATag = 'div') then
+        if (tstart > 8) then
+          dec(tstart)
+        else if (tstart = 7) then
+          tstart := 8
+        else
+      else if (Atag = 'a') and (tstart = 6) then
+        tstart := 7;
 
   end;
 end;
 
 procedure TDownloadThread.XMLContentEvent(AContent: String);
 begin
-
+  if tstart = 6 then
+    if pos('download original',lowercase(AContent)) <> 1 then
+      tmp := '';
 end;
 
 procedure TDownloadThread.AddToStack;
@@ -2017,7 +2045,7 @@ begin
             tstart := 0;
           end
         else
-          nxt := 'http://moe.imouto.org/post?searchDefault=Search&tags=' +
+          nxt := 'http://oreno.imouto.org/post?searchDefault=Search&tags=' +
             StringEncode(tmptag);
       RP_PIXIV:
         if not chbByAuthor.Checked then
@@ -2120,21 +2148,17 @@ begin
         else
           nxt := 'http://e621.net/post?commit=Search&tags=' +
             StringEncode(tmptag);
-      RP_413CHAN_PONIBOORU:
-        nxt := 'http://ponibooru.413chan.net/post/list/' +
+      RP_413CHAN_PONIBOORU,RP_PAHEAL_RULE63, RP_PAHEAL_COSPLAY,
+      RP_TENTACLERAPE:
+        nxt := RESOURCE_URLS[cbSite.ItemIndex] + 'post/list/' +
           StringEncode(tmptag) + '/1';
-      RP_BOORU_II:
-        nxt := 'http://ii.booru.org/index.php?page=post&s=list&tags=' +
+      RP_BOORU_II,RP_TBIB:
+        nxt :=  'index.php?page=post&s=list&tags=' +
           StringEncode(tmptag);
       RP_ZEROCHAN:
         nxt := 'http://www.zerochan.net/search?q=' + StringEncode(tmptag)
           + '&s=id';
-      RP_PAHEAL_RULE63:
-        nxt := 'http://rule63.paheal.net/post/list/' +
-          StringEncode(tmptag) + '/1';
-      RP_PAHEAL_COSPLAY:
-        nxt := 'http://cosplay.paheal.net/post/list/' +
-          StringEncode(tmptag) + '/1';
+
       RP_XBOORU:
         nxt := 'http://xbooru.com/index.php?page=post&s=list&tags=' +
           StringEncode(tmptag);
@@ -3935,7 +3959,7 @@ end;
 procedure TMainForm.XmlStartTag(ATag: String; Attrs: TAttrList);
 begin
   case cbSite.ItemIndex of
-    RP_GELBOORU, RP_BOORU_II, RP_BOORU_RULE34:
+    RP_GELBOORU, RP_BOORU_II, RP_BOORU_RULE34, RP_TBIB:
       begin
         if (ATag = 'a') then
           if tstart = 1 then
@@ -4342,7 +4366,7 @@ begin
         n[xml_tmpi].Params := PreList[curPreItem].Name;
         n[xml_tmpi].pageurl := n[xml_tmpi].URL;
       end;
-    RP_PAHEAL_RULE34, RP_PAHEAL_RULE63, RP_PAHEAL_COSPLAY:
+    RP_PAHEAL_RULE34, RP_PAHEAL_RULE63, RP_PAHEAL_COSPLAY, RP_TENTACLERAPE:
       if (tstart = 0) and (ATag = 'div') then
         if ((lowercase(Attrs.Value('id')) = 'navigationleft')) or
           (lowercase(Attrs.Value('id')) = 'navigation') then
@@ -4640,7 +4664,7 @@ end;
 procedure TMainForm.XmlEndTag(ATag: String);
 begin
   case cbSite.ItemIndex of
-    RP_GELBOORU, RP_BOORU_II, RP_BOORU_RULE34:
+    RP_GELBOORU, RP_BOORU_II, RP_BOORU_RULE34, RP_TBIB:
       if (ATag = 'span') and (tstart = 1) then
         tstart := 0;
     RP_DONMAI_DANBOORU, RP_DONMAI_HIJIRIBE, RP_DONMAI_SONOHARA, RP_SANKAKU_CHAN,
@@ -4718,7 +4742,7 @@ begin
         tstart := -1
       else if (tstart = 8) and (ATag = 'h1') then
         tstart := -1;
-    RP_PAHEAL_RULE34, RP_PAHEAL_RULE63, RP_PAHEAL_COSPLAY:
+    RP_PAHEAL_RULE34, RP_PAHEAL_RULE63, RP_PAHEAL_COSPLAY, RP_TENTACLERAPE:
       if (ATag = 'div') then
         if tstart > 0 then
           dec(tstart)
@@ -4881,7 +4905,7 @@ begin
           n[xml_tmpi].tags := AddTags(CopyTo(Attrs.Value('title'), ' //'));
         end;
       end;
-    RP_BOORU_II:
+    RP_BOORU_II,RP_TBIB:
       if (ATag = 'img') and (tstart = 1) then
       begin
         xml_tmpi :=
@@ -4981,6 +5005,29 @@ begin
           n[xml_tmpi].Params := PreList[curPreItem].Name;
         end;
       end;
+    RP_TENTACLERAPE:
+      if (tstart > 0) then
+        if (ATag = 'img') then
+          begin
+            if pos('://', Attrs.Value('src')) > 0 then
+              xml_tmpi := AddN(REPLACE(REPLACE(Attrs.Value('src'), 'thumbs',
+                'images', false, true), '/thumb', ''))
+            else
+              xml_tmpi := AddN(RESOURCE_URLS[cbSite.ItemIndex] +
+                trim(REPLACE(REPLACE(Attrs.Value('src'), 'thumbs', 'images',
+                false, true), '/thumb', ''), '/'));
+            if xml_tmpi <> -1 then
+            begin
+              if pos('://', Attrs.Value('src')) > 0 then
+                n[xml_tmpi].Preview := Attrs.Value('src')
+              else
+                n[xml_tmpi].Preview := RESOURCE_URLS[cbSite.ItemIndex] +
+                  trim(Attrs.Value('src'), '/');
+              n[xml_tmpi].Params := Attrs.Value('alt');
+              n[xml_tmpi].tags := AddTags(CopyTo(Attrs.Value('alt'), ' //'));
+              n[xml_tmpi].pageurl := tmpurl;
+            end;
+          end
   end;
 end;
 
@@ -5060,7 +5107,7 @@ begin
         nxt := AContent
       else if (tstart = 8) then
         PreList[curPreItem].Name := AContent;
-    RP_PAHEAL_RULE34, RP_PAHEAL_RULE63, RP_PAHEAL_COSPLAY:
+    RP_PAHEAL_RULE34, RP_PAHEAL_RULE63, RP_PAHEAL_COSPLAY, RP_TENTACLERAPE:
       if (tstart < 0) and (lowercase(AContent) = 'next') then
         nxt := tmp;
     RP_RMART:
@@ -5156,7 +5203,6 @@ procedure TMainForm.FormCreate(Sender: TObject);
 var
   i: Integer;
   Icon: TIcon;
-  PNG: TPNGImage;
 //  ICON: TIcon;
 
 begin

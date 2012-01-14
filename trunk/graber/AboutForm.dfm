@@ -655,33 +655,28 @@ object fmAbout: TfmAbout
   object Label3: TLabel
     Left = 8
     Top = 46
-    Width = 310
+    Width = 388
     Height = 13
-    Caption = 'Thanks to all Anonymous and Steves Ballmers for new ideas and '
-  end
-  object Label4: TLabel
-    Left = 281
-    Top = 57
-    Width = 111
-    Height = 13
-    Caption = 'information about bugs'
+    Caption = 
+      'Thanks to all Anonymous and Steves Ballmers for new ideas and tr' +
+      'oubleshooting '
   end
   object Label5: TLabel
     Left = 8
     Top = 108
-    Width = 246
+    Width = 285
     Height = 13
-    Caption = 'Check project homepage for new version of Graber'
+    Caption = 'For new versions, with questions, suggestions and troubles'
   end
   object Label6: TLabel
     Left = 16
     Top = 120
-    Width = 278
+    Width = 117
     Height = 13
-    Caption = '(or if you want to make a suggestion or report about bug)'
+    Caption = 'check project homepage'
   end
   object Label7: TLabel
-    Left = 8
+    Left = 16
     Top = 152
     Width = 175
     Height = 13

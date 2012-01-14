@@ -134,13 +134,14 @@ object MainForm: TMainForm
       TabItem = 'tsiSettings'
       object iLain: TImage
         Left = 444
-        Top = 7
+        Top = 6
         Width = 101
         Height = 122
         Anchors = [akRight, akBottom]
         Center = True
         Visible = False
         OnDblClick = iLainDblClick
+        ExplicitTop = 7
       end
       object gbWindow: TGroupBox
         Left = 234
@@ -920,7 +921,7 @@ object MainForm: TMainForm
         Left = 312
         Top = 5
         Width = 233
-        Height = 121
+        Height = 120
         Anchors = [akLeft, akTop, akRight, akBottom]
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindowText
@@ -936,18 +937,17 @@ object MainForm: TMainForm
         Left = 3
         Top = 3
         Width = 209
-        Height = 124
+        Height = 123
         ActivePage = tsTags
         Anchors = [akLeft, akTop, akBottom]
         TabOrder = 2
         object tsTags: TTabSheet
           Caption = 'Tags Cloud'
-          ExplicitHeight = 67
           object chblTagsCloud: TCheckListBox
             Left = 0
             Top = 0
             Width = 201
-            Height = 96
+            Height = 95
             Align = alClient
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clWindowText
@@ -959,18 +959,16 @@ object MainForm: TMainForm
             PopupMenu = pmTags
             Sorted = True
             TabOrder = 0
-            ExplicitHeight = 67
           end
         end
         object tsRelated: TTabSheet
           Caption = 'Related'
           ImageIndex = 1
-          ExplicitHeight = 67
           object lbRelatedTags: TListBox
             Left = 0
             Top = 0
             Width = 201
-            Height = 96
+            Height = 95
             Align = alClient
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clWindowText
@@ -982,7 +980,6 @@ object MainForm: TMainForm
             PopupMenu = pmTags
             Sorted = True
             TabOrder = 0
-            ExplicitHeight = 67
           end
         end
       end
@@ -1827,7 +1824,7 @@ object MainForm: TMainForm
     Left = 336
     Top = 320
     Bitmap = {
-      494C010103002400540010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103002400580010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
