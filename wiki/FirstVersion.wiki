@@ -357,6 +357,8 @@ pwd=<br />
  * safebooru.org
  * chan.sankakucomplex.com
  * idol.sankakucomplex.com
+ * tbib.org
+ * tentaclerape.net
  * thedoujin.com `[`albums`]`
  * wildcritters.ws `[`+ pools`]`
  * xbooru.com
