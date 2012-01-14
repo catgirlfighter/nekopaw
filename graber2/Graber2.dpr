@@ -12,7 +12,8 @@ uses
   OpBase in 'OpBase.pas',
   MyXMLParser in 'MyXMLParser.pas',
   SettingsFrame in 'SettingsFrame.pas' {fSettings: TFrame},
-  GridFrame in 'GridFrame.pas' {fGrid: TFrame};
+  GridFrame in 'GridFrame.pas' {fGrid: TFrame},
+  MyHTTP in 'MyHTTP.pas';
 
 {$R *.res}
 

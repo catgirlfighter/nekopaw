@@ -75,6 +75,7 @@ type
     procedure CreateSettings(n: Integer);
     procedure SaveSettings;
     procedure LoadItems;
+    procedure ResetItems;
     { Public declarations }
   end;
 
@@ -311,6 +312,12 @@ begin
   tvFull.EndUpdate;
 
   btnOk.Enabled := tvRes.DataController.RowCount > 1;
+end;
+
+procedure TfNewList.ResetItems;
+begin
+  if pcMain.ActivePage = tsSettings then
+    SaveSettings;
 end;
 
 procedure TfNewList.SaveSettings;
