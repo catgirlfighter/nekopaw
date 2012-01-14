@@ -20,7 +20,7 @@ const
 
   ZLAINS = 12;
 
-  RESOURCE_COUNT = 28;
+  RESOURCE_COUNT = 30;
 
   RP_GELBOORU = 11;
   RP_DONMAI_DANBOORU = 5;
@@ -38,18 +38,20 @@ const
   RP_E621 = 9;
   RP_413CHAN_PONIBOORU = 0;
   RP_BOORU_II = 2;
-  RP_ZEROCHAN = 27;
+  RP_ZEROCHAN = 29;
   RP_PAHEAL_RULE63 = 18;
   RP_PAHEAL_COSPLAY = 16;
-  RP_XBOORU = 26;
-  RP_WILDCRITTERS = 25;
+  RP_XBOORU = 28;
+  RP_WILDCRITTERS = 27;
   RP_BOORU_RULE34 = 3;
   RP_RMART = 20;
   RP_DONMAI_HIJIRIBE = 6;
   RP_DONMAI_SONOHARA = 7;
   RP_NEKOBOORU = 15;
-  RP_THEDOUJIN = 24;
+  RP_THEDOUJIN = 26;
   RP_MINITOKYO = 14;
+  RP_TBIB = 24;
+  RP_TENTACLERAPE = 25;
 
   RS_POOLS = [RP_BEHOIMI, RP_SANKAKU_CHAN, RP_IMOUTO, RP_DONMAI_DANBOORU,
   RP_SANKAKU_IDOL, RP_E621, RP_KONACHAN, RP_WILDCRITTERS, RP_DONMAI_HIJIRIBE,
@@ -86,10 +88,12 @@ const
               {21} 'http://safebooru.org/',
               {22} 'http://chan.sankakucomplex.com/',
               {23} 'http://idol.sankakucomplex.com/',
-              {24} 'http://thedoujin.com/',
-              {25} 'http://wildcritters.ws/',
-              {26} 'http://xbooru.com/',
-              {27} 'http://www.zerochan.net/');
+              {24} 'http://tbib.org/',
+              {25} 'http://tentaclerape.net/',
+              {26} 'http://thedoujin.com/',
+              {27} 'http://wildcritters.ws/',
+              {28} 'http://xbooru.com/',
+              {29} 'http://www.zerochan.net/');
 
 
   RVLIST: array [0 .. RESOURCE_COUNT - 1] of Integer =
@@ -99,10 +103,10 @@ const
     RP_413CHAN_PONIBOORU, RP_BOORU_II, RP_ZEROCHAN, RP_PAHEAL_RULE63,
     RP_PAHEAL_COSPLAY, RP_XBOORU, RP_WILDCRITTERS, RP_BOORU_RULE34, RP_RMART,
     RP_DONMAI_HIJIRIBE, RP_DONMAI_SONOHARA, RP_NEKOBOORU, RP_THEDOUJIN,
-    RP_MINITOKYO);
+    RP_MINITOKYO,RP_TBIB,RP_TENTACLERAPE);
 
   REV_RVLIST: array [0 .. RESOURCE_COUNT - 1] of Integer = (14, 7, 15, 21, 12, 1, 23, 24,
-    8, 13, 9, 0, 3, 2, 27, 25, 18, 10, 17, 4, 22, 5, 6, 11, 26, 20, 19, 16);
+    8, 13, 9, 0, 3, 2, 27, 25, 18, 10, 17, 4, 22, 5, 6, 11, 28, 29, 26, 20, 19, 16);
 
 type
   TArrayOfWord = array of word;
