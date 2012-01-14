@@ -1232,23 +1232,26 @@ function CharPos(str: string; ch: Char; Isolators: array of string;
   From: Integer = 1): Integer;
 var
   i, j: Integer;
-  n: boolean;
-  s: Char;
+  n: integer;
+  s1,s2: Char;
   st: TSetOfChar;
 begin
   st := [];
   for i := 0 to length(Isolators) - 1 do
     st := st + [Isolators[i][1]];
 
-  n := false;
-  s := #0;
+  n := 0;
+  s1 := #0;
+  s2 := #0;
 
   for i := From to length(str) do
-    if n then
-      if str[i] = s then
-        n := false
+    if n > 0 then
+      if str[i] = s2 then
+        dec(n)
+      else if str[i] = s1 then
+        inc(n)
       else
-    else if str[i] = ch then
+    else if (str[i] = ch) then
     begin
       Result := i;
       Exit;
@@ -1258,10 +1261,11 @@ begin
       for j := 0 to length(Isolators) - 1 do
         if (str[i] = Isolators[j][1]) then
         begin
-          s := Isolators[j][2];
+          s1 := Isolators[j][1];
+          s2 := Isolators[j][2];
           break;
         end;
-      n := true;
+      inc(n);
     end;
   Result := 0;
 end;

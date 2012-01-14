@@ -1,22 +1,26 @@
 object fGrid: TfGrid
   Left = 0
   Top = 0
-  Width = 610
-  Height = 385
+  Width = 451
+  Height = 304
   Align = alClient
   TabOrder = 0
   object Grid: TcxGrid
     Left = 0
     Top = 0
-    Width = 610
-    Height = 385
+    Width = 451
+    Height = 304
     Align = alClient
     TabOrder = 0
     object vGrid: TcxGridDBTableView
       NavigatorButtons.ConfirmDelete = False
+      DataController.DataSource = ds
       DataController.Summary.DefaultGroupSummaryItems = <>
       DataController.Summary.FooterSummaryItems = <>
       DataController.Summary.SummaryGroups = <>
+      OptionsData.Deleting = False
+      OptionsData.Inserting = False
+      OptionsView.ColumnAutoWidth = True
       OptionsView.ExpandButtonsForEmptyDetails = False
     end
     object vChilds: TcxGridDBTableView
@@ -33,17 +37,22 @@ object fGrid: TfGrid
       end
     end
   end
-  object cds: TClientDataSet
-    Aggregates = <>
-    FieldDefs = <>
-    IndexDefs = <>
-    Params = <>
-    StoreDefs = True
+  object ds: TDataSource
+    DataSet = md
     Left = 48
-    Top = 121
-    object cdsresname: TStringField
-      FieldName = 'resname'
-      Size = 128
+    Top = 168
+  end
+  object md: TdxMemData
+    Indexes = <>
+    SortOptions = []
+    Left = 48
+    Top = 128
+  end
+  object cxEditRepository1: TcxEditRepository
+    Left = 240
+    Top = 104
+    object iTextEdit: TcxEditRepositoryTextItem
+      Properties.ReadOnly = True
     end
   end
 end

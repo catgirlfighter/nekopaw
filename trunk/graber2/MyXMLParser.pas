@@ -165,9 +165,10 @@ begin
   p := CreateChild(Parent);
   p.Name := ATag.Name;
   p.Text := ATag.Text;
+  p.Attrs := TAttrList.Create;
   p.Attrs.Assign(ATag.Attrs);
   p.Childs.CopyList(ATag.Childs,p);
-  Add(p);
+  //Add(p);
 end;
 
 constructor TTag.Create;
@@ -206,7 +207,7 @@ begin
       end else
         p := p.Parent;
   end;
-  Result := nil;
+  Result := Self;
 end;
 
 procedure TTag.SetName(Value: String);
@@ -461,7 +462,7 @@ var
       end;
       1:
       begin
-        FTag := TagLIst.CreateChild(FTag);
+        FTag := TagList.CreateChild(FTag);
         FTag.Name := tagname;
         FTag.Attrs := Attrs;
 
@@ -496,7 +497,7 @@ begin
 
   FTag := nil;
 
-  try
+//  try
     txt := '';
     state := 0;
     l := length(S);
@@ -542,9 +543,9 @@ begin
       inc(i);
       li := i;
     end;
-  finally
+{  finally
     FTag.Free;
-  end;
+  end;   }
 end;
 
 procedure TMyXMLParser.Parse(S: TStrings);
