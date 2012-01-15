@@ -2153,7 +2153,7 @@ begin
         nxt := RESOURCE_URLS[cbSite.ItemIndex] + 'post/list/' +
           StringEncode(tmptag) + '/1';
       RP_BOORU_II,RP_TBIB:
-        nxt :=  'index.php?page=post&s=list&tags=' +
+        nxt := RESOURCE_URLS[cbSite.ItemIndex] + 'index.php?page=post&s=list&tags=' +
           StringEncode(tmptag);
       RP_ZEROCHAN:
         nxt := 'http://www.zerochan.net/search?q=' + StringEncode(tmptag)
