@@ -4,6 +4,12 @@ object fNewList: TfNewList
   Width = 451
   Height = 304
   Align = alClient
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  ParentFont = False
   TabOrder = 0
   object VSplitter: TcxSplitter
     Left = 182
@@ -24,24 +30,25 @@ object fNewList: TfNewList
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 1
-    object btnOk: TcxButton
+    object btnPrevious: TcxButton
       Left = 0
       Top = 0
       Width = 75
       Height = 25
-      Caption = 'btnOk'
+      Caption = 'btnPrevious'
       Enabled = False
       TabOrder = 0
-      OnClick = btnOkClick
+      OnClick = btnPreviousClick
     end
-    object btnCancel: TcxButton
+    object btnNext: TcxButton
       Left = 81
       Top = 0
       Width = 75
       Height = 25
-      Caption = 'btnCancel'
+      Caption = 'btnNext'
+      Enabled = False
       TabOrder = 1
-      OnClick = btnCancelClick
+      OnClick = btnNextClick
     end
   end
   object gRes: TcxGrid
@@ -117,23 +124,29 @@ object fNewList: TfNewList
     Height = 273
     ActivePage = tsList
     Align = alClient
+    HideTabs = True
     TabOrder = 3
     OnChange = pcMainChange
-    ClientRectBottom = 269
-    ClientRectLeft = 4
-    ClientRectRight = 257
-    ClientRectTop = 24
+    ClientRectBottom = 273
+    ClientRectRight = 261
+    ClientRectTop = 0
     object tsList: TcxTabSheet
       Caption = 'tsList'
       ImageIndex = 0
+      ExplicitLeft = 4
+      ExplicitTop = 4
+      ExplicitWidth = 253
+      ExplicitHeight = 265
       object gFull: TcxGrid
         Left = 0
         Top = 0
-        Width = 253
-        Height = 245
+        Width = 261
+        Height = 273
         Margins.Right = 0
         Align = alClient
         TabOrder = 0
+        ExplicitWidth = 253
+        ExplicitHeight = 265
         object tvFull: TcxGridTableView
           NavigatorButtons.ConfirmDelete = False
           DataController.Summary.DefaultGroupSummaryItems = <>
@@ -196,14 +209,21 @@ object fNewList: TfNewList
       Caption = 'tsSettings'
       ImageIndex = 1
       OnShow = tsSettingsShow
+      ExplicitLeft = 4
+      ExplicitTop = 4
+      ExplicitWidth = 253
+      ExplicitHeight = 265
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0
-        Width = 353
-        Height = 245
-        Align = alLeft
-        OptionsView.RowHeaderWidth = 157
+        Width = 261
+        Height = 273
+        Align = alClient
+        OptionsView.GridLineColor = clBtnShadow
+        OptionsView.RowHeaderWidth = 143
         TabOrder = 0
+        ExplicitWidth = 253
+        ExplicitHeight = 265
         Version = 1
       end
     end

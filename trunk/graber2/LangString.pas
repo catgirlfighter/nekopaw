@@ -38,7 +38,9 @@ var
   _TAGSTRING_: String = 'Tag';
   _INHERIT_: String = 'Inherit configuration';
   _SETTINGS_: String = 'Settings';
-  _GENERAL_: STring = 'General';
+  _GENERAL_: String = 'General';
+  _RESNAME_: String = 'Resource';
+  _RESID_: String = '#';
 implementation
 
 end.

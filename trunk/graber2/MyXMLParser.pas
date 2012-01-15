@@ -495,6 +495,8 @@ begin
   if not Assigned(FTagList) then
     FTagList := TTagList.Create;
 
+  FTagList.Clear;
+
   FTag := nil;
 
 //  try

@@ -20,18 +20,20 @@ object mf: Tmf
   TextHeight = 13
   object ds: TdxDockSite
     Left = 0
-    Top = 28
+    Top = 26
     Width = 608
-    Height = 384
+    Height = 386
     Align = alClient
+    ExplicitTop = 28
+    ExplicitHeight = 384
     DockType = 0
     OriginalWidth = 608
-    OriginalHeight = 384
+    OriginalHeight = 386
     object dxLayoutDockSite4: TdxLayoutDockSite
       Left = 0
       Top = 0
       Width = 608
-      Height = 234
+      Height = 236
       DockType = 1
       OriginalWidth = 300
       OriginalHeight = 200
@@ -39,7 +41,7 @@ object mf: Tmf
         Left = 150
         Top = 0
         Width = 458
-        Height = 234
+        Height = 236
         DockType = 1
         OriginalWidth = 300
         OriginalHeight = 200
@@ -47,7 +49,7 @@ object mf: Tmf
           Left = 0
           Top = 0
           Width = 458
-          Height = 234
+          Height = 236
           DockType = 1
           OriginalWidth = 300
           OriginalHeight = 200
@@ -56,7 +58,7 @@ object mf: Tmf
           Left = 0
           Top = 0
           Width = 458
-          Height = 234
+          Height = 236
           AllowFloating = False
           AutoHide = False
           Caption = 'dpTable'
@@ -69,16 +71,16 @@ object mf: Tmf
             Left = 0
             Top = 0
             Width = 454
-            Height = 230
+            Height = 232
             Align = alClient
             Images = il
             Options = [pcoAlwaysShowGoDialogButton, pcoCloseButton, pcoGradient, pcoGradientClientArea, pcoRedrawOnResize]
             TabOrder = 0
             OnChange = pcTablesChange
-            ClientRectBottom = 226
-            ClientRectLeft = 4
-            ClientRectRight = 450
-            ClientRectTop = 4
+            ExplicitHeight = 230
+            ClientRectBottom = 232
+            ClientRectRight = 454
+            ClientRectTop = 0
           end
         end
       end
@@ -86,7 +88,7 @@ object mf: Tmf
         Left = 0
         Top = 0
         Width = 150
-        Height = 234
+        Height = 236
         ActiveChildIndex = 0
         AllowFloating = False
         AutoHide = False
@@ -100,7 +102,7 @@ object mf: Tmf
           Left = 0
           Top = 0
           Width = 146
-          Height = 200
+          Height = 208
           AllowFloating = True
           AutoHide = False
           Caption = 'dpTags'
@@ -113,7 +115,7 @@ object mf: Tmf
           Left = 0
           Top = 0
           Width = 146
-          Height = 200
+          Height = 208
           AllowFloating = True
           AutoHide = False
           Caption = 'dpCurTags'
@@ -126,7 +128,7 @@ object mf: Tmf
     end
     object dsLogs: TdxTabContainerDockSite
       Left = 0
-      Top = 234
+      Top = 236
       Width = 608
       Height = 150
       ActiveChildIndex = 0
@@ -141,11 +143,12 @@ object mf: Tmf
         Left = 0
         Top = 0
         Width = 604
-        Height = 92
+        Height = 102
         AllowFloating = True
         AutoHide = False
         Caption = 'dpLog'
         Dockable = False
+        ExplicitHeight = 92
         DockType = 1
         OriginalWidth = 185
         OriginalHeight = 150
@@ -154,11 +157,12 @@ object mf: Tmf
         Left = 0
         Top = 0
         Width = 604
-        Height = 92
+        Height = 102
         AllowFloating = True
         AutoHide = False
         Caption = 'dpErrors'
         Dockable = False
+        ExplicitHeight = 92
         DockType = 1
         OriginalWidth = 185
         OriginalHeight = 150
@@ -201,7 +205,7 @@ object mf: Tmf
     DefaultTabContainerSiteProperties.Dockable = True
     DefaultTabContainerSiteProperties.ImageIndex = -1
     Font.Charset = DEFAULT_CHARSET
-    Font.Color = clWindowText
+    Font.Color = clBlack
     Font.Height = -11
     Font.Name = 'Tahoma'
     Font.Style = []
@@ -230,7 +234,7 @@ object mf: Tmf
     DockControlHeights = (
       0
       0
-      28
+      26
       0)
     object bmbMain: TdxBar
       AllowClose = False
@@ -891,5 +895,10 @@ object mf: Tmf
           00000000000000000000000000350005059300232BCE003D4CE9003D4DE90024
           2ED1000607980000003B00000000000000000000000000000000}
       end>
+  end
+  object cxLookAndFeelController1: TcxLookAndFeelController
+    NativeStyle = False
+    Left = 136
+    Top = 72
   end
 end
