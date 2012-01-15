@@ -7,7 +7,16 @@ uses
   Dialogs, cxGraphics, cxLookAndFeels, cxLookAndFeelPainters, Menus, StdCtrls,
   cxButtons, ExtCtrls, cxControls, cxContainer, cxEdit, dxLayoutcxEditAdapters,
   cxCheckBox, cxTextEdit, cxLabel, dxLayoutControl, cxGroupBox, cxMaskEdit,
-  cxSpinEdit, dxGDIPlusClasses, cxImage;
+  cxSpinEdit, dxGDIPlusClasses, cxImage, common, dxSkinsCore, dxSkinBlack,
+  dxSkinBlue, dxSkinCaramel, dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide,
+  dxSkinFoggy, dxSkinGlassOceans, dxSkiniMaginary, dxSkinLilian,
+  dxSkinLiquidSky, dxSkinLondonLiquidSky, dxSkinMcSkin, dxSkinMoneyTwins,
+  dxSkinOffice2007Black, dxSkinOffice2007Blue, dxSkinOffice2007Green,
+  dxSkinOffice2007Pink, dxSkinOffice2007Silver, dxSkinOffice2010Black,
+  dxSkinOffice2010Blue, dxSkinOffice2010Silver, dxSkinPumpkin, dxSkinSeven,
+  dxSkinSharp, dxSkinSilver, dxSkinSpringTime, dxSkinStardust, dxSkinSummer2008,
+  dxSkinsDefaultPainters, dxSkinValentine, dxSkinXmas2008Blue,
+  dxSkinscxPCPainter;
 
 type
   TfSettings = class(TFrame)
@@ -84,13 +93,13 @@ uses GraberU;
 procedure TfSettings.btnCancelClick(Sender: TObject);
 begin
   PostMessage(Application.MainForm.Handle, CM_CANCELSETTINGS,
-    Tag, 0);
+    Integer(Self.Parent), 0);
 end;
 
 procedure TfSettings.btnOkClick(Sender: TObject);
 begin
   PostMessage(Application.MainForm.Handle, CM_APPLYSETTINGS,
-    Tag, 0);
+    Integer(Self.Parent), 0);
 end;
 
 procedure TfSettings.chbProxyAuthPropertiesEditValueChanged(Sender: TObject);

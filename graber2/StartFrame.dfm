@@ -4,6 +4,12 @@ object fStart: TfStart
   Width = 451
   Height = 304
   Align = alClient
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  ParentFont = False
   TabOrder = 0
   OnResize = FrameResize
   object iIcon: TImage

@@ -24,6 +24,7 @@ const
   THREAD_STOP = 0;
   THREAD_START = 1;
   THREAD_FINISH = 2;
+  THREAD_PROCESS = 3;
 
   JOB_STOPDOWNLOAD = 0;
   JOB_GETPICTURES = 1;
@@ -234,6 +235,8 @@ type
     FXML: TMyXMLParser;
     FPicture: TTPicture;
     FPicLink: TTPicture;
+    FTagList: TStringList;
+    FPicList: TList;
     // FCookie: TCookieList;
   protected
     procedure SetInitialScript(Value: TScriptSection);
@@ -339,7 +342,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    function Add(TagName: String): TPictureTag;
+    function Add(TagName: String; p: TTPicture): TPictureTag;
     function Find(TagName: String): integer;
     procedure ClearZeros;
     property Items;
@@ -1553,8 +1556,10 @@ begin
           Break;
       end;
 
-      FInitialScript.Process(SE, DE, FE, VE, VE);
-      ProcHTTP;
+      if FInitialScript.NotEmpty then
+        FInitialScript.Process(SE, DE, FE, VE, VE)
+      else
+        ProcHTTP;
       Synchronize(DoJobComplete);
     except
       Break;
@@ -1563,10 +1568,14 @@ begin
 end;
 
 procedure TDownloadThread.AddPicture;
+var
+  i: integer;
 begin
   FPicLink := TTPicture.Create;
   FPicLink.Assign(FPicture);
   FPictureList.Add(FPicLink);
+  for i := 0 to FTagList.Count -1 do
+    FPictureList.Tags.Add(FTagList[i],FPicLink);
 end;
 
 constructor TDownloadThread.Create;
@@ -1584,6 +1593,8 @@ begin
   FPictureList := nil;
   FSectors := TValueList.Create;
   FPicture := TTPicture.Create;
+  FTagList := TStringList.Create;
+  FPicList := TList.Create;
 end;
 
 destructor TDownloadThread.Destroy;
@@ -1597,6 +1608,8 @@ begin
   FXML.Free;
   FHTTP.Free;
   FPicture.Free;
+  FTagList.Free;
+  FPicList.Free;
   inherited;
 end;
 
@@ -1692,8 +1705,8 @@ procedure TDownloadThread.DE(Values: TValueList; LinkedObj: TObject);
           if v1 = 'csv' then
           begin
             v1 := GetNextS(s, ',');
-            v1 := CalcValue(v1, VE, LinkedObj);
-            v2 := GetNextS(s, ',');
+            v1 := Trim(CalcValue(v1, VE, LinkedObj));
+            v2 := Trim(Trim(GetNextS(s, ','),' '),'"');
             if v2 = '' then
               del := #0
             else
@@ -1706,7 +1719,8 @@ procedure TDownloadThread.DE(Values: TValueList; LinkedObj: TObject);
             while v1 <> '' do
             begin
               s := GetNextS(v1, del, ins);
-              FPicture.Tags.Add(FPictureList.Tags.Add(s));
+              FTagList.Add(s);
+              //FPicture.Tags.Add(FPictureList.Tags.Add(s,nil));
             end;
           end;
         end
@@ -1737,6 +1751,7 @@ procedure TDownloadThread.DE(Values: TValueList; LinkedObj: TObject);
     else if Name = '@addpicture' then
     begin
       FPicture.Clear;
+      FTagList.Clear;
       s := Value;
       while s <> '' do
       begin
@@ -1886,15 +1901,13 @@ begin
 end;
 
 destructor TPictureTagList.Destroy;
-var
-  i: integer;
 begin
-  for i := 0 to Count - 1 do
-    Items[i].Free;
+{  for i := 0 to Count - 1 do
+    Items[i].Free; }
   inherited;
 end;
 
-function TPictureTagList.Add(TagName: String): TPictureTag;
+function TPictureTagList.Add(TagName: String; p: TTPicture): TPictureTag;
 begin
   if Find(TagName) > -1 then
   begin
@@ -1905,6 +1918,12 @@ begin
   Result := TPictureTag.Create;
   Result.Attribute := taNone;
   Result.Name := TagName;
+
+  if Assigned(p) then
+  begin
+    p.Tags.Add(Result);
+    Result.Linked.Add(p);
+  end;
 
   inherited Add(Result);
 end;
@@ -2044,6 +2063,7 @@ end;
 
 destructor TPictureList.Destroy;
 begin
+  Clear;
   FTags.Free;
   inherited;
 end;
@@ -2064,9 +2084,9 @@ begin
           for i := 0 to p.Tags.Count - 1 do
             p.Tags[i].Linked.Remove(p);
         end;
-        if p.Linked <> nil then
+        {if p.Linked <> nil then
           for i := 0 to p.Linked.Count - 1 do
-            Remove(p.Linked[i]);
+            Remove(p.Linked[i]);  }
         p.Free;
       end;
   end;
@@ -2298,6 +2318,7 @@ begin
       p := l[i];
       if p.Job = THREAD_STOP then
       begin
+        p.Job := THREAD_PROCESS;
         SetEvent(p.EventHandle);
         Break;
       end;

@@ -15,7 +15,14 @@ uses
   cxGridLevel, cxGrid, cxButtonEdit, cxExtEditRepositoryItems, cxPC, cxLabel,
   cxImage, cxEditRepositoryItems, cxVGrid,
   {graber2}
-  common;
+  common, dxSkinBlack, dxSkinBlue, dxSkinCaramel, dxSkinCoffee, dxSkinDarkRoom,
+  dxSkinDarkSide, dxSkinFoggy, dxSkinGlassOceans, dxSkiniMaginary, dxSkinLilian,
+  dxSkinLiquidSky, dxSkinLondonLiquidSky, dxSkinMcSkin, dxSkinMoneyTwins,
+  dxSkinOffice2007Black, dxSkinOffice2007Blue, dxSkinOffice2007Green,
+  dxSkinOffice2007Pink, dxSkinOffice2007Silver, dxSkinOffice2010Black,
+  dxSkinOffice2010Blue, dxSkinOffice2010Silver, dxSkinPumpkin, dxSkinSeven,
+  dxSkinSharp, dxSkinSilver, dxSkinSpringTime, dxSkinStardust, dxSkinSummer2008,
+  dxSkinsDefaultPainters, dxSkinValentine, dxSkinXmas2008Blue;
 
 type
   TListFrameState = (lfsNew, lfsEdit);
@@ -23,8 +30,7 @@ type
   TfNewList = class(TFrame)
     VSplitter: TcxSplitter;
     pButtons: TPanel;
-    btnOk: TcxButton;
-    btnCancel: TcxButton;
+    btnPrevious: TcxButton;
     lvlRes1: TcxGridLevel;
     gRes: TcxGrid;
     tvRes: TcxGridTableView;
@@ -50,8 +56,7 @@ type
     erCheckBox: TcxEditRepositoryCheckBoxItem;
     erSpinEdit: TcxEditRepositorySpinItem;
     erCombo: TcxEditRepositoryComboBoxItem;
-    procedure btnCancelClick(Sender: TObject);
-    procedure btnOkClick(Sender: TObject);
+    btnNext: TcxButton;
     procedure gRescButtonGetProperties(Sender: TcxCustomGridTableItem;
       ARecord: TcxCustomGridRecord; var AProperties: TcxCustomEditProperties);
     procedure pcMainChange(Sender: TObject);
@@ -65,6 +70,8 @@ type
       APrevFocusedRecord, AFocusedRecord: TcxCustomGridRecord;
       ANewItemRecordFocusingChanged: Boolean);
     procedure tsSettingsShow(Sender: TObject);
+    procedure btnNextClick(Sender: TObject);
+    procedure btnPreviousClick(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -122,22 +129,30 @@ begin
   tvRes.EndUpdate;
   tvFull.EndUpdate;
 
-  btnOk.Enabled := tvRes.DataController.RowCount > 1;
+  btnNext.Enabled := tvRes.DataController.RowCount > 1;
 end;
 
-procedure TfNewList.btnCancelClick(Sender: TObject);
+procedure TfNewList.btnNextClick(Sender: TObject);
 begin
-  PostMessage(Application.MainForm.Handle, CM_CANCELNEWLIST, Tag, 0);
-end;
-
-procedure TfNewList.btnOkClick(Sender: TObject);
-begin
-  case State of
-    lfsNew:
-      PostMessage(Application.MainForm.Handle, CM_APPLYNEWLIST, Tag, 0);
-    lfsEdit:
-      PostMessage(Application.MainForm.Handle, CM_APPLYEDITLIST, Tag, 0);
+  if pcMain.ActivePage = tsSettings then
+    case State of
+      lfsNew:
+        PostMessage(Application.MainForm.Handle, CM_APPLYNEWLIST, Integer(Parent), 0);
+      lfsEdit:
+        PostMessage(Application.MainForm.Handle, CM_APPLYEDITLIST, Integer(Parent), 0);
+    end
+  else
+  begin
+    pcMain.ActivePage := tsSettings;
+    Application.MainForm.ActiveControl := vgSettings;
+    vgSettings.RowByName('vgitag').Focused := true;
   end;
+end;
+
+procedure TfNewList.btnPreviousClick(Sender: TObject);
+begin
+  if pcMain.ActivePage = tsSettings then
+    pcMain.ActivePage := tsList;
 end;
 
 procedure TfNewList.CreateSettings(n: Integer);
@@ -291,6 +306,7 @@ begin
   with (Sender as TcxPageControl) do
   begin
     gRescButton.Visible := ActivePage = tsList;
+    btnPrevious.Enabled := ActivePage = tsSettings;
   end;
 end;
 
@@ -311,7 +327,7 @@ begin
   tvRes.EndUpdate;
   tvFull.EndUpdate;
 
-  btnOk.Enabled := tvRes.DataController.RowCount > 1;
+  btnNext.Enabled := tvRes.DataController.RowCount > 1;
 end;
 
 procedure TfNewList.ResetItems;

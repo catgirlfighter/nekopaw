@@ -15,7 +15,15 @@ uses
   cxCheckBox, cxTextEdit, cxPC, dxBar, dxBarExtItems, cxContainer,
   cxMemo,
   {graber2}
-  common, OpBase, graberU, MyHTTP, ImgList;
+  common, OpBase, graberU, MyHTTP, ImgList, dxSkinBlack, dxSkinBlue,
+  dxSkinCaramel, dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide, dxSkinFoggy,
+  dxSkinGlassOceans, dxSkiniMaginary, dxSkinLilian, dxSkinLiquidSky,
+  dxSkinLondonLiquidSky, dxSkinMcSkin, dxSkinMoneyTwins, dxSkinOffice2007Black,
+  dxSkinOffice2007Blue, dxSkinOffice2007Green, dxSkinOffice2007Pink,
+  dxSkinOffice2007Silver, dxSkinOffice2010Black, dxSkinOffice2010Blue,
+  dxSkinOffice2010Silver, dxSkinPumpkin, dxSkinSeven, dxSkinSharp, dxSkinSilver,
+  dxSkinSpringTime, dxSkinStardust, dxSkinSummer2008, dxSkinsDefaultPainters,
+  dxSkinValentine, dxSkinXmas2008Blue, dxSkinsdxBarPainter;
 
 type
 
@@ -24,8 +32,12 @@ type
       FTimer: TTimer;
       FStartFrame,FEndFrame,FCurrentFrame: Integer;
       FLoop: Boolean;
+      FRName: String;
       procedure OnTimer(Sender: TObject);
     public
+      MainFrame: TFrame;
+      SecondFrame: TFrame;
+      property RName: String read FRName write FRName;
       procedure SetIcon(AStartFrame: integer; AEndFrame: integer = -1;
       Loop: boolean = false);
       constructor Create(AOwner: TComponent); override;
@@ -97,6 +109,7 @@ type
     bbSettings: TdxBarButton;
     bbNew: TdxBarButton;
     il: TcxImageList;
+    cxLookAndFeelController1: TcxLookAndFeelController;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure gLevel2GetGridView(Sender: TcxGridLevel;
@@ -165,7 +178,7 @@ procedure TMycxTabSheet.SetIcon(AStartFrame: integer; AEndFrame: integer = -1;
 begin
   //FTimer.Enabled := false;
 
-  FStartFrame := AStartFrame;
+{  FStartFrame := AStartFrame;
   FLoop := Loop;
   if not FTimer.Enabled or FTimer.Enabled and (AEndFrame > -1)
   and (FCurrentFrame < FStartFrame) then
@@ -173,12 +186,15 @@ begin
   if (AEndFrame > -1) then
     FEndFrame := AEndFrame;
   if (ImageIndex <> FStartFrame) or (AEndFrame > -1) then
-    FTimer.Enabled := true;
+    FTimer.Enabled := true;   }
+  ImageIndex := FStartFrame;
 end;
 
 constructor TMycxTabSheet.Create(AOwner: TComponent);
 begin
   inherited;
+  MainFrame := nil;
+  SecondFrame := nil;
   FTimer := TTimer.Create(Self);
   FTimer.Enabled := false;
   FTimer.Interval := 50;
@@ -189,6 +205,14 @@ end;
 destructor TMycxTabSheet.Destroy;
 begin
   FTimer.Free;
+{  if Assigned(MainFrame) then
+  begin
+    if (MainFrame is TfGrid) then
+      (MainFrame as TfGrid).Relise;
+    MainFrame.Free;
+  end;
+  if Assigned(SecondFrame) then
+    SecondFrame.Free;    }
   inherited;
 end;
 
@@ -277,12 +301,14 @@ begin
   n := CreateTab(pcTables);
   f := TfNewList.Create(n);
   f.State := lfsNew;
-  f.Tag := integer(n);
-  n.Tag := integer(f);
+  //f.Tag := integer(n);
+  //n.Tag := integer(f);
+  n.SecondFrame := f;
 
   f.LoadItems;
 
   f.Parent := n;
+  pcTables.Change;
   ShowDs;
 end;
 
@@ -293,16 +319,23 @@ end;
 
 procedure Tmf.pcTablesChange(Sender: TObject);
 begin
-  if pcTables.ActivePage <> nil then
-    if not (TFrame(pcTables.ActivePage.Tag) is TfGrid) then
+  if (pcTables.ActivePage <> nil) and (pcTables.ActivePage is TMycxtabSheet) then
+  begin
+    if (TMycxtabSheet(pcTables.ActivePage).SecondFrame is TfNewList) then
     begin
+      pcTables.Options := pcTables.Options + [pcoCloseButton];
       dsTags.Hide;
-      pcTables.Options := pcTables.Options - [pcoCloseButton]
-    end else
+    end
+    else if (TMycxtabSheet(pcTables.ActivePage).MainFrame is TfGrid) then
     begin
       dsTags.Show;
       pcTables.Options := pcTables.Options + [pcoCloseButton]
+    end else
+    begin
+      dsTags.Hide;
+      pcTables.Options := pcTables.Options - [pcoCloseButton]
     end;
+  end;
 end;
 
 procedure Tmf.APPLYNEWLIST(var Msg: TMessage);
@@ -314,18 +347,19 @@ var
 
 begin
   n := TMycxTabSheet(Msg.WParam);
-  f := TfNewList(n.Tag);
-  f2 := TfGrid.Create(n);
-  n.Tag := integer(f2);
+  f := n.SecondFrame as tfNewList; //TfNewList(n.Tag);
+  f2 := TfGrid.Create(n) as tfGrid;
+  //n.Tag := integer(f2);
   f2.CreateList;
   f.ResetItems;
   with f.tvRes.DataController do
     for i := 0 to RecordCount - 1 do
       if Values[i, 0] <> 0 then
         f2.ResList.CopyResource(FullResList[Values[i, 0]]);
-  f.Free;
+  FreeAndNil(n.SecondFrame);
   f2.Reset;
   f2.ResList.ThreadHandler.Cookies := FCookie;
+  n.MainFrame := f2;
   f2.Parent := n;
   f2.ResList.ThreadHandler.CreateThreads(GlobalSettings.Downl.ThreadCount);
   f2.ResList.StartJob(JOB_GETPICTURES);
@@ -338,7 +372,7 @@ var
   f: TfSettings;
 begin
   // n := Pointer(Msg.WParam);
-  f := TfSettings(SttPanel.Tag);
+  f := SttPanel.MainFrame as tfSettings;
 
   with f, GlobalSettings do
   begin
@@ -365,7 +399,7 @@ begin
     SaveConfirm := chbSaveConfirm.Checked;
   end;
 
-  f.Free;
+  FreeAndNil(SttPanel.MainFrame);
   CloseTab(SttPanel as TcxTabSheet);
   // SttPanel := nil;
 end;
@@ -385,7 +419,7 @@ var
   f: TFrame;
 
 begin
-  f := TFrame(pcTables.ActivePage.Tag);
+  f := TFrame((pcTables.ActivePage as TMycxTabSheet).MainFrame);
   if f is TfGrid then
     (f as TfGrid).ResList.ThreadHandler.FinishThreads;
 end;
@@ -393,12 +427,11 @@ end;
 procedure Tmf.CANCELNEWLIST(var Msg: TMessage);
 var
   n: TMycxTabSheet;
-  f: TfNewList;
+  //f: TfNewList;
 
 begin
   n := Pointer(Msg.WParam);
-  f := TfNewList(n.Tag);
-  f.Free;
+//  FreeAndNil(n.SecondFrame);
   CloseTab(n);
 end;
 
@@ -434,15 +467,24 @@ var
   f: TFrame;
 begin
   // pcTables.Tabs
-  f := TFrame(t.Tag);
-  if f is TfGrid then
+  if t is TMycxTabSheet then
+  begin
+    f := (t as tMycxTabSheet).MainFrame;
+    if f is TfGrid then
     with (f as TfGrid) do
       if ResList.ThreadHandler.Count > 0 then
       begin
         MessageDlg(_TAB_IS_BUSY_,mtError,[mbOk],0);
         Exit;
       end else
-        ResList.Free;
+        Relise;
+    f := (t as tMycxTabSheet).MainFrame;
+    if f is TfNewList then
+    begin
+      PostMessage(Handle, CM_CANCELNEWLIST, Integer(t), 0)
+    end;
+
+  end;
   t.Free;
   pcTables.Change;
   // FreeAndNil(t);
@@ -546,8 +588,9 @@ begin
     chbSaveConfirm.Checked := SaveConfirm;
   end;
 
-  f.Tag := integer(SttPanel);
-  SttPanel.Tag := integer(f);
+  //f.Tag := integer(SttPanel);
+  SttPanel.MainFrame := f;
+  //SttPanel.Tag := integer(f);
   f.ResetButons;
   f.Parent := SttPanel;
   ShowDs;
