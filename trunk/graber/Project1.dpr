@@ -16,7 +16,8 @@ uses
   DownloadThreads in 'DownloadThreads.pas',
   stoping_u in 'stoping_u.pas' {fStoping},
   Unit5 in 'Unit5.pas' {fmLogin},
-  AboutForm in 'AboutForm.pas' {fmAbout};
+  AboutForm in 'AboutForm.pas' {fmAbout},
+  md5 in 'md5.pas';
 
 {$R *.res}
 

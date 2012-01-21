@@ -72,6 +72,7 @@
 			<DCCReference Include="AboutForm.pas">
 				<Form>fmAbout</Form>
 			</DCCReference>
+			<DCCReference Include="md5.pas"/>
 			<RcItem Include="ico\anim\getlist\9.ico">
 				<ResourceType>Icon</ResourceType>
 				<ResourceId>ZGLIST8</ResourceId>
@@ -269,7 +270,7 @@
 						<VersionInfo Name="MajorVer">1</VersionInfo>
 						<VersionInfo Name="MinorVer">1</VersionInfo>
 						<VersionInfo Name="Release">0</VersionInfo>
-						<VersionInfo Name="Build">9</VersionInfo>
+						<VersionInfo Name="Build">11</VersionInfo>
 						<VersionInfo Name="Debug">True</VersionInfo>
 						<VersionInfo Name="PreRelease">True</VersionInfo>
 						<VersionInfo Name="Special">True</VersionInfo>
@@ -281,7 +282,7 @@
 					<VersionInfoKeys>
 						<VersionInfoKeys Name="CompanyName"/>
 						<VersionInfoKeys Name="FileDescription"/>
-						<VersionInfoKeys Name="FileVersion">1.1.0.9</VersionInfoKeys>
+						<VersionInfoKeys Name="FileVersion">1.1.0.11</VersionInfoKeys>
 						<VersionInfoKeys Name="InternalName"/>
 						<VersionInfoKeys Name="LegalCopyright">Avil</VersionInfoKeys>
 						<VersionInfoKeys Name="LegalTrademarks"/>

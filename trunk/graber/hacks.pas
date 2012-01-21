@@ -33,6 +33,7 @@ type
     public
       function GetCookieValue(CookieName,CookieDomain: string): string;
       function GetCookieByValue(CookieName,CookieDomain: string): string;
+    procedure DeleteCookie(CookieDomain: String);
   end;
 
   TMyIdHTTP = class(TIdCustomHTTP)
@@ -473,6 +474,20 @@ begin
     Result := hacks.GetCookieValue(Self[i]);
     Exit
   end;
+end;
+
+procedure TMyCookieList.DeleteCookie(CookieDomain: String);
+var i: integer;
+begin
+  //Result := '';
+  CookieDomain := GetURLDomain(CookieDomain);
+  i := 0;
+  while i < Self.Count do
+    if (GetCookieDomain(Self[i])=CookieDomain)
+    {and (GetCookieName(Self[i])=CookieName)} then
+      Delete(i)
+    else
+      inc(i);
 end;
 
 function TMyCookieList.GetCookieByValue(CookieName,CookieDomain: string): string;
