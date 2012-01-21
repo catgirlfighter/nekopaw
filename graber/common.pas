@@ -105,8 +105,8 @@ const
     RP_DONMAI_HIJIRIBE, RP_DONMAI_SONOHARA, RP_NEKOBOORU, RP_THEDOUJIN,
     RP_MINITOKYO,RP_TBIB,RP_TENTACLERAPE);
 
-  REV_RVLIST: array [0 .. RESOURCE_COUNT - 1] of Integer = (14, 7, 15, 21, 12, 1, 23, 24,
-    8, 13, 9, 0, 3, 2, 27, 25, 18, 10, 17, 4, 22, 5, 6, 11, 28, 29, 26, 20, 19, 16);
+  REV_RVLIST: array [0 .. RESOURCE_COUNT - 1] of Integer = (14, 7, 15, 12, 1, 23, 24,
+    8, 13, 9, 0, 3, 2, 27, 25, 18, 10, 17, 4, 22, 5, 6, 11, 28, 29, 26, 20, 19, 21, 16);
 
 type
   TArrayOfWord = array of word;
