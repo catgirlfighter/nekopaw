@@ -121,263 +121,265 @@ object MainForm: TMainForm
       Width = 32
       Height = 32
     end
-    object tsSettings: TSpTBXTabSheet
+    object tsMetadata: TSpTBXTabSheet
       Left = 0
       Top = 26
       Width = 548
       Height = 132
-      Caption = 'Settings'
+      Caption = 'Metadata'
       ImageIndex = -1
       DesignSize = (
         548
         132)
-      TabItem = 'tsiSettings'
-      object iLain: TImage
-        Left = 444
-        Top = 6
-        Width = 101
-        Height = 122
-        Anchors = [akRight, akBottom]
-        Center = True
-        Visible = False
-        OnDblClick = iLainDblClick
-        ExplicitTop = 7
+      TabItem = 'tsiMetadata'
+      object lCntFilter: TLabel
+        Left = 218
+        Top = 79
+        Width = 41
+        Height = 13
+        Caption = 'Cnt. filter'
       end
-      object gbWindow: TGroupBox
-        Left = 234
-        Top = 4
-        Width = 134
-        Height = 123
-        Caption = 'Window'
+      object btnSelAll: TSpeedButton
+        Left = 218
+        Top = 38
+        Width = 25
+        Height = 25
+        Hint = 'Select all'
+        Glyph.Data = {
+          3E020000424D3E0200000000000036000000280000000D0000000D0000000100
+          18000000000008020000C40E0000C40E00000000000000000000000000000000
+          000000000000BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A
+          7800000000000000000000000000BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6
+          EFEBE6EFEBE6BD9A7800000000000000BD9A78BD9A78BD9A78BD9A78BD9A78BD
+          9A78BD9A78BD9A78BD9A78EFEBE6BD9A7800000000000000BD9A78EFEBE6EFEB
+          E6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6BD9A78EFEBE6BD9A7800BD9A78BD9A78
+          BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78EFEBE6BD9A78EFEBE6BD9A
+          7800BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6BD9A78EFEBE6
+          BD9A78EFEBE6BD9A7800BD9A78EFEBE6EFEBE61E2D30EFEBE6EFEBE6EFEBE6EF
+          EBE6BD9A78EFEBE6BD9A78EFEBE6BD9A7800BD9A78EFEBE61E2D301E2D301E2D
+          30EFEBE6EFEBE6EFEBE6BD9A78EFEBE6BD9A78EFEBE6BD9A7800BD9A78EFEBE6
+          1E2D30EFEBE61E2D301E2D30EFEBE6EFEBE6BD9A78EFEBE6BD9A78BD9A78BD9A
+          7800BD9A78EFEBE6EFEBE6EFEBE6EFEBE61E2D301E2D30EFEBE6BD9A78EFEBE6
+          BD9A7800000000000000BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE61E2D30EF
+          EBE6BD9A78BD9A78BD9A7800000000000000BD9A78EFEBE6EFEBE6EFEBE6EFEB
+          E6EFEBE6EFEBE6EFEBE6BD9A7800000000000000000000000000BD9A78BD9A78
+          BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A780000000000000000000000
+          0000}
+        ParentShowHint = False
+        ShowHint = True
+        OnClick = btnSelAllClick
+      end
+      object btnDeselAll: TSpeedButton
+        Left = 249
+        Top = 38
+        Width = 25
+        Height = 25
+        Hint = 'Deselect all'
+        Glyph.Data = {
+          3E020000424D3E0200000000000036000000280000000D0000000D0000000100
+          18000000000008020000C40E0000C40E00000000000000000000000000000000
+          000000000000BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A
+          7800000000000000000000000000BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6
+          EFEBE6EFEBE6BD9A7800000000000000BD9A78BD9A78BD9A78BD9A78BD9A78BD
+          9A78BD9A78BD9A78BD9A78EFEBE6BD9A7800000000000000BD9A78EFEBE6EFEB
+          E6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6BD9A78EFEBE6BD9A7800BD9A78BD9A78
+          BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78EFEBE6BD9A78EFEBE6BD9A
+          7800BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6BD9A78EFEBE6
+          BD9A78EFEBE6BD9A7800BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EF
+          EBE6BD9A78EFEBE6BD9A78EFEBE6BD9A7800BD9A78EFEBE6EFEBE6EFEBE6EFEB
+          E6EFEBE6EFEBE6EFEBE6BD9A78EFEBE6BD9A78EFEBE6BD9A7800BD9A78EFEBE6
+          EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6BD9A78EFEBE6BD9A78BD9A78BD9A
+          7800BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6BD9A78EFEBE6
+          BD9A7800000000000000BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EF
+          EBE6BD9A78BD9A78BD9A7800000000000000BD9A78EFEBE6EFEBE6EFEBE6EFEB
+          E6EFEBE6EFEBE6EFEBE6BD9A7800000000000000000000000000BD9A78BD9A78
+          BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A780000000000000000000000
+          0000}
+        ParentShowHint = False
+        ShowHint = True
+        OnClick = btnDeselAllClick
+      end
+      object btnSelInverse: TSpeedButton
+        Left = 280
+        Top = 38
+        Width = 25
+        Height = 25
+        Hint = 'Inverse selection'
+        Glyph.Data = {
+          3E020000424D3E0200000000000036000000280000000D0000000D0000000100
+          18000000000008020000C40E0000C40E00000000000000000000000000000000
+          000000000000BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A
+          7800000000000000000000000000BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6
+          EFEBE6EFEBE6BD9A7800000000000000000000000000BD9A78EFEBE6EFEBE680
+          8080EFEBE6EFEBE6EFEBE6EFEBE6BD9A7800000000000000000000000000BD9A
+          78EFEBE6808080808080808080EFEBE6EFEBE6EFEBE6BD9A7800BD9A78BD9A78
+          BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78808080EFEBE6EFEBE6BD9A
+          7800BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6BD9A78808080
+          808080EFEBE6BD9A7800BD9A78EFEBE6EFEBE6808080EFEBE6EFEBE6EFEBE6EF
+          EBE6BD9A78EFEBE6808080EFEBE6BD9A7800BD9A78EFEBE68080808080808080
+          80EFEBE6EFEBE6EFEBE6BD9A78EFEBE6EFEBE6EFEBE6BD9A7800BD9A78EFEBE6
+          808080EFEBE6808080808080EFEBE6EFEBE6BD9A78BD9A78BD9A78BD9A78BD9A
+          7800BD9A78EFEBE6EFEBE6EFEBE6EFEBE6808080808080EFEBE6BD9A78000000
+          00000000000000000000BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6808080EF
+          EBE6BD9A7800000000000000000000000000BD9A78EFEBE6EFEBE6EFEBE6EFEB
+          E6EFEBE6EFEBE6EFEBE6BD9A7800000000000000000000000000BD9A78BD9A78
+          BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A780000000000000000000000
+          0000}
+        ParentShowHint = False
+        ShowHint = True
+        OnClick = btnSelInverseClick
+      end
+      object btnFindTag: TSpeedButton
+        Left = 218
+        Top = 7
+        Width = 25
+        Height = 25
+        Hint = 'Find tag'
+        Glyph.Data = {
+          36060000424D3606000000000000360000002800000020000000100000000100
+          18000000000000060000C30E0000C30E000000000000000000000000FF0000FF
+          0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000
+          FFD5D7D6D3D2CFFFFFFF0000FF0000FF0000FF0000FF0000FF0000FF0000FF00
+          00FF0000FF0000FF0000FF0000FF0000FFD6D6D6D1D1D1FFFFFF0000FF0000FF
+          0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FFB1AC
+          A9877280646786B9AEAB0000FF0000FF0000FF0000FF0000FF0000FF0000FF00
+          00FF0000FF0000FF0000FF0000FFACACAC7F7F7F727272AFAFAF0000FF0000FF
+          0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FFB1ACA98F73
+          7F6D7AB6378AE483ACD10000FF0000FF0000FF0000FF0000FF0000FF0000FF00
+          00FF0000FF0000FF0000FFACACAC8080808D8D8D8D8D8DAAAAAA0000FF0000FF
+          0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FFB1ADAA92747F6D79
+          B53993E858C0FFBEE5FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF00
+          00FF0000FF0000FFADADAD8181818C8C8C919191B0B0B0E0E0E00000FF0000FF
+          0000FF0000FF0000FF0000FF0000FF0000FF0000FFB6B0AE8F737E6D78B53B95
+          EA57BFFFC9E6FD0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF00
+          00FF0000FFB0B0B07F7F7F8C8C8C939393AFAFAFE4E4E40000FF0000FF0000FF
+          0000FFE7E8E9BBB5B6ADA5A7B4AFB0DAD9DBE9EDEE8F83856474B23993E957BF
+          FFC5E4FD0000FF0000FF0000FF0000FF0000FFE8E8E8B7B7B7A8A8A8B1B1B1DA
+          DADAECECEC878787868686919191AFAFAFE2E2E20000FF0000FF0000FF0000FF
+          C1BDBF877D75C6AE99E1CBB1CFB7A0B9998A9D8583817B7D5695D457BDFDC8E6
+          FD0000FF0000FF0000FF0000FF0000FFBFBFBF7C7C7CAAAAAAC5C5C5B3B3B399
+          99998989897D7D7D959595AEAEAEE3E3E30000FF0000FF0000FF0000FFC1C1C1
+          8B7879F4EAE0FFFFFAFFFFE6FFFFD8FFFDCAF2CFA9B4928AC9CAC9DEEEFB0000
+          FF0000FF0000FF0000FF0000FFC1C1C17C7C7CE8E8E8FDFDFDF5F5F5EFEFEFE9
+          E9E9C7C7C7969696C9C9C9EDEDED0000FF0000FF0000FF0000FFECEFEF897672
+          ECDED0FFFFFFFFFFFFFFFFFFFFFED5FFF4C0FFF6C3EDC8A3D4C5C10000FF0000
+          FF0000FF0000FF0000FFEEEEEE787878DBDBDBFFFFFFFFFFFFFFFFFFEEEEEEE1
+          E1E1E3E3E3C1C1C1C6C6C60000FF0000FF0000FF0000FF0000FFD0CCCDAA8C82
+          FFFFE7FFFFFFFFFFFFFFFFFFFFFFDBFFF3C3FFE2B1FDEFBDE0C8BE0000FF0000
+          FF0000FF0000FF0000FFCDCDCD8E8E8EF5F5F5FFFFFFFFFFFFFFFFFFF1F1F1E2
+          E2E2D4D4D4DEDEDEC9C9C90000FF0000FF0000FF0000FF0000FFCEC7C9C0A690
+          FFFFDCFFFFECFFFFF4FFFFF4FFFED3FFF1C0FFD6A6FEEFBDE2C8B6F9F4F50000
+          FF0000FF0000FF0000FFCACACAA2A2A2F1F1F1F7F7F7FBFBFBFBFBFBEDEDEDE0
+          E0E0CBCBCBDEDEDEC6C6C6F6F6F60000FF0000FF0000FF0000FFD0CCD0BBA18F
+          FFFFD1FFFDD2FFFED1FFFED1FFF9C7FFE5B2FFDFACFFF4C2E1C6B3F9F4F50000
+          FF0000FF0000FF0000FFCFCFCF9F9F9FEDEDEDECECECECECECECECECE6E6E6D6
+          D6D6D1D1D1E2E2E2C4C4C4F6F6F60000FF0000FF0000FF0000FFECECEDAB8F89
+          FDEFBFFFF4C2FFECBBFFEEBDFFE0AEFFE4BBFFF8EAF8F0D3DEC7BA0000FF0000
+          FF0000FF0000FF0000FFECECEC929292DFDFDFE2E2E2DCDCDCDEDEDED2D2D2D9
+          D9D9F4F4F4E6E6E6C6C6C60000FF0000FF0000FF0000FF0000FF0000FFC8C0C2
+          CDA68BFFF7C2FFEBB7FFDCAAFFE5B5FFFEF5FCFBFDDFC5B8F8F2EE0000FF0000
+          FF0000FF0000FF0000FF0000FFC3C3C3A3A3A3E3E3E3DADADACFCFCFD7D7D7FB
+          FBFBFCFCFCC5C5C5F2F2F20000FF0000FF0000FF0000FF0000FF0000FF0000FF
+          C4B8BAD4B097F8E2B4FFF4C4FDF0C5ECDFC2DAC0B9F0E7E40000FF0000FF0000
+          FF0000FF0000FF0000FF0000FF0000FFBCBCBCADADADD4D4D4E3E3E3E1E1E1D6
+          D6D6C2C2C2E8E8E80000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF
+          0000FFE5DEE0DDC2B9C4B6AABEAEA5E0D0CCF5EEEB0000FF0000FF0000FF0000
+          FF0000FF0000FF0000FF0000FF0000FF0000FFE1E1E1C4C4C4B4B4B4AEAEAED2
+          D2D2EEEEEE0000FF0000FF0000FF0000FF0000FF0000FF0000FF}
+        NumGlyphs = 2
+        ParentShowHint = False
+        ShowHint = True
+        OnClick = btnFindTagClick
+      end
+      object chbPreview: TCheckBox
+        Left = 218
+        Top = 103
+        Width = 87
+        Height = 17
+        Caption = 'show preview'
         TabOrder = 0
-        object chbTrayIcon: TCheckBox
-          Left = 8
-          Top = 23
-          Width = 114
-          Height = 17
-          Caption = 'show tray icon'
-          TabOrder = 0
-          OnClick = chbTrayIconClick
-        end
-        object chbTaskbar: TCheckBox
-          Left = 8
-          Top = 46
-          Width = 114
-          Height = 17
-          Caption = 'hide on minimize'
-          TabOrder = 1
-          OnClick = chbTaskbarClick
-        end
-        object chbKeepInstance: TCheckBox
-          Left = 8
-          Top = 69
-          Width = 114
-          Height = 17
-          Caption = 'keep one instance'
-          TabOrder = 2
-          OnClick = chbKeepInstanceClick
-        end
-        object chbSaveNote: TCheckBox
-          Left = 8
-          Top = 92
-          Width = 124
-          Height = 17
-          Caption = 'save note on closing'
-          Checked = True
-          State = cbChecked
-          TabOrder = 3
-          OnClick = chbKeepInstanceClick
-        end
+        OnClick = chbPreviewClick
       end
-      object gbWork: TGroupBox
-        Left = 200
-        Top = 133
-        Width = 226
-        Height = 113
-        Caption = 'Work'
+      object mPicInfo: TMemo
+        Left = 312
+        Top = 5
+        Width = 233
+        Height = 116
+        Anchors = [akLeft, akTop, akRight, akBottom]
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -11
+        Font.Name = 'Arial Unicode MS'
+        Font.Style = []
+        ParentFont = False
+        ReadOnly = True
+        ScrollBars = ssBoth
         TabOrder = 1
-        object lThreads: TLabel
-          Left = 27
-          Top = 23
-          Width = 65
-          Height = 13
-          Caption = 'threads count'
-        end
-        object lRetries: TLabel
-          Left = 26
-          Top = 46
-          Width = 109
-          Height = 13
-          Caption = 'count of retries on error'
-        end
-        object eThreadCount: TJvSpinEdit
-          Left = 148
-          Top = 20
-          Width = 69
-          Height = 21
-          MaxValue = 50.000000000000000000
-          MinValue = 1.000000000000000000
-          Value = 1.000000000000000000
-          TabOrder = 0
-        end
-        object chbOpenDrive: TCheckBox
-          Left = 8
-          Top = 68
-          Width = 134
-          Height = 17
-          Caption = 'open cd-drive after end'
-          TabOrder = 1
-          OnClick = chbOpenDriveClick
-        end
-        object cbLetter: TJvDriveCombo
-          Left = 148
-          Top = 66
-          Width = 69
-          Height = 22
-          DriveTypes = [dtCDROM]
-          Offset = 1
-          TabOrder = 2
-        end
-        object chbdebug: TCheckBox
-          Left = 8
-          Top = 91
-          Width = 134
-          Height = 17
-          Caption = 'debug mode'
-          TabOrder = 3
-          OnClick = chbOpenDriveClick
-        end
-        object eRetries: TJvSpinEdit
-          Left = 147
-          Top = 44
-          Width = 70
-          Height = 21
-          MaxValue = 50.000000000000000000
-          TabOrder = 4
-        end
       end
-      object gbProxy: TGroupBox
+      object pcTags: TPageControl
         Left = 3
-        Top = 4
-        Width = 221
-        Height = 123
-        Caption = 'Proxy'
+        Top = 3
+        Width = 209
+        Height = 119
+        ActivePage = tsTags
+        Anchors = [akLeft, akTop, akBottom]
         TabOrder = 2
-        object chbproxy: TCheckBox
-          Left = 8
-          Top = 23
-          Width = 98
-          Height = 17
-          Caption = 'HTTP proxy'
-          TabOrder = 0
-          OnClick = chbproxyClick
+        object tsTags: TTabSheet
+          Caption = 'Tags Cloud'
+          object chblTagsCloud: TCheckListBox
+            Left = 0
+            Top = 0
+            Width = 201
+            Height = 91
+            Align = alClient
+            Font.Charset = DEFAULT_CHARSET
+            Font.Color = clWindowText
+            Font.Height = -11
+            Font.Name = 'Arial Unicode MS'
+            Font.Style = []
+            ItemHeight = 15
+            ParentFont = False
+            PopupMenu = pmTags
+            Sorted = True
+            TabOrder = 0
+          end
         end
-        object chbauth: TCheckBox
-          Left = 112
-          Top = 23
-          Width = 102
-          Height = 17
-          Caption = 'Authentification'
-          TabOrder = 1
-          OnClick = chbauthClick
-        end
-        object chbsaveproxypwd: TCheckBox
-          Left = 112
-          Top = 97
-          Width = 102
-          Height = 17
-          Caption = 'save password'
-          TabOrder = 2
-          OnClick = chbsavepwdClick
-        end
-        object eproxyserver: TJvEdit
-          Left = 8
-          Top = 43
-          Width = 100
-          Height = 21
-          EmptyValue = 'gateway'
-          DisabledColor = clBtnFace
-          TabOrder = 3
-        end
-        object eproxypassword: TJvEdit
-          Left = 112
-          Top = 70
-          Width = 100
-          Height = 21
-          EmptyValue = 'Password'
-          DisabledColor = clBtnFace
-          PasswordChar = #9679
-          TabOrder = 4
-        end
-        object eproxylogin: TJvEdit
-          Left = 112
-          Top = 43
-          Width = 100
-          Height = 21
-          EmptyValue = 'Login'
-          DisabledColor = clBtnFace
-          TabOrder = 5
-        end
-        object eproxyport: TJvSpinEdit
-          Left = 8
-          Top = 70
-          Width = 100
-          Height = 21
-          CheckMinValue = True
-          Value = 3128.000000000000000000
-          TabOrder = 6
+        object tsRelated: TTabSheet
+          Caption = 'Related'
+          ImageIndex = 1
+          ExplicitLeft = 0
+          ExplicitTop = 0
+          ExplicitWidth = 0
+          ExplicitHeight = 0
+          object lbRelatedTags: TListBox
+            Left = 0
+            Top = 0
+            Width = 201
+            Height = 92
+            Align = alClient
+            Font.Charset = DEFAULT_CHARSET
+            Font.Color = clWindowText
+            Font.Height = -11
+            Font.Name = 'Arial Unicode MS'
+            Font.Style = []
+            ItemHeight = 15
+            ParentFont = False
+            PopupMenu = pmTags
+            Sorted = True
+            TabOrder = 0
+          end
         end
       end
-      object GroupBox1: TGroupBox
-        Left = 4
-        Top = 133
-        Width = 190
-        Height = 113
-        Caption = 'Queries interval'
+      object eCFilter: TJvSpinEdit
+        Left = 265
+        Top = 76
+        Width = 41
+        Height = 21
+        CheckMaxValue = False
+        MinValue = 1.000000000000000000
+        Value = 1.000000000000000000
         TabOrder = 3
-        object lQueryI: TLabel
-          Left = 27
-          Top = 23
-          Width = 34
-          Height = 13
-          Caption = 'interval'
-        end
-        object eQueryI: TJvSpinEdit
-          Left = 92
-          Top = 20
-          Width = 86
-          Height = 21
-          MaxValue = 10.000000000000000000
-          Value = 3.000000000000000000
-          TabOrder = 0
-        end
-        object chbBfGet: TCheckBox
-          Left = 8
-          Top = 44
-          Width = 170
-          Height = 17
-          Caption = 'before getting url'
-          TabOrder = 1
-          OnClick = chbOpenDriveClick
-        end
-        object chbBfDwnld: TCheckBox
-          Left = 8
-          Top = 67
-          Width = 170
-          Height = 17
-          Caption = 'before downloading pic'
-          TabOrder = 2
-          OnClick = chbOpenDriveClick
-        end
-        object chbAftDwnld: TCheckBox
-          Left = 9
-          Top = 90
-          Width = 170
-          Height = 17
-          Caption = 'after downloading pic'
-          TabOrder = 3
-          OnClick = chbOpenDriveClick
-        end
+        OnChange = eCFilterChange
       end
     end
     object tsDownloading: TSpTBXTabSheet
@@ -685,6 +687,7 @@ object MainForm: TMainForm
         Height = 17
         Caption = 'query interval'
         Checked = True
+        Enabled = False
         State = cbChecked
         TabOrder = 16
       end
@@ -737,262 +740,277 @@ object MainForm: TMainForm
         TabOrder = 18
         OnClick = btnAuth2Click
       end
+      object chbFullSize: TCheckBox
+        Left = 346
+        Top = 103
+        Width = 119
+        Height = 17
+        Caption = 'Full Size (spends GP)'
+        TabOrder = 19
+      end
     end
-    object tsMetadata: TSpTBXTabSheet
+    object tsSettings: TSpTBXTabSheet
       Left = 0
       Top = 26
       Width = 548
       Height = 132
-      Caption = 'Metadata'
+      Caption = 'Settings'
       ImageIndex = -1
       DesignSize = (
         548
         132)
-      TabItem = 'tsiMetadata'
-      object lCntFilter: TLabel
-        Left = 218
-        Top = 79
-        Width = 41
-        Height = 13
-        Caption = 'Cnt. filter'
+      TabItem = 'tsiSettings'
+      object iLain: TImage
+        Left = 444
+        Top = 6
+        Width = 101
+        Height = 122
+        Anchors = [akRight, akBottom]
+        Center = True
+        Visible = False
+        OnDblClick = iLainDblClick
+        ExplicitTop = 7
       end
-      object btnSelAll: TSpeedButton
-        Left = 218
-        Top = 38
-        Width = 25
-        Height = 25
-        Hint = 'Select all'
-        Glyph.Data = {
-          3E020000424D3E0200000000000036000000280000000D0000000D0000000100
-          18000000000008020000C40E0000C40E00000000000000000000000000000000
-          000000000000BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A
-          7800000000000000000000000000BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6
-          EFEBE6EFEBE6BD9A7800000000000000BD9A78BD9A78BD9A78BD9A78BD9A78BD
-          9A78BD9A78BD9A78BD9A78EFEBE6BD9A7800000000000000BD9A78EFEBE6EFEB
-          E6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6BD9A78EFEBE6BD9A7800BD9A78BD9A78
-          BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78EFEBE6BD9A78EFEBE6BD9A
-          7800BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6BD9A78EFEBE6
-          BD9A78EFEBE6BD9A7800BD9A78EFEBE6EFEBE61E2D30EFEBE6EFEBE6EFEBE6EF
-          EBE6BD9A78EFEBE6BD9A78EFEBE6BD9A7800BD9A78EFEBE61E2D301E2D301E2D
-          30EFEBE6EFEBE6EFEBE6BD9A78EFEBE6BD9A78EFEBE6BD9A7800BD9A78EFEBE6
-          1E2D30EFEBE61E2D301E2D30EFEBE6EFEBE6BD9A78EFEBE6BD9A78BD9A78BD9A
-          7800BD9A78EFEBE6EFEBE6EFEBE6EFEBE61E2D301E2D30EFEBE6BD9A78EFEBE6
-          BD9A7800000000000000BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE61E2D30EF
-          EBE6BD9A78BD9A78BD9A7800000000000000BD9A78EFEBE6EFEBE6EFEBE6EFEB
-          E6EFEBE6EFEBE6EFEBE6BD9A7800000000000000000000000000BD9A78BD9A78
-          BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A780000000000000000000000
-          0000}
-        ParentShowHint = False
-        ShowHint = True
-        OnClick = btnSelAllClick
-      end
-      object btnDeselAll: TSpeedButton
-        Left = 249
-        Top = 38
-        Width = 25
-        Height = 25
-        Hint = 'Deselect all'
-        Glyph.Data = {
-          3E020000424D3E0200000000000036000000280000000D0000000D0000000100
-          18000000000008020000C40E0000C40E00000000000000000000000000000000
-          000000000000BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A
-          7800000000000000000000000000BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6
-          EFEBE6EFEBE6BD9A7800000000000000BD9A78BD9A78BD9A78BD9A78BD9A78BD
-          9A78BD9A78BD9A78BD9A78EFEBE6BD9A7800000000000000BD9A78EFEBE6EFEB
-          E6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6BD9A78EFEBE6BD9A7800BD9A78BD9A78
-          BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78EFEBE6BD9A78EFEBE6BD9A
-          7800BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6BD9A78EFEBE6
-          BD9A78EFEBE6BD9A7800BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EF
-          EBE6BD9A78EFEBE6BD9A78EFEBE6BD9A7800BD9A78EFEBE6EFEBE6EFEBE6EFEB
-          E6EFEBE6EFEBE6EFEBE6BD9A78EFEBE6BD9A78EFEBE6BD9A7800BD9A78EFEBE6
-          EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6BD9A78EFEBE6BD9A78BD9A78BD9A
-          7800BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6BD9A78EFEBE6
-          BD9A7800000000000000BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EF
-          EBE6BD9A78BD9A78BD9A7800000000000000BD9A78EFEBE6EFEBE6EFEBE6EFEB
-          E6EFEBE6EFEBE6EFEBE6BD9A7800000000000000000000000000BD9A78BD9A78
-          BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A780000000000000000000000
-          0000}
-        ParentShowHint = False
-        ShowHint = True
-        OnClick = btnDeselAllClick
-      end
-      object btnSelInverse: TSpeedButton
-        Left = 280
-        Top = 38
-        Width = 25
-        Height = 25
-        Hint = 'Inverse selection'
-        Glyph.Data = {
-          3E020000424D3E0200000000000036000000280000000D0000000D0000000100
-          18000000000008020000C40E0000C40E00000000000000000000000000000000
-          000000000000BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A
-          7800000000000000000000000000BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6
-          EFEBE6EFEBE6BD9A7800000000000000000000000000BD9A78EFEBE6EFEBE680
-          8080EFEBE6EFEBE6EFEBE6EFEBE6BD9A7800000000000000000000000000BD9A
-          78EFEBE6808080808080808080EFEBE6EFEBE6EFEBE6BD9A7800BD9A78BD9A78
-          BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78808080EFEBE6EFEBE6BD9A
-          7800BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6BD9A78808080
-          808080EFEBE6BD9A7800BD9A78EFEBE6EFEBE6808080EFEBE6EFEBE6EFEBE6EF
-          EBE6BD9A78EFEBE6808080EFEBE6BD9A7800BD9A78EFEBE68080808080808080
-          80EFEBE6EFEBE6EFEBE6BD9A78EFEBE6EFEBE6EFEBE6BD9A7800BD9A78EFEBE6
-          808080EFEBE6808080808080EFEBE6EFEBE6BD9A78BD9A78BD9A78BD9A78BD9A
-          7800BD9A78EFEBE6EFEBE6EFEBE6EFEBE6808080808080EFEBE6BD9A78000000
-          00000000000000000000BD9A78EFEBE6EFEBE6EFEBE6EFEBE6EFEBE6808080EF
-          EBE6BD9A7800000000000000000000000000BD9A78EFEBE6EFEBE6EFEBE6EFEB
-          E6EFEBE6EFEBE6EFEBE6BD9A7800000000000000000000000000BD9A78BD9A78
-          BD9A78BD9A78BD9A78BD9A78BD9A78BD9A78BD9A780000000000000000000000
-          0000}
-        ParentShowHint = False
-        ShowHint = True
-        OnClick = btnSelInverseClick
-      end
-      object btnFindTag: TSpeedButton
-        Left = 218
-        Top = 7
-        Width = 25
-        Height = 25
-        Hint = 'Find tag'
-        Glyph.Data = {
-          36060000424D3606000000000000360000002800000020000000100000000100
-          18000000000000060000C30E0000C30E000000000000000000000000FF0000FF
-          0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000
-          FFD5D7D6D3D2CFFFFFFF0000FF0000FF0000FF0000FF0000FF0000FF0000FF00
-          00FF0000FF0000FF0000FF0000FF0000FFD6D6D6D1D1D1FFFFFF0000FF0000FF
-          0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FFB1AC
-          A9877280646786B9AEAB0000FF0000FF0000FF0000FF0000FF0000FF0000FF00
-          00FF0000FF0000FF0000FF0000FFACACAC7F7F7F727272AFAFAF0000FF0000FF
-          0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FFB1ACA98F73
-          7F6D7AB6378AE483ACD10000FF0000FF0000FF0000FF0000FF0000FF0000FF00
-          00FF0000FF0000FF0000FFACACAC8080808D8D8D8D8D8DAAAAAA0000FF0000FF
-          0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FFB1ADAA92747F6D79
-          B53993E858C0FFBEE5FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF00
-          00FF0000FF0000FFADADAD8181818C8C8C919191B0B0B0E0E0E00000FF0000FF
-          0000FF0000FF0000FF0000FF0000FF0000FF0000FFB6B0AE8F737E6D78B53B95
-          EA57BFFFC9E6FD0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF00
-          00FF0000FFB0B0B07F7F7F8C8C8C939393AFAFAFE4E4E40000FF0000FF0000FF
-          0000FFE7E8E9BBB5B6ADA5A7B4AFB0DAD9DBE9EDEE8F83856474B23993E957BF
-          FFC5E4FD0000FF0000FF0000FF0000FF0000FFE8E8E8B7B7B7A8A8A8B1B1B1DA
-          DADAECECEC878787868686919191AFAFAFE2E2E20000FF0000FF0000FF0000FF
-          C1BDBF877D75C6AE99E1CBB1CFB7A0B9998A9D8583817B7D5695D457BDFDC8E6
-          FD0000FF0000FF0000FF0000FF0000FFBFBFBF7C7C7CAAAAAAC5C5C5B3B3B399
-          99998989897D7D7D959595AEAEAEE3E3E30000FF0000FF0000FF0000FFC1C1C1
-          8B7879F4EAE0FFFFFAFFFFE6FFFFD8FFFDCAF2CFA9B4928AC9CAC9DEEEFB0000
-          FF0000FF0000FF0000FF0000FFC1C1C17C7C7CE8E8E8FDFDFDF5F5F5EFEFEFE9
-          E9E9C7C7C7969696C9C9C9EDEDED0000FF0000FF0000FF0000FFECEFEF897672
-          ECDED0FFFFFFFFFFFFFFFFFFFFFED5FFF4C0FFF6C3EDC8A3D4C5C10000FF0000
-          FF0000FF0000FF0000FFEEEEEE787878DBDBDBFFFFFFFFFFFFFFFFFFEEEEEEE1
-          E1E1E3E3E3C1C1C1C6C6C60000FF0000FF0000FF0000FF0000FFD0CCCDAA8C82
-          FFFFE7FFFFFFFFFFFFFFFFFFFFFFDBFFF3C3FFE2B1FDEFBDE0C8BE0000FF0000
-          FF0000FF0000FF0000FFCDCDCD8E8E8EF5F5F5FFFFFFFFFFFFFFFFFFF1F1F1E2
-          E2E2D4D4D4DEDEDEC9C9C90000FF0000FF0000FF0000FF0000FFCEC7C9C0A690
-          FFFFDCFFFFECFFFFF4FFFFF4FFFED3FFF1C0FFD6A6FEEFBDE2C8B6F9F4F50000
-          FF0000FF0000FF0000FFCACACAA2A2A2F1F1F1F7F7F7FBFBFBFBFBFBEDEDEDE0
-          E0E0CBCBCBDEDEDEC6C6C6F6F6F60000FF0000FF0000FF0000FFD0CCD0BBA18F
-          FFFFD1FFFDD2FFFED1FFFED1FFF9C7FFE5B2FFDFACFFF4C2E1C6B3F9F4F50000
-          FF0000FF0000FF0000FFCFCFCF9F9F9FEDEDEDECECECECECECECECECE6E6E6D6
-          D6D6D1D1D1E2E2E2C4C4C4F6F6F60000FF0000FF0000FF0000FFECECEDAB8F89
-          FDEFBFFFF4C2FFECBBFFEEBDFFE0AEFFE4BBFFF8EAF8F0D3DEC7BA0000FF0000
-          FF0000FF0000FF0000FFECECEC929292DFDFDFE2E2E2DCDCDCDEDEDED2D2D2D9
-          D9D9F4F4F4E6E6E6C6C6C60000FF0000FF0000FF0000FF0000FF0000FFC8C0C2
-          CDA68BFFF7C2FFEBB7FFDCAAFFE5B5FFFEF5FCFBFDDFC5B8F8F2EE0000FF0000
-          FF0000FF0000FF0000FF0000FFC3C3C3A3A3A3E3E3E3DADADACFCFCFD7D7D7FB
-          FBFBFCFCFCC5C5C5F2F2F20000FF0000FF0000FF0000FF0000FF0000FF0000FF
-          C4B8BAD4B097F8E2B4FFF4C4FDF0C5ECDFC2DAC0B9F0E7E40000FF0000FF0000
-          FF0000FF0000FF0000FF0000FF0000FFBCBCBCADADADD4D4D4E3E3E3E1E1E1D6
-          D6D6C2C2C2E8E8E80000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF
-          0000FFE5DEE0DDC2B9C4B6AABEAEA5E0D0CCF5EEEB0000FF0000FF0000FF0000
-          FF0000FF0000FF0000FF0000FF0000FF0000FFE1E1E1C4C4C4B4B4B4AEAEAED2
-          D2D2EEEEEE0000FF0000FF0000FF0000FF0000FF0000FF0000FF}
-        NumGlyphs = 2
-        ParentShowHint = False
-        ShowHint = True
-        OnClick = btnFindTagClick
-      end
-      object chbPreview: TCheckBox
-        Left = 218
-        Top = 103
-        Width = 87
-        Height = 17
-        Caption = 'show preview'
-        TabOrder = 0
-        OnClick = chbPreviewClick
-      end
-      object mPicInfo: TMemo
-        Left = 312
-        Top = 5
-        Width = 233
-        Height = 120
-        Anchors = [akLeft, akTop, akRight, akBottom]
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = clWindowText
-        Font.Height = -11
-        Font.Name = 'Arial Unicode MS'
-        Font.Style = []
-        ParentFont = False
-        ReadOnly = True
-        ScrollBars = ssBoth
-        TabOrder = 1
-      end
-      object pcTags: TPageControl
-        Left = 3
-        Top = 3
-        Width = 209
+      object gbWindow: TGroupBox
+        Left = 234
+        Top = 4
+        Width = 134
         Height = 123
-        ActivePage = tsTags
-        Anchors = [akLeft, akTop, akBottom]
-        TabOrder = 2
-        object tsTags: TTabSheet
-          Caption = 'Tags Cloud'
-          object chblTagsCloud: TCheckListBox
-            Left = 0
-            Top = 0
-            Width = 201
-            Height = 95
-            Align = alClient
-            Font.Charset = DEFAULT_CHARSET
-            Font.Color = clWindowText
-            Font.Height = -11
-            Font.Name = 'Arial Unicode MS'
-            Font.Style = []
-            ItemHeight = 15
-            ParentFont = False
-            PopupMenu = pmTags
-            Sorted = True
-            TabOrder = 0
-          end
+        Caption = 'Window'
+        TabOrder = 0
+        object chbTrayIcon: TCheckBox
+          Left = 8
+          Top = 23
+          Width = 114
+          Height = 17
+          Caption = 'show tray icon'
+          TabOrder = 0
+          OnClick = chbTrayIconClick
         end
-        object tsRelated: TTabSheet
-          Caption = 'Related'
-          ImageIndex = 1
-          object lbRelatedTags: TListBox
-            Left = 0
-            Top = 0
-            Width = 201
-            Height = 95
-            Align = alClient
-            Font.Charset = DEFAULT_CHARSET
-            Font.Color = clWindowText
-            Font.Height = -11
-            Font.Name = 'Arial Unicode MS'
-            Font.Style = []
-            ItemHeight = 15
-            ParentFont = False
-            PopupMenu = pmTags
-            Sorted = True
-            TabOrder = 0
-          end
+        object chbTaskbar: TCheckBox
+          Left = 8
+          Top = 46
+          Width = 114
+          Height = 17
+          Caption = 'hide on minimize'
+          TabOrder = 1
+          OnClick = chbTaskbarClick
+        end
+        object chbKeepInstance: TCheckBox
+          Left = 8
+          Top = 69
+          Width = 114
+          Height = 17
+          Caption = 'keep one instance'
+          TabOrder = 2
+          OnClick = chbKeepInstanceClick
+        end
+        object chbSaveNote: TCheckBox
+          Left = 8
+          Top = 92
+          Width = 124
+          Height = 17
+          Caption = 'save note on closing'
+          Checked = True
+          State = cbChecked
+          TabOrder = 3
+          OnClick = chbKeepInstanceClick
         end
       end
-      object eCFilter: TJvSpinEdit
-        Left = 265
-        Top = 76
-        Width = 41
-        Height = 21
-        CheckMaxValue = False
-        MinValue = 1.000000000000000000
-        Value = 1.000000000000000000
+      object gbWork: TGroupBox
+        Left = 200
+        Top = 133
+        Width = 226
+        Height = 113
+        Caption = 'Work'
+        TabOrder = 1
+        object lThreads: TLabel
+          Left = 27
+          Top = 23
+          Width = 65
+          Height = 13
+          Caption = 'threads count'
+        end
+        object lRetries: TLabel
+          Left = 26
+          Top = 46
+          Width = 109
+          Height = 13
+          Caption = 'count of retries on error'
+        end
+        object eThreadCount: TJvSpinEdit
+          Left = 148
+          Top = 20
+          Width = 69
+          Height = 21
+          MaxValue = 50.000000000000000000
+          MinValue = 1.000000000000000000
+          Value = 1.000000000000000000
+          TabOrder = 0
+        end
+        object chbOpenDrive: TCheckBox
+          Left = 8
+          Top = 68
+          Width = 134
+          Height = 17
+          Caption = 'open cd-drive after end'
+          TabOrder = 1
+          OnClick = chbOpenDriveClick
+        end
+        object cbLetter: TJvDriveCombo
+          Left = 148
+          Top = 66
+          Width = 69
+          Height = 22
+          DriveTypes = [dtCDROM]
+          Offset = 1
+          TabOrder = 2
+        end
+        object chbdebug: TCheckBox
+          Left = 8
+          Top = 91
+          Width = 134
+          Height = 17
+          Caption = 'debug mode'
+          TabOrder = 3
+          OnClick = chbOpenDriveClick
+        end
+        object eRetries: TJvSpinEdit
+          Left = 147
+          Top = 44
+          Width = 70
+          Height = 21
+          MaxValue = 50.000000000000000000
+          TabOrder = 4
+        end
+      end
+      object gbProxy: TGroupBox
+        Left = 3
+        Top = 4
+        Width = 221
+        Height = 123
+        Caption = 'Proxy'
+        TabOrder = 2
+        object chbproxy: TCheckBox
+          Left = 8
+          Top = 23
+          Width = 98
+          Height = 17
+          Caption = 'HTTP proxy'
+          TabOrder = 0
+          OnClick = chbproxyClick
+        end
+        object chbauth: TCheckBox
+          Left = 112
+          Top = 23
+          Width = 102
+          Height = 17
+          Caption = 'Authentification'
+          TabOrder = 1
+          OnClick = chbauthClick
+        end
+        object chbsaveproxypwd: TCheckBox
+          Left = 112
+          Top = 97
+          Width = 102
+          Height = 17
+          Caption = 'save password'
+          TabOrder = 2
+          OnClick = chbsavepwdClick
+        end
+        object eproxyserver: TJvEdit
+          Left = 8
+          Top = 43
+          Width = 100
+          Height = 21
+          EmptyValue = 'gateway'
+          DisabledColor = clBtnFace
+          TabOrder = 3
+        end
+        object eproxypassword: TJvEdit
+          Left = 112
+          Top = 70
+          Width = 100
+          Height = 21
+          EmptyValue = 'Password'
+          DisabledColor = clBtnFace
+          PasswordChar = #9679
+          TabOrder = 4
+        end
+        object eproxylogin: TJvEdit
+          Left = 112
+          Top = 43
+          Width = 100
+          Height = 21
+          EmptyValue = 'Login'
+          DisabledColor = clBtnFace
+          TabOrder = 5
+        end
+        object eproxyport: TJvSpinEdit
+          Left = 8
+          Top = 70
+          Width = 100
+          Height = 21
+          CheckMinValue = True
+          Value = 3128.000000000000000000
+          TabOrder = 6
+        end
+      end
+      object GroupBox1: TGroupBox
+        Left = 4
+        Top = 133
+        Width = 190
+        Height = 113
+        Caption = 'Queries interval'
         TabOrder = 3
-        OnChange = eCFilterChange
+        object lQueryI: TLabel
+          Left = 27
+          Top = 23
+          Width = 34
+          Height = 13
+          Caption = 'interval'
+        end
+        object eQueryI: TJvSpinEdit
+          Left = 92
+          Top = 20
+          Width = 86
+          Height = 21
+          MaxValue = 10.000000000000000000
+          MinValue = 1.000000000000000000
+          ValueType = vtFloat
+          Value = 3.000000000000000000
+          TabOrder = 0
+        end
+        object chbBfGet: TCheckBox
+          Left = 8
+          Top = 44
+          Width = 170
+          Height = 17
+          Caption = 'before getting url'
+          Checked = True
+          Enabled = False
+          State = cbChecked
+          TabOrder = 1
+          OnClick = chbOpenDriveClick
+        end
+        object chbBfDwnld: TCheckBox
+          Left = 8
+          Top = 67
+          Width = 170
+          Height = 17
+          Caption = 'before downloading pic'
+          TabOrder = 2
+          OnClick = chbOpenDriveClick
+        end
+        object chbAftDwnld: TCheckBox
+          Left = 9
+          Top = 90
+          Width = 170
+          Height = 17
+          Caption = 'after downloading pic'
+          TabOrder = 3
+          OnClick = chbOpenDriveClick
+        end
       end
     end
     object tsPicsList: TSpTBXTabSheet
@@ -1159,6 +1177,7 @@ object MainForm: TMainForm
         Height = 17
         Caption = 'query interval'
         Checked = True
+        Enabled = False
         State = cbChecked
         TabOrder = 11
       end
@@ -1824,7 +1843,7 @@ object MainForm: TMainForm
     Left = 336
     Top = 320
     Bitmap = {
-      494C010103002400580010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103002400680010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

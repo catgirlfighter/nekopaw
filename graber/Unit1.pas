@@ -89,7 +89,7 @@ type
     XML: TMyXMLParser;
     createnewdirs, downloadalbums, tagsinfname, origfname, incfname: Boolean;
     savejpegmeta: Boolean;
-    dwnld, IntBefGet, IntBefDwnld, IntAftDwnld: Boolean;
+    dwnld, IntBefGet, IntBefDwnld, IntAftDwnld, fullsize: Boolean;
     // LogErr, updatecaption: TLogProc;
     existingfile: Integer;
     tstart: Integer;
@@ -277,6 +277,7 @@ type
     SpTBXItem1: TSpTBXItem;
     btnFindTag: TSpeedButton;
     fdTag: TFindDialog;
+    chbFullSize: TCheckBox;
     procedure btnBrowseClick(Sender: TObject);
     procedure btnGrabClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -376,13 +377,13 @@ type
     procedure tbiLoadClick(Sender: TObject);
     procedure tbiSaveClick(Sender: TObject);
     procedure tbiGridCloseClick(Sender: TObject);
-    procedure btnAuth2Click(Sender: TObject);
     procedure btnAuth1Click(Sender: TObject);
     procedure cbByAuthorChange(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure SpTBXItem1Click(Sender: TObject);
     procedure btnFindTagClick(Sender: TObject);
     procedure fdTagFind(Sender: TObject);
+    procedure btnAuth2Click(Sender: TObject);
 
   private
     FThreadList: TThreadList;
@@ -466,7 +467,7 @@ type
     procedure SaveToFile(fname: string; tp: Integer; Sender: TObject);
     procedure ForceStop;
     procedure updateskin;
-    procedure UpdLogin(iindex: Integer);
+    function UpdLogin(iindex: Integer): boolean;
   end;
 
 var
@@ -482,7 +483,7 @@ procedure ClearTags;
 
 implementation
 
-uses Unit3, Unit4, stoping_u, Unit5, AboutForm;
+uses Unit3, Unit4, stoping_u, Unit5, AboutForm, md5;
 {$R *.dfm}
 
 var
@@ -691,7 +692,7 @@ var
   c: Boolean;
   EXIF: TEXIFDATA;
   arr: array [0 .. 10] of byte;
-
+  ans: ANSIString;
 begin
   try
     tstart := 8;
@@ -773,6 +774,25 @@ begin
         XML.Parse(s);
 
         o := ClearHTML(nxt);
+
+        if o = '' then
+        if pos('Your IP address has been temporarily banned',s) > 0 then
+        begin
+          SMSG(msERR,true,n[num].URL + ': Empty pic url' + #13#10 + s);
+          prgress := 2;
+          Continue;
+        end else if pos('You are opening pages too fast',s) > 0 then
+        begin
+          SMSG(msERR,true,'You are opening pages too fast, thus placing a ' +
+          'heavy load on the server. Back down, or your IP address will be ' +
+          'automatically banned.');
+          prgress := 2;
+          Continue;
+        end else
+        begin
+          SMSG(msERR,true,n[num].URL + ': Empty pic url' + #13#10 + s);
+          Continue;
+        end;
 
 {        if tmp <> '' then
           o := ClearHTML(tmp); }
@@ -954,10 +974,11 @@ begin
           if HTTP.Connected then
             HTTP.Disconnect;
 
-          if n[num].work <> f.Size then
-            raise Exception.Create('Incrrect File Size: ' + IntToStr(n[num].work) + ' <> ' + IntToStr(f.Size));
-
           dwnld := false;
+
+          if n[num].work <> f.Size then
+            raise Exception.Create('Incorrect File Size: ' + IntToStr(n[num].work) + ' <> ' + IntToStr(f.Size));
+          
 
 {          CSection.Enter;
           CSection.Leave;          }
@@ -971,6 +992,25 @@ begin
             end;
             Break;
           end;
+
+          if (prgress = 0) and (curdest in [RP_EHENTAI_G,RP_EXHENTAI]) then
+            if (f.Size < 1024) then
+            begin
+              f.Position := 0;
+              SetLength(ans,f.Size);
+              f.Read(ans[1],f.Size);
+              if ans = 'Insufficient GP' then
+              begin
+                prgress := 2;
+                raise Exception.Create('Can not download fullsizes. Insufficient GP');
+              end else if ans = 'You can not access a file directly without specifying a gallery. Please get the full URL for this image.' then
+                raise Exception.Create(o + ': ' + ans);
+            end else
+              if (f.Size = 28658) and (MD5DigestToStr(MD5Stream(f)) = '88FE16AE482FADDB4CC23DF15722348C') then
+              begin
+                prgress := 2;
+                raise Exception.Create('509 Bandwidth Exceeded. You have temporarily reached the limit how many images you can browse. Wait a few hours or change an account and IP-adress.');
+              end;
 
           if IntAftDwnld then
             Synchronize(StackReset);
@@ -1148,7 +1188,7 @@ begin
           if ((Attrs.Value('class') = 'sn')
           or (Attrs.Value('class') = 'sb') or (Attrs.Value('class') = 'sa')) then
             tstart := 9
-          else if (Attrs.Value('class') = 'if') then
+          else if fullsize and (Attrs.Value('class') = 'if') then
             tstart := 7
           else
         else
@@ -1466,17 +1506,19 @@ begin
     chbOrigFNames.Checked);
   chbIncFNames.Checked := ini.ReadBool('options', 'incfnames',
     chbIncFNames.Checked);
+  chbFullSize.Checked := ini.ReadBool('options', 'fullsize',
+    chbFullSize.Checked);
 
   eQueryI.Value := ini.ReadInteger('options', 'queryinterval',
     eQueryI.AsInteger);
   // eQueryI2.Value := eQueryI.Value;
 
-  chbQueryI1.Checked := ini.ReadBool('options', 'checkqueryinterval1',
+{  chbQueryI1.Checked := ini.ReadBool('options', 'checkqueryinterval1',
     chbQueryI1.Checked);
   chbQueryI2.Checked := ini.ReadBool('options', 'checkqueryinterval2',
-    chbQueryI2.Checked);
-  chbBfGet.Checked := ini.ReadBool('options', 'checkbeforeget',
-    chbBfGet.Checked);
+    chbQueryI2.Checked); }
+{  chbBfGet.Checked := ini.ReadBool('options', 'checkbeforeget',
+    chbBfGet.Checked);}
   chbBfDwnld.Checked := ini.ReadBool('options', 'checkbeforedwnld',
     chbBfDwnld.Checked);
   chbAftDwnld.Checked := ini.ReadBool('options', 'checkbafterdwnld',
@@ -1593,7 +1635,10 @@ begin
           except
             on E: Exception do
               if E.Message <> 'Connection Closed Gracefully.' then
-                LogErr(E.Message);
+              begin
+                MessageDlg(E.Message,mtError,[mbOk],0);
+                Exit;
+              end;
           end;
           HTTP.Free;
           s.Free;
@@ -1647,7 +1692,10 @@ begin
             except
               on E: Exception do
                 if E.Message <> 'Connection Closed Gracefully.' then
-                  LogErr(E.Message);
+                begin
+                  MessageDlg(E.Message,mtError,[mbOk],0);
+                  Exit;
+                end;
             end;
             HTTP.Free;
             s.Free;
@@ -1724,7 +1772,10 @@ begin
             except
               on E: Exception do
                 if E.Message <> 'Connection Closed Gracefully.' then
-                  LogErr(E.Message);
+                begin
+                  MessageDlg(E.Message,mtError,[mbOk],0);
+                  Exit;
+                end;
             end;
             HTTP.Free;
             s.Free;
@@ -1784,7 +1835,10 @@ begin
             except
               on E: Exception do
                 if E.Message <> 'Connection Closed Gracefully.' then
-                  LogErr(E.Message);
+                begin
+                  MessageDlg(E.Message,mtError,[mbOk],0);
+                  Exit;
+                end;
             end;
             HTTP.Free;
             s.Free;
@@ -1828,12 +1882,14 @@ end;
 
 procedure TMainForm.btnAuth1Click(Sender: TObject);
 begin
-  UpdLogin(cbSite.ItemIndex);
+  if UpdLogin(cbSite.ItemIndex) then
+    FCookies.DeleteCookie(RESOURCE_URLS[cbSite.ItemIndex]);
 end;
 
 procedure TMainForm.btnAuth2Click(Sender: TObject);
 begin
-  UpdLogin(curdest);
+  if UpdLogin(curdest) then
+    FCookies.DeleteCookie(RESOURCE_URLS[curdest]);
 end;
 
 procedure TMainForm.btnBrowseClick(Sender: TObject);
@@ -2162,8 +2218,8 @@ begin
       RP_XBOORU:
         nxt := 'http://xbooru.com/index.php?page=post&s=list&tags=' +
           StringEncode(tmptag);
-      RP_BOORU_RULE34:
-        nxt := 'http://rule34.booru.org/index.php?page=post&s=list&tags=' +
+      RP_XXX_RULE34:
+        nxt := 'http://rule34.xxx/index.php?page=post&s=list&tags=' +
           StringEncode(tmptag);
       RP_RMART:
         nxt := 'http://rmart.org/?q=' + StringEncode(tmptag);
@@ -2904,7 +2960,7 @@ begin
 
   if curdest in [RP_EHENTAI_G, RP_EXHENTAI] then
   begin
-    FThreadQueue.DelayPeriod := eQueryI.AsInteger * 1000;
+    FThreadQueue.DelayPeriod := Trunc(eQueryI.Value * 1000);
     result.ThreadQueue := FThreadQueue;
     result.XML := TMyXMLParser.Create;
     result.XML.OnStartTag := result.XMLStartTagEvent;
@@ -2930,6 +2986,7 @@ begin
   result.origfname := chbOrigFNames.Checked and chbOrigFNames.Visible;
   result.incfname := chbIncFNames.Checked and chbIncFNames.Visible;
   result.zerocount := Length(n);
+  result.fullsize := chbFullSize.Checked;
   // result.updatecaption := updatecaption;
   result.FreeOnTerminate := true;
   result.OnTerminate := ThreadTerminate;
@@ -2961,9 +3018,9 @@ begin
   else
     ini.WriteInteger('options', 'byauthor', -1);
   ini.WriteInteger('options', 'queryinterval', eQueryI.AsInteger);
-  ini.WriteBool('options', 'checkqueryinterval1', chbQueryI1.Checked);
+{  ini.WriteBool('options', 'checkqueryinterval1', chbQueryI1.Checked);
   ini.WriteBool('options', 'checkqueryinterval2', chbQueryI2.Checked);
-  ini.WriteBool('options', 'checkbeforeget', chbBfGet.Checked);
+  ini.WriteBool('options', 'checkbeforeget', chbBfGet.Checked);        }
   ini.WriteBool('options', 'checkbeforedwnld', chbBfDwnld.Checked);
   ini.WriteBool('options', 'checkbafterdwnld', chbAftDwnld.Checked);
 
@@ -2979,6 +3036,7 @@ begin
   ini.WriteBool('options', 'createnewdirs', chbcreatenewdirs.Checked);
   ini.WriteBool('options', 'origfnames', chbOrigFNames.Checked);
   ini.WriteBool('options', 'incfnames', chbIncFNames.Checked);
+  ini.WriteBool('options', 'fullsize', chbFullSize.Checked);
   ini.WriteBool('options', 'nameformatcheck', chbNameFormat.Checked);
   ini.WriteString('options', 'nameformat', eNameFormat.Text);
   ini.WriteBool('options', 'tagsincheck', chbTagsIn.Checked);
@@ -3802,8 +3860,9 @@ begin
     FloatToStr(RoundTo(diff(ncmpl, nsel) * 100, -2)) + '%';
 end;
 
-procedure TMainForm.UpdLogin(iindex: Integer);
+function TMainForm.UpdLogin(iindex: Integer): boolean;
 begin
+  Result := false;
   with fmLogin do
   begin
     Caption := 'Login to  ' + cbSite.Items[iindex];
@@ -3813,6 +3872,7 @@ begin
     ShowModal;
     if ModalResult = mrOK then
     begin
+      Result := true;
       AuthData[iindex].Login := eLogin.Text;
       AuthData[iindex].Password := ePassword.Text;
       FSavePWD := chbSavePWD.Checked;
@@ -3959,7 +4019,7 @@ end;
 procedure TMainForm.XmlStartTag(ATag: String; Attrs: TAttrList);
 begin
   case cbSite.ItemIndex of
-    RP_GELBOORU, RP_BOORU_II, RP_BOORU_RULE34, RP_TBIB:
+    RP_GELBOORU, RP_BOORU_II, RP_XXX_RULE34, RP_TBIB:
       begin
         if (ATag = 'a') then
           if tstart = 1 then
@@ -4664,7 +4724,7 @@ end;
 procedure TMainForm.XmlEndTag(ATag: String);
 begin
   case cbSite.ItemIndex of
-    RP_GELBOORU, RP_BOORU_II, RP_BOORU_RULE34, RP_TBIB:
+    RP_GELBOORU, RP_BOORU_II, RP_XXX_RULE34, RP_TBIB:
       if (ATag = 'span') and (tstart = 1) then
         tstart := 0;
     RP_DONMAI_DANBOORU, RP_DONMAI_HIJIRIBE, RP_DONMAI_SONOHARA, RP_SANKAKU_CHAN,
@@ -4918,7 +4978,7 @@ begin
           n[xml_tmpi].pageurl := tmpurl;
         end;
       end;
-    RP_BOORU_RULE34:
+    RP_XXX_RULE34:
       if (ATag = 'img') and (tstart = 1) then
       begin
         xml_tmpi :=
@@ -5847,8 +5907,8 @@ begin
   chbKeepInstance.Enabled := n;
   chbSaveNote.Enabled := n;
   chbdebug.Enabled := n;
-  chbQueryI1.Enabled := n;
-  chbQueryI2.Enabled := n;
+{  chbQueryI1.Enabled := n;
+  chbQueryI2.Enabled := n;  }
   chbNameFormat.Enabled := n and (curdest = RP_PIXIV);
   // eNameFormat.Enabled := n;
   chbAutoDirName.Enabled := n;
@@ -6392,6 +6452,16 @@ begin
   end
   else
     chbIncFNames.Visible := false;
+
+  if curdest in [RP_EHENTAI_G, RP_EXHENTAI] then
+  begin
+    chbFullSize.Top := 59 + 23 * (i mod 3);
+    chbFullSize.Left := 9 * Integer(i < 3) + 173 * (i div 3);
+    chbFullSize.Visible := true;
+    inc(i);
+  end
+  else
+    chbFullSize.Visible := false;
 
   if curdest in [RP_EHENTAI_G, RP_EXHENTAI] then
   begin

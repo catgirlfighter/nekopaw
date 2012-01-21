@@ -22,36 +22,36 @@ const
 
   RESOURCE_COUNT = 30;
 
-  RP_GELBOORU = 11;
-  RP_DONMAI_DANBOORU = 5;
-  RP_KONACHAN = 13;
-  RP_IMOUTO = 12;
-  RP_PIXIV = 19;
-  RP_SAFEBOORU = 21;
-  RP_SANKAKU_CHAN = 22;
+  RP_GELBOORU = 10;
+  RP_DONMAI_DANBOORU = 4;
+  RP_KONACHAN = 12;
+  RP_IMOUTO = 11;
+  RP_PIXIV = 18;
+  RP_SAFEBOORU = 20;
+  RP_SANKAKU_CHAN = 21;
   RP_BEHOIMI = 1;
-  RP_EHENTAI_G = 8;
-  RP_EXHENTAI = 10;
-  RP_PAHEAL_RULE34 = 17;
-  RP_SANKAKU_IDOL = 23;
-  RP_DEVIANTART = 4;
-  RP_E621 = 9;
+  RP_EHENTAI_G = 7;
+  RP_EXHENTAI = 9;
+  RP_PAHEAL_RULE34 = 16;
+  RP_SANKAKU_IDOL = 22;
+  RP_DEVIANTART = 3;
+  RP_E621 = 8;
   RP_413CHAN_PONIBOORU = 0;
   RP_BOORU_II = 2;
   RP_ZEROCHAN = 29;
-  RP_PAHEAL_RULE63 = 18;
-  RP_PAHEAL_COSPLAY = 16;
-  RP_XBOORU = 28;
-  RP_WILDCRITTERS = 27;
-  RP_BOORU_RULE34 = 3;
-  RP_RMART = 20;
-  RP_DONMAI_HIJIRIBE = 6;
-  RP_DONMAI_SONOHARA = 7;
-  RP_NEKOBOORU = 15;
-  RP_THEDOUJIN = 26;
-  RP_MINITOKYO = 14;
-  RP_TBIB = 24;
-  RP_TENTACLERAPE = 25;
+  RP_PAHEAL_RULE63 = 17;
+  RP_PAHEAL_COSPLAY = 15;
+  RP_XBOORU = 27;
+  RP_WILDCRITTERS = 26;
+  RP_XXX_RULE34 = 28;
+  RP_RMART = 19;
+  RP_DONMAI_HIJIRIBE = 5;
+  RP_DONMAI_SONOHARA = 6;
+  RP_NEKOBOORU = 14;
+  RP_THEDOUJIN = 25;
+  RP_MINITOKYO = 13;
+  RP_TBIB = 23;
+  RP_TENTACLERAPE = 24;
 
   RS_POOLS = [RP_BEHOIMI, RP_SANKAKU_CHAN, RP_IMOUTO, RP_DONMAI_DANBOORU,
   RP_SANKAKU_IDOL, RP_E621, RP_KONACHAN, RP_WILDCRITTERS, RP_DONMAI_HIJIRIBE,
@@ -67,32 +67,32 @@ const
               {00}('http://ponibooru.413chan.net/',
               {01} 'http://behoimi.org/',
               {02} 'http://ii.booru.org/',
-              {03} 'http://rule34.booru.org/',
-              {04} 'http://deviantart.com/',
-              {05} 'http://danbooru.donmai.us/',
-              {06} 'http://hijiribe.donmai.us/',
-              {07} 'http://sonohara.donmai.us/',
-              {08} 'http://g.e-hentai.org/',
-              {09} 'http://e621.net/',
-              {10} 'http://exhentai.org/',
-              {11} 'http://gelbooru.com/',
-              {12} 'http://oreno.imouto.org/',
-              {13} 'http://konachan.com/',
-              {14} 'http://www.minitokyo.net/',
-              {15} 'http://nekobooru.net/',
-              {16} 'http://cosplay.paheal.net/',
-              {17} 'http://rule34.paheal.net/',
-              {18} 'http://rule63.paheal.net/',
-              {19} 'http://pixiv.net/',
-              {20} 'http://rmart.org/',
-              {21} 'http://safebooru.org/',
-              {22} 'http://chan.sankakucomplex.com/',
-              {23} 'http://idol.sankakucomplex.com/',
-              {24} 'http://tbib.org/',
-              {25} 'http://tentaclerape.net/',
-              {26} 'http://thedoujin.com/',
-              {27} 'http://wildcritters.ws/',
-              {28} 'http://xbooru.com/',
+              {03} 'http://deviantart.com/',
+              {04} 'http://danbooru.donmai.us/',
+              {05} 'http://hijiribe.donmai.us/',
+              {06} 'http://sonohara.donmai.us/',
+              {07} 'http://g.e-hentai.org/',
+              {08} 'http://e621.net/',
+              {09} 'http://exhentai.org/',
+              {10} 'http://gelbooru.com/',
+              {11} 'http://oreno.imouto.org/',
+              {12} 'http://konachan.com/',
+              {13} 'http://www.minitokyo.net/',
+              {14} 'http://nekobooru.net/',
+              {15} 'http://cosplay.paheal.net/',
+              {16} 'http://rule34.paheal.net/',
+              {17} 'http://rule63.paheal.net/',
+              {18} 'http://pixiv.net/',
+              {19} 'http://rmart.org/',
+              {20} 'http://safebooru.org/',
+              {21} 'http://chan.sankakucomplex.com/',
+              {22} 'http://idol.sankakucomplex.com/',
+              {23} 'http://tbib.org/',
+              {24} 'http://tentaclerape.net/',
+              {25} 'http://thedoujin.com/',
+              {26} 'http://wildcritters.ws/',
+              {27} 'http://xbooru.com/',
+              {28} 'http://rule34.xxx/',
               {29} 'http://www.zerochan.net/');
 
 
@@ -101,7 +101,7 @@ const
     RP_SAFEBOORU, RP_SANKAKU_CHAN, RP_BEHOIMI, RP_EHENTAI_G, RP_EXHENTAI,
     RP_PAHEAL_RULE34, RP_SANKAKU_IDOL, RP_DEVIANTART, RP_E621,
     RP_413CHAN_PONIBOORU, RP_BOORU_II, RP_ZEROCHAN, RP_PAHEAL_RULE63,
-    RP_PAHEAL_COSPLAY, RP_XBOORU, RP_WILDCRITTERS, RP_BOORU_RULE34, RP_RMART,
+    RP_PAHEAL_COSPLAY, RP_XBOORU, RP_WILDCRITTERS, RP_XXX_RULE34, RP_RMART,
     RP_DONMAI_HIJIRIBE, RP_DONMAI_SONOHARA, RP_NEKOBOORU, RP_THEDOUJIN,
     RP_MINITOKYO,RP_TBIB,RP_TENTACLERAPE);
 
