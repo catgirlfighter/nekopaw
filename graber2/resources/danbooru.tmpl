@@ -1,0 +1,56 @@
+*preinstalled=0
+
+;template of danbooru engine
+
+[main]
+$picture.fields(url,preview,width:i,height:i,rating,id:i,author,score:i,posted:d,md5,source);
+
+[listscript]
+$thread.url = "$main.url+'post/index.xml?tags='+$tag";
+$thread.xml = 'firstpagexml';
+$thread.execute();
+$thread.counter = 2;
+$thread.xml = 'listxml';
+$thread.url = "$main.url+'post/index.xml?limit=100&tags='+$tag+'&page='+$thread.counter";
+;@unixtime(#created_at)
+
+[firstpagexml]
+^posts{
+	$thread.count=#count/100+1;
+	^post{
+		addpicture(
+			%url=#file_url,
+			%preview=#preview_url,
+			%width=#width,
+			%height=#height,
+			%rating=#rating,
+			%id=#id,
+			%author=#author,
+			%score=#score,
+			%posted=@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy"),
+			%md5=#md5,
+			%source=#source,
+			%tags=csv(#tags," ")
+		);
+	}
+}
+
+[listxml]
+^posts{
+	^post{
+		addpicture(
+			%url=#file_url,
+			%preview=#preview_url,
+			%width=#width,
+			%height=#height,
+			%rating=#rating,
+			%id=#id,
+			%author=#author,
+			%score=#score,
+			%posted=@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy"),
+			%md5=#md5,
+			%source=#source,
+			%tags=csv(#tags," ")
+		);
+	}
+}
