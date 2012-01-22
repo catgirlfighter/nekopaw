@@ -3,7 +3,7 @@
 interface
 
 uses Classes, Variants, SysUtils, Math, Forms, StdCtrls, ExtCtrls, ComCtrls,
-  Controls,
+  Controls, DateUtils,
   HTTPApp, ShellAPI, Windows, Graphics, JPEG, GIFImg, PNGImage;
 
 type
@@ -34,8 +34,10 @@ function STRINGENCODE(s: STRING): STRING;
 function STRINGDECODE(s: STRING): STRING;
 function Trim(s: String; ch: Char = ' '): String;
 function TrimEx(s: String; ch: TSetOfChar): String;
-function CopyTo(s, substr: string): string;
-function CopyFromTo(s, sub1, sub2: String; re: boolean = false): String;
+function CopyTo(s, substr: string): string; overload;
+function CopyTo(var Source: String; ATo: Char; Isl: array of string; cut: boolean = false): string; overload;
+function CopyFromTo(s, sub1, sub2: String; re: boolean = false): String; overload;
+function CopyFromTo(Source: String; AFrom,ATo: Char; Isl: array of string): String; overload;
 function ExtractFolder(s: string): string;
 function MoveDir(const fromDir, toDir: string): boolean;
 procedure MultWordArrays(var a1: TArrayOfWord; a2: TArrayOfWord);
@@ -62,6 +64,9 @@ function GetNextSEx(var s: string; del: TSetOfChar = [';'];
   ins: TSetOfChar = []): string;
 procedure FileToString(FileName: String; var AValue: AnsiString);
 function MathCalcStr(s: string): variant;
+function DateTimeStrEval(const DateTimeFormat: string;
+  const DateTimeStr: string; locale: string): TDateTime;
+function nullstr(Value: Variant): Variant;
 
 implementation
 
@@ -715,6 +720,19 @@ begin
     Result := copy(s, 1, i - 1);
 end;
 
+function CopyTo(var Source: String; ATo: Char; Isl: array of string; cut: boolean = false): string;
+var
+  i: Integer;
+begin
+  i := CharPos(Source,ATo,Isl);
+  if i = 0 then
+    Result := copy(Source, 1, length(Source))
+  else
+    Result := copy(Source, 1, i - 1);
+  if cut then
+    Delete(Source,1,i);
+end;
+
 function CopyFromTo(s, sub1, sub2: String; re: boolean = false): String;
 var
   l1, l2: Integer;
@@ -742,6 +760,31 @@ begin
     Result := copy(s, l1 + length(sub1), l2 - l1 - length(sub1))
   else
     Result := copy(s, 1, l2 - 1);
+end;
+
+function CopyFromTo(Source: String; AFrom,ATo: Char; Isl: array of string): String;
+var
+  n1,n2: integer;
+begin
+
+  n1 := CharPos(Source,AFrom,Isl);
+
+  if n1 = 0 then
+  begin
+    Result := '';
+    Exit;
+  end;
+
+  n2 := CharPos(Source,ATo,Isl,n1 + 1);
+
+  if n2 = 0 then
+  begin
+    Result := '';
+    Exit;
+  end;
+
+  Result := Copy(Source,n1+1,n2-n1-1);
+
 end;
 
 function DeleteFromTo(s, sub1, sub2: String; casesens: boolean = true): String;
@@ -1504,6 +1547,224 @@ begin
   i := 1;
   ls := null;
   Result := Proc(0, s, i, length(s), ls);
+end;
+
+function DateTimeStrEval(const DateTimeFormat: string;
+  const DateTimeStr: string; locale: string): TDateTime;
+var
+  i, ii, iii: integer;
+  Retvar: TDateTime;
+  Tmp,
+    Fmt, Data, Mask, Spec: string;
+  Year, Month, Day, Hour,
+    Minute, Second, MSec: word;
+  AmPm: integer;
+  fs: TFormatSettings;
+begin
+  fs := TFormatSettings.Create(locale);
+  Year := 1;
+  Month := 1;
+  Day := 1;
+  Hour := 0;
+  Minute := 0;
+  Second := 0;
+  MSec := 0;
+  Fmt := UpperCase(DateTimeFormat);
+  Data := UpperCase(DateTimeStr);
+  i := 1;
+  Mask := '';
+  AmPm := 0;
+
+  while i < length(Fmt) do
+  begin
+    if CharInSet(Fmt[i],['A', 'P', 'D', 'M', 'Y', 'H', 'N', 'S', 'Z']) then
+    begin
+      // Start of a date specifier
+      Mask := Fmt[i];
+      ii := i + 1;
+
+      // Keep going till not valid specifier
+      while true do
+      begin
+        if ii > length(Fmt) then
+          Break; // End of specifier string
+        Spec := Mask + Fmt[ii];
+
+        if (Spec = 'DD') or (Spec = 'DDD') or (Spec = 'DDDD') or
+          (Spec = 'MM') or (Spec = 'MMM') or (Spec = 'MMMM') or
+          (Spec = 'YY') or (Spec = 'YYY') or (Spec = 'YYYY') or
+          (Spec = 'HH') or (Spec = 'NN') or (Spec = 'SS') or
+          (Spec = 'ZZ') or (Spec = 'ZZZ') or
+          (Spec = 'AP') or (Spec = 'AM') or (Spec = 'AMP') or
+          (Spec = 'AMPM') then
+        begin
+          Mask := Spec;
+          inc(ii);
+        end
+        else
+        begin
+          // End of or Invalid specifier
+          Break;
+        end;
+      end;
+
+      // Got a valid specifier ? - evaluate it from data string
+      if (Mask <> '') and (length(Data) > 0) then
+      begin
+        // Day 1..31
+        if (Mask = 'DD') then
+        begin
+          Day := StrToIntDef(trim(copy(Data, 1, 2)), 0);
+          delete(Data, 1, 2);
+        end;
+
+        // Day Sun..Sat (Just remove from data string)
+        if Mask = 'DDD' then
+          delete(Data, 1, 3);
+
+        // Day Sunday..Saturday (Just remove from data string LEN)
+        if Mask = 'DDDD' then
+        begin
+          Tmp := copy(Data, 1, 3);
+          for iii := 1 to 7 do
+          begin
+            if Tmp = Uppercase(copy(fs.LongDayNames[iii], 1, 3)) then
+            begin
+              delete(Data, 1, length(fs.LongDayNames[iii]));
+              Break;
+            end;
+          end;
+        end;
+
+        // Month 1..12
+        if (Mask = 'MM') then
+        begin
+          Month := StrToIntDef(trim(copy(Data, 1, 2)), 0);
+          delete(Data, 1, 2);
+        end;
+
+        // Month Jan..Dec
+        if Mask = 'MMM' then
+        begin
+          Tmp := copy(Data, 1, 3);
+          for iii := 1 to 12 do
+          begin
+            if Tmp = Uppercase(copy(fs.LongMonthNames[iii], 1, 3)) then
+            begin
+              Month := iii;
+              delete(Data, 1, 3);
+              Break;
+            end;
+          end;
+        end;
+
+        // Month January..December
+        if Mask = 'MMMM' then
+        begin
+          Tmp := copy(Data, 1, 3);
+          for iii := 1 to 12 do
+          begin
+            if Tmp = Uppercase(copy(fs.LongMonthNames[iii], 1, 3)) then
+            begin
+              Month := iii;
+              delete(Data, 1, length(fs.LongMonthNames[iii]));
+              Break;
+            end;
+          end;
+        end;
+
+        // Year 2 Digit
+        if Mask = 'YY' then
+        begin
+          Year := StrToIntDef(copy(Data, 1, 2), 0);
+          delete(Data, 1, 2);
+          if Year < fs.TwoDigitYearCenturyWindow then
+            Year := (YearOf(Date) div 100) * 100 + Year
+          else
+            Year := (YearOf(Date) div 100 - 1) * 100 + Year;
+        end;
+
+        // Year 4 Digit
+        if Mask = 'YYYY' then
+        begin
+          Year := StrToIntDef(copy(Data, 1, 4), 0);
+          delete(Data, 1, 4);
+        end;
+
+        // Hours
+        if Mask = 'HH' then
+        begin
+          Hour := StrToIntDef(trim(copy(Data, 1, 2)), 0);
+          delete(Data, 1, 2);
+        end;
+
+        // Minutes
+        if Mask = 'NN' then
+        begin
+          Minute := StrToIntDef(trim(copy(Data, 1, 2)), 0);
+          delete(Data, 1, 2);
+        end;
+
+        // Seconds
+        if Mask = 'SS' then
+        begin
+          Second := StrToIntDef(trim(copy(Data, 1, 2)), 0);
+          delete(Data, 1, 2);
+        end;
+
+        // Milliseconds
+        if (Mask = 'ZZ') or (Mask = 'ZZZ') then
+        begin
+          MSec := StrToIntDef(trim(copy(Data, 1, 3)), 0);
+          delete(Data, 1, 3);
+        end;
+
+        // AmPm A or P flag
+        if (Mask = 'AP') then
+        begin
+          if Data[1] = 'A' then
+            AmPm := -1
+          else
+            AmPm := 1;
+          delete(Data, 1, 1);
+        end;
+
+        // AmPm AM or PM flag
+        if (Mask = 'AM') or (Mask = 'AMP') or (Mask = 'AMPM') then
+        begin
+          if copy(Data, 1, 2) = 'AM' then
+            AmPm := -1
+          else
+            AmPm := 1;
+          delete(Data, 1, 2);
+        end;
+
+        Mask := '';
+        i := ii;
+      end;
+    end
+    else
+    begin
+      // Remove delimiter from data string
+      if length(Data) > 1 then
+        delete(Data, 1, 1);
+      inc(i);
+    end;
+  end;
+
+  if AmPm = 1 then
+    Hour := Hour + 12;
+  if not TryEncodeDateTime(Year, Month, Day, Hour, Minute, Second, MSec, Retvar) then
+    Retvar := 0.0;
+  Result := Retvar;
+end;
+
+function nullstr(Value: Variant): Variant;
+begin
+  if value = null then
+    Result := ''
+  else
+    Result := Value;
 end;
 
 end.

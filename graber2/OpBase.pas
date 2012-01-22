@@ -58,10 +58,10 @@ begin
     begin
       ThreadCount := INI.ReadInteger('download','threadcount',1);
       Retries := INI.ReadInteger('download','retires',5);
-      Interval := INI.ReadInteger('download','interval',3);
-      BeforeU := INI.ReadBool('download','beforeurl',true);
-      BeforeP := INI.ReadBool('download','beforepicture',false);
-      AfterP := INI.ReadBool('download','afterpicture',false);
+      //Interval := INI.ReadInteger('download','interval',3);
+      //BeforeU := INI.ReadBool('download','beforeurl',true);
+      //BeforeP := INI.ReadBool('download','beforepicture',false);
+      //AfterP := INI.ReadBool('download','afterpicture',false);
       Debug := false;
     end;
 

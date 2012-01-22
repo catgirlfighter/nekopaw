@@ -8,16 +8,8 @@ uses
   cxStyles, cxCustomData, cxFilter, cxData, cxDataStorage, cxEdit, DB, cxDBData,
   DBClient, cxGridLevel, cxClasses, cxGridCustomView, cxGridCustomTableView,
   cxGridTableView, cxGridDBTableView, cxGrid, graberU, dxmdaset,
-  cxEditRepositoryItems, common, ComCtrls, cxContainer, cxLabel, dxSkinsCore,
-  dxSkinBlack, dxSkinBlue, dxSkinCaramel, dxSkinCoffee, dxSkinDarkRoom,
-  dxSkinDarkSide, dxSkinFoggy, dxSkinGlassOceans, dxSkiniMaginary, dxSkinLilian,
-  dxSkinLiquidSky, dxSkinLondonLiquidSky, dxSkinMcSkin, dxSkinMoneyTwins,
-  dxSkinOffice2007Black, dxSkinOffice2007Blue, dxSkinOffice2007Green,
-  dxSkinOffice2007Pink, dxSkinOffice2007Silver, dxSkinOffice2010Black,
-  dxSkinOffice2010Blue, dxSkinOffice2010Silver, dxSkinPumpkin, dxSkinSeven,
-  dxSkinSharp, dxSkinSilver, dxSkinSpringTime, dxSkinStardust, dxSkinSummer2008,
-  dxSkinsDefaultPainters, dxSkinValentine, dxSkinXmas2008Blue,
-  dxSkinscxPCPainter, dxStatusBar;
+  cxEditRepositoryItems, common, ComCtrls, cxContainer, cxLabel, dxStatusBar,
+  dxBar, cxGridCustomPopupMenu, cxGridPopupMenu;
 
 type
   TfGrid = class(TFrame)
@@ -32,6 +24,14 @@ type
     vGrid: TcxGridDBTableView;
     ds: TDataSource;
     sBar: TdxStatusBar;
+    BarManager: TdxBarManager;
+    BarControl: TdxBarDockControl;
+    TableActions: TdxBar;
+    bbColumns: TdxBarButton;
+    GridPopup: TcxGridPopupMenu;
+    bbFilter: TdxBarButton;
+    procedure bbColumnsClick(Sender: TObject);
+    procedure bbFilterClick(Sender: TObject);
   private
     FList: TList;
     FFieldList: TStringList;
@@ -55,7 +55,7 @@ type
   end;
 
   TcxGridSiteAccess = class(TcxGridSite);
-
+  TcxGridPopupMenuAccess = class(TcxGridPopupMenu);
 implementation
 
 uses LangString;
@@ -64,19 +64,49 @@ uses LangString;
 
 function TfGrid.AddField(s: string;chu: string = ''): TcxGridDBColumn;
 var
-  f: TStringField;
+  f: TField;
+  n: string;
 
 begin
-  f := TStringField.Create(md);
-  f.FieldName := chu + s;
-  f.DisplayLabel := s;
-  f.Size := 128;
+  n := GetNextS(s,':');
+
+  if s <> '' then
+    case s[1] of
+      'i' : f := TIntegerField.Create(md);
+      'd' : f := TDateTimeField.Create(md);
+    else
+    begin
+      f := TStringField.Create(md);
+      f.Size := 256;
+    end end
+  else
+  begin
+    f := TStringField.Create(md);
+    f.Size := 256;
+  end;
+  //f := TStringField.Create(md);
+  f.FieldName := chu + n;
+  f.DisplayLabel := n;
+
   f.FieldKind := fkData;
   f.DataSet := md;
   result := vGrid.CreateColumn;
   result.DataBinding.FieldName := f.FieldName;
   result.RepositoryItem := iTextEdit;
   //result.DataBinding.ValueType := 'String';
+end;
+
+procedure TfGrid.bbColumnsClick(Sender: TObject);
+begin
+  TcxGridPopupMenuAccess(GridPopup).GridOperationHelper.DoShowColumnCustomizing(True);
+end;
+
+procedure TfGrid.bbFilterClick(Sender: TObject);
+begin
+  if bbFilter.Down then
+    vGrid.FilterBox.Visible := fvAlways
+  else
+    vGrid.FilterBox.Visible := fvNonEmpty;
 end;
 
 procedure TfGrid.CreateList;
@@ -151,6 +181,8 @@ begin
           vGrid.DataController.Values[r,c] := APicture.Meta.Items[i].Value;   }
           //vGrid.
           md.FieldValues['.' + APicture.Meta.Items[i].Name] := APicture.Meta.Items[i].Value;
+          md.FieldValues['resname'] := APicture.List.Resource.Name;
+          md.FieldValues['label'] := APicture.DisplayLabel;
       end;
       md.Post;
     except
@@ -223,14 +255,24 @@ begin
   //c.Visible := false;
   c.DataBinding.FieldName := 'RecId';
   c.DataBinding.Field.DisplayLabel := _RESID_;
+
+
   c.SortOrder := soAscending;
   c.Width := 20;
 //  c.Options.HorzSizing := false;
   c := AddField('resname');
   c.DataBinding.Field.DisplayLabel := _RESNAME_;
   c.GroupBy(0);
+
+  c := AddField('label');
+  c.DataBinding.Field.DisplayLabel := _PICTURELABEL_;
+
   for i := 0 to FFieldList.Count -1 do
-    FFieldList.Objects[i] := AddField(FFieldList[i],'.');
+  begin
+    c := AddField(FFieldList[i],'.');
+    c.Visible := false;
+    FFieldList.Objects[i] := c;
+  end;
   //l.Free;
 
   md.Open;

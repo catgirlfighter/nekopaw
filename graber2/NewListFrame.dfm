@@ -133,10 +133,6 @@ object fNewList: TfNewList
     object tsList: TcxTabSheet
       Caption = 'tsList'
       ImageIndex = 0
-      ExplicitLeft = 4
-      ExplicitTop = 4
-      ExplicitWidth = 253
-      ExplicitHeight = 265
       object gFull: TcxGrid
         Left = 0
         Top = 0
@@ -145,8 +141,6 @@ object fNewList: TfNewList
         Margins.Right = 0
         Align = alClient
         TabOrder = 0
-        ExplicitWidth = 253
-        ExplicitHeight = 265
         object tvFull: TcxGridTableView
           NavigatorButtons.ConfirmDelete = False
           DataController.Summary.DefaultGroupSummaryItems = <>
