@@ -337,7 +337,7 @@ pwd=<br />
  * ponibooru.413chan.net
  * behoimi.org `[`+ pools`]`
  * ii.booru.org
- * rule34.booru.org
+ * rule34.booru.org (rule34.xxx)
  * deviantart.com `[`+ by categories`]`
  * danbooru.donmai.us `[`+ pools`]`
  * hijiribe.donmai.us `[`+ pools`]`
