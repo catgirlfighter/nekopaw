@@ -98,39 +98,6 @@ object fSettings: TfSettings
       Text = 'eProxyPassword'
       Width = 100
     end
-    object eInterval: TcxSpinEdit
-      Left = 72
-      Top = 166
-      Properties.MinValue = 1.000000000000000000
-      Style.HotTrack = False
-      TabOrder = 7
-      Value = 1
-      Width = 75
-    end
-    object chbBeforeU: TcxCheckBox
-      Left = 22
-      Top = 193
-      Caption = 'chbBeforeU'
-      Style.HotTrack = False
-      TabOrder = 8
-      Width = 121
-    end
-    object chbBeforeP: TcxCheckBox
-      Left = 22
-      Top = 220
-      Caption = 'chbBeforeP'
-      Style.HotTrack = False
-      TabOrder = 9
-      Width = 121
-    end
-    object chbAfterP: TcxCheckBox
-      Left = 22
-      Top = 247
-      Caption = 'chbAfterP'
-      Style.HotTrack = False
-      TabOrder = 10
-      Width = 121
-    end
     object chbProxySavePWD: TcxCheckBox
       Left = 128
       Top = 109
@@ -144,7 +111,7 @@ object fSettings: TfSettings
       Top = 28
       Caption = 'chbTrayIcon'
       Style.HotTrack = False
-      TabOrder = 11
+      TabOrder = 7
       OnClick = chbTrayIconClick
       Width = 121
     end
@@ -153,7 +120,7 @@ object fSettings: TfSettings
       Top = 55
       Caption = 'chbHideToTray'
       Style.HotTrack = False
-      TabOrder = 12
+      TabOrder = 8
       Width = 121
     end
     object chbOneInstance: TcxCheckBox
@@ -161,7 +128,7 @@ object fSettings: TfSettings
       Top = 82
       Caption = 'chbOneInstance'
       Style.HotTrack = False
-      TabOrder = 13
+      TabOrder = 9
       Width = 121
     end
     object chbSaveConfirm: TcxCheckBox
@@ -169,7 +136,7 @@ object fSettings: TfSettings
       Top = 109
       Caption = 'chbSaveConfirm'
       Style.HotTrack = False
-      TabOrder = 14
+      TabOrder = 10
       Width = 121
     end
     object eThreads: TcxSpinEdit
@@ -178,7 +145,7 @@ object fSettings: TfSettings
       Properties.MaxValue = 50.000000000000000000
       Properties.MinValue = 1.000000000000000000
       Style.HotTrack = False
-      TabOrder = 15
+      TabOrder = 11
       Value = 1
       Width = 75
     end
@@ -188,7 +155,7 @@ object fSettings: TfSettings
       Properties.AssignedValues.MinValue = True
       Properties.MaxValue = 50.000000000000000000
       Style.HotTrack = False
-      TabOrder = 16
+      TabOrder = 12
       Width = 75
     end
     object chbDebug: TcxCheckBox
@@ -196,7 +163,7 @@ object fSettings: TfSettings
       Top = 247
       Caption = 'chbDebug'
       Style.HotTrack = False
-      TabOrder = 17
+      TabOrder = 13
       Width = 121
     end
     object cxImage1: TcxImage
@@ -538,7 +505,7 @@ object fSettings: TfSettings
       Properties.ReadOnly = True
       Properties.ShowFocusRect = False
       Style.TransparentBorder = True
-      TabOrder = 18
+      TabOrder = 14
       Transparent = True
     end
     object dxLayoutControl1Group_Root: TdxLayoutGroup
@@ -548,91 +515,58 @@ object fSettings: TfSettings
       Hidden = True
       LayoutDirection = ldHorizontal
       ShowBorder = False
-      object dxLayoutControl1Group4: TdxLayoutGroup
-        CaptionOptions.Text = 'Hidden Group'
+      object gpProxy: TdxLayoutGroup
+        CaptionOptions.Text = 'gpProxy'
         ButtonOptions.Buttons = <>
-        Hidden = True
-        ShowBorder = False
-        object gpProxy: TdxLayoutGroup
-          CaptionOptions.Text = 'gpProxy'
+        LayoutDirection = ldHorizontal
+        object dxLayoutControl1Group3: TdxLayoutGroup
+          CaptionOptions.Text = 'New Group'
           ButtonOptions.Buttons = <>
-          LayoutDirection = ldHorizontal
-          object dxLayoutControl1Group3: TdxLayoutGroup
-            CaptionOptions.Text = 'New Group'
-            ButtonOptions.Buttons = <>
-            ShowBorder = False
-            object lcProxy: TdxLayoutItem
-              CaptionOptions.Text = 'cxCheckBox1'
-              CaptionOptions.Visible = False
-              Control = chbProxy
-              ControlOptions.ShowBorder = False
-            end
-            object lcHost: TdxLayoutItem
-              CaptionOptions.Text = 'lcHost'
-              CaptionOptions.Visible = False
-              Control = eHost
-              ControlOptions.ShowBorder = False
-            end
-            object lcPort: TdxLayoutItem
-              CaptionOptions.Text = 'lcPort'
-              CaptionOptions.Visible = False
-              Control = ePort
-              ControlOptions.ShowBorder = False
-            end
+          ShowBorder = False
+          object lcProxy: TdxLayoutItem
+            CaptionOptions.Text = 'cxCheckBox1'
+            CaptionOptions.Visible = False
+            Control = chbProxy
+            ControlOptions.ShowBorder = False
           end
-          object dxLayoutControl1Group1: TdxLayoutGroup
-            CaptionOptions.Text = 'New Group'
-            ButtonOptions.Buttons = <>
-            ShowBorder = False
-            object lcProxyAuth: TdxLayoutItem
-              CaptionOptions.Visible = False
-              Control = chbProxyAuth
-              ControlOptions.ShowBorder = False
-            end
-            object lcProxyLogin: TdxLayoutItem
-              CaptionOptions.Text = 'lcProxyLogin'
-              CaptionOptions.Visible = False
-              Control = eProxyLogin
-              ControlOptions.ShowBorder = False
-            end
-            object lcProxyPassword: TdxLayoutItem
-              CaptionOptions.Text = 'lcProxyPassword'
-              CaptionOptions.Visible = False
-              Control = eProxyPassword
-              ControlOptions.ShowBorder = False
-            end
-            object dxLayoutControl1Item4: TdxLayoutItem
-              CaptionOptions.Text = 'cxCheckBox1'
-              CaptionOptions.Visible = False
-              Control = chbProxySavePWD
-              ControlOptions.ShowBorder = False
-            end
+          object lcHost: TdxLayoutItem
+            CaptionOptions.Text = 'lcHost'
+            CaptionOptions.Visible = False
+            Control = eHost
+            ControlOptions.ShowBorder = False
+          end
+          object lcPort: TdxLayoutItem
+            CaptionOptions.Text = 'lcPort'
+            CaptionOptions.Visible = False
+            Control = ePort
+            ControlOptions.ShowBorder = False
           end
         end
-        object gpInterval: TdxLayoutGroup
-          CaptionOptions.Text = 'gpInterval'
+        object dxLayoutControl1Group1: TdxLayoutGroup
+          CaptionOptions.Text = 'New Group'
           ButtonOptions.Buttons = <>
-          object lcInterval: TdxLayoutItem
-            CaptionOptions.Text = 'lcInterval'
-            Control = eInterval
+          ShowBorder = False
+          object lcProxyAuth: TdxLayoutItem
+            CaptionOptions.Visible = False
+            Control = chbProxyAuth
             ControlOptions.ShowBorder = False
           end
-          object dxLayoutControl1Item1: TdxLayoutItem
-            CaptionOptions.Text = 'cxCheckBox1'
+          object lcProxyLogin: TdxLayoutItem
+            CaptionOptions.Text = 'lcProxyLogin'
             CaptionOptions.Visible = False
-            Control = chbBeforeU
+            Control = eProxyLogin
             ControlOptions.ShowBorder = False
           end
-          object dxLayoutControl1Item2: TdxLayoutItem
-            CaptionOptions.Text = 'cxCheckBox1'
+          object lcProxyPassword: TdxLayoutItem
+            CaptionOptions.Text = 'lcProxyPassword'
             CaptionOptions.Visible = False
-            Control = chbBeforeP
+            Control = eProxyPassword
             ControlOptions.ShowBorder = False
           end
-          object dxLayoutControl1Item3: TdxLayoutItem
+          object dxLayoutControl1Item4: TdxLayoutItem
             CaptionOptions.Text = 'cxCheckBox1'
             CaptionOptions.Visible = False
-            Control = chbAfterP
+            Control = chbProxySavePWD
             ControlOptions.ShowBorder = False
           end
         end

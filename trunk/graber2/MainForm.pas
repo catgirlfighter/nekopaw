@@ -15,15 +15,7 @@ uses
   cxCheckBox, cxTextEdit, cxPC, dxBar, dxBarExtItems, cxContainer,
   cxMemo,
   {graber2}
-  common, OpBase, graberU, MyHTTP, ImgList, dxSkinBlack, dxSkinBlue,
-  dxSkinCaramel, dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide, dxSkinFoggy,
-  dxSkinGlassOceans, dxSkiniMaginary, dxSkinLilian, dxSkinLiquidSky,
-  dxSkinLondonLiquidSky, dxSkinMcSkin, dxSkinMoneyTwins, dxSkinOffice2007Black,
-  dxSkinOffice2007Blue, dxSkinOffice2007Green, dxSkinOffice2007Pink,
-  dxSkinOffice2007Silver, dxSkinOffice2010Black, dxSkinOffice2010Blue,
-  dxSkinOffice2010Silver, dxSkinPumpkin, dxSkinSeven, dxSkinSharp, dxSkinSilver,
-  dxSkinSpringTime, dxSkinStardust, dxSkinSummer2008, dxSkinsDefaultPainters,
-  dxSkinValentine, dxSkinXmas2008Blue, dxSkinsdxBarPainter;
+  common, OpBase, graberU, MyHTTP, ImgList;
 
 type
 
@@ -388,10 +380,10 @@ begin
     Downl.Retries := eRetries.Value;
     Downl.Debug := chbDebug.Checked;
 
-    Downl.Interval := eInterval.Value;
-    Downl.BeforeU := chbBeforeU.Checked;
-    Downl.BeforeP := chbBeforeP.Checked;
-    Downl.AfterP := chbAfterP.Checked;
+    //Downl.Interval := eInterval.Value;
+    //Downl.BeforeU := chbBeforeU.Checked;
+    //Downl.BeforeP := chbBeforeP.Checked;
+    //Downl.AfterP := chbAfterP.Checked;
 
     TrayIcon := chbTrayIcon.Checked;
     HideToTray := chbHideToTray.Checked;
@@ -559,7 +551,17 @@ begin
     pcTables.ActivePage := SttPanel;
     Exit;
   end;
+
+  if pcTables.PageCount = 0 then
+  begin
+    pcTables.HideTabs :=  true;
+    dpLog.Visible := false;
+    dpErrors.Visible := false;
+  end;
+
+
   SttPanel := CreateTab(pcTables, false);
+
   SttPanel.Caption := _SETTINGS_;
   f := TfSettings.Create(SttPanel);
 
@@ -577,10 +579,10 @@ begin
     eRetries.Value := Downl.Retries;
     chbDebug.Checked := Downl.Debug;
 
-    eInterval.Value := Downl.Interval;
-    chbBeforeU.Checked := Downl.BeforeU;
-    chbBeforeP.Checked := Downl.BeforeP;
-    chbAfterP.Checked := Downl.AfterP;
+    //eInterval.Value := Downl.Interval;
+    //chbBeforeU.Checked := Downl.BeforeU;
+    //chbBeforeP.Checked := Downl.BeforeP;
+    //chbAfterP.Checked := Downl.AfterP;
 
     chbTrayIcon.Checked := TrayIcon;
     chbHideToTray.Checked := HideToTray;
@@ -639,6 +641,9 @@ begin
     dsTags.Hide;
     dsLogs.Hide;
     bmbMain.Visible := false;
+    pcTables.HideTabs := false;
+    dpLog.Visible := true;
+    dpErrors.Visible := true;
     mFrame := TfStart.Create(Self);
     mFrame.Parent := Self;
   end;

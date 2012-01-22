@@ -13,13 +13,13 @@ object fGrid: TfGrid
   TabOrder = 0
   object Grid: TcxGrid
     Left = 0
-    Top = 0
+    Top = 26
     Width = 451
-    Height = 284
+    Height = 258
     Align = alClient
     TabOrder = 0
     LookAndFeel.NativeStyle = False
-    ExplicitHeight = 304
+    ExplicitTop = 32
     object vChilds: TcxGridDBTableView
       NavigatorButtons.ConfirmDelete = False
       DataController.Summary.DefaultGroupSummaryItems = <>
@@ -45,6 +45,7 @@ object fGrid: TfGrid
       OptionsData.Inserting = False
       OptionsView.ColumnAutoWidth = True
       OptionsView.ExpandButtonsForEmptyDetails = False
+      OptionsView.HeaderEndEllipsis = True
     end
     object GridLevel1: TcxGridLevel
       GridView = vGrid
@@ -72,7 +73,14 @@ object fGrid: TfGrid
     Font.Height = -11
     Font.Name = 'Tahoma'
     Font.Style = []
-    ExplicitTop = 259
+  end
+  object BarControl: TdxBarDockControl
+    Left = 0
+    Top = 0
+    Width = 451
+    Height = 26
+    Align = dalTop
+    BarManager = BarManager
   end
   object cxEditRepository1: TcxEditRepository
     Left = 240
@@ -92,5 +100,76 @@ object fGrid: TfGrid
     DataSet = md
     Left = 72
     Top = 128
+  end
+  object BarManager: TdxBarManager
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -12
+    Font.Name = 'Segoe UI'
+    Font.Style = []
+    Categories.Strings = (
+      'Default')
+    Categories.ItemsVisibles = (
+      2)
+    Categories.Visibles = (
+      True)
+    PopupMenuLinks = <>
+    UseSystemFont = True
+    Left = 208
+    Top = 192
+    DockControlHeights = (
+      0
+      0
+      0
+      0)
+    object TableActions: TdxBar
+      Caption = 'Table'
+      CaptionButtons = <>
+      DockControl = BarControl
+      DockedDockControl = BarControl
+      DockedLeft = 0
+      DockedTop = 0
+      FloatLeft = 461
+      FloatTop = 0
+      FloatClientWidth = 0
+      FloatClientHeight = 0
+      ItemLinks = <
+        item
+          Visible = True
+          ItemName = 'bbColumns'
+        end
+        item
+          Visible = True
+          ItemName = 'bbFilter'
+        end>
+      NotDocking = [dsNone, dsLeft, dsTop, dsRight, dsBottom]
+      OneOnRow = True
+      Row = 0
+      UseOwnFont = False
+      UseRestSpace = True
+      Visible = True
+      WholeRow = False
+    end
+    object bbColumns: TdxBarButton
+      Caption = 'bbColumns'
+      Category = 0
+      Hint = 'bbColumns'
+      Visible = ivAlways
+      OnClick = bbColumnsClick
+    end
+    object bbFilter: TdxBarButton
+      Caption = 'bbFilter'
+      Category = 0
+      Hint = 'bbFilter'
+      Visible = ivAlways
+      ButtonStyle = bsChecked
+      OnClick = bbFilterClick
+    end
+  end
+  object GridPopup: TcxGridPopupMenu
+    Grid = Grid
+    PopupMenus = <>
+    Left = 104
+    Top = 200
   end
 end

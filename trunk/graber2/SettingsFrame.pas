@@ -7,16 +7,7 @@ uses
   Dialogs, cxGraphics, cxLookAndFeels, cxLookAndFeelPainters, Menus, StdCtrls,
   cxButtons, ExtCtrls, cxControls, cxContainer, cxEdit, dxLayoutcxEditAdapters,
   cxCheckBox, cxTextEdit, cxLabel, dxLayoutControl, cxGroupBox, cxMaskEdit,
-  cxSpinEdit, dxGDIPlusClasses, cxImage, common, dxSkinsCore, dxSkinBlack,
-  dxSkinBlue, dxSkinCaramel, dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide,
-  dxSkinFoggy, dxSkinGlassOceans, dxSkiniMaginary, dxSkinLilian,
-  dxSkinLiquidSky, dxSkinLondonLiquidSky, dxSkinMcSkin, dxSkinMoneyTwins,
-  dxSkinOffice2007Black, dxSkinOffice2007Blue, dxSkinOffice2007Green,
-  dxSkinOffice2007Pink, dxSkinOffice2007Silver, dxSkinOffice2010Black,
-  dxSkinOffice2010Blue, dxSkinOffice2010Silver, dxSkinPumpkin, dxSkinSeven,
-  dxSkinSharp, dxSkinSilver, dxSkinSpringTime, dxSkinStardust, dxSkinSummer2008,
-  dxSkinsDefaultPainters, dxSkinValentine, dxSkinXmas2008Blue,
-  dxSkinscxPCPainter;
+  cxSpinEdit, dxGDIPlusClasses, cxImage, common;
 
 type
   TfSettings = class(TFrame)
@@ -40,19 +31,9 @@ type
     dxLayoutControl1Group1: TdxLayoutGroup;
     eProxyPassword: TcxTextEdit;
     lcProxyPassword: TdxLayoutItem;
-    gpInterval: TdxLayoutGroup;
-    eInterval: TcxSpinEdit;
-    lcInterval: TdxLayoutItem;
-    chbBeforeU: TcxCheckBox;
-    dxLayoutControl1Item1: TdxLayoutItem;
-    chbBeforeP: TcxCheckBox;
-    dxLayoutControl1Item2: TdxLayoutItem;
-    chbAfterP: TcxCheckBox;
-    dxLayoutControl1Item3: TdxLayoutItem;
     chbProxySavePWD: TcxCheckBox;
     dxLayoutControl1Item4: TdxLayoutItem;
     gpWindow: TdxLayoutGroup;
-    dxLayoutControl1Group4: TdxLayoutGroup;
     chbTrayIcon: TcxCheckBox;
     dxLayoutControl1Item5: TdxLayoutItem;
     chbHideToTray: TcxCheckBox;

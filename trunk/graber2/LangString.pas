@@ -41,6 +41,7 @@ var
   _GENERAL_: String = 'General';
   _RESNAME_: String = 'Resource';
   _RESID_: String = '#';
+  _PICTURELABEL_: String = 'Label';
 implementation
 
 end.
