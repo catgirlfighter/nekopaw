@@ -110,7 +110,7 @@ end;
 
 destructor TAttrList.Destroy;
 begin
-  FAttrs := nil;
+  SetLength(FAttrs,0);
   inherited;
 end;
 
@@ -187,7 +187,7 @@ begin
             tagname := copy(adata,li,i-li);
             if (length(tagname) > 0) and CharInSet(tagname[1],['!']) then
             begin
-              attrs.Free;
+              FreeAndNil(attrs);
               Exit;
             end;
           end else
@@ -254,7 +254,8 @@ begin
         if Assigned(FOnStartTag) then
           FOnStartTag(tagname,Attrs);
     end;
-  attrs.Free;
+  if Assigned(attrs) then
+    attrs.Free;
 end;
 
 function checkstr(s: string): boolean;
@@ -264,7 +265,7 @@ begin
   s := trim(s);
   Result := True;
   for i := 1 to length(s) do
-    if not CharInSet(s[i],[' ',#13,#10])  then
+    if not CharInSet(s[i],[' ',#13,#10,#9])  then
       Exit;
   Result := False;
 end;

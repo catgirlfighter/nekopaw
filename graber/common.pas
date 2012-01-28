@@ -112,6 +112,8 @@ type
   TArrayOfWord = array of word;
   TArrayOfString = array of string;
 
+  TSetOfChar = Set of Char;
+
 function Replace(src, s1, s2: string; rpslashes: boolean = false;  rpall: boolean = false): string;
 function emptyname(s: string): string;
 function deleteids(s: string;slsh: boolean = false): string;
@@ -132,6 +134,7 @@ function extracttags(S: TStrings): String;
 function getnexts(var s: string; del: char= ';'; ins: char = #0): string;
 procedure ImportTags(src: String; Dst: TStrings); overload;
 function Trim(S: String; ch: char = ' '): String;
+function TrimEx(s: String; ch: TSetOfChar): String;
 function StringToArrayOfWord(S: String): TArrayOfWord;
 procedure AddSrtdd(var l: TArrayOfWord; s: Word);
 function CopyTo(s, substr: string): string;
@@ -1411,6 +1414,24 @@ begin
   for i  := 1 to j - length(s) do
     result := '0' + result;
 
+end;
+
+function TrimEx(s: String; ch: TSetOfChar): String;
+var
+  i, l: Integer;
+begin
+  l := length(s);
+  i := 1;
+  while (i <= l) and (CharInSet(s[i], ch)) do
+    inc(i);
+  if i > l then
+    Result := ''
+  else
+  begin
+    while CharInSet(s[l], ch) do
+      dec(l);
+    Result := copy(s, i, l - i + 1);
+  end;
 end;
 
 end.

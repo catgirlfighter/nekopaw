@@ -82,6 +82,8 @@ type
     HTTP: TMyIdHTTP;
     num, errcount, curerrcount, zerocount: Integer;
     // destnum: integer;
+    f: TFileStream;
+    fname: string;
     CSection: TCriticalSection;
     // FOnProgress: TProgProc;
     // Grd: TAdvStringGrid;
@@ -109,6 +111,8 @@ type
     procedure SMSG(m: tms; f: Boolean = false; t: string = '');
   protected
     procedure Execute; override;
+  public
+    procedure FreeFile;
   end;
 
   TMainForm = class(TForm)
@@ -473,6 +477,7 @@ type
 var
   MainForm: TMainForm;
   curdest: Integer = -2;
+  FSection: TCriticalSection;
 
 function AddTags(s: String; spr: char = ' '): TArrayOfWord;
 function extracttags2(s: TTags): String;
@@ -685,9 +690,8 @@ procedure TDownloadThread.Execute;
 
 var
   j: Integer;
-  f: TFileStream;
   xcp: byte;
-  o, es, expth, fname, tagstr, formatdir: string;
+  o, es, expth, tagstr, formatdir: string;
   s: String;
   c: Boolean;
   EXIF: TEXIFDATA;
@@ -697,7 +701,7 @@ begin
   try
     tstart := 8;
     EXIF := TEXIFDATA.Create;
-    CSection := TCriticalSection.Create;
+    //CSection := TCriticalSection.Create;
 
     while (nm < Length(n)) and (prgress = 0) do
     begin
@@ -780,18 +784,18 @@ begin
         begin
           SMSG(msERR,true,n[num].URL + ': Empty pic url' + #13#10 + s);
           prgress := 2;
-          Continue;
+          //Continue;
         end else if pos('You are opening pages too fast',s) > 0 then
         begin
           SMSG(msERR,true,'You are opening pages too fast, thus placing a ' +
           'heavy load on the server. Back down, or your IP address will be ' +
           'automatically banned.');
           prgress := 2;
-          Continue;
+          //Continue;
         end else
         begin
           SMSG(msERR,true,n[num].URL + ': Empty pic url' + #13#10 + s);
-          Continue;
+          //Continue;
         end;
 
 {        if tmp <> '' then
@@ -800,6 +804,13 @@ begin
       end
       else
         o := n[num].URL;
+
+        if not(prgress = 0) then
+        begin
+          SMSG(msABRT);
+          Break;
+        end;
+
       expth := spth;
       formatdir := '';
 
@@ -824,7 +835,6 @@ begin
               if curdest = RP_PIXIV then
                 if c then
                 begin
-
                   if (j = 0) then
                   begin
                     if nformat = '' then
@@ -942,12 +952,17 @@ begin
               end;
 
             if not(prgress = 0) then
+            begin
+              CSection.Leave;
               Break;
+            end;
 
-            f := TFileStream.Create(fname, fmCreate or fmOpenWrite);
+            f := TFileStream.Create(fname, fmCreate{ or fmOpenWrite});
           finally
             CSection.Leave;
           end;
+
+
 
           if IntBefDwnld then
           begin
@@ -976,22 +991,14 @@ begin
 
           dwnld := false;
 
-          if n[num].work <> f.Size then
-            raise Exception.Create('Incorrect File Size: ' + IntToStr(n[num].work) + ' <> ' + IntToStr(f.Size));
-          
-
-{          CSection.Enter;
-          CSection.Leave;          }
-
           if not(prgress = 0) then
           begin
-            if assigned(f) then
-            begin
-              FreeAndNil(f);
-              deletefile(fname);
-            end;
+            FreeFile;
             Break;
           end;
+
+          if n[num].work <> f.Size then
+            raise Exception.Create('Incorrect File Size: ' + IntToStr(n[num].work) + ' <> ' + IntToStr(f.Size));
 
           if (prgress = 0) and (curdest in [RP_EHENTAI_G,RP_EXHENTAI]) then
             if (f.Size < 1024) then
@@ -1006,7 +1013,11 @@ begin
               end else if ans = 'You can not access a file directly without specifying a gallery. Please get the full URL for this image.' then
                 raise Exception.Create(o + ': ' + ans);
             end else
-              if (f.Size = 28658) and (MD5DigestToStr(MD5Stream(f)) = '88FE16AE482FADDB4CC23DF15722348C') then
+              {if (f.Size = 28658) and (MD5DigestToStr(MD5Stream(f)) = '88FE16AE482FADDB4CC23DF15722348C') then }
+              if (o = 'http://st.exhentai.net/img/509s.gif')
+              or (o = 'http://st.exhentai.net/img/509.gif')
+              or (o = 'http://g.ehgt.org/img/509s.gif')
+              or (o = 'http://g.ehgt.org/img/509.gif') then
               begin
                 prgress := 2;
                 raise Exception.Create('509 Bandwidth Exceeded. You have temporarily reached the limit how many images you can browse. Wait a few hours or change an account and IP-adress.');
@@ -1080,14 +1091,9 @@ begin
         except
           on E: Exception do
           begin
-            if assigned(f) then
-            begin
-              if HTTP.Connected then
-                HTTP.Disconnect;
-              f.Free;
-            end;
-            if fileexists(fname) then
-              deletefile(fname);
+            if HTTP.Connected then
+              HTTP.Disconnect;
+            FreeFile;
             if pos('404 Not Found', E.Message) > 0 then
             begin
               case xcp of
@@ -1169,14 +1175,25 @@ begin
         end; // try on e
     end;
 
+    if Assigned(f) then
+      FreeAndNil(f);
+
     if curdest in [RP_EHENTAI_G, RP_EXHENTAI] then
       Synchronize(ProcStack);
     FreeAndNil(HTTP);
     FreeAndNil(XML);
     FreeAndNil(EXIF);
-    FreeAndNil(CSection);
+    //FreeAndNil(CSection);
   finally
   end;
+end;
+
+procedure TDownloadThread.FreeFile;
+begin
+  if Assigned(f) then
+    FreeAndNil(f);
+  if FileExists(fname) then
+    DeleteFile(fname);
 end;
 
 procedure TDownloadThread.XMLStartTagEvent(ATag: String; Attrs: TAttrList);
@@ -1353,7 +1370,7 @@ begin
           Grid.Rows[num + 1][5] := '-';
         end;
       msFNAME:
-        Grid.Rows[Tag + 1][1] := n[num].URL;
+        Grid.Rows[num + 1][1] := n[num].URL;
       msOK:
         begin
           Grid.Rows[num + 1][2] := '';
@@ -1386,10 +1403,10 @@ begin
         end;
       msERR:
         begin
-          Grid.Rows[Tag + 1][2] := '';
-          Grid.Rows[Tag + 1][3] := '';
-          Grid.Rows[Tag + 1][4] := '';
-          Grid.Rows[Tag + 1][5] := 'ERR';
+          Grid.Rows[num + 1][2] := '';
+          Grid.Rows[num + 1][3] := '';
+          Grid.Rows[num + 1][4] := '';
+          Grid.Rows[num + 1][5] := 'ERR';
           inc(nerr);
           LogErr(Msg.data);
         end;
@@ -2224,8 +2241,8 @@ begin
       RP_RMART:
         nxt := 'http://rmart.org/?q=' + StringEncode(tmptag);
       RP_THEDOUJIN:
-        nxt := 'http://thedoujin.com/index.php?page=post&s=list&tags=' +
-          StringEncode(tmptag);
+        nxt := 'http://thedoujin.com/index.php/categories/index?tags=' +
+          StringEncode(tmptag) + '&commit=';
       RP_MINITOKYO:
         if (curdest = cbSite.ItemIndex) and (curtag = tmptag) and (tstart = -1)
           and (Length(PreList) > 0) then
@@ -2666,6 +2683,8 @@ begin
               StringEncode(ClearHTML(n[i].category)), ';',
               ArrayOfWordToString(n[i].tags));
           closefile(f);
+
+          saved := true;
         end;
       2:
         begin
@@ -2711,8 +2730,12 @@ begin
     l := FThreadList.LockList;
     for i := 0 to l.Count - 1 do
       try
-        if TDownloadThread(l[i]).HTTP.Connected then
-          TDownloadThread(l[i]).HTTP.Disconnect;
+        with TDownloadThread(l[i]) do
+         if HTTP.Connected then
+        begin
+          HTTP.Disconnect;
+          FreeFile;
+        end;
       except
       end;
     FThreadList.UnlockList;
@@ -2917,6 +2940,8 @@ begin
 //  result.CookieManager := CookieManager;
   result.AllowCookies := False;
   result.CookieList := FCookies;
+  result.ConnectTimeout := 5000;
+  result.ReadTimeout := 10000;
   result.Request.UserAgent :=
     'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; en)';
   if chbproxy.Checked then
@@ -2945,6 +2970,7 @@ begin
   // Result.Grd := Grid;
   // Result.StatusBar := StatusBar;
   // Result.PB := prgrsbr;
+  result.CSection := FSection;
   result.spth := edir.Text;
   // result.LogErr := LogErr;
   result.HTTP := CreateHTTP(1);
@@ -3883,11 +3909,13 @@ end;
 procedure TMainForm.btnCancelClick(Sender: TObject);
 begin
   if (prgress = 0) and
-    (MessageDlg('Program in working. Are you realy want to cancel?',
+    (MessageDlg('Program working. Are you realy want to cancel?',
     mtConfirmation, [mbYes, mbNo], 0) = mrYes) then
+  begin
     prgress := 2;
-  if assigned(FThreadList) then
-    fStoping.Execute;
+    if assigned(FThreadList) then
+      fStoping.Execute;
+  end;
 end;
 
 procedure TMainForm.btnCatEditClick(Sender: TObject);
@@ -3940,6 +3968,7 @@ begin
   saveparams;
   saveoptions;
   log('Downloading pictures from ' + cbSite.Text);
+
   if not AutoMode then
     merrors.Clear;
 
@@ -3997,6 +4026,8 @@ begin
       if AutoMode then
         AutoMode := false;
     end;
+
+    saved := false;
 
   except
     on E: Exception do
@@ -4651,21 +4682,81 @@ begin
           tstart := 1;
         end;
     RP_THEDOUJIN:
-      if tstart = -1 then
-        if (ATag = 'span') and (Attrs.Value('class') = 'thumb') then
-          tstart := 2
-        else if (ATag = 'a') and (Attrs.Value('name') = 'next') then
-          nxt := Attrs.Value('href')
-        else
-      else if tstart = 0 then
-        if (ATag = 'span') and (Attrs.Value('class') = 'thumb') then
+      if tstart = 0 then
+        if (ATag = 'li') and (Attrs.Value('class') = 'next') then
           tstart := 1
-        else if (ATag = 'a') and (Attrs.Value('name') = 'next') then
+        else if (ATag = 'div') and (Attrs.Value('class') = 'items') then
+          tstart := 2
+        else
+      else if tstart = 1 then
+        if (ATag = 'a') then
           nxt := Attrs.Value('href')
         else
-      else if tstart in [1, 2] then
-        if (ATag = 'a') then
-          tmpurl := Attrs.Value('href');
+      else if (tstart > 1) and (tstart < 6) then
+        if ATag = 'div' then
+          inc(tstart)
+        else if tstart = 4 then
+          if ATag = 'a' then
+            tmpurl := RESOURCE_URLS[cbSite.ItemIndex] + trim(Attrs.Value('href'),'/')
+          else if ATag = 'img' then
+          begin
+            xml_tmpi := Length(PreList) + 1;
+            SetLength(PreList, xml_tmpi);
+            PreList[xml_tmpi - 1].Name := '';
+            PreList[xml_tmpi - 1].AType := '';
+            PreList[xml_tmpi - 1].URL := tmpurl;
+            PreList[xml_tmpi - 1].chck := false;
+            PreList[xml_tmpi - 1].Preview := deleteids(Attrs.Value('src'));
+          end else
+        else if tstart = 5 then
+          if ATag = 'a' then
+            tstart := 6
+          else
+        else
+      else if tstart = -1 then
+        if (ATag = 'div') and (Attrs.Value('id') = 'yw0')then
+          tstart := 8
+        else
+      else if tstart > 7 then
+        if ATag = 'div' then
+          inc(tstart)
+        else if tstart = 9 then
+          if ATag = 'a' then
+            tmpurl := RESOURCE_URLS[cbSite.ItemIndex] + trim(Attrs.Value('href'),'/')
+          else if ATag = 'img' then
+          begin
+            xml_tmpi := AddN(REPLACE(REPLACE(deleteids(Attrs.Value('src')),
+              'thumbnail_', ''), 'thumbs', 'images'));
+            if xml_tmpi <> -1 then
+            begin
+              n[xml_tmpi].Preview := deleteids(Attrs.Value('src'));
+              n[xml_tmpi].pageurl := RESOURCE_URLS[cbSite.ItemIndex] + tmpurl;
+              //n[xml_tmpi].tags := AddTags(CopyTo(Attrs.Value('title'), 'score:'));
+              n[xml_tmpi].Params := PreList[curPreItem].Name;
+              n[xml_tmpi].title := IntToStr(npp);
+            end;
+          end
+          else if (ATag = 'li') and (Attrs.Value('class') = 'next') then
+            tstart := 10
+          else
+        else if tstart = 10 then
+          if ATag = 'a' then
+            nxt := Attrs.Value('href')
+          else
+        else
+      else ;
+
+
+
+
+
+
+
+
+
+
+
+
     RP_MINITOKYO:
       if (tstart = 0) and (ATag = 'ul') and (Attrs.Value('id') = 'tabs') then
         tstart := 1
@@ -4826,10 +4917,20 @@ begin
       if (tstart = 1) and (ATag = 'a') then
         tstart := 0;
     RP_THEDOUJIN:
-      if (tstart = 1) and (ATag = 'span') then
+      if (tstart = 1) and (ATag = 'li') then
         tstart := 0
-      else if (tstart = 2) and (ATag = 'span') then
-        tstart := -1;
+      else if (tstart = 2) and (ATag = 'div') then
+        tstart := 0
+      else if (tstart > 2) and (tstart < 6) and (ATag = 'div') then
+        dec(tstart)
+      else if (tstart = 6) and (ATag = 'a') then
+        tstart := 5
+      else if (tstart = 8) and (ATag = 'div') then
+        tstart := -1
+      else if (tstart > 8) and (tstart < 10) and (ATag = 'div')then
+        dec(tstart)
+      else if (tstart = 10) and (ATag = 'li') then
+        tstart := 9;
     RP_MINITOKYO:
       if (tstart = 1) and (ATag = 'ul') then
         tstart := 0
@@ -5025,7 +5126,7 @@ begin
           end;
         end;
     RP_THEDOUJIN:
-      if tstart = 1 then
+{      if tstart = 1 then
         if (ATag = 'img') and (Attrs.Value('class') = 'preview') then
         begin
           xml_tmpi := Length(PreList) + 1;
@@ -5050,6 +5151,13 @@ begin
             n[xml_tmpi].Params := PreList[curPreItem].Name;
             n[xml_tmpi].title := IntToStr(npp);
           end;
+        end else
+      else} if tstart = 7 then
+        if ATag = 'br' then
+        begin
+          if PreList[xml_tmpi - 1].Name = '' then
+            PreList[xml_tmpi - 1].Name := emptyname(PreList[xml_tmpi - 1].URL);
+          tstart := 5;
         end;
     RP_MINITOKYO:
       if (tstart = 5) and (ATag = 'img') then
@@ -5195,7 +5303,19 @@ begin
       else if (tstart = 9) and (xml_tmpi > -1) then
         n[xml_tmpi].category := AContent
       else if (tstart = 11) then
-        tmp := tmp + ',' + AContent
+        tmp := tmp + ',' + AContent;
+    RP_THEDOUJIN:
+      if (tstart = 5) and (AContent = 'Description:') then
+        tstart := 7
+      else if (tstart = 6) then
+        if pos('View ',Acontent) = 1 then
+          PreList[xml_tmpi - 1].Name := trim(DeleteTo(Acontent,'View'))
+        else
+      else if (tstart = 7) then
+        if PreList[xml_tmpi - 1].Name = '' then
+          PreList[xml_tmpi - 1].Name := trim(AContent)
+        else
+      else ;
   end;
 end;
 
@@ -5267,6 +5387,7 @@ var
 
 begin
   FCookies := TMyCookieList.Create;
+  FSection := TCriticalSection.Create;
   FThreadList := nil;
   FSHUTDOWN := false;
   CloseAfterFinish := false;
@@ -5388,6 +5509,7 @@ procedure TMainForm.FormDestroy(Sender: TObject);
 begin
   FThreadQueue.Free;
   FCookies.Free;
+  FSection.Free;
 end;
 
 procedure TMainForm.FormResize(Sender: TObject);
