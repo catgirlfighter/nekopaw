@@ -34,12 +34,13 @@ type
   private
     { Private declarations }
   public
+    procedure SetLang;
     { Public declarations }
   end;
 
 implementation
 
-uses MainForm, GraberU;
+uses MainForm, GraberU, LangString;
 
 {$R *.dfm}
 
@@ -68,6 +69,14 @@ begin
   bExit.SetBounds(bNew.Left,bSettings.BoundsRect.Bottom + sps*4,ButtonWidth,ButtonHeight);
   iIcon.SetBounds(bNew.BoundsRect.Right + sps*4, (Height - IconHeight) div 2, IconWidth,IconHeight);
 //  bAdvanced.SetBounds(iIcon.BoundsRect.Right + sps*2,iIcon.BoundsRect.Bottom - ButtonHeight,ButtonWidth,ButtonHeight);
+end;
+
+procedure TfStart.SetLang;
+begin
+  bNew.Caption := _NEWLIST_;
+  bLoad.Caption := _LOADLIST_;
+  bSettings.Caption := _SETTINGS_;
+  bEXIT.Caption := _EXIT_;
 end;
 
 end.

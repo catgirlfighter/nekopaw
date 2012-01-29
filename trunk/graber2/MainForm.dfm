@@ -100,7 +100,7 @@ object mf: Tmf
           Top = 0
           Width = 146
           Height = 208
-          AllowFloating = True
+          AllowFloating = False
           AutoHide = False
           Caption = 'dpTags'
           Dockable = False
@@ -113,7 +113,7 @@ object mf: Tmf
           Top = 0
           Width = 146
           Height = 208
-          AllowFloating = True
+          AllowFloating = False
           AutoHide = False
           Caption = 'dpCurTags'
           Dockable = False
@@ -148,6 +148,17 @@ object mf: Tmf
         DockType = 1
         OriginalWidth = 185
         OriginalHeight = 150
+        object mLog: TcxMemo
+          Left = 0
+          Top = 0
+          Align = alClient
+          Properties.ReadOnly = True
+          Properties.ScrollBars = ssVertical
+          Style.Color = clInfoBk
+          TabOrder = 0
+          Height = 102
+          Width = 604
+        end
       end
       object dpErrors: TdxDockPanel
         Left = 0
@@ -161,6 +172,17 @@ object mf: Tmf
         DockType = 1
         OriginalWidth = 185
         OriginalHeight = 150
+        object mErrors: TcxMemo
+          Left = 0
+          Top = 0
+          Align = alClient
+          Properties.ReadOnly = True
+          Properties.ScrollBars = ssVertical
+          Style.Color = 14803455
+          TabOrder = 0
+          Height = 102
+          Width = 604
+        end
       end
     end
   end
@@ -254,29 +276,31 @@ object mf: Tmf
         end
         item
           Visible = True
-          ItemName = 'bbStartDownload'
+          ItemName = 'bbStartPics'
         end
         item
           Visible = True
           ItemName = 'bbSettings'
         end>
+      NotDocking = [dsNone, dsLeft, dsTop, dsRight, dsBottom]
       OneOnRow = True
       Row = 0
       UseOwnFont = False
+      UseRestSpace = True
       Visible = True
       WholeRow = False
     end
     object bbStartList: TdxBarButton
-      Caption = 'bbStartGet'
+      Caption = 'bbStartList'
       Category = 0
-      Hint = 'bbStartGet'
+      Hint = 'bbStartList'
       Visible = ivAlways
       OnClick = bbStartListClick
     end
-    object bbStartDownload: TdxBarButton
-      Caption = 'bbStartDownload'
+    object bbStartPics: TdxBarButton
+      Caption = 'bbStartPics'
       Category = 0
-      Hint = 'bbStartDownload'
+      Hint = 'bbStartPics'
       Visible = ivAlways
     end
     object bbSettings: TdxBarButton
@@ -334,6 +358,43 @@ object mf: Tmf
           38701B1B1D390A0A0A1100000000000000000000000000000000000000002F30
           324C60616CBB62626EC455565E9C3233366419191A2302020203000000000000
           0000000000000000000000000000000000000000000000000000}
+      end
+      item
+        Image.Data = {
+          36040000424D3604000000000000360000002800000010000000100000000100
+          2000000000000004000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000002A2A2A63424242BF3D3D3DBF2020
+          2063000000000000000000000000000000000000000000000000000000000000
+          000000000000121212290606060E01010102767676EABDBDBDFFB2B2B2FF5454
+          54EA010101020505050E0D0D0D29000000000000000000000000000000000000
+          00004E4E4E9B6E6E6EFD5B5B5BE70C0C0C19777777E7CBCBCBFFC7C7C7FF5959
+          59E709090919505050E74D4D4DFD2C2C2C9B0000000000000000000000004F4F
+          4F7BBCBCBCFFDEDEDEFFA6A6A6FF7D7D7DF4848484FEC4C4C4FFC2C2C2FF6D6D
+          6DFE696969F4A6A6A6FFD2D2D2FF808080FF2828287B00000000000000005454
+          547DA5A5A5FED5D5D5FFC5C5C5FFCBCBCBFFD1D1D1FFC9C9C9FFC7C7C7FFCCCC
+          CCFFC5C5C5FFBDBDBDFFCBCBCBFF6E6E6EFE3232327D00000000000000000000
+          00005A5A5A85C5C5C5FFC1C1C1FFC5C5C5FFC7C7C7FFAAAAAAFFA7A7A7FFC1C1
+          C1FFBEBEBEFFB5B5B5FFAAAAAAFF373737850000000000000000838383CD7F7F
+          7FE3959595EECFCFCFFFC6C6C6FFCCCCCCFF7B7B7BC629292944272727446F6F
+          6FC6C1C1C1FFBCBCBCFFB9B9B9FF5D5D5DEE4E4E4EE3434343CDBEBEBEFDE2E2
+          E2FFD2D2D2FFC6C6C6FFCDCDCDFFB1B1B1FF2727274400000000000000002828
+          2844A8A8A8FFC2C2C2FFB7B7B7FFC0C0C0FFD2D2D2FF606060FDC2C2C2FDE9E9
+          E9FFD6D6D6FFC9C9C9FFCECECEFFA5A5A5FF2323234400000000000000002929
+          2944ACACACFFC4C4C4FFBABABAFFC6C6C6FFDDDDDDFF6A6A6AFDA1A1A1CDAEAE
+          AEE3B3B3B3EED8D8D8FFCDCDCDFFBCBCBCFF656565C620202044222222446F6F
+          6FC6C3C3C3FFC2C2C2FFCDCDCDFF838383EE787878E3696969CD000000000000
+          000067676785D4D4D4FFCCCCCCFFC9C9C9FFBABABAFF9C9C9CFFA1A1A1FFC2C2
+          C2FFC6C6C6FFC1C1C1FFB7B7B7FF474747850000000000000000000000006363
+          637DC3C3C3FEDCDCDCFFD4D4D4FFD9D9D9FFDBDBDBFFD6D6D6FFD4D4D4FFD9D9
+          D9FFD2D2D2FFCBCBCBFFC8C8C8FF797979FE3737377D00000000000000006464
+          647BDCDCDCFFEDEDEDFFDBDBDBFFBABABAF4BDBDBDFED6D6D6FFD4D4D4FFAFAF
+          AFFEA5A5A5F4CBCBCBFFE7E7E7FFB7B7B7FF4343437B00000000000000000000
+          00007F7F7F9BCCCCCCFDB7B7B7E713131319B0B0B0E7DEDEDEFFDDDDDDFFA1A1
+          A1E7111111199C9C9CE7A6A6A6FD6363639B0000000000000000000000000000
+          000000000000222222290B0B0B0E02020202B7B7B7EAE5E5E5FFE4E4E4FF9E9E
+          9EEA010101020A0A0A0E1C1C1C29000000000000000000000000000000000000
+          0000000000000000000000000000000000004F4F4F63959595BF939393BF4A4A
+          4A63000000000000000000000000000000000000000000000000}
       end>
   end
   object cxLookAndFeelController1: TcxLookAndFeelController

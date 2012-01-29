@@ -38,13 +38,18 @@ object fGrid: TfGrid
     object vGrid: TcxGridDBTableView
       NavigatorButtons.ConfirmDelete = False
       DataController.DataSource = ds
-      DataController.Summary.DefaultGroupSummaryItems = <>
+      DataController.Summary.DefaultGroupSummaryItems = <
+        item
+          Kind = skCount
+          DisplayText = 'Count:'
+        end>
       DataController.Summary.FooterSummaryItems = <>
       DataController.Summary.SummaryGroups = <>
       OptionsData.Deleting = False
       OptionsData.Inserting = False
       OptionsView.ColumnAutoWidth = True
       OptionsView.ExpandButtonsForEmptyDetails = False
+      OptionsView.Footer = True
       OptionsView.HeaderEndEllipsis = True
     end
     object GridLevel1: TcxGridLevel
@@ -86,12 +91,14 @@ object fGrid: TfGrid
     Left = 240
     Top = 104
     object iTextEdit: TcxEditRepositoryTextItem
+      Properties.AutoSelect = False
       Properties.ReadOnly = True
     end
   end
   object md: TdxMemData
     Indexes = <>
     SortOptions = []
+    SortedField = 'RecId'
     Left = 72
     Top = 80
   end

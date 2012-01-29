@@ -5,7 +5,7 @@ interface
 uses
   {base}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, DB, ActnList, ExtCtrls,
+  Dialogs, DB, ActnList, ExtCtrls, DateUtils, ImgList,
   {devex}
   dxDockControl, dxDockPanel, cxGraphics, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxStyles, dxSkinsCore, dxSkinscxPCPainter,
@@ -15,7 +15,7 @@ uses
   cxCheckBox, cxTextEdit, cxPC, dxBar, dxBarExtItems, cxContainer,
   cxMemo,
   {graber2}
-  common, OpBase, graberU, MyHTTP, ImgList;
+  common, OpBase, graberU, MyHTTP;
 
 type
 
@@ -97,11 +97,13 @@ type
     dsLogs: TdxTabContainerDockSite;
     pcTables: TcxPageControl;
     bbStartList: TdxBarButton;
-    bbStartDownload: TdxBarButton;
+    bbStartPics: TdxBarButton;
     bbSettings: TdxBarButton;
     bbNew: TdxBarButton;
     il: TcxImageList;
     cxLookAndFeelController1: TcxLookAndFeelController;
+    mLog: TcxMemo;
+    mErrors: TcxMemo;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure gLevel2GetGridView(Sender: TcxGridLevel;
@@ -141,6 +143,8 @@ type
     procedure CloseTab(t: TcxTabSheet);
     procedure OnTabClose(ASender: TObject; ATabSheet: TcxTabSheet);
     procedure ShowPanels;
+    procedure OnError(Sender: TObject; Msg: String);
+    procedure Setlang;
 
     { Public declarations }
   end;
@@ -291,7 +295,9 @@ var
 
 begin
   n := CreateTab(pcTables);
+  n.ImageIndex := 0;
   f := TfNewList.Create(n);
+  f.SetLang;
   f.State := lfsNew;
   //f.Tag := integer(n);
   //n.Tag := integer(f);
@@ -302,6 +308,11 @@ begin
   f.Parent := n;
   pcTables.Change;
   ShowDs;
+end;
+
+procedure Tmf.OnError(Sender: TObject; Msg: String);
+begin
+  mErrors.Lines.Add(FormatDateTime('hh:nn',Time) + ' ' + Msg);
 end;
 
 procedure Tmf.OnTabClose(ASender: TObject; ATabSheet: TcxTabSheet);
@@ -320,11 +331,15 @@ begin
     end
     else if (TMycxtabSheet(pcTables.ActivePage).MainFrame is TfGrid) then
     begin
-      dsTags.Show;
-      pcTables.Options := pcTables.Options + [pcoCloseButton]
+      //dsTags.Show;
+      pcTables.Options := pcTables.Options + [pcoCloseButton];
+      bbStartList.Enabled := true;
+      bbStartPics.Enabled := true;
     end else
     begin
-      dsTags.Hide;
+      //dsTags.Hide;
+      bbStartList.Enabled := false;
+      bbStartPics.Enabled := false;
       pcTables.Options := pcTables.Options - [pcoCloseButton]
     end;
   end;
@@ -341,8 +356,12 @@ begin
   n := TMycxTabSheet(Msg.WParam);
   f := n.SecondFrame as tfNewList; //TfNewList(n.Tag);
   f2 := TfGrid.Create(n) as tfGrid;
-  //n.Tag := integer(f2);
+  f2.SetLang;
   f2.CreateList;
+  f2.ResList.OnError := OnError;
+  if GlobalSettings.Downl.UsePerRes then
+    f2.ResList.MaxThreadCount := GlobalSettings.Downl.PerResThreads;
+
   f.ResetItems;
   with f.tvRes.DataController do
     for i := 0 to RecordCount - 1 do
@@ -353,8 +372,9 @@ begin
   f2.ResList.ThreadHandler.Cookies := FCookie;
   n.MainFrame := f2;
   f2.Parent := n;
+  f2.ResList.ThreadHandler.Proxy := Globalsettings.Proxy;
   f2.ResList.ThreadHandler.CreateThreads(GlobalSettings.Downl.ThreadCount);
-  f2.ResList.StartJob(JOB_GETPICTURES);
+  f2.ResList.StartJob(JOB_LIST);
   ShowPanels;
 end;
 
@@ -380,6 +400,9 @@ begin
     Downl.Retries := eRetries.Value;
     Downl.Debug := chbDebug.Checked;
 
+    Downl.UsePerRes := chbUseThreadPerRes.Checked;
+    Downl.PerResThreads := eThreadPerRes.EditValue;
+    Downl.PicThreads := ePicThreads.EditValue;
     //Downl.Interval := eInterval.Value;
     //Downl.BeforeU := chbBeforeU.Checked;
     //Downl.BeforeP := chbBeforeP.Checked;
@@ -390,6 +413,8 @@ begin
     OneInstance := chbOneInstance.Checked;
     SaveConfirm := chbSaveConfirm.Checked;
   end;
+
+  SaveProfileSettings;
 
   FreeAndNil(SttPanel.MainFrame);
   CloseTab(SttPanel as TcxTabSheet);
@@ -413,7 +438,11 @@ var
 begin
   f := TFrame((pcTables.ActivePage as TMycxTabSheet).MainFrame);
   if f is TfGrid then
-    (f as TfGrid).ResList.ThreadHandler.FinishThreads;
+    with (f as TfGrid) do
+      if ResList.Finished then
+        ResList.StartJob(JOB_LIST)
+       else
+        ResList.ThreadHandler.FinishThreads;
 end;
 
 procedure Tmf.CANCELNEWLIST(var Msg: TMessage);
@@ -496,8 +525,8 @@ begin
     FreeAndNil(mFrame);
 
   n := TMycxTabSheet.Create(Self);
-  n.ImageIndex := 0;
-  n.Caption := 'New' + IntToStr(TabList.Count + 1);
+  //n.ImageIndex := 0;
+  n.Caption := _NEWTABCAPTION_ + IntToStr(TabList.Count + 1);
   // n.OnClose := dxTabClose;
   // n.Dockable := false;
   // n.ShowCaption := false;
@@ -520,6 +549,16 @@ end;
 procedure Tmf.dxTabClose(Sender: TdxCustomDockControl);
 begin
   PostMessage(Application.MainForm.Handle, CM_CLOSETAB, integer(Sender), 0);
+end;
+
+procedure Tmf.Setlang;
+begin
+  bbNew.Caption := _NEWLIST_;
+  bbStartList.Caption := _STARTLIST_;
+  bbStartPics.Caption := _STARTPICS_;
+  bbSettings.Caption := _SETTINGS_;
+  dpLog.Caption := _LOG_;
+  dpErrors.Caption := _ERRORS_;
 end;
 
 procedure Tmf.ShowDs;
@@ -561,9 +600,11 @@ begin
 
 
   SttPanel := CreateTab(pcTables, false);
-
+  SttPanel.ImageIndex := 1;
   SttPanel.Caption := _SETTINGS_;
+
   f := TfSettings.Create(SttPanel);
+  f.SetLang;
 
   with f, GlobalSettings do
   begin
@@ -579,6 +620,9 @@ begin
     eRetries.Value := Downl.Retries;
     chbDebug.Checked := Downl.Debug;
 
+    chbUseThreadPerRes.Checked := Downl.UsePerRes;
+    eThreadPerRes.EditValue := Downl.PerResThreads;
+    ePicThreads.EditValue := Downl.PicThreads;
     //eInterval.Value := Downl.Interval;
     //chbBeforeU.Checked := Downl.BeforeU;
     //chbBeforeP.Checked := Downl.BeforeP;
@@ -600,12 +644,15 @@ end;
 
 procedure Tmf.FormCreate(Sender: TObject);
 begin
+  SetLang;
   pcTables.OnPageClose := OnTabClose;
+  FullResList.OnError := OnError;
   dsFirstShow := true;
   SttPanel := nil;
   FCookie := TMyCookieList.Create;
 
   mFrame := TfStart.Create(Self);
+  (mFrame as TfStart).SetLang;
   mFrame.Parent := Self;
 
   TabList := TList.Create;
@@ -645,6 +692,7 @@ begin
     dpLog.Visible := true;
     dpErrors.Visible := true;
     mFrame := TfStart.Create(Self);
+    (mFrame as TfStart).SetLang;
     mFrame.Parent := Self;
   end;
 end;
