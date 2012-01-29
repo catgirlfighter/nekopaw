@@ -33,7 +33,7 @@ object fNewList: TfNewList
     object btnPrevious: TcxButton
       Left = 0
       Top = 0
-      Width = 75
+      Width = 95
       Height = 25
       Caption = 'btnPrevious'
       Enabled = False
@@ -41,9 +41,9 @@ object fNewList: TfNewList
       OnClick = btnPreviousClick
     end
     object btnNext: TcxButton
-      Left = 81
+      Left = 101
       Top = 0
-      Width = 75
+      Width = 95
       Height = 25
       Caption = 'btnNext'
       Enabled = False
@@ -203,10 +203,6 @@ object fNewList: TfNewList
       Caption = 'tsSettings'
       ImageIndex = 1
       OnShow = tsSettingsShow
-      ExplicitLeft = 4
-      ExplicitTop = 4
-      ExplicitWidth = 253
-      ExplicitHeight = 265
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0
@@ -216,8 +212,6 @@ object fNewList: TfNewList
         OptionsView.GridLineColor = clBtnShadow
         OptionsView.RowHeaderWidth = 143
         TabOrder = 0
-        ExplicitWidth = 253
-        ExplicitHeight = 265
         Version = 1
       end
     end

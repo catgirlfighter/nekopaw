@@ -9,7 +9,7 @@ uses Classes, Variants, SysUtils, Math, Forms, StdCtrls, ExtCtrls, ComCtrls,
 type
   TArrayOfWord = array of word;
   TArrayOfString = array of string;
-  TSetOfChar = Set of WideChar;
+  TSetOfChar = Set of Char;
 
 function Replace(src, s1, s2: string; rpslashes: boolean = false;
   rpall: boolean = false): string;
@@ -616,12 +616,12 @@ end;
 
 function STRINGENCODE(s: STRING): STRING;
 begin
-  Result := HTTPENCODE(UTF8ENCODE(s));
+  Result := String(HTTPENCODE(UTF8ENCODE(s)));
 end;
 
 function STRINGDECODE(s: STRING): STRING;
 begin
-  Result := UTF8ToString(HTTPDECODE(s));
+  Result := UTF8ToString(HTTPDECODE(AnsiString(s)));
 end;
 
 function GetNextS(var s: string; del: Char = ';'; ins: Char = #0): string;
@@ -1574,6 +1574,12 @@ begin
   i := 1;
   Mask := '';
   AmPm := 0;
+
+  if length(DateTimeStr) < length(DateTimeFormat) then
+  begin
+    Result := 0.0;
+    Exit;
+  end;
 
   while i < length(Fmt) do
   begin

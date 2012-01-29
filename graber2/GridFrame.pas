@@ -33,9 +33,9 @@ type
     procedure bbColumnsClick(Sender: TObject);
     procedure bbFilterClick(Sender: TObject);
   private
-    FList: TList;
+    //FList: TList;
     FFieldList: TStringList;
-    FStartSender: TObject;
+    //FStartSender: TObject;
 //    FN: Integer;
     //FFirstC: TcxDBGridColumn;
     { Private declarations }
@@ -51,6 +51,7 @@ type
     procedure OnBeginPicList(Sender: TObject);
     procedure OnEndPicList(Sender: TObject);
     procedure Relise;
+    procedure SetLang;
     { Public declarations }
   end;
 
@@ -119,19 +120,19 @@ begin
     VScrollBar.LookAndFeel.MasterLookAndFeel := nil;
     HScrollBar.LookAndFeel.MasterLookAndFeel := nil;
   end;
-  if not Assigned(FList) then
+{  if not Assigned(FList) then
     FList := TList.Create
   else
-    FList.Clear;
+    FList.Clear;}
   if not Assigned(FFieldList) then
     FFieldList := TStringList.Create;
   if not Assigned(ResList) then
   begin
     ResList := TResourceList.Create;
-    ResList.OnAddPicture := OnPicAdd;
+    //ResList.OnAddPicture := OnPicAdd;
     ResList.OnStartJob := OnStartJob;
     ResList.OnEndJob := OnEndJob;
-    ResList.OnBeginPicList := OnBeginPicList;
+    //ResList.OnBeginPicList := OnBeginPicList;
     ResList.OnEndPicList := OnEndPicList;
   end else
     ResList.Clear;
@@ -141,7 +142,7 @@ procedure TfGrid.OnBeginPicList(Sender: TObject);
 begin
 //  vGrid.BeginUpdate;
 //  md.DisableControls;
-  FStartSender := Sender;
+  //FStartSender := Sender;
 end;
 
 procedure TfGrid.OnEndJob(Sender: TObject);
@@ -155,17 +156,24 @@ var
   i,j: integer;
   APicture: TTPicture;
   //r,c: integer;
-  n,t: integer;
+  t: integer;
+  n: variant;
+  FList: TPictureLinkList;
 begin
-  if FStartSender <> Sender then
-    Exit;
+{  if FStartSender <> Sender then
+    Exit;   }
+  FList := Sender as TPictureLinkList;
 
   vGrid.BeginUpdate;
-  n := vgrid.DataController.FocusedRowIndex;
   //if vgrid.
-  t := vgrid.Controller.TopRecordIndex;
+  n := md.CurRec;
   if n < 0 then
     n := 0;
+  //vgrid.Controller.FocusedRow.Selected := false;
+{  if n <> -1 then
+    n := vgrid.ViewData.Records[n].Values[0];   }
+  t := vgrid.Controller.FocusedRecordIndex - vgrid.Controller.TopRecordIndex;
+//  b := vgrid.Controller.
   md.DisableControls;
   //r := vGrid.DataController.RecordCount;
   for j := 0 to FList.Count -1 do
@@ -189,48 +197,39 @@ begin
       md.Cancel;
     end;
   end;
-  FList.Clear;
+  //FList.Clear;
+  //md.CurRec := n;
   md.EnableControls;
 //  if vgrid.DataController.RecordCount > 0 then
+  //vgrid.DataController.Groups.FullCollapse;
   vGrid.EndUpdate;
-  if vgrid.DataController.RecordCount > 0 then
-  begin
-    vgrid.DataController.FocusedRowIndex := n;
-    vGrid.Controller.TopRecordIndex := t;
-  end;
-  sBar.Panels[1].Text := 'Count = ' + IntToStr(vGrid.DataController.RecordCount);
+  //md.CurRec := n;
+  {    if n <> -1 then
+    begin
+      vgrid.DataController.FocusedRecordIndex := n;
+      vGrid.Controller.FocusedRecord.Selected := true;
+    end;    }
+  //vgrid.DataController.FocusedRecordIndex := n;
+  vgrid.DataController.FocusedRecordIndex := n;
+  vgrid.Controller.TopRecordIndex := vgrid.Controller.FocusedRecordIndex - t;
+  sBar.Panels[1].Text := _COUNT_ + ' = ' + IntToStr(vGrid.DataController.RecordCount);
 end;
 
 procedure TfGrid.OnPicAdd(APicture: TTPicture);
-{var
-  i: integer;
 begin
-  vGrid.BeginUpdate;
-  md.Insert;
-  try
-    for i := 0 to APicture.Meta.Count-1 do
-    begin
-        md.FieldValues['.'+APicture.Meta.Items[i].Name] := APicture.Meta.Items[i].Value;
-    end;
-    md.Post;
-  except
-    md.Cancel;
-  end;
-  vGrid.EndUpdate;  }
-begin
-  FList.Add(APicture);
+  //FList.Add(APicture);
 end;
 
 procedure TfGrid.OnStartJob(Sender: TObject);
 begin
   PostMessage(Application.MainForm.Handle,CM_STARTJOB,Integer(Self.Parent),0);
-    sBar.Panels[0].Text := 'ON AIR';
+    sBar.Panels[0].Text := _ON_AIR_;
 end;
 
 procedure TfGrid.Relise;
 begin
   ResList.Free;
-  FList.Free;
+  //FList.Free;
   FFieldList.Free;
   vGrid.BeginUpdate;
   vGrid.DataController.RecordCount := 0;
@@ -256,6 +255,7 @@ begin
   c.DataBinding.FieldName := 'RecId';
   c.DataBinding.Field.DisplayLabel := _RESID_;
 
+  vgrid.DataController.KeyFieldNames := 'RecId';
 
   c.SortOrder := soAscending;
   c.Width := 20;
@@ -278,6 +278,12 @@ begin
   md.Open;
   md.EnableControls;
   Grid.EndUpdate;
+end;
+
+procedure TfGrid.SetLang;
+begin
+  bbColumns.Caption := _COLUMNS_;
+  bbFilter.Caption := _FILTER_;
 end;
 
 end.

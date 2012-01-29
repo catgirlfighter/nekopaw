@@ -76,6 +76,7 @@ type
     procedure SaveSettings;
     procedure LoadItems;
     procedure ResetItems;
+    procedure SetLang;
     { Public declarations }
   end;
 
@@ -300,6 +301,10 @@ begin
   begin
     gRescButton.Visible := ActivePage = tsList;
     btnPrevious.Enabled := ActivePage = tsSettings;
+    if ActivePage = tsSettings then
+      btnNext.Caption := _FINISH_
+    else
+      btnNext.Caption := _NEXTSTEP_;
   end;
 end;
 
@@ -332,7 +337,6 @@ end;
 procedure TfNewList.SaveSettings;
 var
   i, n, d: Integer;
-  v: TResourceField;
 begin
   n := vgSettings.Tag;
   with FullResList[n] do
@@ -348,13 +352,17 @@ begin
         with FullResList[n].Fields do
           for i := d to Count - 1 do
           begin
-            v := Items[i];
-            v.resvalue := (vgSettings.RowByName('evgi' + Items[i].resname)
+            Items[i].resvalue := (vgSettings.RowByName('evgi' + Items[i].resname)
               as TcxEditorRow).Properties.Value;
-            Items[i] := v;
           end;
     end;
   end;
+end;
+
+procedure TfNewList.SetLang;
+begin
+  btnPrevious.Caption := _PREVIOUSSTEP_;
+  btnNext.Caption := _NEXTSTEP_;
 end;
 
 procedure TfNewList.tsSettingsShow(Sender: TObject);
