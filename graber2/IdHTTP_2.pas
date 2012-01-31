@@ -448,6 +448,9 @@ type
     property Response: TIdHTTPResponse read FResponse;
   end;
 
+  TOnSetCookies = procedure(AURL: String; ARequest: TIdHTTPRequest) of object;
+  TOnProcessCookies = procedure(ARequest: TIdHTTPRequest; AResponse: TIdHTTPResponse) of object;
+
   TIdCustomHTTP = class(TIdTCPClientCustom)
   protected
     {Retries counter for WWW authorization}
@@ -480,6 +483,10 @@ type
     FOnSelectProxyAuthorization: TIdOnSelectAuthorization;
     FOnAuthorization: TIdOnAuthorization;
     FOnProxyAuthorization: TIdOnAuthorization;
+
+    FOnSetCookies: TOnSetCookies;
+    FOnProcessCookies: TOnProcessCookies;
+
     //
 {
     procedure SetHost(const Value: string); override;
@@ -588,6 +595,9 @@ type
     property CookieManager: TIdCookieManager read FCookieManager write SetCookieManager;
     //
     property AuthenticationManager: TIdAuthenticationManager read FAuthenticationManager write SetAuthenticationManager;
+
+    property OnSetCookies: TOnSetCookies read FOnSetCookies write FOnSetCookies;
+    property OnProcessCookies: TOnProcessCookies read FOnProcessCookies write FOnProcessCookies;
   end;
 
   TIdHTTP = class(TIdCustomHTTP)
@@ -892,7 +902,8 @@ begin
       AURL,
       TextIsSame(AURL.Protocol, 'HTTPS'), {do not localize}
       ARequest.RawHeaders);
-  end;
+  end else if Assigned(FOnSetCookies) then
+    FOnSetCookies(AURL.GetFullURI,ARequest);
 end;
 
 // This function sets the Host and Port and returns a boolean depending on
@@ -1436,7 +1447,8 @@ begin
       for i := 0 to Cookies2.Count - 1 do begin
         CookieManager.AddServerCookie2(Cookies2[i], FURI);
       end;
-    end;
+    end else if Assigned(FOnProcessCookies) then
+      FOnProcessCookies(ARequest,AResponse);
   finally
     FreeAndNil(Temp);
     FreeAndNil(Cookies);
