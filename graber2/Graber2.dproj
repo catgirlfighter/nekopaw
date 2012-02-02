@@ -50,7 +50,7 @@
 				<Form>mf</Form>
 			</DCCReference>
 			<DCCReference Include="graberU.pas">
-				<Form>graber comps</Form>
+				<Form>GraberU</Form>
 			</DCCReference>
 			<DCCReference Include="StartFrame.pas">
 				<Form>fStart</Form>
@@ -72,6 +72,9 @@
 				<DesignClass>TFrame</DesignClass>
 			</DCCReference>
 			<DCCReference Include="MyHTTP.pas"/>
+			<DCCReference Include="AES.pas"/>
+			<DCCReference Include="ElAES.pas"/>
+			<DCCReference Include="EncryptStrings.pas"/>
 			<BuildConfiguration Include="Debug">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>
@@ -101,7 +104,7 @@
 						<VersionInfo Name="MajorVer">2</VersionInfo>
 						<VersionInfo Name="MinorVer">0</VersionInfo>
 						<VersionInfo Name="Release">0</VersionInfo>
-						<VersionInfo Name="Build">1</VersionInfo>
+						<VersionInfo Name="Build">3</VersionInfo>
 						<VersionInfo Name="Debug">False</VersionInfo>
 						<VersionInfo Name="PreRelease">False</VersionInfo>
 						<VersionInfo Name="Special">False</VersionInfo>
@@ -113,7 +116,7 @@
 					<VersionInfoKeys>
 						<VersionInfoKeys Name="CompanyName">catgirl group</VersionInfoKeys>
 						<VersionInfoKeys Name="FileDescription">Nekopaw Grabber</VersionInfoKeys>
-						<VersionInfoKeys Name="FileVersion">2.0.0.1</VersionInfoKeys>
+						<VersionInfoKeys Name="FileVersion">2.0.0.3</VersionInfoKeys>
 						<VersionInfoKeys Name="InternalName"/>
 						<VersionInfoKeys Name="LegalCopyright">nekopaw.googlecode.com</VersionInfoKeys>
 						<VersionInfoKeys Name="LegalTrademarks"/>

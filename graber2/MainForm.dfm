@@ -398,7 +398,6 @@ object mf: Tmf
       end>
   end
   object cxLookAndFeelController1: TcxLookAndFeelController
-    NativeStyle = False
     Left = 136
     Top = 72
   end

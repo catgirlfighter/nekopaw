@@ -1,0 +1,12 @@
+unit EncryptStrings;
+
+interface
+
+{Key string 128bit UNICODE}
+
+var
+  KeyString: String = '12345678';
+
+implementation
+
+end.
