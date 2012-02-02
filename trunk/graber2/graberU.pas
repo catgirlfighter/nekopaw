@@ -439,6 +439,11 @@ type
 
   TResourceEvent = procedure(R: TResource) of object;
 
+  TJobRec = record
+    id: integer;
+    url: string;
+  end;
+
   TResource = class(TObject)
   private
     FFileName: String;
@@ -2127,20 +2132,21 @@ end;
 procedure TDownloadThread.ProcHTTP;
 var
   s: string;
-
+  url: string;
 begin
   while True do
     try
       FBeforeScript.Process(SE, DE, FE, VE, VE);
       //FHTTP.ResponseCode := 0;
       try
-        s := FHTTP.Get(CalcValue(FHTTPRec.Url,VE,nil));
+        url := CalcValue(FHTTPRec.Url,VE,nil);
+        s := FHTTP.Get(url);
         inc(FHTTPRec.Counter);
       except
         on e: Exception do
-          if (FHTTP.ResponseCode = 404) or (FHTTP.ResponseCode = 0) then
+          if (FHTTP.ResponseCode = 404) or (FHTTP.ResponseCode = -1) then
           begin
-            FErrorString := e.Message;
+            FErrorString := url + ': ' + e.Message;
             FJob := JOB_ERROR;
             Break;
           end;

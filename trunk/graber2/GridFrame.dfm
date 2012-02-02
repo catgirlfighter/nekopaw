@@ -19,7 +19,6 @@ object fGrid: TfGrid
     Align = alClient
     TabOrder = 0
     LookAndFeel.NativeStyle = False
-    ExplicitTop = 32
     object vChilds: TcxGridDBTableView
       NavigatorButtons.ConfirmDelete = False
       DataController.Summary.DefaultGroupSummaryItems = <>
@@ -49,7 +48,6 @@ object fGrid: TfGrid
       OptionsData.Inserting = False
       OptionsView.ColumnAutoWidth = True
       OptionsView.ExpandButtonsForEmptyDetails = False
-      OptionsView.Footer = True
       OptionsView.HeaderEndEllipsis = True
     end
     object GridLevel1: TcxGridLevel

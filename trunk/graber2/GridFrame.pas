@@ -212,7 +212,7 @@ begin
   //vgrid.DataController.FocusedRecordIndex := n;
   vgrid.DataController.FocusedRecordIndex := n;
   vgrid.Controller.TopRecordIndex := vgrid.Controller.FocusedRecordIndex - t;
-  sBar.Panels[1].Text := _COUNT_ + ' = ' + IntToStr(vGrid.DataController.RecordCount);
+  sBar.Panels[1].Text := _COUNT_ + ' ' + IntToStr(vGrid.DataController.RecordCount);
 end;
 
 procedure TfGrid.OnPicAdd(APicture: TTPicture);

@@ -5,7 +5,7 @@ uses
   SysUtils,
   common in 'common.pas',
   MainForm in 'MainForm.pas' {mf},
-  graberU in 'graberU.pas' {graber comps},
+  graberU in 'graberU.pas' {GraberU},
   StartFrame in 'StartFrame.pas' {fStart: TFrame},
   NewListFrame in 'NewListFrame.pas' {fNewList: TFrame},
   LangString in 'LangString.pas',
@@ -13,7 +13,10 @@ uses
   MyXMLParser in 'MyXMLParser.pas',
   SettingsFrame in 'SettingsFrame.pas' {fSettings: TFrame},
   GridFrame in 'GridFrame.pas' {fGrid: TFrame},
-  MyHTTP in 'MyHTTP.pas';
+  MyHTTP in 'MyHTTP.pas',
+  AES in 'AES.pas',
+  ElAES in 'ElAES.pas',
+  EncryptStrings in 'EncryptStrings.pas';
 
 {$R *.res}
 

@@ -45,7 +45,7 @@ procedure SaveProfileSettings;
 
 implementation
 
-uses LangString;
+uses LangString, EncryptStrings, AES;
 
 procedure LoadProfileSettings;
 var
@@ -80,6 +80,8 @@ begin
       Auth := INI.ReadBool('proxy','authetication',false);
       Login := INI.ReadString('proxy','login','');
       Password := INI.ReadString('proxy','password','');
+      if Password <> '' then
+        Password := DecryptString(Password,KeyString);
     end;
   end;
   INI.Free;
@@ -112,7 +114,10 @@ begin
       INI.WriteInteger('Proxy','Port',Port);
       INI.WriteBool('Proxy','Authetication',Auth);
       INI.WriteString('Proxy','Login',Login);
-      INI.WriteString('Proxy','Password',Password);
+      if Password <> '' then
+        INI.WriteString('Proxy','Password',EncryptString(Password,KeyString))
+      else
+        INI.WriteString('Proxy','Password',Password);
     end;
   end;
   INI.Free;
