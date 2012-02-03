@@ -15,7 +15,7 @@ uses
   cxCheckBox, cxTextEdit, cxPC, dxBar, dxBarExtItems, cxContainer,
   cxMemo,
   {graber2}
-  common, OpBase, graberU, MyHTTP;
+  common, OpBase, graberU, MyHTTP, AppEvnts;
 
 type
 
@@ -104,6 +104,7 @@ type
     cxLookAndFeelController1: TcxLookAndFeelController;
     mLog: TcxMemo;
     mErrors: TcxMemo;
+    ApplicationEvents1: TApplicationEvents;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure gLevel2GetGridView(Sender: TcxGridLevel;
@@ -112,6 +113,7 @@ type
     procedure bbNewClick(Sender: TObject);
     procedure pcTablesChange(Sender: TObject);
     procedure bbStartListClick(Sender: TObject);
+    procedure ApplicationEvents1Exception(Sender: TObject; E: Exception);
   private
     mFrame: TFrame;
     // tvMain: TmycxGridTableView;
@@ -345,6 +347,11 @@ begin
   end;
 end;
 
+procedure Tmf.ApplicationEvents1Exception(Sender: TObject; E: Exception);
+begin
+  OnError(Sender,E.Message);
+end;
+
 procedure Tmf.APPLYNEWLIST(var Msg: TMessage);
 var
   n: TMycxTabSheet;
@@ -373,7 +380,7 @@ begin
   n.MainFrame := f2;
   f2.Parent := n;
   f2.ResList.ThreadHandler.Proxy := Globalsettings.Proxy;
-  f2.ResList.ThreadHandler.CreateThreads(GlobalSettings.Downl.ThreadCount);
+  f2.ResList.ThreadHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
   f2.ResList.StartJob(JOB_LIST);
   ShowPanels;
 end;
@@ -439,10 +446,10 @@ begin
   f := TFrame((pcTables.ActivePage as TMycxTabSheet).MainFrame);
   if f is TfGrid then
     with (f as TfGrid) do
-      if ResList.Finished then
+      if ResList.ListFinished then
         ResList.StartJob(JOB_LIST)
        else
-        ResList.ThreadHandler.FinishThreads;
+        ResList.StartJob(JOB_STOPLIST);
 end;
 
 procedure Tmf.CANCELNEWLIST(var Msg: TMessage);
@@ -493,7 +500,7 @@ begin
     f := (t as tMycxTabSheet).MainFrame;
     if f is TfGrid then
     with (f as TfGrid) do
-      if ResList.ThreadHandler.Count > 0 then
+      if not ResList.ListFinished then
       begin
         MessageDlg(_TAB_IS_BUSY_,mtError,[mbOk],0);
         Exit;
