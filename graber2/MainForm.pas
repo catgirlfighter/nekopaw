@@ -329,11 +329,17 @@ begin
     if (TMycxtabSheet(pcTables.ActivePage).SecondFrame is TfNewList) then
     begin
       pcTables.Options := pcTables.Options + [pcoCloseButton];
+      bbStartList.Enabled := false;
+      bbStartPics.Enabled := false;
       dsTags.Hide;
     end
     else if (TMycxtabSheet(pcTables.ActivePage).MainFrame is TfGrid) then
     begin
       //dsTags.Show;
+      if (TMycxtabSheet(pcTables.ActivePage).MainFrame as TfGrid).ResList.ListFinished then
+        bbStartList.Caption := _STARTLIST_
+      else
+        bbStartList.Caption := _STOPLIST_;
       pcTables.Options := pcTables.Options + [pcoCloseButton];
       bbStartList.Enabled := true;
       bbStartPics.Enabled := true;
