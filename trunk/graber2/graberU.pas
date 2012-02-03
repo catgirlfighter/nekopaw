@@ -2632,14 +2632,15 @@ begin
     d.FreeOnTerminate := true;
     d.Finish := Finish;
     d.OnTerminate := ThreadTerminate;
-    with d.HTTP.ProxyParams do
-    begin
-      ProxyServer := Proxy.Host;
-      ProxyPort := Proxy.Port;
-      BasicAuthentication := Proxy.Auth;
-      ProxyUserName := Proxy.Login;
-      ProxyPassword := Proxy.Password;
-    end;
+    if Proxy.UseProxy then
+      with d.HTTP.ProxyParams do
+      begin
+        ProxyServer := Proxy.Host;
+        ProxyPort := Proxy.Port;
+        BasicAuthentication := Proxy.Auth;
+        ProxyUserName := Proxy.Login;
+        ProxyPassword := Proxy.Password;
+      end;
     d.HTTP.CookieList := FCookie;
     Add(d);
   end;
