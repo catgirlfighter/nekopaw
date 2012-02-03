@@ -401,4 +401,9 @@ object mf: Tmf
     Left = 136
     Top = 72
   end
+  object ApplicationEvents1: TApplicationEvents
+    OnException = ApplicationEvents1Exception
+    Left = 504
+    Top = 176
+  end
 end

@@ -2,7 +2,7 @@ unit EncryptStrings;
 
 interface
 
-{Key string 128bit UNICODE}
+{Key string 128bit UNICODE (2 bytes for 1 symbol)}
 
 var
   KeyString: String = '12345678';

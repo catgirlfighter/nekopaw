@@ -26,10 +26,13 @@ const
   THREAD_FINISH = 2;
   THREAD_PROCESS = 3;
 
+  JOB_ERROR = 255;
   JOB_NOJOB = 0;
   JOB_LIST = 1;
   JOB_DOWNLOAD = 2;
-  JOB_ERROR = -1;
+  JOB_FINISHED = 3;
+  JOB_INPROGRESS = 4;
+  JOB_STOPLIST = 5;
 
   SAVEFILE_VERSION = 0;
 
@@ -245,6 +248,7 @@ type
     FXML: TMyXMLParser;
     FPicture: TTPicture;
     FSTOPERROR: Boolean;
+    FJobId: Integer;
     //FPicLink: TTPicture;
     //FTagList: TStringList;
     //FPicList: TList;
@@ -293,6 +297,7 @@ type
     property Sectors: TValueList read FSectors write SetSectors;
     property PictureList: TPictureList read FPicList {write FPictureList};
     property STOPERROR: Boolean read FSTOPERROR write FSTOPERROR;
+    property JobId: integer read FJobId write FJobId;
   end;
 
   TJobEvent = function(t: TDownloadThread): boolean of object;
@@ -308,13 +313,14 @@ type
     FCookie: TMyCookieList;
     FOnAllThreadsFinished: TNotifyEvent;
     FOnError: TLogEvent;
+    FThreadCount: Integer;
   protected
     function Finish(t: TDownloadThread): integer;
     procedure CheckIdle(ALL: Boolean = false);
     //procedure AddToQueue(R: TResource);
     procedure ThreadTerminate(ASender: TObject);
   public
-    procedure CreateThreads(acount: integer);
+    procedure CreateThreads(acount: integer = -1);
     procedure FinishThreads(Force: boolean = false);
     constructor Create;
     destructor Destroy; override;
@@ -326,6 +332,7 @@ type
     property OnAllThreadsFinished: TNotifyEvent read FOnAllThreadsFinished
       write FOnAllThreadsFinished;
     property OnError: TLogEvent read FOnError write FOnError;
+    property ThreadCount: Integer read FThreadCount write FThreadCount;
     // property FinishThreads: boolean read FFinishThread;
   end;
 
@@ -442,6 +449,29 @@ type
   TJobRec = record
     id: integer;
     url: string;
+    kind: integer;
+    status: integer;
+  end;
+
+  PJobRec = ^TJobRec;
+
+  TJobList = class(TList)
+    private
+      FLastAdded: PJobRec;
+      FCursor: integer;
+      FFinishCursor: integer;
+    protected
+      function Get(Value: integer): PJobRec;
+      procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+    public
+      function Add(id,kind: integer): Integer;
+      function AllFinished: boolean;
+      function NextJob(Status: Integer): Integer;
+    function eol: boolean;
+      property Items[Index: integer]: PJobRec read Get; default;
+      procedure Reset;
+      procedure Clear; override;
+      property Cursor: Integer read FCursor;
   end;
 
   TResource = class(TObject)
@@ -472,10 +502,12 @@ type
     FOnError: TLogEvent;
     FMaxThreadCount: Integer;
     FCurrThreadCount: Integer;
+    FJobList: TJobList;
 {    FPerPageMode: Boolean;  }
   protected
     procedure DeclorationEvent(Values: TValueList; LinkedObj: TObject);
     function JobComplete(t: TDownloadThread): integer;
+    function StringFromFile(fname: string): string;
   public
     constructor Create;
     destructor Destroy; override;
@@ -484,7 +516,6 @@ type
     procedure CreateJob(t: TDownloadThread);
     procedure StartJob(JobType: integer);
     procedure Assign(R: TResource);
-    function StringFromFile(fname: string): string;
     procedure GetSectors(s: string; R: TValueList);
     function CanAddThread: boolean;
     property FileName: String read FFileName;
@@ -514,6 +545,7 @@ type
     property OnError: TLogEvent read FOnError write FOnError;
     property CurrThreadCount: Integer read FCurrThreadCount;
     property MaxThreadCount: Integer read FMaxThreadCount write FMaxThreadCount;
+    property JobList: TJobList read FJobList;
   end;
 
   TResourceLinkList = class(TList)
@@ -533,7 +565,7 @@ type
     FOnEndPicList: TNotifyEvent;
     FQueueIndex: integer;
     FPageMode: Boolean;
-    FFinished: Boolean;
+    //FFinished: Boolean;
     //FOnLog: TLogEvent;
     FOnError: TLogEvent;
     FMaxThreadCount: Integer;
@@ -545,6 +577,7 @@ type
     procedure OnHandlerFinished(Sender: TObject);
     function CreateJob(t: TDownloadThread): boolean;
     procedure SetOnError(Value: TLogEvent);
+    function GetListFinished: Boolean;
   public
     constructor Create;
     destructor Destroy; override;
@@ -562,7 +595,7 @@ type
     property OnBeginPicList: TNotifyEvent read FOnBeginPicList write FOnBeginPicList;
     property OnEndPicList: TNotifyEvent read FOnEndPicList write FOnEndPicList;
     property PageMode: Boolean read FPageMode write SetPageMode;
-    property Finished: Boolean read FFinished;
+    property ListFinished: Boolean read GetListFinished;
     //property OnLog: TLogEvent read FOnLog write FOnLog;
     property OnError: TLogEvent read FOnError write SetOnError;
     property MaxThreadCount: Integer read FMaxThreadCount write SetMaxThreadCount;
@@ -1193,6 +1226,111 @@ begin
   Result := inherited Get(Index);
 end;
 
+//TJobList
+
+function TJobList.AllFinished: boolean;
+var
+  i: integer;
+begin
+{  if not(FLastAdded.status in [JOB_ERROR,JOB_FINISHED]) then
+  begin
+    Result := false;
+    Exit;
+  end;   }
+
+  for i := FFinishCursor to Count -1 do
+    if not(Items[i].status in [JOB_ERROR,JOB_FINISHED]) then
+    begin
+      FFinishCursor := i;
+      Result := false;
+      Exit;
+    end;
+
+  Result := true;
+end;
+
+function TJobList.NextJob(Status: Integer): Integer;
+var
+  i: integer;
+
+begin
+  if FCursor < Count then
+  begin
+    for i := FCursor to Count do
+      if (Items[FCursor].status = JOB_NOJOB) then
+      begin
+        Items[FCursor].status := JOB_INPROGRESS;
+        FCursor := i;
+        Result := FCursor;
+        inc(FCursor);
+        Exit;
+      end;
+      FCursor := Count;
+      Result := -1;
+  end else
+    Result := -1;
+end;
+
+procedure TJobList.Reset;
+var
+  i: integer;
+
+begin
+  FFinishCursor := 0;
+  AllFinished;
+
+  i := 0;
+
+  for i := i to Count -1 do
+    if Items[i].status <> JOB_FINISHED then
+      Break;
+
+  FCursor := i;
+
+  for i := i to Count -1 do
+    if Items[i].status <> JOB_FINISHED then
+      Items[i].status := JOB_NOJOB;
+end;
+
+procedure TJobList.Clear;
+begin
+  inherited Clear;
+  FCursor := 0;
+end;
+
+function TJobList.eol: boolean;
+begin
+  result := not (FCursor < Count);
+end;
+
+function TJobList.Get(Value: integer): PJobRec;
+begin
+  Result := inherited Get(Value);
+end;
+
+procedure TJobList.Notify(Ptr: Pointer; Action: TListNotification);
+var
+  p: PJobRec;
+begin
+  case Action of
+    lnDeleted:
+      begin
+        p := Ptr;
+        Dispose(p);
+      end;
+  end;
+end;
+
+function TJobList.Add(id,kind: integer): integer;
+begin
+  New(FLastAdded);
+  FLastAdded.id := id;
+  FLastAdded.kind := kind;
+  FLastAdded.url := '';
+  FLastAdded.status := JOB_NOJOB;
+  Result := inherited Add(FLastAdded);
+end;
+
 // TResource
 
 procedure TResource.Assign(R: TResource);
@@ -1246,11 +1384,13 @@ begin
   FJobFinished := false;
   //FPerpageMode := false;
   FNextPage := false;
+  FJobList := TJobList.Create;
   FJobFinished := false;
 end;
 
 destructor TResource.Destroy;
 begin
+  FJobList.Free;
   FPictureList.Free;
   FSectors.Free;
   FFields.Free;
@@ -1305,21 +1445,35 @@ end;
 
 procedure TResource.StartJob(JobType: integer);
 begin
-  if FJobFinished then
-    Exit;
-
-  FCurrThreadCount := 0;
-  FJobInitiated := false;
-  //FJobFinished := false;
-  if not Assigned(FInitialScript) then
-    FInitialScript := TScriptSection.Create;
-
   case JobType of
     JOB_LIST:
-      FInitialScript.ParseValues(FSectors[LIST_SCRIPT]);
-    JOB_DOWNLOAD:
-      FInitialScript.ParseValues(FSectors[DOWNLOAD_SCRIPT]);
+    begin
+      if (FJobList.Count > 0) and (FJobList.AllFinished) then
+        Exit;
+
+      FJobList.Reset;
+
+      FCurrThreadCount := 0;
+      FJobFinished := false;
+
+      FJobInitiated := FJobList.Count > 0;
+      if not FJobInitiated then
+      begin
+        if not Assigned(FInitialScript) then
+          FInitialScript := TScriptSection.Create;
+
+        case JobType of
+          JOB_LIST:
+            FInitialScript.ParseValues(FSectors[LIST_SCRIPT]);
+          JOB_DOWNLOAD:
+            FInitialScript.ParseValues(FSectors[DOWNLOAD_SCRIPT]);
+        end;
+
+        FJobList.Add(0,JOB_LIST);
+      end;
+    end;
   end;
+
   //AddToQueue(Self);
 end;
 
@@ -1345,7 +1499,12 @@ begin
 end;
 
 procedure TResource.CreateJob(t: TDownloadThread);
+{var
+  n: integer;    }
 begin
+  //t.JobId := ;
+  t.JobId := FJobList.NextJob(JOB_LIST);
+
   t.JobComplete := JobComplete;
   if not JobInitiated then
   begin
@@ -1366,7 +1525,7 @@ begin
 end;
 
 procedure TResource.DeclorationEvent(Values: TValueList; LinkedObj: TObject);
-
+//loading main settings of resoruce
   procedure ProcValue(ItemName: String; ItemValue: Variant);
   var
     s,v: String;
@@ -1374,7 +1533,6 @@ procedure TResource.DeclorationEvent(Values: TValueList; LinkedObj: TObject);
     FSS: TScriptSection;
     i: integer;
     //f: TResourceField;
-    
   begin
     if ItemName = '$main.url' then
       FHTTPRec.DefUrl := ItemValue
@@ -1439,6 +1597,7 @@ begin
 end;
 
 function TResource.JobComplete(t: TDownloadThread): integer;
+//procedure, called when thread finish it job
 var
   i: integer;
 
@@ -1469,8 +1628,9 @@ begin
     HTTPRec := t.HTTPRec;
 
     for i := HTTPRec.Counter to HTTPRec.Count - 1 do
-      //AddToQueue(Self); }
-      CheckIdle;
+      FJobList.Add(HTTPRec.Counter,JOB_LIST);
+
+    CheckIdle(true);
 
     //FJobInitiated := true;
   end;
@@ -1478,18 +1638,24 @@ begin
   if t.ReturnValue = 0 then
     case t.Job of
       JOB_LIST:
+      begin
+        FJobList[t.JobId].status := JOB_FINISHED;
         if t.PictureList.Count > 0 then
         begin
           PictureList.Add(t.PictureList);
           if Assigned(PictureList.OnEndAddList) then
             PictureList.OnEndAddList(t.PictureList);
         end;
+      end;
       JOB_ERROR:
+      begin
+        FJobList[t.JobId].status := JOB_ERROR;
         if Assigned(FOnError) then
           FOnError(Self,t.Error);
+      end;
     end;
 
-  if { (HTTPRec.Count > 0) and } (HTTPRec.Counter >= HTTPRec.Count) then
+  if (FJobList.eol) and (FJobList.AllFinished) then
   begin
     FJobFinished := true;
     FOnJobFinished(Self);
@@ -1585,7 +1751,7 @@ begin
   FThreadHandler := TThreadHandler.Create;
   FThreadHandler.OnAllThreadsFinished := OnHandlerFinished;
   FThreadHandler.CreateJob := CreateJob;
-  FFinished := True;
+  //FFinished := True;
   FMaxThreadCount := 0;
 end;
 
@@ -1607,10 +1773,10 @@ begin
   begin
     R := Items[i];
     if (not (FPageMode and not R.NextPage) and (not R.JobInitiated
-    or (R.HTTPRec.Counter < R.HTTPRec.Count))) and R.CanAddThread then
+    or (not R.JobList.eol))) and R.CanAddThread then
     begin
       R.CreateJob(t);
-      R.NextPage := false;
+      //R.NextPage := false;
       Result := true;
       inc(FQueueIndex);
       Exit;
@@ -1623,7 +1789,7 @@ begin
   begin
     R := Items[i];
     if (not (FPageMode and not R.NextPage) and (not R.JobInitiated
-    or (R.HTTPRec.Counter < R.HTTPRec.Count))) and R.CanAddThread then
+    or (not R.JobList.eol))) and R.CanAddThread then
     begin
       R.CreateJob(t);
       R.NextPage := false;
@@ -1656,6 +1822,11 @@ begin
   FThreadHandler.OnError := Value;
   for i := 0 to Count -1 do
     Items[i].OnError := Value;
+end;
+
+function TResourceList.GetListFinished: Boolean;
+begin
+  Result := ThreadHandler.Count = 0;
 end;
 
 destructor TResourceList.Destroy;
@@ -1702,7 +1873,7 @@ var
 
 begin
   for i := 0 to Count-1 do
-  begin
+  if not Items[i].JobList.eol then begin
     Items[i].NextPage := true;
     ThreadHandler.CheckIdle;
   end;
@@ -1727,27 +1898,35 @@ var
   i: integer;
 
 begin
-  FQueueIndex := 0;
   case JobType of
-    JOB_NOJOB:
+    JOB_STOPLIST:
+    begin
+{      for i := 0 to Count - 1 do
+        Items[i].StartJob(JobType);                }
       FThreadHandler.FinishThreads(false);
-    JOB_LIST, JOB_DOWNLOAD:
-      for i := 0 to Count - 1 do
+    end;
+    JOB_LIST:
+      if ListFinished then
       begin
-        Items[i].MaxThreadCount := MaxThreadCount;
-        Items[i].StartJob(JobType);
-        if not FPageMode then
-          ThreadHandler.CheckIdle;
+        FQueueIndex := 0;
+        ThreadHandler.CreateThreads;
+        for i := 0 to Count - 1 do
+        begin
+          Items[i].MaxThreadCount := MaxThreadCount;
+          Items[i].StartJob(JobType);
+          if not FPageMode and (not Items[i].JobList.eol) then
+            ThreadHandler.CheckIdle;
+        end;
+
+        if Assigned(FOnStartJob) then
+          FOnStartJob(Self);
+
+        if FPageMode then
+          NextPage;
+
+        //FFinished := false;
       end;
   end;
-
-  if Assigned(FOnStartJob) then
-    FOnStartJob(Self);
-
-  if FPageMode then
-    NextPage;
-
-  FFinished := false;
   //ThreadHandler.CheckIdle(true);
 end;
 
@@ -1767,7 +1946,7 @@ end;
 
 procedure TResourceList.SetPageMode(Value: Boolean);
 begin
-  if FFinished then
+  if ListFinished then
     FPageMode := Value;
 end;
 
@@ -1775,7 +1954,6 @@ procedure TResourceList.OnHandlerFinished(Sender: TObject);
 begin
   if (FThreadHandler.Count = 0) and Assigned(FOnEndJob) then
     FOnEndJob(Self);
-  FFinished := true;
 end;
 
 procedure TResourceList.LoadList(Dir: String);
@@ -2149,7 +2327,8 @@ begin
             FErrorString := url + ': ' + e.Message;
             FJob := JOB_ERROR;
             Break;
-          end;
+          end else
+            Continue;
       end;
 
       FXML.Parse(s);
@@ -2617,11 +2796,13 @@ begin
   Result := Add(p);
 end;
 
-procedure TThreadHandler.CreateThreads(acount: integer);
+procedure TThreadHandler.CreateThreads(acount: integer = -1);
 var
   d: TDownloadThread;
 
 begin
+  if acount = -1 then
+    acount := FThreadCount;
   FFinishQueue := false;
   FFinishThreads := false;
   //FQueue.Clear;
