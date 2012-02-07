@@ -282,6 +282,10 @@ type
     btnFindTag: TSpeedButton;
     fdTag: TFindDialog;
     chbFullSize: TCheckBox;
+    Label1: TLabel;
+    eConnTimeOut: TJvSpinEdit;
+    Label2: TLabel;
+    eContTimeOut: TJvSpinEdit;
     procedure btnBrowseClick(Sender: TObject);
     procedure btnGrabClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -722,7 +726,7 @@ begin
       HTTP.Tag := num;
 
       case curdest of
-        RP_IMOUTO, RP_KONACHAN:
+        RP_IMOUTO, RP_KONACHAN, RP_DEVIANTART:
           xcp := 0;
         RP_EHENTAI_G, RP_EXHENTAI, RP_RMART:
           xcp := 4;
@@ -873,6 +877,13 @@ begin
               if c then
                 o := ChangeFileExt(n[num].URL, '_big_p' + IntToStr(j) +
                   ExtractFileExt(n[num].URL));
+            RP_DEVIANTART:
+              case xcp of
+                0:
+                  o := RESOURCE_URLS[curdest] + 'download/' +
+                    DownCopyTo('-',n[num].pageurl) +
+                    '/' + emptyname(n[num].URL);
+              end;
           end;
 
           if (curdest in [RP_EHENTAI_G, RP_EXHENTAI]) and not origfname then
@@ -1098,7 +1109,12 @@ begin
             begin
               case xcp of
                 0:
-                  o := REPLACE(n[num].URL, '/image/', '/jpeg/');
+                  case curdest of
+                    RP_DEVIANTART:
+                      o := n[num].URL;
+                  else
+                    o := REPLACE(n[num].URL, '/image/', '/jpeg/');
+                  end;
                 1:
                   o := ChangeFileExt(n[num].URL, '.png');
                 2:
@@ -1526,8 +1542,8 @@ begin
   chbFullSize.Checked := ini.ReadBool('options', 'fullsize',
     chbFullSize.Checked);
 
-  eQueryI.Value := ini.ReadInteger('options', 'queryinterval',
-    eQueryI.AsInteger);
+  eQueryI.Value := ini.ReadFloat('options', 'queryinterval',
+    eQueryI.Value);
   // eQueryI2.Value := eQueryI.Value;
 
 {  chbQueryI1.Checked := ini.ReadBool('options', 'checkqueryinterval1',
@@ -1542,6 +1558,8 @@ begin
     chbAftDwnld.Checked);
   eRetries.AsInteger := ini.ReadInteger('options', 'retries',
     eRetries.AsInteger);
+  eConnTimeOut.Value := ini.ReadFloat('options','ConnTimeout',eConnTimeOut.Value);
+  eContTimeOut.Value := ini.ReadFloat('options','ContTimeout',eContTimeOut.Value);
 
   for i := 0 to RESOURCE_COUNT - 1 do
   begin
@@ -2328,8 +2346,17 @@ begin
                 IntToStr(nm) + '.html');
 
             case cbSite.ItemIndex of
+              RP_GELBOORU:
+                if pos('You are viewing an advertisement...',s.Text) > 0 then
+                begin
+                  Log('Porno-banner accepted');
+                  HTTP.Request.Referer := ClearHTML(nxt);
+                  HTTP.Get('http://gelbooru.com/intermission.php');
+                  HTTP.Request.Referer := '';
+                  Continue;
+                end;
               RP_EHENTAI_G, RP_EXHENTAI:
-                if pos('Please wait', s[3]) > 0 then
+                if pos('Please wait', s.Text) > 0 then
                 begin
                   if not Application.Active then
                     JvTrayIcon.BalloonHint('Error on getting list',
@@ -2940,8 +2967,8 @@ begin
 //  result.CookieManager := CookieManager;
   result.AllowCookies := False;
   result.CookieList := FCookies;
-  result.ConnectTimeout := 5000;
-  result.ReadTimeout := 10000;
+  result.ConnectTimeout := Trunc(eConnTimeOut.Value * 1000);
+  result.ReadTimeout := Trunc(eContTimeOut.Value * 1000);
   result.Request.UserAgent :=
     'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; en)';
   if chbproxy.Checked then
@@ -3043,7 +3070,7 @@ begin
     ini.WriteInteger('options', 'byauthor', cbByAuthor.ItemIndex)
   else
     ini.WriteInteger('options', 'byauthor', -1);
-  ini.WriteInteger('options', 'queryinterval', eQueryI.AsInteger);
+  ini.WriteFloat('options', 'queryinterval', eQueryI.Value);
 {  ini.WriteBool('options', 'checkqueryinterval1', chbQueryI1.Checked);
   ini.WriteBool('options', 'checkqueryinterval2', chbQueryI2.Checked);
   ini.WriteBool('options', 'checkbeforeget', chbBfGet.Checked);        }
@@ -3076,6 +3103,8 @@ begin
   ini.WriteBool('options', 'keepinstance', chbKeepInstance.Checked);
   ini.WriteBool('options', 'savenote', chbSaveNote.Checked);
   ini.WriteInteger('options', 'retries', eRetries.AsInteger);
+  ini.WriteFloat('options','ConnTimeout',eConnTimeOut.Value);
+  ini.WriteFloat('options','ContTimeout',eContTimeOut.Value);
 
   { if (cbSite.ItemIndex > -1) and
     (pcMenu.ActivePage = tsSettings) then
@@ -4525,6 +4554,9 @@ begin
               if xml_tmpi <> -1 then
               begin
                 // n[xml_tmpi].preview := replace(attrs.Value('super_img'),'/PRE/i/','/150/i/');
+{                n[xml_tmpi].URL := RESOURCE_URLS[cbSite.ItemIndex] + 'download/' +
+                  DownCopyTo('-',Attrs.Value('href')) +
+                  '/' + emptyname(n[xml_tmpi].URL);    }
                 n[xml_tmpi].title :=
                   CopyTo(CopyTo(Attrs.Value('title'), ' by ~'), ' by *');
                 n[xml_tmpi].Params := Attrs.Value('title');
@@ -6575,10 +6607,14 @@ begin
   else
     chbIncFNames.Visible := false;
 
-  if curdest in [RP_EHENTAI_G, RP_EXHENTAI] then
+  if curdest in [RP_EHENTAI_G, RP_EXHENTAI{, RP_DEVIANTART}] then
   begin
     chbFullSize.Top := 59 + 23 * (i mod 3);
     chbFullSize.Left := 9 * Integer(i < 3) + 173 * (i div 3);
+{    if curdest = RP_DEVIANTART then
+      chbFullSize.Caption := 'Full Size'
+    else
+      chbFullSize.Caption := 'Full Size (spends GP)';  }
     chbFullSize.Visible := true;
     inc(i);
   end

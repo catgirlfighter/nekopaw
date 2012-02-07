@@ -158,6 +158,8 @@ function ImageFormat(Start: Pointer): string;
 function GetWinVersion: string;
 procedure ShutDown;
 function AddZeros(s: string; count: integer): string;
+function DownCharPos(ch: char; dst: string): integer;
+function DownCopyTo(substr: char; dst: string): string;
 
 implementation
 
@@ -1432,6 +1434,32 @@ begin
       dec(l);
     Result := copy(s, i, l - i + 1);
   end;
+end;
+
+function DownCharPos(ch: char; dst: string): integer;
+var
+  i: integer;
+begin
+  for i := length(dst) downto 1 do
+    if ch = dst[i] then
+    begin
+      result := i;
+      Exit;
+    end;
+  result := 0;
+end;
+
+function DownCopyTo(substr: char; dst: string): string;
+var
+  n: integer;
+begin
+  n := DownCharPos(substr,dst);
+  if n = 0 then
+  begin
+    result := '';
+    Exit;
+  end;
+  Result := Copy(dst,n + 1,length(dst) - n);
 end;
 
 end.
