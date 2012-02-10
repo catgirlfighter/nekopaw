@@ -191,6 +191,8 @@ begin
           md.FieldValues['.' + APicture.Meta.Items[i].Name] := APicture.Meta.Items[i].Value;
           md.FieldValues['resname'] := APicture.List.Resource.Name;
           md.FieldValues['label'] := APicture.DisplayLabel;
+          md.FieldValues['id'] := Integer(APicture);
+          md.FieldValues['parent'] := Integer(Apicture.Parent);
       end;
       md.Post;
     except
@@ -266,6 +268,16 @@ begin
 
   c := AddField('label');
   c.DataBinding.Field.DisplayLabel := _PICTURELABEL_;
+
+  c := AddField('id:i');
+  c.Visible := false;
+  c.VisibleForCustomization := false;
+
+  c := AddField('parent:i');
+  c.Visible := false;
+  c.VisibleForCustomization := false;
+
+
 
   for i := 0 to FFieldList.Count -1 do
   begin

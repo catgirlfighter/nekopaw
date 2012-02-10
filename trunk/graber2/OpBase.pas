@@ -2,11 +2,12 @@ unit OpBase;
 
 interface
 
-uses SysUtils, Messages, GraberU, INIFiles;
+uses SysUtils, Messages, GraberU, INIFiles, Classes, Common;
 
 var
   FullResList: TResourceList;
   GlobalSettings: TSettingsRec;
+  IgnoreList: TDSArray;
   rootdir: string;
   profname: string = 'default.ini';
   langname: string = 'English';
@@ -50,6 +51,9 @@ uses LangString, EncryptStrings, AES;
 procedure LoadProfileSettings;
 var
   INI: TINIFile;
+  i,j: integer;
+  v: tstringlist;
+  s: string;
 begin
   INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
   with GlobalSettings do
@@ -83,6 +87,24 @@ begin
       if Password <> '' then
         Password := DecryptString(Password,KeyString);
     end;
+
+    v := tstringlist.Create;
+    INI.ReadSection('IgnoreList',v);
+    j := 0;
+    for i := 0 to v.Count-1 do
+    begin
+      s := INI.ReadString('IgnoreList',v[i],'');
+      while s <> '' do
+      begin
+        inc(j);
+        SetLength(IgnoreList,j);
+        IgnoreList[j-1][0] := v[i];
+        IgnoreList[j-1][1] := CopyTo(s,',',[],true);
+      end;
+    end;
+
+
+    v.Free;
   end;
   INI.Free;
 end;

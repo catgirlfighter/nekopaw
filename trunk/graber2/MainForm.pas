@@ -382,11 +382,12 @@ begin
         f2.ResList.CopyResource(FullResList[Values[i, 0]]);
   FreeAndNil(n.SecondFrame);
   f2.Reset;
-  f2.ResList.ThreadHandler.Cookies := FCookie;
   n.MainFrame := f2;
   f2.Parent := n;
+  f2.ResList.ThreadHandler.Cookies := FCookie;
   f2.ResList.ThreadHandler.Proxy := Globalsettings.Proxy;
   f2.ResList.ThreadHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
+  f2.ResList.PicIgnoreList := IgnoreList;
   f2.ResList.StartJob(JOB_LIST);
   ShowPanels;
 end;
@@ -589,7 +590,8 @@ begin
   if not bmbMain.Visible then
     bmbMain.Visible := true;
   pcTables.Change;
-    // dsLogs.Visible := true;
+  if not dsLogs.AutoHide then
+    dsLogs.Visible := true;
 end;
 
 procedure Tmf.SHOWSETTINGS(var Msg: TMessage);
