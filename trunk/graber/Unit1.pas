@@ -16,7 +16,8 @@ uses {manual}
   TB2Dock, TB2Toolbar, Classes, SpTBXItem, SpTBXControls, ImgList,
   SpTBXTabs, SpTBXDkPanels, JvSpin,
   {hacks}
-  hacks, IdTCPConnection, IdTCPClient;
+  hacks, IdTCPConnection, IdTCPClient, IdIOHandler, IdIOHandlerSocket,
+  IdIOHandlerStack, IdSSL, IdSSLOpenSSL;
 
 type
 
@@ -286,6 +287,7 @@ type
     eConnTimeOut: TJvSpinEdit;
     Label2: TLabel;
     eContTimeOut: TJvSpinEdit;
+    OpSSLHandler: TIdSSLIOHandlerSocketOpenSSL;
     procedure btnBrowseClick(Sender: TObject);
     procedure btnGrabClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -1025,10 +1027,8 @@ begin
                 raise Exception.Create(o + ': ' + ans);
             end else
               {if (f.Size = 28658) and (MD5DigestToStr(MD5Stream(f)) = '88FE16AE482FADDB4CC23DF15722348C') then }
-              if (o = 'http://st.exhentai.net/img/509s.gif')
-              or (o = 'http://st.exhentai.net/img/509.gif')
-              or (o = 'http://g.ehgt.org/img/509s.gif')
-              or (o = 'http://g.ehgt.org/img/509.gif') then
+              if (pos('/img/509s.gif',o) > 0)
+              or (pos('/img/509.gif',o) > 0) then
               begin
                 prgress := 2;
                 raise Exception.Create('509 Bandwidth Exceeded. You have temporarily reached the limit how many images you can browse. Wait a few hours or change an account and IP-adress.');
@@ -1753,13 +1753,84 @@ begin
         end;
       end;
     RP_DEVIANTART:
-      if FCookies.GetCookieValue('userinfo', '.deviantart.com')
-        = '' then
+    begin
+      if FCookies.GetCookieValue('userinfo', '.deviantart.com') = '' then
       begin
         HTTP := CreateHTTP;
         HTTP.Get(RESOURCE_URLS[iindex]);
         HTTP.Free;
       end;
+
+      if AuthData[iindex].Login <> '' then
+        if (FCookies.GetCookieValue('auth', '.deviantart.com')
+          = '') then
+        begin
+          log('Login on resource');
+          repeat
+            if (AuthData[iindex].Login = '') then
+              Break
+            else if (AuthData[iindex].Password = '') then
+              if AutoMode then
+              begin
+                LogErr('AutoMode: login and password is needed');
+                Exit;
+              end
+              else
+                UpdLogin(iindex);
+
+            if AuthData[iindex].Password = '' then
+              Exit;
+            s := TStringList.Create;
+            s.Add('ref=');
+            s.Add('username=' + AuthData[iindex].Login);
+            s.Add('password=' + AuthData[iindex].Password);
+            s.Add('action=Login');
+            HTTP := CreateHTTP;
+            HTTP.IOHandler := OpSSLHandler;
+            HTTP.Request.Referer := 'http://www.deviantart.com/';
+            try
+              s.Text := HTTP.Post('https://www.deviantart.com/users/login', s);
+              if chbdebug.Checked then
+                s.SaveToFile(ExtractFilePath(paramstr(0))+'logs\tmplogin.html');
+              HTTP.Disconnect;
+            except
+              on E: Exception do
+                if E.Message <> 'Connection Closed Gracefully.' then
+                begin
+                  MessageDlg(E.Message,mtError,[mbOk],0);
+                  Exit;
+                end;
+            end;
+            HTTP.Free;
+            s.Free;
+
+            if (FCookies.GetCookieValue('auth', '.deviantart.com')
+              = '') then
+            begin
+              MessageDlg('Incorrect login or password', mtError, [mbOk], 0);
+              AuthData[cbSite.ItemIndex].Password := '';
+            end
+            else
+            begin
+              log('Loged ok');
+              Break;
+            end;
+          until (AuthData[iindex].Login <> '') and
+            (AuthData[iindex].Password <> '');
+        end
+        else if chbdebug.Checked then
+        begin
+          log('cookie data = ' + FCookies.GetCookieValue('auth',
+            '.deviantart.com'));
+        end;
+    end;
+{      if FCookies.GetCookieValue('userinfo', '.deviantart.com')
+        = '' then
+      begin
+        HTTP := CreateHTTP;
+        HTTP.Get(RESOURCE_URLS[iindex]);
+        HTTP.Free;
+      end;  }
     RP_RMART:
       if FCookies.GetCookieValue('PageSize', 'rmart.org') <> '100' then
       begin
@@ -2350,6 +2421,7 @@ begin
                 if pos('You are viewing an advertisement...',s.Text) > 0 then
                 begin
                   Log('Porno-banner accepted');
+                  fStoping.Execute('Waiting...','Watching porno-banner :3','Wait ',0,10,true,true);
                   HTTP.Request.Referer := ClearHTML(nxt);
                   HTTP.Get('http://gelbooru.com/intermission.php');
                   HTTP.Request.Referer := '';
@@ -3943,7 +4015,7 @@ begin
   begin
     prgress := 2;
     if assigned(FThreadList) then
-      fStoping.Execute;
+      fStoping.Execute('Closing...','Waiting...','Force ',2000,5);
   end;
 end;
 
@@ -4557,6 +4629,7 @@ begin
 {                n[xml_tmpi].URL := RESOURCE_URLS[cbSite.ItemIndex] + 'download/' +
                   DownCopyTo('-',Attrs.Value('href')) +
                   '/' + emptyname(n[xml_tmpi].URL);    }
+                n[xml_tmpi].Preview := '';
                 n[xml_tmpi].title :=
                   CopyTo(CopyTo(Attrs.Value('title'), ' by ~'), ' by *');
                 n[xml_tmpi].Params := Attrs.Value('title');
@@ -4567,7 +4640,7 @@ begin
           else if (xml_tmpi > -1) and (Attrs.Value('class') = '') then
             n[xml_tmpi].category := Attrs.Value('href')
           else
-        else if (ATag = 'img') and (xml_tmpi > -1) then
+        else if (ATag = 'img') and (xml_tmpi > -1) and (n[xml_tmpi].Preview = '') then
         begin
           n[xml_tmpi].Preview := Attrs.Value('src');
           if n[xml_tmpi].URL = '' then

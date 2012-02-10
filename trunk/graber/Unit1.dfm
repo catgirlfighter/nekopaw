@@ -495,17 +495,13 @@ object MainForm: TMainForm
       Height = 132
       Caption = 'Settings'
       ImageIndex = -1
-      ExplicitLeft = 232
-      ExplicitTop = -118
-      ExplicitWidth = 546
-      ExplicitHeight = 340
       DesignSize = (
         548
         132)
       TabItem = 'tsiSettings'
       object iLain: TImage
         Left = 444
-        Top = 7
+        Top = 6
         Width = 101
         Height = 122
         Anchors = [akRight, akBottom]
@@ -973,7 +969,7 @@ object MainForm: TMainForm
         Left = 312
         Top = 5
         Width = 233
-        Height = 108
+        Height = 107
         Anchors = [akLeft, akTop, akRight, akBottom]
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindowText
@@ -989,7 +985,7 @@ object MainForm: TMainForm
         Left = 3
         Top = 3
         Width = 209
-        Height = 111
+        Height = 110
         ActivePage = tsTags
         Anchors = [akLeft, akTop, akBottom]
         TabOrder = 2
@@ -999,7 +995,7 @@ object MainForm: TMainForm
             Left = 0
             Top = 0
             Width = 201
-            Height = 83
+            Height = 82
             Align = alClient
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clWindowText
@@ -1020,7 +1016,7 @@ object MainForm: TMainForm
             Left = 0
             Top = 0
             Width = 201
-            Height = 83
+            Height = 82
             Align = alClient
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clWindowText
@@ -1877,7 +1873,7 @@ object MainForm: TMainForm
     Left = 448
     Top = 224
     Bitmap = {
-      494C010103002400880010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101030024008C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -2021,5 +2017,15 @@ object MainForm: TMainForm
     OnFind = fdTagFind
     Left = 416
     Top = 72
+  end
+  object OpSSLHandler: TIdSSLIOHandlerSocketOpenSSL
+    MaxLineAction = maException
+    Port = 0
+    DefaultPort = 0
+    SSLOptions.Mode = sslmUnassigned
+    SSLOptions.VerifyMode = []
+    SSLOptions.VerifyDepth = 0
+    Left = 384
+    Top = 280
   end
 end
