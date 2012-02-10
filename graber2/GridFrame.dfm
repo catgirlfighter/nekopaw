@@ -21,6 +21,9 @@ object fGrid: TfGrid
     LookAndFeel.NativeStyle = False
     object vChilds: TcxGridDBTableView
       NavigatorButtons.ConfirmDelete = False
+      DataController.DataSource = ds
+      DataController.DetailKeyFieldNames = 'parent'
+      DataController.KeyFieldNames = 'id'
       DataController.Summary.DefaultGroupSummaryItems = <>
       DataController.Summary.FooterSummaryItems = <>
       DataController.Summary.SummaryGroups = <>
@@ -37,6 +40,7 @@ object fGrid: TfGrid
     object vGrid: TcxGridDBTableView
       NavigatorButtons.ConfirmDelete = False
       DataController.DataSource = ds
+      DataController.KeyFieldNames = 'id'
       DataController.Summary.DefaultGroupSummaryItems = <
         item
           Kind = skCount

@@ -730,7 +730,10 @@ begin
   else
     Result := copy(Source, 1, i - 1);
   if cut then
-    Delete(Source,1,i);
+    if i = 0 then
+      Delete(Source,1,length(Source))
+    else
+      Delete(Source,1,i);
 end;
 
 function CopyFromTo(s, sub1, sub2: String; re: boolean = false): String;

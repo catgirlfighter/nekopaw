@@ -2,8 +2,8 @@ unit graberU;
 
 interface
 
-uses Classes, Messages, SysUtils, Variants, Windows, idHTTP, MyXMLParser,
-  DateUtils, MyHTTP;
+uses Classes, Messages, SysUtils, Variants, VarUtils, Windows, idHTTP, MyXMLParser,
+  DateUtils, MyHTTP, StrUtils;
 
 const
   UNIQUE_ID = 'GRABER2LOCK';
@@ -424,24 +424,31 @@ type
     property Resource: TResource read FResource write FResource;
   end;
 
+  TDoubleString = array[0..1] of String;
+
+  TDSArray = array of TDoubleString;
+
+  TCheckFunction = function(Pic: TTPicture): boolean of object;
 
   TPictureList = class(TPictureLinkList)
   private
     FTags: TPictureTagList;
     FOnAddPicture: TPictureEvent;
+    FCheckDouble: TCheckFunction;
   protected
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
     constructor Create;
     destructor Destroy; override;
-    function Add(APicture: TTPicture): Integer; overload;
-    procedure Add(APicList: TPictureList); overload;
+    function Add(APicture: TTPicture): Integer;
+    procedure AddPicList(APicList: TPictureList);
     function CopyPicture(Pic: TTPicture): TTPicture;
     property Tags: TPictureTagList read FTags;
     property Items;
     property Count;
     property Resource;
     property OnAddPicture: TPictureEvent read FOnAddPicture write FOnAddPicture;
+    property CheckDouble: TCheckFunction read FCheckDouble write FCheckDouble;
   end;
 
   TResourceEvent = procedure(R: TResource) of object;
@@ -465,7 +472,7 @@ type
       procedure Notify(Ptr: Pointer; Action: TListNotification); override;
     public
       function Add(id,kind: integer): Integer;
-      function AllFinished: boolean;
+      function AllFinished(incerrs: boolean = true): boolean;
       function NextJob(Status: Integer): Integer;
     function eol: boolean;
       property Items[Index: integer]: PJobRec read Get; default;
@@ -569,6 +576,7 @@ type
     //FOnLog: TLogEvent;
     FOnError: TLogEvent;
     FMaxThreadCount: Integer;
+    FIgnoreList: TDSArray;
   protected
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
     procedure JobFinished(R: TResource);
@@ -578,6 +586,7 @@ type
     function CreateJob(t: TDownloadThread): boolean;
     procedure SetOnError(Value: TLogEvent);
     function GetListFinished: Boolean;
+    function CheckDouble(Pic: TTPicture): boolean;
   public
     constructor Create;
     destructor Destroy; override;
@@ -587,6 +596,7 @@ type
     procedure NextPage;
     procedure SetPageMode(Value: Boolean);
     procedure SetMaxThreadCount(Value: integer);
+    function AllFinished: boolean;
     property ThreadHandler: TThreadHandler read FThreadHandler;
     procedure LoadList(Dir: String);
     property OnAddPicture: TPictureEvent read FOnAddPicture write SetOnPictureAdd;
@@ -599,6 +609,7 @@ type
     //property OnLog: TLogEvent read FOnLog write FOnLog;
     property OnError: TLogEvent read FOnError write SetOnError;
     property MaxThreadCount: Integer read FMaxThreadCount write SetMaxThreadCount;
+    property PicIgnoreList: TDSArray read FIgnoreList write FIgnoreList;
   end;
 
 implementation
@@ -616,7 +627,9 @@ var
   n1, n2: integer;
   cstr: string;
   rstr: Variant;
-
+  vt: WideString;
+  vt2: Double;
+  VRESULT: HRESULT;
 begin
   if Assigned(VE) then
   begin
@@ -672,11 +685,17 @@ begin
       if rstr = null then
         rstr := '""'
       else
-        try
-          rstr := VarAsType(rstr,varDouble)
-        except
-          rstr := '"' + rstr + '"';
+      begin
+        if (VarType(rstr) = varString) or VarIsType(rstr,varOleStr) then
+        begin
+          vt := VarToWideStr(rstr);
+          VRESULT := VarR8FromStr(vt, VAR_LOCALE_USER_DEFAULT, 0, vt2);
+          if VRESULT <> VAR_OK then
+            rstr := '"' + rstr + '"'
+          else
+            rstr := vt2;
         end;
+      end;
 
 
       cstr := s[n1] + cstr;
@@ -745,7 +764,7 @@ var
 begin
   p := FindItem(ItemName);
   if p = nil then
-    Result := null
+    Result := Null
   else
     Result := p.Value;
 end;
@@ -785,7 +804,7 @@ begin
   for i := 0 to Count - 1 do
   begin
     Result := inherited Get(i);
-    if LowerCase(Result.Name) = ItemName then
+    if SameText(LowerCase(Result.Name),ItemName) then
       Exit;
   end;
   Result := nil;
@@ -1228,7 +1247,7 @@ end;
 
 //TJobList
 
-function TJobList.AllFinished: boolean;
+function TJobList.AllFinished(incerrs: boolean): boolean;
 var
   i: integer;
 begin
@@ -1239,7 +1258,8 @@ begin
   end;   }
 
   for i := FFinishCursor to Count -1 do
-    if not(Items[i].status in [JOB_ERROR,JOB_FINISHED]) then
+    if incerrs and not (Items[i].status in [JOB_ERROR,JOB_FINISHED]) or
+    not incerrs and not (Items[i].status in [JOB_FINISHED]) then
     begin
       FFinishCursor := i;
       Result := false;
@@ -1277,7 +1297,6 @@ var
 
 begin
   FFinishCursor := 0;
-  AllFinished;
 
   i := 0;
 
@@ -1290,6 +1309,8 @@ begin
   for i := i to Count -1 do
     if Items[i].status <> JOB_FINISHED then
       Items[i].status := JOB_NOJOB;
+
+  AllFinished;
 end;
 
 procedure TJobList.Clear;
@@ -1448,10 +1469,13 @@ begin
   case JobType of
     JOB_LIST:
     begin
-      if (FJobList.Count > 0) and (FJobList.AllFinished) then
-        Exit;
-
       FJobList.Reset;
+
+      if (FJobList.Count > 0) and (FJobList.AllFinished(false)) then
+      begin
+        FJobFinished := true;
+        Exit;
+      end;
 
       FCurrThreadCount := 0;
       FJobFinished := false;
@@ -1642,7 +1666,7 @@ begin
         FJobList[t.JobId].status := JOB_FINISHED;
         if t.PictureList.Count > 0 then
         begin
-          PictureList.Add(t.PictureList);
+          PictureList.AddPicList(t.PictureList);
           if Assigned(PictureList.OnEndAddList) then
             PictureList.OnEndAddList(t.PictureList);
         end;
@@ -1728,6 +1752,23 @@ end;
 
 // TResourceList
 
+function TResourceList.AllFinished: boolean;
+var
+  i: integer;
+begin
+  for i := 0 to Count -1 do
+  begin
+    Items[i].JobList.Reset;
+    if (Items[i].JobList.Count = 0) or
+    not Items[i].JobList.AllFinished(false) then
+    begin
+      Result := false;
+      Exit;
+    end;
+  end;
+  Result := true;
+end;
+
 procedure TResourceList.CopyResource(R: TResource);
 var
   NR: TResource;
@@ -1753,6 +1794,30 @@ begin
   FThreadHandler.CreateJob := CreateJob;
   //FFinished := True;
   FMaxThreadCount := 0;
+end;
+
+function TResourceList.CheckDouble(Pic: TTPicture): boolean;
+var
+  l,i,j: integer;
+  s1,s2: variant;
+
+begin
+  for l := 0 to Count -1 do
+    for i := 0 to length(FIgnoreList)-1 do
+    begin
+      s1 := Pic.Meta[FIgnoreList[i][0]];
+      for j := 0 to Items[l].PictureList.Count -1 do
+      begin
+        s2 := Items[l].PictureList[j].Meta[FIgnoreList[i][1]];
+        if (s1 <> null) and (s1 <> '') and (s2 <> null)
+          and SameText(LowerCase(s1), LowerCase(s2)) then
+        begin
+          Result := true;
+          Exit;
+        end;
+      end;
+    end;
+  Result := false;
 end;
 
 function TResourceList.CreateJob(t: TDownloadThread): boolean;
@@ -1908,11 +1973,14 @@ begin
     JOB_LIST:
       if ListFinished then
       begin
+        if AllFinished then
+          Exit;
         FQueueIndex := 0;
         ThreadHandler.CreateThreads;
         for i := 0 to Count - 1 do
         begin
           Items[i].MaxThreadCount := MaxThreadCount;
+          Items[i].PictureList.CheckDouble := CheckDouble;
           Items[i].StartJob(JobType);
           if not FPageMode and (not Items[i].JobList.eol) then
             ThreadHandler.CheckIdle;
@@ -2009,7 +2077,7 @@ procedure TDownloadThread.Execute;
 begin
   while not terminated do
   begin
-    FErrorString := '';
+    //FErrorString := '';
     try
       Synchronize(DoFinish);
       case Job of
@@ -2602,24 +2670,28 @@ begin
     FOnAddPicture(APicture);
 end;
 
-procedure TPictureList.Add(APicList: TPictureList);
+procedure TPictureList.AddPicList(APicList: TPictureList);
 var
   i,j: integer;
   t: TTPicture;
 
 begin
-
-  for i := 0 to APicList.Count -1 do
-    if not Assigned(APicList[i].Parent) then
+  i := 0;
+  while i < APicList.Count -1 do
+    if not Assigned(FCheckDouble) or not CheckDouble(APicList[i]) then
     begin
-      t := CopyPicture(APicList[i]);
-      for j := 0 to APicList[i].Linked.Count-1 do
+      if not Assigned(APicList[i].Parent) then
       begin
-        t.Linked.Add(APicList[i].Linked[j]);
-        t.Linked[j].Parent := t;
+        t := CopyPicture(APicList[i]);
+        for j := 0 to APicList[i].Linked.Count-1 do
+        if not CheckDouble(APicList[i].Linked[j]) then begin
+          t.Linked.Add(APicList[i].Linked[j]);
+          t.Linked[j].Parent := t;
+        end;
       end;
-    end;
-
+      inc(i);
+    end else
+      APicList.Delete(i);
 end;
 
 function TPictureList.CopyPicture(Pic: TTPicture): TTPicture;
