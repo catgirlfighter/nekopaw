@@ -3,7 +3,7 @@ unit graberU;
 interface
 
 uses Classes, Messages, SysUtils, Variants, VarUtils, Windows, idHTTP, MyXMLParser,
-  DateUtils, MyHTTP, StrUtils;
+  DateUtils, MyHTTP, StrUtils, md5;
 
 const
   UNIQUE_ID = 'GRABER2LOCK';
@@ -386,6 +386,10 @@ type
     FQueueN: Integer;
     FList: TPictureList;
     FDisplayLabel: String;
+    FFileName: String;
+    FExt: String;
+    FMD5: TMD5Digest;
+    function GetMD5String: string;
     //FObj: TObject;
   protected
     procedure SetParent(Item: TTPicture);
@@ -395,6 +399,7 @@ type
     destructor Destroy; override;
     procedure Clear;
     procedure Assign(Value: TTPicture; Links: boolean = false);
+    procedure MakeFileName(Format: String);
     property Removed: boolean read FRemoved write SetRemoved;
     property Finished: boolean read FFinished;
     property Checked: boolean read FChecked write FChecked;
@@ -405,6 +410,10 @@ type
     property QueueN: Integer read FQueueN write FQueueN;
     property List: TPictureList read FList write FList;
     property DisplayLabel: String read FDisplayLabel write FDisplayLabel;
+    property FileName: String read FFileName write FFileName;
+    property Ext: String read FExt;
+    property MD5: TMD5Digest read FMD5;
+    property MD5String: String read GetMD5String;
     //property Obj: TObject read FObj write FObj;
   end;
 
@@ -435,6 +444,7 @@ type
     FTags: TPictureTagList;
     FOnAddPicture: TPictureEvent;
     FCheckDouble: TCheckFunction;
+    FNameFormat: String;
   protected
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
@@ -449,6 +459,7 @@ type
     property Resource;
     property OnAddPicture: TPictureEvent read FOnAddPicture write FOnAddPicture;
     property CheckDouble: TCheckFunction read FCheckDouble write FCheckDouble;
+    property NameFormat: String read FNameFormat write FNameFormat;
   end;
 
   TResourceEvent = procedure(R: TResource) of object;
@@ -577,6 +588,8 @@ type
     FOnError: TLogEvent;
     FMaxThreadCount: Integer;
     FIgnoreList: TDSArray;
+    FListFileFormat: String;
+    FPicFileFormat: String;
   protected
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
     procedure JobFinished(R: TResource);
@@ -610,6 +623,8 @@ type
     property OnError: TLogEvent read FOnError write SetOnError;
     property MaxThreadCount: Integer read FMaxThreadCount write SetMaxThreadCount;
     property PicIgnoreList: TDSArray read FIgnoreList write FIgnoreList;
+    property ListFileForamt: String read FListFileFormat write FListFileFormat;
+    property PicFileFormat: String read FPicFileFormat write FPicFileFormat;
   end;
 
 implementation
@@ -630,6 +645,7 @@ var
   vt: WideString;
   vt2: Double;
   VRESULT: HRESULT;
+  tmp: integer;
 begin
   if Assigned(VE) then
   begin
@@ -686,7 +702,8 @@ begin
         rstr := '""'
       else
       begin
-        if (VarType(rstr) = varString) or VarIsType(rstr,varOleStr) then
+        tmp := VarType(rstr);
+        if (tmp = varOleStr) or (tmp = varString) or (tmp = varUString) then
         begin
           vt := VarToWideStr(rstr);
           VRESULT := VarR8FromStr(vt, VAR_LOCALE_USER_DEFAULT, 0, vt2);
@@ -694,7 +711,8 @@ begin
             rstr := '"' + rstr + '"'
           else
             rstr := vt2;
-        end;
+        end else
+          rstr := VarAsType(rstr,varDouble);
       end;
 
 
@@ -800,11 +818,10 @@ function TValueList.FindItem(ItemName: String): TListValue;
 var
   i: integer;
 begin
-  ItemName := LowerCase(ItemName);
   for i := 0 to Count - 1 do
   begin
     Result := inherited Get(i);
-    if SameText(LowerCase(Result.Name),ItemName) then
+    if SameText(Result.Name,ItemName) then
       Exit;
   end;
   Result := nil;
@@ -1783,6 +1800,7 @@ begin
   NR.CheckIdle := ThreadHandler.CheckIdle;
   NR.OnError := FOnError;
   NR.MaxThreadCount := FMaxThreadCount;
+  NR.PictureList.CheckDouble := CheckDouble;
   Add(NR);
 end;
 
@@ -1810,7 +1828,7 @@ begin
       begin
         s2 := Items[l].PictureList[j].Meta[FIgnoreList[i][1]];
         if (s1 <> null) and (s1 <> '') and (s2 <> null)
-          and SameText(LowerCase(s1), LowerCase(s2)) then
+          and SameText(s1, s2) then
         begin
           Result := true;
           Exit;
@@ -1980,7 +1998,7 @@ begin
         for i := 0 to Count - 1 do
         begin
           Items[i].MaxThreadCount := MaxThreadCount;
-          Items[i].PictureList.CheckDouble := CheckDouble;
+          Items[i].PictureList.NameFormat := PicFileFormat;
           Items[i].StartJob(JobType);
           if not FPageMode and (not Items[i].JobList.eol) then
             ThreadHandler.CheckIdle;
@@ -2618,6 +2636,60 @@ begin
   {if Assigned(FObj) then
     Obj.Free; }
   inherited;
+end;
+
+function TTPicture.GetMD5String: string;
+begin
+  Result := MD5DigestToStr(FMD5);
+end;
+
+// make file name
+procedure TTPicture.MakeFileName(Format: String);
+
+  function ParamCheck(S: String): String;
+  begin
+
+  end;
+
+  function ParseValues(S: String; b: boolean = true): String;
+  begin
+
+  end;
+  //check "<>" sections
+  function ParseSections(s: string): string;
+  var
+    i,n,l: integer;
+    tmp: string;
+  begin
+    s := ParseValues(s,true);
+
+    l := Length(s);
+    n := PosEx('<',s);
+    i := 1;
+
+    Result := '';
+
+    while n <> 0 do
+    begin
+      Result := Result + Copy(s,i,n-i);
+      i := n;
+
+      n := PosEx('>',s,i + 1);
+
+      if n <> 0 then
+      begin
+        Result := Result + ParseValues(Copy(s,i + 1, n - i - 1));
+        i := n + 1;
+      end;
+
+      n := PosEx('<',s,i);
+    end;
+
+    Result := Result + Copy(s,i,l - i + 1);
+  end;
+
+begin
+  FFileName := ParseSections(Format);
 end;
 
 procedure TTPicture.SetParent(Item: TTPicture);

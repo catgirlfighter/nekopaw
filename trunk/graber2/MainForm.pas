@@ -482,19 +482,21 @@ begin
 end;
 
 procedure Tmf.ENDJOB(var Msg: TMessage);
-var
-  t: TMycxTabSheet;
+{var
+  t: TMycxTabSheet; }
 begin
-  t := TMycxTabSheet(Msg.WParam);
-  t.SetIcon(0);
+  pcTables.Change;
+{  t := TMycxTabSheet(Msg.WParam);
+  t.SetIcon(0); }
 end;
 
 procedure Tmf.STARTJOB(var Msg: TMessage);
-var
-  t: TMycxTabSheet;
+{var
+  t: TMycxTabSheet;  }
 begin
-  t := TMycxTabSheet(Msg.WParam);
-  t.SetIcon(0,15,true);
+  pcTables.Change;
+{  t := TMycxTabSheet(Msg.WParam);
+  t.SetIcon(0,15,true); }
 end;
 
 procedure Tmf.CloseTab(t: TcxTabSheet);

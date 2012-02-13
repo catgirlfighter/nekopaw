@@ -15,7 +15,7 @@ uses
   cxGridLevel, cxGrid, cxButtonEdit, cxExtEditRepositoryItems, cxPC, cxLabel,
   cxImage, cxEditRepositoryItems, cxVGrid,
   {graber2}
-  common;
+  common, Graberu;
 
 type
   TListFrameState = (lfsNew, lfsEdit);
@@ -77,6 +77,9 @@ type
     procedure LoadItems;
     procedure ResetItems;
     procedure SetLang;
+    function CreateField(AName,ACaption,ComboItems: string;
+      fieldtype: TFieldType; Category: TcxCategoryRow; DefaultValue: Variant): TcxEditorRow;
+    function CreateCategory(AName, ACaption: String): TcxCategoryRow;
     { Public declarations }
   end;
 
@@ -85,7 +88,7 @@ var
 
 implementation
 
-uses OpBase, GraberU, LangString;
+uses OpBase, LangString;
 
 {$R *.dfm}
 
@@ -149,10 +152,40 @@ begin
     pcMain.ActivePage := tsList;
 end;
 
+function TfNewList.CreateCategory(AName, ACaption: String): TcxCategoryRow;
+begin
+  Result := vgSettings.Add(TcxCategoryRow) as TcxCategoryRow;
+  Result.Name := AName;
+  Result.Properties.Caption := ACaption;
+end;
+
+function TfNewList.CreateField(AName,ACaption,ComboItems: string;
+  FieldType: TFieldType; Category: TcxCategoryRow; DefaultValue: Variant): TcxEditorRow;
+begin
+  Result := vgSettings.AddChild(Category, TcxEditorRow) as TcxEditorRow;
+  Result.Name := AName;
+  Result.Properties.Caption := ACaption;
+  case FieldType of
+    ftString:
+      ;
+    ftNumber:
+      Result.Properties.RepositoryItem := erSpinEdit;
+    ftCombo:
+      begin
+        erCombo.Properties.Items.Clear;
+        StringToList(comboitems, erCombo.Properties.Items);
+        Result.Properties.RepositoryItem := erCombo;
+      end;
+    ftCheck:
+      Result.Properties.RepositoryItem := erCheckBox;
+  end;
+  Result.Properties.Value := DefaultValue;
+end;
+
 procedure TfNewList.CreateSettings(n: Integer);
 var
   c: TcxCategoryRow;
-  r: TcxEditorRow;
+  //r: TcxEditorRow;
   i, d: Integer;
 
 begin
@@ -163,32 +196,14 @@ begin
   vgSettings.Tag := n;
   if n = 0 then
   begin
-    c := vgSettings.Add(TcxCategoryRow) as TcxCategoryRow;
-    c.Name := 'vgimain';
-    c.Properties.Caption := _MAINCONFIG_;
-
-    r := vgSettings.AddChild(c, TcxEditorRow) as TcxEditorRow;
-    r.Name := 'vgitag';
-    r.Properties.Caption := _TAGSTRING_;
-    r.Properties.Value := FullResList[n].Fields['tag'];
+    c := CreateCategory('vgimain',_MAINCONFIG_);
+    CreateField('vgitag',_TAGSTRING_,'',ftString,c,FullResList[n].Fields['tag']);
   end
   else
   begin
-    c := vgSettings.Add(TcxCategoryRow) as TcxCategoryRow;
-    c.Name := 'vgimain';
-    c.Properties.Caption := _MAINCONFIG_;
-
-    r := vgSettings.AddChild(c, TcxEditorRow) as TcxEditorRow;
-    r.Name := 'vgiinherit';
-    r.Properties.Caption := _INHERIT_;
-    r.Properties.RepositoryItem := erCheckBox;
-    r.Properties.Value := FullResList[n].Inherit;
-
-    r := vgSettings.AddChild(c, TcxEditorRow) as TcxEditorRow;
-    r.Name := 'vgitag';
-    r.Properties.Caption := _TAGSTRING_;
-    r.Properties.Value := FullResList[n].Fields['tag'];
-    r.Tag := Integer(vgSettings.RowByName('inherit'));
+    c := CreateCategory('vgimain',_MAINCONFIG_);
+    CreateField('vgiinherit',_INHERIT_,'',ftCheck,c,FullResList[n].Inherit);
+    CreateField('vgitag',_TAGSTRING_,'',ftString,c,FullResList[n].Fields['tag']);
 
     d := FullResList[0].Fields.Count;
 
@@ -201,33 +216,14 @@ begin
           if Items[i].restype <> ftNone then
           begin
             if not Assigned(c) then
-            begin
-              c := vgSettings.Add(TcxCategoryRow) as TcxCategoryRow;
-              c.Name := 'vgieditional';
-              c.Properties.Caption := _EDITIONALCONFIG_;
-            end;
-            r := vgSettings.AddChild(c, TcxEditorRow) as TcxEditorRow;
-            r.Name := 'evgi' + Items[i].resname;
-            r.Properties.Caption := Items[i].resname;
-            case Items[i].restype of
-              ftString:
-                ;
-              ftNumber:
-                r.Properties.RepositoryItem := erSpinEdit;
-              ftCombo:
-                begin
-                  erCombo.Properties.Items.Clear;
-                  StringToList(Items[i].resitems, erCombo.Properties.Items);
-                  r.Properties.RepositoryItem := erCombo;
-                end;
-              ftCheck:
-                r.Properties.RepositoryItem := erCheckBox;
-            end;
-            r.Properties.Value := FullResList[n].Inherit;
+              c := CreateCategory('vgieditional',_EDITIONALCONFIG_);
+            with FullResList[n].Fields.Items[i]^ do
+              CreateField('evgi' + resname,resname,resitems,restype,c,resvalue);
+
+               ///derp
           end;
     end;
   end;
-  // FullResList[0].Fields
   vgSettings.EndUpdate;
 end;
 
