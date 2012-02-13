@@ -114,13 +114,13 @@ procedure TfGrid.CreateList;
 begin
 {  Grid.LookAndFeel.SkinName := '';
   Grid.LookAndFeel.Kind := lfFlat;
-  Grid.LookAndFeel.NativeStyle := true;    }
+  Grid.LookAndFeel.NativeStyle := true;
   with TcxGridSiteAccess(Grid.ActiveView.Site) do
   begin
     VScrollBar.LookAndFeel.MasterLookAndFeel := nil;
     HScrollBar.LookAndFeel.MasterLookAndFeel := nil;
   end;
-{  if not Assigned(FList) then
+  if not Assigned(FList) then
     FList := TList.Create
   else
     FList.Clear;}
@@ -225,7 +225,7 @@ end;
 procedure TfGrid.OnStartJob(Sender: TObject);
 begin
   PostMessage(Application.MainForm.Handle,CM_STARTJOB,Integer(Self.Parent),0);
-    sBar.Panels[0].Text := _ON_AIR_;
+  sBar.Panels[0].Text := _ON_AIR_;
 end;
 
 procedure TfGrid.Relise;

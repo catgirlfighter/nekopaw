@@ -4,7 +4,7 @@ interface
 
 uses Classes, Variants, SysUtils, Math, Forms, StdCtrls, ExtCtrls, ComCtrls,
   Controls, DateUtils,
-  HTTPApp, ShellAPI, Windows, Graphics, JPEG, GIFImg, PNGImage;
+  HTTPApp, ShellAPI, Windows, Graphics, JPEG, GIFImg, PNGImage, VarUtils;
 
 type
   TArrayOfWord = array of word;
@@ -1381,10 +1381,13 @@ const
   function Proc(const p: byte; var s: string; var i: Integer; const l: integer; var ls: variant;
     const isstring: boolean = false): variant;
   var
-    n, tmp, lvl: Integer;
+    n, tmp, lvl, tp: Integer;
     op: boolean;
     d: variant;
     tmpls: variant;
+    vt: WideString;
+    vt2: Double;
+    VRESULT: HRESULT;
   label cc; // looooool
 
   begin
@@ -1530,11 +1533,25 @@ const
             n := l + 1;
 
           Result := copy(s, i, n - i);
-          try
-            Result := Result + 0;
-          except
-            raise Exception.Create(Format(_INCORRECT_SYMBOL_,[result,i,s]));
-          end;
+
+          tp := VarType(Result);
+          if (tp = varOleStr) or (tp = varString) or (tp = varUString) then
+          begin
+            vt := VarToWideStr(Result);
+            VRESULT := VarR8FromStr(vt, VAR_LOCALE_USER_DEFAULT, 0, vt2);
+            case VRESULT of
+              VAR_OK:  // in this case the OS function has put the value into result
+                Result := vt2;
+              VAR_TYPEMISMATCH:
+                if TryStrToFloat(vt, vt2) then
+                  Result := vt2
+                else
+                   raise Exception.Create(Format(_INCORRECT_SYMBOL_,[result,i,s]));
+              else raise Exception.Create(Format(_INCORRECT_SYMBOL_,[result,i,s]));
+            end;
+          end else
+            Result := VarAsType(Result,varDouble);
+
           i := n;
           op := true;
         end;
