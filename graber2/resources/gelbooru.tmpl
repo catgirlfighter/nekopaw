@@ -26,11 +26,12 @@ $thread.url = $picture%url;
 			%height=#height,
 			%rating=#rating,
 			%id=#id,
-			%posted=,
+			%posted=@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy"),
 			%md5=#md5,
 			%sample_url=#sample_url,
 			%tags=csv(#tags," ")
 		);
+		$picture.filename = @emptyname(#file_url);
 	}
 }
 
@@ -49,6 +50,7 @@ $thread.url = $picture%url;
 			%sample_url=#sample_url,
 			%tags=csv(#tags," ")
 		);
+		$picture.filename = @emptyname(#file_url);
 	}
 }
 

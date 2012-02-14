@@ -324,10 +324,13 @@ end;
 
 procedure Tmf.OnError(Sender: TObject; Msg: String);
 begin
-  mErrors.Lines.Add(FormatDateTime('hh:nn',Time) + ' ' + Msg);
-  dpErrors.Show;
+  if mErrors.Lines.Count = 0 then
+    mErrors.Lines[0] := FormatDateTime('hh:nn',Time) + ' ' + Msg
+  else
+    mErrors.Lines.Add(FormatDateTime('hh:nn',Time) + ' ' + Msg);
   dsLogs.AutoHide := false;
   dsLogs.Show;
+  dsLogs.ActiveChild := dpErrors;
 end;
 
 procedure Tmf.OnTabClose(ASender: TObject; ATabSheet: TcxTabSheet);
@@ -383,6 +386,7 @@ begin
   begin
     vgCurMain.ClearRows;
     chlbTags.Clear;
+    Exit;
   end;
 
   vgCurMain.BeginUpdate;
