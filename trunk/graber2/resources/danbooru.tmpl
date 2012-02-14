@@ -35,6 +35,7 @@ $thread.url = "$main.url+'post/index.xml?limit=100&tags='+$tag+'&page='+$thread.
 			%sample_url=#sample_url,
 			%tags=csv(#tags," ")
 		);
+		$picture.filename = @emptyname(#file_url);
 	}
 }
 
@@ -56,5 +57,6 @@ $thread.url = "$main.url+'post/index.xml?limit=100&tags='+$tag+'&page='+$thread.
 			%sample_url=#sample_url,
 			%tags=csv(#tags," ")
 		);
+		$picture.filename = @emptyname(#file_url);
 	}
 }
