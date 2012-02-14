@@ -88,6 +88,12 @@ begin
         Password := DecryptString(Password,KeyString);
     end;
 
+    with Formats do
+    begin
+      ListFormat := INI.ReadString('formats','list','$rootdir$\lists\$tag$.ngl');
+      PicFormat := INI.ReadString('formats','picture','$rootdir$\pics\$fname$.$ext$');
+    end;
+
     v := tstringlist.Create;
     INI.ReadSection('IgnoreList',v);
     j := 0;
@@ -141,6 +147,13 @@ begin
       else
         INI.WriteString('Proxy','Password',Password);
     end;
+
+    with Formats do
+    begin
+      INI.WriteString('Formats','List',ListFormat);
+      INI.WriteString('Proxy','Picture',PicFormat);
+    end;
+
   end;
   INI.Free;
 end;

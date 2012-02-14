@@ -15,7 +15,8 @@ uses
   cxCheckBox, cxTextEdit, cxPC, dxBar, dxBarExtItems, cxContainer,
   cxMemo,
   {graber2}
-  common, OpBase, graberU, MyHTTP, AppEvnts;
+  common, OpBase, graberU, MyHTTP, AppEvnts, dxsbar, cxListBox, dxNavBarCollns,
+  dxNavBarBase, dxNavBar, cxInplaceContainer, cxVGrid, cxCheckListBox;
 
 type
 
@@ -105,6 +106,13 @@ type
     mLog: TcxMemo;
     mErrors: TcxMemo;
     ApplicationEvents1: TApplicationEvents;
+    nvCur: TdxNavBar;
+    nbgCurMain: TdxNavBarGroup;
+    nbgCurTags: TdxNavBarGroup;
+    nbgCurMainControl: TdxNavBarGroupControl;
+    vgCurMain: TcxVerticalGrid;
+    nbgCurTagsControl: TdxNavBarGroupControl;
+    chlbTags: TcxCheckListBox;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure gLevel2GetGridView(Sender: TcxGridLevel;
@@ -134,6 +142,7 @@ type
     dsFirstShow: Boolean;
     SttPanel: TMycxTabSheet;
     FCookie: TMyCookieList;
+    CurPic: TTPicture;
     { Private declarations }
   public
     // OldState: TmfState;
@@ -147,6 +156,7 @@ type
     procedure ShowPanels;
     procedure OnError(Sender: TObject; Msg: String);
     procedure Setlang;
+    procedure PicInfo(a: TTPicture);
 
     { Public declarations }
   end;
@@ -156,7 +166,7 @@ var
 
 implementation
 
-uses StartFrame, NewListFrame, LangString, SettingsFrame, GridFrame;
+uses StartFrame, NewListFrame, LangString, SettingsFrame, GridFrame, utils;
 {$R *.dfm}
 
 procedure TMycxTabSheet.OnTimer(Sender: TObject);
@@ -315,6 +325,9 @@ end;
 procedure Tmf.OnError(Sender: TObject; Msg: String);
 begin
   mErrors.Lines.Add(FormatDateTime('hh:nn',Time) + ' ' + Msg);
+  dpErrors.Show;
+  dsLogs.AutoHide := false;
+  dsLogs.Show;
 end;
 
 procedure Tmf.OnTabClose(ASender: TObject; ATabSheet: TcxTabSheet);
@@ -343,13 +356,61 @@ begin
       pcTables.Options := pcTables.Options + [pcoCloseButton];
       bbStartList.Enabled := true;
       bbStartPics.Enabled := true;
+      if not dsTags.AutoHide then
+        dsTags.Show;
     end else
     begin
       //dsTags.Hide;
       bbStartList.Enabled := false;
       bbStartPics.Enabled := false;
-      pcTables.Options := pcTables.Options - [pcoCloseButton]
+      pcTables.Options := pcTables.Options - [pcoCloseButton];
+      dsTags.Hide;
     end;
+  end;
+end;
+
+procedure Tmf.PicInfo(a: TTPicture);
+var
+  i: integer;
+  //r: TcxEditorRow;
+begin
+  if CurPic = a then
+    Exit
+  else
+    CurPic := a;
+
+  if a = nil then
+  begin
+    vgCurMain.ClearRows;
+    chlbTags.Clear;
+  end;
+
+  vgCurMain.BeginUpdate;
+  try
+    vgCurMain.ClearRows;
+    dm.CreateField(vgCurMain,'vgiRName',_RESNAME_,'',ftReadOnly,nil,
+      a.List.Resource.Name);
+    dm.CreateField(vgCurMain,'vgiName',_FILENAME_,'',ftReadOnly,nil,
+      a.PicName + '.' + a.Ext);
+    dm.CreateField(vgCurMain,'vgiSavePath',_SAVEPATH_,'',ftReadOnly,nil,
+      a.FileName);
+    for i := 0 to a.Meta.Count -1 do
+      with a.Meta.Items[i] do
+        dm.CreateField(vgCurMain,'avgi' + Name,Name,
+          '',ftReadOnly,nil,VarToStr(Value));
+  finally
+    vgCurMain.EndUpdate;
+  end;
+
+  chlbTags.Items.BeginUpdate;
+  try
+  chlbTags.Clear;
+
+  for i := 0 to a.Tags.Count-1 do
+    chlbTags.AddItem(a.Tags[i].Name + ' (' + IntTOStr(a.Tags[i].Linked.Count) + ')');
+
+  finally
+    chlbTags.Items.EndUpdate;
   end;
 end;
 
@@ -388,6 +449,7 @@ begin
   f2.ResList.ThreadHandler.Proxy := Globalsettings.Proxy;
   f2.ResList.ThreadHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
   f2.ResList.PicIgnoreList := IgnoreList;
+  f2.OnPicChanged := PicInfo;
   f2.ResList.StartJob(JOB_LIST);
   ShowPanels;
 end;
@@ -575,6 +637,10 @@ begin
   bbSettings.Caption := _SETTINGS_;
   dpLog.Caption := _LOG_;
   dpErrors.Caption := _ERRORS_;
+  dpTags.Caption := _GENERAL_;
+  dpCurTags.Caption := _INFO_;
+  nbgCurMain.Caption := _GENERAL_;
+  nbgCurTags.Caption := _TAGS_;
 end;
 
 procedure Tmf.ShowDs;
@@ -592,6 +658,7 @@ begin
   if not bmbMain.Visible then
     bmbMain.Visible := true;
   pcTables.Change;
+  PicInfo(nil);
   if not dsLogs.AutoHide then
     dsLogs.Visible := true;
 end;
@@ -678,6 +745,7 @@ begin
   dsLogs.AutoHide := true;
   dsLogs.Hide;
   dsTags.Hide;
+  CurPic := nil;
 end;
 
 procedure Tmf.FormDestroy(Sender: TObject);

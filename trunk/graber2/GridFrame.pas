@@ -12,6 +12,7 @@ uses
   dxBar, cxGridCustomPopupMenu, cxGridPopupMenu;
 
 type
+
   TfGrid = class(TFrame)
     GridLevel1: TcxGridLevel;
     Grid: TcxGrid;
@@ -32,9 +33,13 @@ type
     bbFilter: TdxBarButton;
     procedure bbColumnsClick(Sender: TObject);
     procedure bbFilterClick(Sender: TObject);
+    procedure vGridFocusedRecordChanged(Sender: TcxCustomGridTableView;
+      APrevFocusedRecord, AFocusedRecord: TcxCustomGridRecord;
+      ANewItemRecordFocusingChanged: Boolean);
   private
     //FList: TList;
     FFieldList: TStringList;
+    FPicChanged: TPictureEvent;
     //FStartSender: TObject;
 //    FN: Integer;
     //FFirstC: TcxDBGridColumn;
@@ -52,6 +57,7 @@ type
     procedure OnEndPicList(Sender: TObject);
     procedure Relise;
     procedure SetLang;
+    property OnPicChanged: TPictureEvent read FPicChanged write FPicChanged;
     { Public declarations }
   end;
 
@@ -59,7 +65,7 @@ type
   TcxGridPopupMenuAccess = class(TcxGridPopupMenu);
 implementation
 
-uses LangString;
+uses LangString, utils;
 
 {$R *.dfm}
 
@@ -134,6 +140,7 @@ begin
     ResList.OnEndJob := OnEndJob;
     //ResList.OnBeginPicList := OnBeginPicList;
     ResList.OnEndPicList := OnEndPicList;
+    FPicChanged := nil;
   end else
     ResList.Clear;
 end;
@@ -167,8 +174,6 @@ begin
   vGrid.BeginUpdate;
   //if vgrid.
   n := md.CurRec;
-  if n < 0 then
-    n := 0;
   //vgrid.Controller.FocusedRow.Selected := false;
 {  if n <> -1 then
     n := vgrid.ViewData.Records[n].Values[0];   }
@@ -191,8 +196,11 @@ begin
           md.FieldValues['.' + APicture.Meta.Items[i].Name] := APicture.Meta.Items[i].Value;
           md.FieldValues['resname'] := APicture.List.Resource.Name;
           md.FieldValues['label'] := APicture.DisplayLabel;
-          md.FieldValues['id'] := Integer(APicture);
-          md.FieldValues['parent'] := Integer(Apicture.Parent);
+          md.FieldValues['id'] := Integer(APicture.Orig);
+          md.FieldValues['parent'] := Integer(Apicture.Orig.Parent);
+          md.FieldValues['fname'] := APicture.PicName;
+          //md.FieldValues['savename'] := APicture.FileName;
+          md.FieldValues['fext'] := APicture.Ext;
       end;
       md.Post;
     except
@@ -204,7 +212,17 @@ begin
   md.EnableControls;
 //  if vgrid.DataController.RecordCount > 0 then
   //vgrid.DataController.Groups.FullCollapse;
+  if n > -1 then
+    BestFitWidths(vGrid);
   vGrid.EndUpdate;
+
+  if n < 0 then
+  begin
+    BestFitWidths(vGrid);
+    n := 0;
+  end;
+
+  //BestFitWidths(vChilds);
   //md.CurRec := n;
   {    if n <> -1 then
     begin
@@ -277,7 +295,12 @@ begin
   c.Visible := false;
   c.VisibleForCustomization := false;
 
+  c := AddField('fname'); c.Visible := false;
+  c.DataBinding.Field.DisplayLabel := _FILENAME_;
 
+  c := AddField('fext'); c.Visible := false;
+  c.DataBinding.Field.DisplayLabel := _EXTENSION_;
+  //c := AddField('savename');
 
   for i := 0 to FFieldList.Count -1 do
   begin
@@ -296,6 +319,20 @@ procedure TfGrid.SetLang;
 begin
   bbColumns.Caption := _COLUMNS_;
   bbFilter.Caption := _FILTER_;
+end;
+
+procedure TfGrid.vGridFocusedRecordChanged(Sender: TcxCustomGridTableView;
+  APrevFocusedRecord, AFocusedRecord: TcxCustomGridRecord;
+  ANewItemRecordFocusingChanged: Boolean);
+var
+  n: integer;
+
+begin
+  if Assigned(FPicChanged) then
+  begin
+    n := md.FieldValues['id'];
+    FPicChanged(TTPicture(n));
+  end;
 end;
 
 end.

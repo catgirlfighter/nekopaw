@@ -67,9 +67,15 @@ type
     Debug: boolean;
   end;
 
+  TFormatRec = record
+    ListFormat: String;
+    PicFormat: String;
+  end;
+
   TSettingsRec = record
     Proxy: TProxyRec;
     Downl: TDownloadRec;
+    Formats: TFormatRec;
     OneInstance: boolean;
     TrayIcon: boolean;
     HideToTray: boolean;
@@ -196,7 +202,7 @@ type
   TPictureList = class;
   //TResource = class;
 
-  TFieldType = (ftNone, ftString, ftNumber, ftCombo, ftCheck);
+  TFieldType = (ftNone, ftString, ftReadOnly, ftNumber, ftCombo, ftCheck);
 
   PResourceField = ^TResourceField;
 
@@ -386,9 +392,11 @@ type
     FQueueN: Integer;
     FList: TPictureList;
     FDisplayLabel: String;
+    FPicName: String;
     FFileName: String;
     FExt: String;
     FMD5: TMD5Digest;
+    FOrig: TTPicture;
     function GetMD5String: string;
     //FObj: TObject;
   protected
@@ -400,6 +408,7 @@ type
     procedure Clear;
     procedure Assign(Value: TTPicture; Links: boolean = false);
     procedure MakeFileName(Format: String);
+    procedure SetPicName(Value: String);
     property Removed: boolean read FRemoved write SetRemoved;
     property Finished: boolean read FFinished;
     property Checked: boolean read FChecked write FChecked;
@@ -414,6 +423,8 @@ type
     property Ext: String read FExt;
     property MD5: TMD5Digest read FMD5;
     property MD5String: String read GetMD5String;
+    property PicName: String read FPicName write SetPicName;
+    property Orig: TTPicture read FOrig write FOrig;
     //property Obj: TObject read FObj write FObj;
   end;
 
@@ -451,7 +462,7 @@ type
     constructor Create;
     destructor Destroy; override;
     function Add(APicture: TTPicture): Integer;
-    procedure AddPicList(APicList: TPictureList);
+    procedure AddPicList(APicList: TPictureList; orig: boolean);
     function CopyPicture(Pic: TTPicture): TTPicture;
     property Tags: TPictureTagList read FTags;
     property Items;
@@ -521,6 +532,7 @@ type
     FMaxThreadCount: Integer;
     FCurrThreadCount: Integer;
     FJobList: TJobList;
+    FCheckExt: Boolean;
 {    FPerPageMode: Boolean;  }
   protected
     procedure DeclorationEvent(Values: TValueList; LinkedObj: TObject);
@@ -564,6 +576,7 @@ type
     property CurrThreadCount: Integer read FCurrThreadCount;
     property MaxThreadCount: Integer read FMaxThreadCount write FMaxThreadCount;
     property JobList: TJobList read FJobList;
+    property CheckExt: Boolean read FCheckExt;
   end;
 
   TResourceLinkList = class(TList)
@@ -589,7 +602,9 @@ type
     FMaxThreadCount: Integer;
     FIgnoreList: TDSArray;
     FListFileFormat: String;
-    FPicFileFormat: String;
+    //FPicFileFormat: String;
+    //procedure SetPicFileFormat(Value: String);
+    procedure SetOnError(Value: TLogEvent);
   protected
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
     procedure JobFinished(R: TResource);
@@ -597,7 +612,6 @@ type
     procedure SetOnPictureAdd(Value: TPictureEvent);
     procedure OnHandlerFinished(Sender: TObject);
     function CreateJob(t: TDownloadThread): boolean;
-    procedure SetOnError(Value: TLogEvent);
     function GetListFinished: Boolean;
     function CheckDouble(Pic: TTPicture): boolean;
   public
@@ -624,7 +638,7 @@ type
     property MaxThreadCount: Integer read FMaxThreadCount write SetMaxThreadCount;
     property PicIgnoreList: TDSArray read FIgnoreList write FIgnoreList;
     property ListFileForamt: String read FListFileFormat write FListFileFormat;
-    property PicFileFormat: String read FPicFileFormat write FPicFileFormat;
+    //property PicFileFormat: String read FPicFileFormat write SetPicFileFormat;
   end;
 
 implementation
@@ -712,12 +726,15 @@ begin
           else
             rstr := vt2;
         end else
-          rstr := VarAsType(rstr,varDouble);
+          if VarType(rstr) = varDate then
+            rstr := '"' + VarToStr(rstr) + '"'
+          else
+            rstr := VarAsType(rstr,varDouble);
       end;
 
 
       cstr := s[n1] + cstr;
-      s := Replace(s, cstr, rstr, false, true);
+      s := Replace(s, cstr, rstr, true);
 
       n2 := n1 + length(rstr) - 1;
     end;
@@ -1379,7 +1396,11 @@ begin
   FInherit := R.Inherit;
   FFields.Assign(R.Fields);
   if FInherit then
+  begin
     FFields.Assign(R.Parent.Fields, laOr);
+    FPictureList.NameFormat := R.Parent.PictureList.NameFormat;
+  end else
+    FPictureList.NameFormat := R.PictureList.NameFormat;
   FLoginPrompt := R.LoginPrompt;
   FResName := R.Name;
   FSectors.Assign(R.Sectors);
@@ -1683,7 +1704,7 @@ begin
         FJobList[t.JobId].status := JOB_FINISHED;
         if t.PictureList.Count > 0 then
         begin
-          PictureList.AddPicList(t.PictureList);
+          PictureList.AddPicList(t.PictureList,true);
           if Assigned(PictureList.OnEndAddList) then
             PictureList.OnEndAddList(t.PictureList);
         end;
@@ -1837,6 +1858,19 @@ begin
     end;
   Result := false;
 end;
+
+{procedure TResourceList.SetPicFileFormat(Value: string);
+var
+  i: integer;
+
+begin
+  FPicFileFormat := Value;
+  if ListFinished then
+    for i := 0 to Count -1 do
+      with Items[i] do
+        if Inherit then
+          PictureList.NameFormat := Value;
+end; }
 
 function TResourceList.CreateJob(t: TDownloadThread): boolean;
 var
@@ -1997,11 +2031,15 @@ begin
         ThreadHandler.CreateThreads;
         for i := 0 to Count - 1 do
         begin
-          Items[i].MaxThreadCount := MaxThreadCount;
-          Items[i].PictureList.NameFormat := PicFileFormat;
-          Items[i].StartJob(JobType);
-          if not FPageMode and (not Items[i].JobList.eol) then
-            ThreadHandler.CheckIdle;
+          with Items[i] do
+          begin
+            MaxThreadCount := MaxThreadCount;
+            {if Inherit then
+              PictureList.NameFormat := PicFileFormat;     }
+            StartJob(JobType);
+            if not FPageMode and (not JobList.eol) then
+              ThreadHandler.CheckIdle;
+          end;
         end;
 
         if Assigned(FOnStartJob) then
@@ -2236,7 +2274,7 @@ begin
   case ValS of
     '#':
       if Assigned(LinkedObj) and (LinkedObj is TTag) then
-        Result := (LinkedObj as TTag).Attrs.Value(Value);
+        Result := ClearHTML((LinkedObj as TTag).Attrs.Value(Value));
     '$':
       if Value = 'main.url' then
         Result := HTTPRec.DefUrl
@@ -2252,6 +2290,9 @@ begin
         if s = 'calc' then
           Result := CalcValue(trim(CalcValue(CopyFromTo(Value, '(', ')'), VE,
             LinkedObj, true),'"'), VE, LinkedObj)
+        else if s = 'emptyname' then
+          Result := emptyname(CalcValue(StringDecode(CopyFromTo(Value, '(', ')')), VE,
+            LinkedObj))
         else if s = 'unixtime' then
           Result := UnixToDateTime(CalcValue(CopyFromTo(Value, '(', ')'), VE,
             LinkedObj))
@@ -2344,6 +2385,8 @@ procedure TDownloadThread.DE(Values: TValueList; LinkedObj: TObject);
       ProcHTTP
     else if Name = '$picture.displaylabel' then
       FPicture.DisplayLabel := Value
+    else if Name = '$picture.filename' then
+      FPicture.PicName := Value
     else if Name = '@addpicture' then
     begin
       {if FAddPic then
@@ -2532,24 +2575,24 @@ begin
 end;
 
 function TPictureTagList.Add(TagName: String; p: TTPicture): TPictureTag;
+var
+  n: integer;
 begin
-  if Find(TagName) > -1 then
+  n := Find(TagName);
+  if n = -1 then
   begin
-    Result := nil;
-    Exit;
-  end;
-
-  Result := TPictureTag.Create;
-  Result.Attribute := taNone;
-  Result.Name := TagName;
+    Result := TPictureTag.Create;
+    Result.Attribute := taNone;
+    Result.Name := TagName;
+    inherited Add(Result)
+  end else
+    Result := Items[n];
 
   if Assigned(p) then
   begin
     p.Tags.Add(Result);
     Result.Linked.Add(p);
   end;
-
-  inherited Add(Result);
 end;
 
 function TPictureTagList.Find(TagName: String): integer;
@@ -2596,6 +2639,8 @@ begin
   FChecked := Value.Checked;
   FFinished := Value.Finished;
   FDisplayLabel := Value.DisplayLabel;
+  FPicName := Value.PicName;
+  FExt := Value.Ext;
   FMeta.Assign(Value.Meta);
   FRemoved := false;
   if Links then
@@ -2645,23 +2690,85 @@ end;
 
 // make file name
 procedure TTPicture.MakeFileName(Format: String);
+  //check names
+  function ParamCheck(S: String; main: boolean): String;
+  var
+    n: TListValue;
 
-  function ParamCheck(S: String): String;
   begin
+    if main then
+      if SameText(s,'rname') then
+        Result := List.Resource.Name
+      else if SameText(s,'fname') then
+        Result := FPicName
+      else if SameText(s,'ext') then
+        Result := Ext
+      else if SameText(s,'rootdir') then
+        Result := ExtractFileDir(paramstr(0))
+      else Result := S
+    else
+    begin
+      n := Meta.FindItem(s);
 
+      if n = nil then
+        Result := s
+      else
+        Result := VarToStr(n.Value);
+    end;
   end;
-
+  //check keywords: $main$, %editional%, if b then result = '' if key = ''
   function ParseValues(S: String; b: boolean = true): String;
+  var
+    i,n: integer;
+    c: boolean;
+    key,rsl: string;
   begin
+    c := false;
+    n := CharPosEx(s,['$','%'],[]);
+
+    while n <> 0 do
+    begin
+      i := n;
+      n := CharPosEx(s,['$','%'],[],i + 1);
+
+      if n = 0 then
+        Break
+      else if s[i] <> s[n] then
+      begin
+        i := n;
+        Continue;
+      end;
+
+      key := Copy(s,i+1,n-i-1);
+      rsl := ParamCheck(key,s[i]='$');
+
+      if rsl <> key then
+      begin
+        if not c and (rsl <> '') then
+          c := true;
+        s := Replace(s,s[i] + key + s[n],rsl,true);
+      end else
+      begin
+        i := n;
+        Continue;
+      end;
+
+      n := CharPosEx(s,['$','%'],[], i + 1);
+    end;
+
+    if b and not c then
+      Result := ''
+    else
+      Result := s;
 
   end;
+
   //check "<>" sections
   function ParseSections(s: string): string;
   var
     i,n,l: integer;
-    tmp: string;
   begin
-    s := ParseValues(s,true);
+    s := ParseValues(s,false);
 
     l := Length(s);
     n := PosEx('<',s);
@@ -2703,6 +2810,12 @@ begin
     Parent.Linked.Add(Self);
 end;
 
+procedure TTPicture.SetPicName(Value: String);
+begin
+  FExt := trim(ExtractFileExt(Value),'.');
+  FPicName := ChangeFileExt(Value,'');
+end;
+
 procedure TTPicture.SetRemoved(Value: boolean);
 begin
   FRemoved := Value;
@@ -2738,31 +2851,38 @@ function TPictureList.Add(APicture: TTPicture): Integer;
 begin
   Result := inherited Add(APicture);
   APicture.List := Self;
+  APicture.MakeFileName(FNameFormat);
   if Assigned(FOnAddPicture) then
     FOnAddPicture(APicture);
 end;
 
-procedure TPictureList.AddPicList(APicList: TPictureList);
+procedure TPictureList.AddPicList(APicList: TPictureList; orig: boolean);
 var
   i,j: integer;
-  t: TTPicture;
+  t,ch: TTPicture;
 
 begin
   i := 0;
-  while i < APicList.Count -1 do
+  while i < APicList.Count do
     if not Assigned(FCheckDouble) or not CheckDouble(APicList[i]) then
     begin
       if not Assigned(APicList[i].Parent) then
       begin
         t := CopyPicture(APicList[i]);
+        if orig then
+          APicList[i].Orig := t;
         for j := 0 to APicList[i].Linked.Count-1 do
         if not CheckDouble(APicList[i].Linked[j]) then begin
-          t.Linked.Add(APicList[i].Linked[j]);
-          t.Linked[j].Parent := t;
+          ch := CopyPicture(APicList[i].Linked[j]);
+          if orig then
+            APicList[i].Linked[j].Orig := ch;
+          t.Linked.Add(ch);
+          ch.Parent := t;
+
         end;
       end;
       inc(i);
-    end else
+    end else if orig then
       APicList.Delete(i);
 end;
 

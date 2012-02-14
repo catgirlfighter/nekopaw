@@ -71,6 +71,12 @@ var
   _STOPPICS_: String = 'Stop download pictures';
   _NEWTABCAPTION_: String = 'New';
   _COUNT_: String = 'Count';
+  _NAMEFORMAT_: String = 'Save file format';
+  _SAVEPATH_: String = 'save path';
+  _FILENAME_: String = 'File name';
+  _EXTENSION_: String = 'Extension';
+  _INFO_: String = 'Pic info';
+  _TAGS_: String = 'Tags';
 
 procedure LoadLang(FileName: String);
 
@@ -149,6 +155,12 @@ begin
   _STOPPICS_ := INI.ReadString('lang','_STOPPICS_',_STOPPICS_);
   _NEWTABCAPTION_ := INI.ReadString('lang','_NEWTABCAPTION_',_NEWTABCAPTION_);
   _COUNT_ := INI.ReadString('lang','_COUNT_',_COUNT_);
+  _NAMEFORMAT_ := INI.ReadString('lang','_NAMEFORMAT_',_NAMEFORMAT_);
+  _SAVEPATH_ :=  INI.ReadString('lang','_SAVEPATH_',_SAVEPATH_);
+  _FILENAME_ :=  INI.ReadString('lang','_FILENAME_',_FILENAME_);
+  _EXTENSION_ :=  INI.ReadString('lang','_EXTENSION_',_EXTENSION_);
+  _INFO_ :=  INI.ReadString('lang','_INFO_',_INFO_);
+  _TAGS_ :=  INI.ReadString('lang','_TAGS_',_TAGS_);
   INI.Free;
 end;
 
