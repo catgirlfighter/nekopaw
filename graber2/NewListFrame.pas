@@ -38,17 +38,10 @@ type
     tvFullcName: TcxGridColumn;
     lvlFull1: TcxGridLevel;
     tvFullID: TcxGridColumn;
-    EditRepository: TcxEditRepository;
     tvFullcIcon: TcxGridColumn;
     gRescID: TcxGridColumn;
     tgRescIcon: TcxGridColumn;
-    erLabel: TcxEditRepositoryLabel;
-    erButton: TcxEditRepositoryButtonItem;
     vgSettings: TcxVerticalGrid;
-    erAuthButton: TcxEditRepositoryButtonItem;
-    erCheckBox: TcxEditRepositoryCheckBoxItem;
-    erSpinEdit: TcxEditRepositorySpinItem;
-    erCombo: TcxEditRepositoryComboBoxItem;
     btnNext: TcxButton;
     procedure gRescButtonGetProperties(Sender: TcxCustomGridTableItem;
       ARecord: TcxCustomGridRecord; var AProperties: TcxCustomEditProperties);
@@ -77,9 +70,6 @@ type
     procedure LoadItems;
     procedure ResetItems;
     procedure SetLang;
-    function CreateField(AName,ACaption,ComboItems: string;
-      fieldtype: TFieldType; Category: TcxCategoryRow; DefaultValue: Variant): TcxEditorRow;
-    function CreateCategory(AName, ACaption: String): TcxCategoryRow;
     { Public declarations }
   end;
 
@@ -88,7 +78,7 @@ var
 
 implementation
 
-uses OpBase, LangString;
+uses OpBase, LangString, utils;
 
 {$R *.dfm}
 
@@ -98,17 +88,6 @@ begin
     Result := n1
   else
     Result := n2;
-end;
-
-procedure StringToList(s: string; list: TStrings);
-var
-  tmp: string;
-begin
-  while s <> '' do
-  begin
-    tmp := GetNextS(s, ',');
-    list.Add(tmp);
-  end;
 end;
 
 procedure TfNewList.AddItem(index: Integer);
@@ -140,6 +119,7 @@ begin
     end
   else
   begin
+    tvRes.Controller.FocusedRowIndex := 0;
     pcMain.ActivePage := tsSettings;
     Application.MainForm.ActiveControl := vgSettings;
     vgSettings.RowByName('vgitag').Focused := true;
@@ -152,41 +132,12 @@ begin
     pcMain.ActivePage := tsList;
 end;
 
-function TfNewList.CreateCategory(AName, ACaption: String): TcxCategoryRow;
-begin
-  Result := vgSettings.Add(TcxCategoryRow) as TcxCategoryRow;
-  Result.Name := AName;
-  Result.Properties.Caption := ACaption;
-end;
-
-function TfNewList.CreateField(AName,ACaption,ComboItems: string;
-  FieldType: TFieldType; Category: TcxCategoryRow; DefaultValue: Variant): TcxEditorRow;
-begin
-  Result := vgSettings.AddChild(Category, TcxEditorRow) as TcxEditorRow;
-  Result.Name := AName;
-  Result.Properties.Caption := ACaption;
-  case FieldType of
-    ftString:
-      ;
-    ftNumber:
-      Result.Properties.RepositoryItem := erSpinEdit;
-    ftCombo:
-      begin
-        erCombo.Properties.Items.Clear;
-        StringToList(comboitems, erCombo.Properties.Items);
-        Result.Properties.RepositoryItem := erCombo;
-      end;
-    ftCheck:
-      Result.Properties.RepositoryItem := erCheckBox;
-  end;
-  Result.Properties.Value := DefaultValue;
-end;
-
 procedure TfNewList.CreateSettings(n: Integer);
 var
   c: TcxCategoryRow;
   //r: TcxEditorRow;
   i, d: Integer;
+  s: string;
 
 begin
   if vgSettings.Rows.Count > 0 then
@@ -196,14 +147,24 @@ begin
   vgSettings.Tag := n;
   if n = 0 then
   begin
-    c := CreateCategory('vgimain',_MAINCONFIG_);
-    CreateField('vgitag',_TAGSTRING_,'',ftString,c,FullResList[n].Fields['tag']);
+    c := dm.CreateCategory(vgSettings,'vgimain',_MAINCONFIG_);
+    dm.CreateField(vgSettings,'vgitag',_TAGSTRING_,'',ftString,c,FullResList[n].Fields['tag']);
+    dm.CreateField(vgSettings,'vgidwpath',_SAVEPATH_,'',ftString,c,FullResList[n].PictureList.NameFormat);
   end
   else
-  begin
-    c := CreateCategory('vgimain',_MAINCONFIG_);
-    CreateField('vgiinherit',_INHERIT_,'',ftCheck,c,FullResList[n].Inherit);
-    CreateField('vgitag',_TAGSTRING_,'',ftString,c,FullResList[n].Fields['tag']);
+  with FullResList[n] do begin
+    c := dm.CreateCategory(vgSettings,'vgimain',_MAINCONFIG_);
+    dm.CreateField(vgSettings,'vgiinherit',_INHERIT_,'',ftCheck,c,Inherit);
+
+    s := VarToStr(Fields['tag']);
+    if (s = '') and Inherit then
+      s := VarToStr(FullResList[0].Fields['tag']);
+    dm.CreateField(vgSettings,'vgitag',_TAGSTRING_,'',ftString,c,s);
+
+    s := PictureList.NameFormat;
+    if (s = '') and Inherit then
+      s := FullResList[0].PictureList.NameFormat;
+    dm.CreateField(vgSettings,'vgidwpath',_SAVEPATH_,'',ftString,c,s);
 
     d := FullResList[0].Fields.Count;
 
@@ -216,9 +177,9 @@ begin
           if Items[i].restype <> ftNone then
           begin
             if not Assigned(c) then
-              c := CreateCategory('vgieditional',_EDITIONALCONFIG_);
+              c := dm.CreateCategory(vgSettings,'vgieditional',_EDITIONALCONFIG_);
             with FullResList[n].Fields.Items[i]^ do
-              CreateField('evgi' + resname,resname,resitems,restype,c,resvalue);
+              dm.CreateField(vgSettings,'evgi' + resname,resname,resitems,restype,c,resvalue);
 
                ///derp
           end;
@@ -231,7 +192,7 @@ procedure TfNewList.gRescButtonGetProperties(Sender: TcxCustomGridTableItem;
   ARecord: TcxCustomGridRecord; var AProperties: TcxCustomEditProperties);
 begin
   if ARecord.Values[0] = 0 then
-    AProperties := erLabel.Properties;
+    AProperties := dm.erLabel.Properties;
 end;
 
 procedure TfNewList.gRescButtonPropertiesButtonClick(Sender: TObject;
@@ -245,7 +206,7 @@ procedure TfNewList.gRescNameGetProperties(Sender: TcxCustomGridTableItem;
 begin
   if (ARecord.Values[0] <> null) and FullResList[ARecord.Values[0]]
     .LoginPrompt then
-    AProperties := erAuthButton.Properties;
+    AProperties := dm.erAuthButton.Properties;
   // ARecord.Values[2] := ARecord.Values[0];
 end;
 
@@ -339,14 +300,20 @@ begin
   begin
     Fields['tag'] := (vgSettings.RowByName('vgitag') as TcxEditorRow)
       .Properties.Value;
+
+    PictureList.NameFormat := (vgSettings.RowByName('vgidwpath') as TcxEditorRow)
+      .Properties.Value;
+
     if vgSettings.Tag > 0 then
     begin
       Inherit := (vgSettings.RowByName('vgiinherit') as TcxEditorRow)
         .Properties.Value;
       d := FullResList[0].Fields.Count;
-      if FullResList[n].Fields.Count > d then
-        with FullResList[n].Fields do
+      if Fields.Count > d then
+        with Fields do
           for i := d to Count - 1 do
+          if Items[i].restype <> ftNone then
+
           begin
             Items[i].resvalue := (vgSettings.RowByName('evgi' + Items[i].resname)
               as TcxEditorRow).Properties.Value;

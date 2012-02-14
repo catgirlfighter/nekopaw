@@ -325,8 +325,8 @@ var
     lastattr := '';
     tagname := '';
     stat := 1;
-    adata := REPLACE(adata, #13#10, ' ', false, true);
-    adata := REPLACE(adata, #9, ' ', false, true);
+    adata := REPLACE(adata, #13#10, ' ', true);
+    adata := REPLACE(adata, #9, ' ', true);
     // adata := REPLACE(adata,'  ',' ',false,true);
     adata := trim(adata) + ' ';
     li := 1;

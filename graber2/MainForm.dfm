@@ -36,9 +36,9 @@ object mf: Tmf
       OriginalWidth = 300
       OriginalHeight = 200
       object dsTable: TdxLayoutDockSite
-        Left = 150
+        Left = 185
         Top = 0
-        Width = 458
+        Width = 423
         Height = 236
         DockType = 1
         OriginalWidth = 300
@@ -46,8 +46,9 @@ object mf: Tmf
         object dxLayoutDockSite2: TdxLayoutDockSite
           Left = 0
           Top = 0
-          Width = 458
+          Width = 423
           Height = 236
+          ExplicitWidth = 458
           DockType = 1
           OriginalWidth = 300
           OriginalHeight = 200
@@ -55,30 +56,30 @@ object mf: Tmf
         object dpTable: TdxDockPanel
           Left = 0
           Top = 0
-          Width = 458
+          Width = 423
           Height = 236
           AllowFloating = False
           AutoHide = False
           Caption = 'dpTable'
           Dockable = False
           ShowCaption = False
+          ExplicitWidth = 458
           DockType = 1
           OriginalWidth = 185
           OriginalHeight = 140
           object pcTables: TcxPageControl
             Left = 0
             Top = 0
-            Width = 454
+            Width = 419
             Height = 232
             Align = alClient
             Images = il
             Options = [pcoAlwaysShowGoDialogButton, pcoCloseButton, pcoGradient, pcoGradientClientArea, pcoRedrawOnResize]
             TabOrder = 0
             OnChange = pcTablesChange
-            ExplicitLeft = 2
-            ExplicitTop = -4
+            ExplicitWidth = 454
             ClientRectBottom = 232
-            ClientRectRight = 454
+            ClientRectRight = 419
             ClientRectTop = 0
           end
         end
@@ -86,42 +87,119 @@ object mf: Tmf
       object dsTags: TdxTabContainerDockSite
         Left = 0
         Top = 0
-        Width = 150
+        Width = 185
         Height = 236
-        ActiveChildIndex = 0
+        ActiveChildIndex = 1
         AllowFloating = False
         AutoHide = False
         Dockable = False
         ShowCaption = False
         TabsPosition = tctpTop
         DockType = 2
-        OriginalWidth = 150
+        OriginalWidth = 185
         OriginalHeight = 140
         object dpTags: TdxDockPanel
           Left = 0
           Top = 0
-          Width = 146
+          Width = 181
           Height = 208
           AllowFloating = False
           AutoHide = False
           Caption = 'dpTags'
           Dockable = False
           DockType = 1
-          OriginalWidth = 150
+          OriginalWidth = 185
           OriginalHeight = 140
         end
         object dpCurTags: TdxDockPanel
           Left = 0
           Top = 0
-          Width = 146
+          Width = 181
           Height = 208
           AllowFloating = False
           AutoHide = False
           Caption = 'dpCurTags'
           Dockable = False
           DockType = 1
-          OriginalWidth = 150
+          OriginalWidth = 185
           OriginalHeight = 140
+          object nvCur: TdxNavBar
+            Left = 0
+            Top = 0
+            Width = 181
+            Height = 208
+            Align = alClient
+            ActiveGroupIndex = 0
+            TabOrder = 0
+            View = 1
+            ExplicitLeft = -2
+            ExplicitTop = -4
+            object nbgCurMain: TdxNavBarGroup
+              Caption = 'nbgCurMain'
+              SelectedLinkIndex = -1
+              TopVisibleLinkIndex = 0
+              OptionsGroupControl.ShowControl = True
+              OptionsGroupControl.UseControl = True
+              Links = <>
+            end
+            object nbgCurTags: TdxNavBarGroup
+              Caption = 'nbgCurTags'
+              SelectedLinkIndex = -1
+              TopVisibleLinkIndex = 0
+              OptionsGroupControl.ShowControl = True
+              OptionsGroupControl.UseControl = True
+              Links = <>
+            end
+            object nbgCurMainControl: TdxNavBarGroupControl
+              Left = 0
+              Top = 19
+              Width = 181
+              Height = 170
+              Caption = 'nbgCurMainControl'
+              TabOrder = 3
+              GroupIndex = 0
+              OriginalHeight = 41
+              object vgCurMain: TcxVerticalGrid
+                Left = 0
+                Top = 0
+                Width = 181
+                Height = 170
+                Align = alClient
+                OptionsView.RowHeaderWidth = 86
+                TabOrder = 0
+                ExplicitLeft = 48
+                ExplicitTop = 48
+                ExplicitWidth = 150
+                ExplicitHeight = 200
+                Version = 1
+              end
+            end
+            object nbgCurTagsControl: TdxNavBarGroupControl
+              Left = 0
+              Top = 38
+              Width = 181
+              Height = 170
+              Caption = 'nbgCurTagsControl'
+              TabOrder = 5
+              GroupIndex = 1
+              OriginalHeight = 41
+              object chlbTags: TcxCheckListBox
+                Left = 0
+                Top = 0
+                Width = 181
+                Height = 170
+                Align = alClient
+                EditValueFormat = cvfCaptions
+                Items = <>
+                Sorted = True
+                TabOrder = 0
+                ExplicitLeft = 96
+                ExplicitTop = 56
+                ExplicitWidth = 121
+                ExplicitHeight = 97
+              end
+            end
+          end
         end
       end
     end

@@ -16,7 +16,8 @@ uses
   MyHTTP in 'MyHTTP.pas',
   AES in 'AES.pas',
   ElAES in 'ElAES.pas',
-  EncryptStrings in 'EncryptStrings.pas';
+  EncryptStrings in 'EncryptStrings.pas',
+  utils in 'utils.pas' {dm: TDataModule};
 
 {$R *.res}
 
@@ -29,8 +30,11 @@ begin
   Application.Title := 'nekopaw grabber';
 
   FullResList.LoadList(rootdir + '\resources');
+  FullResList[0].PictureList.NameFormat := GlobalSettings.Formats.PicFormat;
+  //FullResList.PicFileFormat := GlobalSettings.Formats.PicFormat;
 
   Application.CreateForm(Tmf, mf);
+  Application.CreateForm(Tdm, dm);
   Application.Run;
 
 end.

@@ -39,6 +39,7 @@ object fGrid: TfGrid
     end
     object vGrid: TcxGridDBTableView
       NavigatorButtons.ConfirmDelete = False
+      OnFocusedRecordChanged = vGridFocusedRecordChanged
       DataController.DataSource = ds
       DataController.KeyFieldNames = 'id'
       DataController.Summary.DefaultGroupSummaryItems = <

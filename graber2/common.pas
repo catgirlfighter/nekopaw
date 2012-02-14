@@ -11,7 +11,7 @@ type
   TArrayOfString = array of string;
   TSetOfChar = Set of Char;
 
-function Replace(src, s1, s2: string; rpslashes: boolean = false;
+function Replace(src, AFrom, ATo: string;
   rpall: boolean = false): string;
 function emptyname(s: string): string;
 function deleteids(s: string; slsh: boolean = false): string;
@@ -67,6 +67,7 @@ function MathCalcStr(s: string): variant;
 function DateTimeStrEval(const DateTimeFormat: string;
   const DateTimeStr: string; locale: string): TDateTime;
 function nullstr(Value: Variant): Variant;
+function ifn(b: boolean; thn, els: variant): variant;
 
 implementation
 
@@ -316,36 +317,29 @@ begin
   Result := s;
 end;
 
-function Replace(src, s1, s2: string; rpslashes: boolean = false;
+function Replace(src, AFrom, ATo: string;
   rpall: boolean = false): string;
 var
   n: Integer;
 begin
+
+  if AFrom = ATo then
+  begin
+    Result := src;
+    Exit;
+  end;
+
   Result := '';
-  n := pos(s1, src);
+  n := pos(AFrom, src);
 
   while n > 0 do
   begin
-    if (copy(src, n, length(s2)) = s2) and rpall and rpslashes then
-      Result := Result + copy(src, 1, n - 1)
-    else
-      Result := Result + copy(src, 1, n - 1) + s2;
-    Delete(src, 1, n + length(s1) - 1);
+    Result := Result + copy(src, 1, n - 1) + Ato;
+    Delete(src, 1, n + length(AFrom) - 1);
     if rpall then
-      n := pos(s1, src)
+      n := pos(AFrom, src)
     else
-    begin
-      if rpslashes then
-      begin
-        n := pos('/', src);
-        while n > 0 do
-        begin
-          Delete(src, 1, n);
-          n := pos('/', src);
-        end;
-      end;
       n := 0;
-    end;
   end;
   Result := Result + src;
 end;
@@ -1791,6 +1785,14 @@ begin
     Result := ''
   else
     Result := Value;
+end;
+
+function ifn(b: boolean; thn, els: variant): variant;
+begin
+  if b then
+    result := thn
+  else
+    result:= els;
 end;
 
 end.
