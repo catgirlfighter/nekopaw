@@ -24,6 +24,8 @@ object mf: Tmf
     Width = 608
     Height = 386
     Align = alClient
+    ExplicitTop = 28
+    ExplicitHeight = 384
     DockType = 0
     OriginalWidth = 608
     OriginalHeight = 386
@@ -48,7 +50,6 @@ object mf: Tmf
           Top = 0
           Width = 423
           Height = 236
-          ExplicitWidth = 458
           DockType = 1
           OriginalWidth = 300
           OriginalHeight = 200
@@ -63,7 +64,6 @@ object mf: Tmf
           Caption = 'dpTable'
           Dockable = False
           ShowCaption = False
-          ExplicitWidth = 458
           DockType = 1
           OriginalWidth = 185
           OriginalHeight = 140
@@ -77,7 +77,7 @@ object mf: Tmf
             Options = [pcoAlwaysShowGoDialogButton, pcoCloseButton, pcoGradient, pcoGradientClientArea, pcoRedrawOnResize]
             TabOrder = 0
             OnChange = pcTablesChange
-            ExplicitWidth = 454
+            ExplicitHeight = 230
             ClientRectBottom = 232
             ClientRectRight = 419
             ClientRectTop = 0
@@ -132,8 +132,7 @@ object mf: Tmf
             ActiveGroupIndex = 0
             TabOrder = 0
             View = 1
-            ExplicitLeft = -2
-            ExplicitTop = -4
+            ExplicitHeight = 200
             object nbgCurMain: TdxNavBarGroup
               Caption = 'nbgCurMain'
               SelectedLinkIndex = -1
@@ -156,7 +155,7 @@ object mf: Tmf
               Width = 181
               Height = 170
               Caption = 'nbgCurMainControl'
-              TabOrder = 3
+              TabOrder = 2
               GroupIndex = 0
               OriginalHeight = 41
               object vgCurMain: TcxVerticalGrid
@@ -167,10 +166,6 @@ object mf: Tmf
                 Align = alClient
                 OptionsView.RowHeaderWidth = 86
                 TabOrder = 0
-                ExplicitLeft = 48
-                ExplicitTop = 48
-                ExplicitWidth = 150
-                ExplicitHeight = 200
                 Version = 1
               end
             end
@@ -193,10 +188,6 @@ object mf: Tmf
                 Items = <>
                 Sorted = True
                 TabOrder = 0
-                ExplicitLeft = 96
-                ExplicitTop = 56
-                ExplicitWidth = 121
-                ExplicitHeight = 97
               end
             end
           end
@@ -213,6 +204,7 @@ object mf: Tmf
       AutoHide = False
       CaptionButtons = [cbMaximize, cbHide]
       Dockable = False
+      ExplicitTop = 234
       DockType = 5
       OriginalWidth = 185
       OriginalHeight = 150
@@ -225,6 +217,7 @@ object mf: Tmf
         AutoHide = False
         Caption = 'dpLog'
         Dockable = False
+        ExplicitHeight = 92
         DockType = 1
         OriginalWidth = 185
         OriginalHeight = 150
@@ -236,6 +229,7 @@ object mf: Tmf
           Properties.ScrollBars = ssVertical
           Style.Color = clInfoBk
           TabOrder = 0
+          ExplicitHeight = 92
           Height = 102
           Width = 604
         end
@@ -249,6 +243,7 @@ object mf: Tmf
         AutoHide = False
         Caption = 'dpErrors'
         Dockable = False
+        ExplicitHeight = 92
         DockType = 1
         OriginalWidth = 185
         OriginalHeight = 150
@@ -260,6 +255,7 @@ object mf: Tmf
           Properties.ScrollBars = ssVertical
           Style.Color = 14803455
           TabOrder = 0
+          ExplicitHeight = 92
           Height = 102
           Width = 604
         end
@@ -478,6 +474,7 @@ object mf: Tmf
       end>
   end
   object cxLookAndFeelController1: TcxLookAndFeelController
+    NativeStyle = False
     Left = 136
     Top = 72
   end
