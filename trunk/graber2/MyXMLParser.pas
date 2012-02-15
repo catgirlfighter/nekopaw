@@ -194,7 +194,7 @@ begin
   TagString := lowercase(TagString);
   if Name = TagString then
   begin
-    Result := Self;
+    Result := Self.Parent;
     Exit;
   end else
   begin
@@ -218,8 +218,8 @@ end;
 procedure TTag.SetText(Value: String);
 begin
   FText := Value;
-  if Assigned(FParent) then
-    FParent.Text := FParent.Text + Value;
+  {if Assigned(FParent) then
+    FParent.Text := FParent.Text + Value;    }
 end;
 
 function TAttrList.GetAttr(AValue: Integer): TAttr;

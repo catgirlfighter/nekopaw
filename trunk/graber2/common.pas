@@ -1397,12 +1397,24 @@ const
             if op then
               raise Exception.Create(Format(_OPERATOR_MISSED_, [i,s[i],s]));
 
-            n := CharPos(s, s[i], [], i + 1);
+            Result := '';
 
-            if n = 0 then
-              raise Exception.Create(Format(_SYMBOL_MISSED_, [s[i], i, s[i], s]));
+            while true do
+            begin
+              n := CharPos(s, s[i], [], i + 1);
 
-            Result := copy(s, i + 1, n - i - 1);
+              if n = 0 then
+                raise Exception.Create(Format(_SYMBOL_MISSED_, [s[i], i, s[i], s]));
+
+              if (n < l) and (s[n + 1] = s[n]) then
+              begin
+                Result := Result + copy(s, i + 1, n - i);
+                i := n + 1;
+              end else
+                Break;
+            end;
+
+            Result := Result + copy(s, i + 1, n - i - 1);
 
             i := n + 1;
 
