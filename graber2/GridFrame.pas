@@ -156,6 +156,7 @@ procedure TfGrid.OnEndJob(Sender: TObject);
 begin
   PostMessage(Application.MainForm.Handle,CM_ENDJOB,Integer(Self.Parent),0);
   sBar.Panels[0].Text := '';
+  BestFitWidths(vGrid);
 end;
 
 procedure TfGrid.OnEndPicList(Sender: TObject);
@@ -212,13 +213,13 @@ begin
   md.EnableControls;
 //  if vgrid.DataController.RecordCount > 0 then
   //vgrid.DataController.Groups.FullCollapse;
-  if n > -1 then
-    BestFitWidths(vGrid);
+{  if n > -1 then
+    BestFitWidths(vGrid); }
   vGrid.EndUpdate;
 
   if n < 0 then
   begin
-    BestFitWidths(vGrid);
+    //BestFitWidths(vGrid);
     n := 0;
   end;
 

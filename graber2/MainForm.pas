@@ -399,7 +399,7 @@ begin
     dm.CreateField(vgCurMain,'vgiSavePath',_SAVEPATH_,'',ftReadOnly,nil,
       a.FileName);
     for i := 0 to a.Meta.Count -1 do
-      with a.Meta.Items[i] do
+      with a.Meta.Items[i]^ do
         dm.CreateField(vgCurMain,'avgi' + Name,Name,
           '',ftReadOnly,nil,VarToStr(Value));
   finally

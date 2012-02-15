@@ -91,7 +91,7 @@ type
     Counter, Count: integer;
   end;
 
-  TListValue = class(TObject)
+  {TListValue = class(TObject)
   private
     FName: String;
     FValue: Variant;
@@ -99,24 +99,31 @@ type
     constructor Create;
     property Name: String read FName write FName;
     property Value: Variant read FValue write FValue;
+  end; }
+
+  PListValue = ^TListValue;
+
+  TListValue = record
+    Name: String;
+    Value: Variant;
   end;
 
   TValueList = class(TList)
   private
     FNodouble: boolean;
   protected
-    function Get(Index: integer): TListValue;
+    function Get(Index: integer): PListValue;
     function GetValue(ItemName: String): Variant;
     procedure SetValue(ItemName: String; Value: Variant); virtual;
-    function FindItem(ItemName: String): TListValue;
+    function FindItem(ItemName: String): PListValue;
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
     destructor Destroy; override;
     procedure Assign(List: TValueList; AOperator: TListAssignOp = laCopy);
     constructor Create;
 //    procedure Add(ItemName: String; Value: Variant);
-    property Items[Index: integer]: TListValue read Get;
-    property ItemByName[ItemName: String]: TListValue read FindItem;
+    property Items[Index: integer]: PListValue read Get;
+    property ItemByName[ItemName: String]: PListValue read FindItem;
     property Values[ItemName: String]: Variant read GetValue
       write SetValue; default;
     property Count;
@@ -253,6 +260,7 @@ type
     FSectors: TValueList;
     FXML: TMyXMLParser;
     FPicture: TTPicture;
+    FLnkPic: TTPicture;
     FSTOPERROR: Boolean;
     FJobId: Integer;
     //FPicLink: TTPicture;
@@ -304,6 +312,7 @@ type
     property PictureList: TPictureList read FPicList {write FPictureList};
     property STOPERROR: Boolean read FSTOPERROR write FSTOPERROR;
     property JobId: integer read FJobId write FJobId;
+    property LnkPic: TTPicture read FLnkPic write FLnkPic;
   end;
 
   TJobEvent = function(t: TDownloadThread): boolean of object;
@@ -532,7 +541,6 @@ type
     FMaxThreadCount: Integer;
     FCurrThreadCount: Integer;
     FJobList: TJobList;
-    FCheckExt: Boolean;
 {    FPerPageMode: Boolean;  }
   protected
     procedure DeclorationEvent(Values: TValueList; LinkedObj: TObject);
@@ -576,7 +584,6 @@ type
     property CurrThreadCount: Integer read FCurrThreadCount;
     property MaxThreadCount: Integer read FMaxThreadCount write FMaxThreadCount;
     property JobList: TJobList read FJobList;
-    property CheckExt: Boolean read FCheckExt;
   end;
 
   TResourceLinkList = class(TList)
@@ -589,6 +596,7 @@ type
   TResourceList = class(TResourceLinkList)
   private
     FThreadHandler: TThreadHandler;
+    FDwnldHandler: TThreadHandler;
     FOnAddPicture: TPictureEvent;
     FOnStartJob: TNotifyEvent;
     FOnEndJob: TNotifyEvent;
@@ -614,6 +622,7 @@ type
     function CreateJob(t: TDownloadThread): boolean;
     function GetListFinished: Boolean;
     function CheckDouble(Pic: TTPicture): boolean;
+    function CreateDWNLDJob(t: TDownloadThread): boolean;
   public
     constructor Create;
     destructor Destroy; override;
@@ -646,6 +655,20 @@ implementation
 uses LangString, common;
 
 function CalcValue(s: String; VE: TValueEvent; Lnk: TObject; NoMath: Boolean = false): Variant;
+
+function doubles(s: string; ch: char): string;
+var
+  i: integer;
+begin
+  i := PosEx(ch,s);
+  while i <> 0 do
+  begin
+    Insert(ch,s,i+1);
+    i := PosEx(ch,s,i + 2);
+  end;
+  Result := s;
+end;
+
 const
   op = ['(', ')', '+', '-', '<', '>', '=', '!', '/', '\', '&', ',', '?', '~',
     '|', ' ', #9, #13, #10];
@@ -722,12 +745,12 @@ begin
           vt := VarToWideStr(rstr);
           VRESULT := VarR8FromStr(vt, VAR_LOCALE_USER_DEFAULT, 0, vt2);
           if VRESULT <> VAR_OK then
-            rstr := '"' + rstr + '"'
+            rstr := '''' + doubles(rstr,'''') + ''''
           else
             rstr := vt2;
         end else
           if VarType(rstr) = varDate then
-            rstr := '"' + VarToStr(rstr) + '"'
+            rstr := '''' + doubles(VarToStr(rstr),'''') + ''''
           else
             rstr := VarAsType(rstr,varDouble);
       end;
@@ -748,12 +771,12 @@ end;
 
 // TListValue
 
-constructor TListValue.Create;
+{constructor TListValue.Create;
 begin
   inherited;
   FName := '';
   FValue := '';
-end;
+end;  }
 
 // TPictureValue
 
@@ -777,25 +800,25 @@ end;
 
 procedure TValueList.Notify(Ptr: Pointer; Action: TListNotification);
 var
-  p: TListValue;
+  p: PListValue;
 begin
   case Action of
     lnDeleted:
       begin
         p := Ptr;
-        p.Free;
+        Dispose(p);
       end;
   end;
 end;
 
-function TValueList.Get(Index: integer): TListValue;
+function TValueList.Get(Index: integer): PListValue;
 begin
   Result := inherited Get(Index);
 end;
 
 function TValueList.GetValue(ItemName: String): Variant;
 var
-  p: TListValue;
+  p: PListValue;
 begin
   p := FindItem(ItemName);
   if p = nil then
@@ -806,7 +829,7 @@ end;
 
 procedure TValueList.SetValue(ItemName: String; Value: Variant);
 var
-  p: TListValue;
+  p: PListValue;
 begin
   if ItemName = '' then
     Exit;
@@ -815,7 +838,7 @@ begin
     p := FindItem(ItemName);
     if p = nil then
     begin
-      p := TListValue.Create;
+      New(p);
       p.Name := ItemName;
       p.Value := Value;
       inherited Add(p);
@@ -824,14 +847,14 @@ begin
       p.Value := Value;
   end else
   begin
-    p := TListValue.Create;
+    New(p);
     p.Name := ItemName;
     p.Value := Value;
     inherited Add(p);
   end;
 end;
 
-function TValueList.FindItem(ItemName: String): TListValue;
+function TValueList.FindItem(ItemName: String): PListValue;
 var
   i: integer;
 begin
@@ -863,7 +886,7 @@ end;  }
 procedure TValueList.Assign(List: TValueList; AOperator: TListAssignOp);
 var
   i: integer;
-  p: TListValue;
+  p: PListValue;
 begin
   case AOperator of
     laCopy:
@@ -872,7 +895,7 @@ begin
         Capacity := List.Capacity;
         for i := 0 to List.Count - 1 do
         begin
-          p := TListValue.Create;
+          New(p);
           p.Name := List.Items[i].Name;
           p.Value := List.Items[i].Value;
           inherited Add(p);
@@ -1653,7 +1676,7 @@ var
 begin
   for i := 0 to Values.Count - 1 do
   begin
-    t := Values.Items[i];
+    t := Values.Items[i]^;
     ProcValue(LowerCase(t.Name), t.Value);
   end;
 end;
@@ -1832,24 +1855,32 @@ begin
   FThreadHandler.OnAllThreadsFinished := OnHandlerFinished;
   FThreadHandler.CreateJob := CreateJob;
   //FFinished := True;
+  FDWNLDHandler := TThreadHandler.Create;
+
   FMaxThreadCount := 0;
+end;
+
+function TResourceList.CreateDWNLDJob(t: TDownloadThread): boolean;
+begin
+
 end;
 
 function TResourceList.CheckDouble(Pic: TTPicture): boolean;
 var
   l,i,j: integer;
-  s1,s2: variant;
+  s1{,s2}: variant;
 
 begin
   for l := 0 to Count -1 do
     for i := 0 to length(FIgnoreList)-1 do
     begin
-      s1 := Pic.Meta[FIgnoreList[i][0]];
+      s1 := VarToStr(Pic.Meta[FIgnoreList[i][0]]);
       for j := 0 to Items[l].PictureList.Count -1 do
       begin
-        s2 := Items[l].PictureList[j].Meta[FIgnoreList[i][1]];
-        if (s1 <> null) and (s1 <> '') and (s2 <> null)
-          and SameText(s1, s2) then
+        //s2 := Items[l].PictureList[j].Meta[FIgnoreList[i][1]];
+
+        if (VarToStr(s1) <> ' ') and VarSameValue(Pic.Meta[FIgnoreList[i][0]],
+           Items[l].PictureList[j].Meta[FIgnoreList[i][1]]) then
         begin
           Result := true;
           Exit;
@@ -2086,20 +2117,21 @@ var
   R: TResource;
 
 begin
-  Clear;
-  R := TResource.Create;
-  R.Inherit := false;
-  R.Name := _GENERAL_;
-  Add(R);
-
-  R := nil;
-
   if not DirectoryExists(Dir) then
   begin
     if Assigned(FOnError) then
       FOnError(Self,Format(_NO_DIRECTORY_, [Dir]));
     Exit;
   end;
+
+  Clear;
+
+  R := TResource.Create;
+  R.Inherit := false;
+  R.Name := _GENERAL_;
+  Add(R);
+
+  R := nil;
 
   Dir := IncludeTrailingPathDelimiter(Dir);
 
@@ -2289,10 +2321,10 @@ begin
         s := TrimEx(CopyTo(Value, '('),[#13,#10,#9,' ']);
         if s = 'calc' then
           Result := CalcValue(trim(CalcValue(CopyFromTo(Value, '(', ')'), VE,
-            LinkedObj, true),'"'), VE, LinkedObj)
+            LinkedObj, true),''''), VE, LinkedObj)
         else if s = 'emptyname' then
-          Result := emptyname(CalcValue(StringDecode(CopyFromTo(Value, '(', ')')), VE,
-            LinkedObj))
+          Result := emptyname(StringDecode(CalcValue(CopyFromTo(Value, '(', ')'), VE,
+            LinkedObj)))
         else if s = 'unixtime' then
           Result := UnixToDateTime(CalcValue(CopyFromTo(Value, '(', ')'), VE,
             LinkedObj))
@@ -2693,7 +2725,7 @@ procedure TTPicture.MakeFileName(Format: String);
   //check names
   function ParamCheck(S: String; main: boolean): String;
   var
-    n: TListValue;
+    n: PListValue;
 
   begin
     if main then
@@ -2734,10 +2766,7 @@ procedure TTPicture.MakeFileName(Format: String);
       if n = 0 then
         Break
       else if s[i] <> s[n] then
-      begin
-        i := n;
         Continue;
-      end;
 
       key := Copy(s,i+1,n-i-1);
       rsl := ParamCheck(key,s[i]='$');
@@ -2748,10 +2777,7 @@ procedure TTPicture.MakeFileName(Format: String);
           c := true;
         s := Replace(s,s[i] + key + s[n],rsl,true);
       end else
-      begin
-        i := n;
         Continue;
-      end;
 
       n := CharPosEx(s,['$','%'],[], i + 1);
     end;
@@ -2872,7 +2898,8 @@ begin
         if orig then
           APicList[i].Orig := t;
         for j := 0 to APicList[i].Linked.Count-1 do
-        if not CheckDouble(APicList[i].Linked[j]) then begin
+        if not Assigned(FCheckDouble)
+        or not CheckDouble(APicList[i].Linked[j]) then begin
           ch := CopyPicture(APicList[i].Linked[j]);
           if orig then
             APicList[i].Linked[j].Orig := ch;

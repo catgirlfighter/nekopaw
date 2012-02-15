@@ -24,8 +24,6 @@ object mf: Tmf
     Width = 608
     Height = 386
     Align = alClient
-    ExplicitTop = 28
-    ExplicitHeight = 384
     DockType = 0
     OriginalWidth = 608
     OriginalHeight = 386
@@ -77,7 +75,6 @@ object mf: Tmf
             Options = [pcoAlwaysShowGoDialogButton, pcoCloseButton, pcoGradient, pcoGradientClientArea, pcoRedrawOnResize]
             TabOrder = 0
             OnChange = pcTablesChange
-            ExplicitHeight = 230
             ClientRectBottom = 232
             ClientRectRight = 419
             ClientRectTop = 0
@@ -132,7 +129,6 @@ object mf: Tmf
             ActiveGroupIndex = 0
             TabOrder = 0
             View = 1
-            ExplicitHeight = 200
             object nbgCurMain: TdxNavBarGroup
               Caption = 'nbgCurMain'
               SelectedLinkIndex = -1
@@ -155,7 +151,7 @@ object mf: Tmf
               Width = 181
               Height = 170
               Caption = 'nbgCurMainControl'
-              TabOrder = 2
+              TabOrder = 1
               GroupIndex = 0
               OriginalHeight = 41
               object vgCurMain: TcxVerticalGrid
@@ -204,7 +200,6 @@ object mf: Tmf
       AutoHide = False
       CaptionButtons = [cbMaximize, cbHide]
       Dockable = False
-      ExplicitTop = 234
       DockType = 5
       OriginalWidth = 185
       OriginalHeight = 150
@@ -217,7 +212,6 @@ object mf: Tmf
         AutoHide = False
         Caption = 'dpLog'
         Dockable = False
-        ExplicitHeight = 92
         DockType = 1
         OriginalWidth = 185
         OriginalHeight = 150
@@ -229,7 +223,6 @@ object mf: Tmf
           Properties.ScrollBars = ssVertical
           Style.Color = clInfoBk
           TabOrder = 0
-          ExplicitHeight = 92
           Height = 102
           Width = 604
         end
@@ -243,7 +236,6 @@ object mf: Tmf
         AutoHide = False
         Caption = 'dpErrors'
         Dockable = False
-        ExplicitHeight = 92
         DockType = 1
         OriginalWidth = 185
         OriginalHeight = 150
@@ -255,7 +247,6 @@ object mf: Tmf
           Properties.ScrollBars = ssVertical
           Style.Color = 14803455
           TabOrder = 0
-          ExplicitHeight = 92
           Height = 102
           Width = 604
         end
@@ -474,7 +465,6 @@ object mf: Tmf
       end>
   end
   object cxLookAndFeelController1: TcxLookAndFeelController
-    NativeStyle = False
     Left = 136
     Top = 72
   end
