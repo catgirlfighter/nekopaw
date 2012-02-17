@@ -16,7 +16,8 @@ uses
   cxMemo,
   {graber2}
   common, OpBase, graberU, MyHTTP, AppEvnts, dxsbar, cxListBox, dxNavBarCollns,
-  dxNavBarBase, dxNavBar, cxInplaceContainer, cxVGrid, cxCheckListBox;
+  dxNavBarBase, dxNavBar, cxInplaceContainer, cxVGrid, cxCheckListBox,
+  dxSkinsDefaultPainters, dxSkinsdxNavBar2Painter, dxSkinsdxBarPainter;
 
 type
 
@@ -122,6 +123,7 @@ type
     procedure pcTablesChange(Sender: TObject);
     procedure bbStartListClick(Sender: TObject);
     procedure ApplicationEvents1Exception(Sender: TObject; E: Exception);
+    procedure bbStartPicsClick(Sender: TObject);
   private
     mFrame: TFrame;
     // tvMain: TmycxGridTableView;
@@ -345,6 +347,7 @@ begin
     if (TMycxtabSheet(pcTables.ActivePage).SecondFrame is TfNewList) then
     begin
       pcTables.Options := pcTables.Options + [pcoCloseButton];
+      bbStartList.Caption := _STARTLIST_ ;
       bbStartList.Enabled := false;
       bbStartPics.Enabled := false;
       dsTags.Hide;
@@ -353,17 +356,27 @@ begin
     begin
       //dsTags.Show;
       if (TMycxtabSheet(pcTables.ActivePage).MainFrame as TfGrid).ResList.ListFinished then
-        bbStartList.Caption := _STARTLIST_
-      else
+      begin
+        bbStartList.Caption := _STARTLIST_ ;
+        bbStartPics.Enabled := true;
+      end else
+      begin
         bbStartList.Caption := _STOPLIST_;
-      pcTables.Options := pcTables.Options + [pcoCloseButton];
+        bbStartPics.Enabled := false;
+      end;
       bbStartList.Enabled := true;
-      bbStartPics.Enabled := true;
+//      bbStartPics.Enabled := true;
+
+
+
+      pcTables.Options := pcTables.Options + [pcoCloseButton];
+
       if not dsTags.AutoHide then
         dsTags.Show;
     end else
     begin
       //dsTags.Hide;
+      bbStartList.Caption := _STARTLIST_ ;
       bbStartList.Enabled := false;
       bbStartPics.Enabled := false;
       pcTables.Options := pcTables.Options - [pcoCloseButton];
@@ -452,6 +465,9 @@ begin
   f2.ResList.ThreadHandler.Cookies := FCookie;
   f2.ResList.ThreadHandler.Proxy := Globalsettings.Proxy;
   f2.ResList.ThreadHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
+  f2.ResList.DWNLDHandler.Cookies := FCookie;
+  f2.ResList.DWNLDHandler.Proxy := Globalsettings.Proxy;
+  f2.ResList.DWNLDHandler.ThreadCount := GlobalSettings.Downl.PicThreads;
   f2.ResList.PicIgnoreList := IgnoreList;
   f2.OnPicChanged := PicInfo;
   f2.ResList.StartJob(JOB_LIST);
@@ -523,6 +539,20 @@ begin
         ResList.StartJob(JOB_LIST)
        else
         ResList.StartJob(JOB_STOPLIST);
+end;
+
+procedure Tmf.bbStartPicsClick(Sender: TObject);
+var
+  f: TFrame;
+
+begin
+  f := TFrame((pcTables.ActivePage as TMycxTabSheet).MainFrame);
+  if f is TfGrid then
+    with (f as TfGrid) do
+      if ResList.PicsFinished then
+        ResList.StartJob(JOB_PICS)
+       else
+        ResList.StartJob(JOB_STOPPICS);
 end;
 
 procedure Tmf.CANCELNEWLIST(var Msg: TMessage);

@@ -91,7 +91,7 @@ begin
     with Formats do
     begin
       ListFormat := INI.ReadString('formats','list','$rootdir$\lists\$tag$.ngl');
-      PicFormat := INI.ReadString('formats','picture','$rootdir$\pics\$fname$.$ext$');
+      PicFormat := INI.ReadString('formats','picture','$rootdir$\pics\$rname$\$fname$.$ext$');
     end;
 
     v := tstringlist.Create;
@@ -163,7 +163,11 @@ initialization
 FullResList := TResourceList.Create;
 rootdir := ExtractFileDir(paramstr(0));
 
-LoadProfileSettings;
+if fileexists(IncludeTrailingPathDelimiter(rootdir) + profname) then
+  LoadProfileSettings
+else
+  SaveProfileSettings;
+
 LoadLang(IncludeTrailingPathDelimiter(rootdir)+IncludeTrailingPathDelimiter('languages')+langname+'.ini');
 
 finalization

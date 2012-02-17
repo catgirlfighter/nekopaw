@@ -97,6 +97,15 @@ object fGrid: TfGrid
       Properties.AutoSelect = False
       Properties.ReadOnly = True
     end
+    object iPicChecker: TcxEditRepositoryCheckBoxItem
+      Properties.ImmediatePost = True
+    end
+    object iCheckBox: TcxEditRepositoryCheckBoxItem
+      Properties.ReadOnly = True
+    end
+    object iPBar: TcxEditRepositoryProgressBar
+      Properties.AnimationPath = cxapPingPong
+    end
   end
   object md: TdxMemData
     Indexes = <>
@@ -106,8 +115,8 @@ object fGrid: TfGrid
     Top = 80
   end
   object ds: TDataSource
-    AutoEdit = False
     DataSet = md
+    OnDataChange = dsDataChange
     Left = 72
     Top = 128
   end
@@ -174,6 +183,12 @@ object fGrid: TfGrid
       Visible = ivAlways
       ButtonStyle = bsChecked
       OnClick = bbFilterClick
+    end
+    object dxBarButton1: TdxBarButton
+      Caption = 'bbBestFit'
+      Category = 0
+      Hint = 'bbBestFit'
+      Visible = ivAlways
     end
   end
   object GridPopup: TcxGridPopupMenu

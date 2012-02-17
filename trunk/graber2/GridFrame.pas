@@ -9,7 +9,9 @@ uses
   DBClient, cxGridLevel, cxClasses, cxGridCustomView, cxGridCustomTableView,
   cxGridTableView, cxGridDBTableView, cxGrid, graberU, dxmdaset,
   cxEditRepositoryItems, common, ComCtrls, cxContainer, cxLabel, dxStatusBar,
-  dxBar, cxGridCustomPopupMenu, cxGridPopupMenu;
+  dxBar, cxGridCustomPopupMenu, cxGridPopupMenu, cxExtEditRepositoryItems,
+  cxDataUtils, dxSkinsCore, dxSkinsDefaultPainters, dxSkinscxPCPainter,
+  dxSkinsdxStatusBarPainter, dxSkinsdxBarPainter;
 
 type
 
@@ -31,15 +33,26 @@ type
     bbColumns: TdxBarButton;
     GridPopup: TcxGridPopupMenu;
     bbFilter: TdxBarButton;
+    dxBarButton1: TdxBarButton;
+    iPicChecker: TcxEditRepositoryCheckBoxItem;
+    iCheckBox: TcxEditRepositoryCheckBoxItem;
+    iPBar: TcxEditRepositoryProgressBar;
     procedure bbColumnsClick(Sender: TObject);
     procedure bbFilterClick(Sender: TObject);
     procedure vGridFocusedRecordChanged(Sender: TcxCustomGridTableView;
       APrevFocusedRecord, AFocusedRecord: TcxCustomGridRecord;
       ANewItemRecordFocusingChanged: Boolean);
+    procedure dsDataChange(Sender: TObject; Field: TField);
   private
     //FList: TList;
     FFieldList: TStringList;
     FPicChanged: TPictureEvent;
+    FCheckColumn: tcxGridDBColumn;
+    FIdColumn: tcxGridDBColumn;
+    FLabelColumn: tcxGridDBColumn;
+    FProgressColumn: tcxGridDBColumn;
+    FSizeColumn: tcxGridDBColumn;
+    FPosColumn: tcxGridDBColumn;
     //FStartSender: TObject;
 //    FN: Integer;
     //FFirstC: TcxDBGridColumn;
@@ -50,13 +63,15 @@ type
     procedure CreateList;
     procedure OnPicAdd(APicture: TTPicture);
 //    procedure CheckField(ch,s: string; value: variant);
-    procedure OnStartJob(Sender: TObject);
-    procedure OnEndJob(Sender: TObject);
-    function AddField(s: string;chu: string = ''): TcxGridDBColumn;
+    procedure OnStartJob(Sender: TObject; Action: Integer);
+//    procedure OnEndJob(Sender: TObject);
+    function AddField(s: string;chu: string = ''; base: boolean = false): TcxGridDBColumn;
     procedure OnBeginPicList(Sender: TObject);
     procedure OnEndPicList(Sender: TObject);
     procedure Relise;
     procedure SetLang;
+    procedure OnListPicChanged(Pic: TTPicture; Changes: TPicChanges);
+    procedure SetColWidths;
     property OnPicChanged: TPictureEvent read FPicChanged write FPicChanged;
     { Public declarations }
   end;
@@ -69,7 +84,7 @@ uses LangString, utils;
 
 {$R *.dfm}
 
-function TfGrid.AddField(s: string;chu: string = ''): TcxGridDBColumn;
+function TfGrid.AddField(s: string;chu: string = ''; base: boolean = false): TcxGridDBColumn;
 var
   f: TField;
   n: string;
@@ -79,8 +94,9 @@ begin
 
   if s <> '' then
     case s[1] of
-      'i' : f := TIntegerField.Create(md);
+      'i','p' : f := TIntegerField.Create(md);
       'd' : f := TDateTimeField.Create(md);
+      'b' : f := TBooleanField.Create(md);
     else
     begin
       f := TStringField.Create(md);
@@ -99,7 +115,15 @@ begin
   f.DataSet := md;
   result := vGrid.CreateColumn;
   result.DataBinding.FieldName := f.FieldName;
-  result.RepositoryItem := iTextEdit;
+  if f is TBooleanField then
+    if base then
+      result.RepositoryItem := iPicChecker
+    else
+      result.RepositoryItem := iCheckBox
+  else if s = 'p' then
+    result.RepositoryItem := iPBar
+  else
+    result.RepositoryItem := iTextEdit;
   //result.DataBinding.ValueType := 'String';
 end;
 
@@ -135,9 +159,10 @@ begin
   if not Assigned(ResList) then
   begin
     ResList := TResourceList.Create;
+    ResList.OnPicChanged := OnListPicChanged;
     //ResList.OnAddPicture := OnPicAdd;
-    ResList.OnStartJob := OnStartJob;
-    ResList.OnEndJob := OnEndJob;
+    ResList.OnJobChanged := OnStartJob;
+    //ResList.OnEndJob := OnEndJob;
     //ResList.OnBeginPicList := OnBeginPicList;
     ResList.OnEndPicList := OnEndPicList;
     FPicChanged := nil;
@@ -145,18 +170,21 @@ begin
     ResList.Clear;
 end;
 
-procedure TfGrid.OnBeginPicList(Sender: TObject);
+procedure TfGrid.dsDataChange(Sender: TObject; Field: TField);
+var
+  p: TTPicture;
 begin
-//  vGrid.BeginUpdate;
-//  md.DisableControls;
-  //FStartSender := Sender;
+
+  if Assigned(Field) and (Field.FieldName = 'checked') then
+  begin
+    p := Pointer(Integer(md.FieldByName('id').Value));
+    p.Checked := Field.Value;
+  end;
 end;
 
-procedure TfGrid.OnEndJob(Sender: TObject);
+procedure TfGrid.OnBeginPicList(Sender: TObject);
 begin
-  PostMessage(Application.MainForm.Handle,CM_ENDJOB,Integer(Self.Parent),0);
-  sBar.Panels[0].Text := '';
-  BestFitWidths(vGrid);
+
 end;
 
 procedure TfGrid.OnEndPicList(Sender: TObject);
@@ -188,6 +216,11 @@ begin
     md.Insert;
     try
       //r := vGrid.DataController.InsertRecord(r);
+      md.FieldValues['checked'] := APicture.Checked;
+      md.FieldValues['resname'] := APicture.List.Resource.Name;
+      md.FieldValues['label'] := APicture.DisplayLabel;
+      md.FieldValues['id'] := Integer(APicture.Orig);
+      md.FieldValues['parent'] := Integer(Apicture.Orig.Parent);
       for i := 0 to APicture.Meta.Count-1 do
       begin
           {c := FFieldList.IndexOf(APicture.Meta.Items[i].Name);
@@ -195,15 +228,11 @@ begin
           vGrid.DataController.Values[r,c] := APicture.Meta.Items[i].Value;   }
           //vGrid.
           md.FieldValues['.' + APicture.Meta.Items[i].Name] := APicture.Meta.Items[i].Value;
-          md.FieldValues['resname'] := APicture.List.Resource.Name;
-          md.FieldValues['label'] := APicture.DisplayLabel;
-          md.FieldValues['id'] := Integer(APicture.Orig);
-          md.FieldValues['parent'] := Integer(Apicture.Orig.Parent);
-          md.FieldValues['fname'] := APicture.PicName;
-          //md.FieldValues['savename'] := APicture.FileName;
-          md.FieldValues['fext'] := APicture.Ext;
+{          md.FieldValues['fname'] := APicture.PicName;
+          md.FieldValues['fext'] := APicture.Ext; }
       end;
       md.Post;
+      APicture.Orig.BookMark := md.RecNo;
     except
       md.Cancel;
     end;
@@ -213,15 +242,18 @@ begin
   md.EnableControls;
 //  if vgrid.DataController.RecordCount > 0 then
   //vgrid.DataController.Groups.FullCollapse;
-{  if n > -1 then
-    BestFitWidths(vGrid); }
+  if n > -1 then
+    BestFitWidths(vGrid);
   vGrid.EndUpdate;
 
   if n < 0 then
   begin
-    //BestFitWidths(vGrid);
+    BestFitWidths(vGrid);
     n := 0;
   end;
+
+    vgrid.DataController.FocusedRecordIndex := n;
+    vgrid.Controller.TopRecordIndex := vgrid.Controller.FocusedRecordIndex - t;
 
   //BestFitWidths(vChilds);
   //md.CurRec := n;
@@ -231,8 +263,7 @@ begin
       vGrid.Controller.FocusedRecord.Selected := true;
     end;    }
   //vgrid.DataController.FocusedRecordIndex := n;
-  vgrid.DataController.FocusedRecordIndex := n;
-  vgrid.Controller.TopRecordIndex := vgrid.Controller.FocusedRecordIndex - t;
+
   sBar.Panels[1].Text := _COUNT_ + ' ' + IntToStr(vGrid.DataController.RecordCount);
 end;
 
@@ -241,10 +272,112 @@ begin
   //FList.Add(APicture);
 end;
 
-procedure TfGrid.OnStartJob(Sender: TObject);
+procedure TfGrid.OnListPicChanged(Pic: TTPicture; Changes: TPicChanges);
+var
+  n: integer;
+
+begin
+  //(pcProgress,pcSize,pcLabel,pcDeleted,pcChecked)
+  //md.CurRec := md. ( 'id',Integer(Pic),[]);
+  //md.CurRec := md.GetRecNoByFieldValue(Integer(Pic),'id');
+
+
+
+{  if pcDelete in Changes then
+  begin
+    md.Delete;
+    Exit;
+  end;   }
+
+{  n := vGrid.DataController.FindRecordIndexByText(0,FIdColumn.Index,
+        IntToStr(Integer(pic)),false,false,true); }
+  if Pic.BookMark = 0 then
+    Exit;
+
+  vGrid.BeginUpdate;
+
+  n := md.RecNo;
+
+  md.RecNo := Pic.BookMark;
+
+  md.Edit;
+
+  //md.GetCurrentRecord;
+  try
+    if pcSize in Changes then
+      if Pic.Size = 0 then
+        md.FieldValues['size'] := null
+      else
+        md.FieldValues['size'] := GetBTString(Pic.Size);
+
+    if pcProgress in Changes then
+    begin
+      if Pic.Pos = 0 then
+        md.FieldValues['pos'] := null
+      else
+        md.FieldValues['pos'] := GetBTString(Pic.Pos);
+      if Pic.Size = 0 then
+        md.FieldValues['progress'] := 100
+      else
+        md.FieldValues['progress'] := Pic.Pos/Pic.Size * 100;
+    end;
+
+{    if pcLabel in Changes then
+      md.FieldValues['label'] := Pic.DisplayLabel;    }
+
+    if pcChecked in Changes then
+      md.FieldValues['checked'] := Pic.Checked;
+
+{    if md.State in [dsEdit] then
+      md.Post;    }
+
+    //VGrid.ViewData.se
+
+    //vGrid.DataController.PostEditingData;
+    md.Post;
+
+    md.RecNo := n;
+
+    vGrid.EndUpdate;
+
+    Pic.Changes := [];
+
+  finally
+//    md.Post;
+  end;
+end;
+
+procedure TfGrid.OnStartJob(Sender: TObject; Action: integer);
 begin
   PostMessage(Application.MainForm.Handle,CM_STARTJOB,Integer(Self.Parent),0);
-  sBar.Panels[0].Text := _ON_AIR_;
+  case Action of
+    JOB_LIST:
+      sBar.Panels[0].Text := _ON_AIR_;
+    JOB_PICS:
+    begin
+//      vGrid.BeginUpdate;
+      FCheckColumn.Options.Editing := false;
+//      iPicChecker.Properties.ReadOnly := true;
+      SetColWidths;
+      FSizeColumn.Visible := true;
+      FPosColumn.Visible := true;
+      FProgressColumn.Visible := true;
+//      vGrid.EndUpdate;
+      sBar.Panels[0].Text := _ON_AIR_;
+    end;
+    JOB_STOPLIST:
+      if ResList.PicsFinished then
+        sBar.Panels[0].Text := '';
+    JOB_STOPPICS:
+    begin
+      FSizeColumn.Visible := false;
+      FPosColumn.Visible := false;
+      FProgressColumn.Visible := false;
+      FCheckColumn.Options.Editing := true;
+      if ResList.ListFinished then
+        sBar.Panels[0].Text := '';
+    end;
+  end;
 end;
 
 procedure TfGrid.Relise;
@@ -271,8 +404,31 @@ begin
   md.Close;
   FFieldList := ResList.FullPicFieldList;
   //FFieldList.Insert(0,'resname');
-  c := vGrid.CreateColumn;
+  //c := vGrid.CreateColumn;
   //c.Visible := false;
+
+  FCHeckColumn := AddField('checked:b','',true);
+  FCHeckColumn.Caption := '';
+  //c.Visible := false;
+  with FCHeckColumn.Options do
+  begin
+    HorzSizing := false;
+    Filtering := false;
+    Grouping := false;
+    Moving := false;
+    Sorting := false;
+  end;
+  FCHeckColumn.Width := 20;
+  FCHeckColumn.VisibleForCustomization := false;
+
+  FIdColumn := AddField('id:i');
+  FIdColumn.Visible := false;
+  FIdColumn.VisibleForCustomization := false;
+
+  c := AddField('parent:i');
+  c.Visible := false;
+  c.VisibleForCustomization := false;
+
   c.DataBinding.FieldName := 'RecId';
   c.DataBinding.Field.DisplayLabel := _RESID_;
 
@@ -285,22 +441,14 @@ begin
   c.DataBinding.Field.DisplayLabel := _RESNAME_;
   c.GroupBy(0);
 
-  c := AddField('label');
-  c.DataBinding.Field.DisplayLabel := _PICTURELABEL_;
+  FLabelColumn := AddField('label');
+  FLabelColumn.DataBinding.Field.DisplayLabel := _PICTURELABEL_;
 
-  c := AddField('id:i');
-  c.Visible := false;
-  c.VisibleForCustomization := false;
-
-  c := AddField('parent:i');
-  c.Visible := false;
-  c.VisibleForCustomization := false;
-
-  c := AddField('fname'); c.Visible := false;
+{  c := AddField('fname'); c.Visible := false;
   c.DataBinding.Field.DisplayLabel := _FILENAME_;
 
   c := AddField('fext'); c.Visible := false;
-  c.DataBinding.Field.DisplayLabel := _EXTENSION_;
+  c.DataBinding.Field.DisplayLabel := _EXTENSION_;   }
   //c := AddField('savename');
 
   for i := 0 to FFieldList.Count -1 do
@@ -311,9 +459,58 @@ begin
   end;
   //l.Free;
 
+  FPosColumn := AddField('pos');
+  with FPosColumn.Options do
+  begin
+    HorzSizing := false;
+    Filtering := false;
+    Grouping := false;
+    Moving := false;
+    Sorting := false;
+  end;
+  //FPosColumn.Width := 20;
+  //FPosColumn.MinWidth := 20;
+  FPosColumn.Visible := false;
+  FPosColumn.VisibleForCustomization := false;
+
+  FSizeColumn := AddField('size');
+  with FSizeColumn.Options do
+  begin
+    HorzSizing := false;
+    Filtering := false;
+    Grouping := false;
+    Moving := false;
+    Sorting := false;
+  end;
+  //FSizeColumn.Width := 20;
+  //FSizeColumn.MinWidth := 20;
+  FSizeColumn.Visible := false;
+  FSizeColumn.VisibleForCustomization := false;
+
+  FProgressColumn := AddField('progress:p');
+  with FProgressColumn.Options do
+  begin
+    HorzSizing := false;
+    Filtering := false;
+    Grouping := false;
+    Moving := false;
+    Sorting := false;
+  end;
+  //FProgressColumn.Width := 20;
+  //FPosColumn.MinWidth := 20;
+  FProgressColumn.Visible := false;
+  FProgressColumn.VisibleForCustomization := false;
+
   md.Open;
   md.EnableControls;
   Grid.EndUpdate;
+end;
+
+procedure TfGrid.SetColWidths;
+begin
+  FSizeColumn.Width := 60;
+  FPosColumn.Width := 60;
+  FProgressColumn.Width := 60;
 end;
 
 procedure TfGrid.SetLang;

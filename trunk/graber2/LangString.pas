@@ -35,6 +35,7 @@ var
   _SCRIPT_READ_ERROR_: String = 'Error reading script: %s';
   _SYMBOLS_IN_SECTOR_NAME_: String = 'Incorrect symbol in sector name';
   _INCORRECT_DECLORATION_: String = 'Incorrect decloration near symbol %s';
+  _INCORRECT_FILESIZE_: String = 'Incorrect file size';
 
   (* OTHER *)
   _NEWLIST_: String = 'New list';
