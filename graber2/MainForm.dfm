@@ -369,6 +369,7 @@ object mf: Tmf
       Category = 0
       Hint = 'bbStartPics'
       Visible = ivAlways
+      OnClick = bbStartPicsClick
     end
     object bbSettings: TdxBarButton
       Caption = 'bbSettings'
