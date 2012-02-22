@@ -474,4 +474,8 @@ object mf: Tmf
     Left = 504
     Top = 176
   end
+  object vINFO: TrpVersionInfo
+    Left = 448
+    Top = 112
+  end
 end

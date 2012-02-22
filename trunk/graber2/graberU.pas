@@ -21,6 +21,7 @@ const
   CM_CANCELSETTINGS = WM_USER + 10;
   CM_STARTJOB = WM_USER + 11;
   CM_ENDJOB = WM_USER + 12;
+  CM_UPDATE = WM_USER + 13;
 
   THREAD_STOP = 0;
   THREAD_START = 1;
@@ -567,6 +568,7 @@ type
     FResName: String;
     // FURL: String;
     FIconFile: String;
+    FShort: String;
     FParent: TResource;
     FLoginPrompt: Boolean;
     FInherit: Boolean;
@@ -630,6 +632,8 @@ type
     // property JobFinished: boolean read FJobFinished;
     property OnJobFinished: TResourceEvent read FOnJobFinished
       write FOnJobFinished;
+    property OnPicJobFinished: TResourceEvent read FOnPicJobFinished
+      write FOnPicJobFinished;
     property PicFieldList: TStringList read FPicFieldList;
     property CheckIdle: TBoolProcedureOfObject read FCheckIdle write FCheckIdle;
     property NextPage: Boolean read FNextPage write FNextPage;
@@ -637,6 +641,7 @@ type
     property CurrThreadCount: integer read FCurrThreadCount;
     property MaxThreadCount: integer read FMaxThreadCount write FMaxThreadCount;
     property JobList: TJobList read FJobList;
+    property Short: String read FShort;
   end;
 
   TResourceLinkList = class(TList)
@@ -679,7 +684,7 @@ type
     procedure OnHandlerFinished(Sender: TObject);
     function CreateJob(t: TDownloadThread): Boolean;
     function GetListFinished: Boolean;
-    function CheckDouble(Pic: TTPicture): Boolean;
+    function CheckDouble(Pic: TTPicture; x,y: integer): Boolean;
     function CreateDWNLDJob(t: TDownloadThread): Boolean;
     procedure PicJobFinished(R: TResource);
   public
@@ -693,6 +698,7 @@ type
     procedure SetMaxThreadCount(Value: integer);
     function AllFinished: Boolean;
     function AllPicsFinished: Boolean;
+    procedure UncheckDoubles;
     property ThreadHandler: TThreadHandler read FThreadHandler;
     property DWNLDHandler: TThreadHandler read FDwnldHandler;
     procedure LoadList(Dir: String);
@@ -1500,7 +1506,7 @@ begin
   FSectors.Assign(R.Sectors);
   FPicFieldList.Assign(R.PicFieldList);
   // FURL := R.Url;
-
+  FShort := R.Short;
   FHTTPRec.DefUrl := R.HTTPRec.DefUrl;
   FHTTPRec.Url := '';
   FHTTPRec.Method := hmGet;
@@ -1746,6 +1752,8 @@ procedure TResource.DeclorationEvent(Values: TValueList; LinkedObj: TObject);
       FIconFile := ItemValue
     else if ItemName = '$main.authorization' then
       FLoginPrompt := true
+    else if ItemName = '$main.short' then
+      FShort := ItemValue
     else if ItemName = '$main.template' then
     begin
       s := StringFromFile(ExtractFilePath(paramstr(0)) + 'resources\' +
@@ -1996,6 +2004,7 @@ begin
   NR := TResource.Create;
   // NR.AddToQueue := AddToQueue;
   NR.OnJobFinished := JobFinished;
+  NR.OnPicJobFinished := PicJobFinished;
   NR.Assign(R);
   NR.PictureList.OnAddPicture := FOnAddPicture;
   NR.PictureList.OnBeginAddList := FOnBeginPicList;
@@ -2036,7 +2045,7 @@ begin
   // check new task
   // from current to end
 
-  for i := FQueueIndex to Count - 1 do
+  for i := FPicQueue to Count - 1 do
   begin
     R := Items[i];
     if not R.PictureList.eol then
@@ -2085,25 +2094,29 @@ begin
   Result := true;
 end;
 
-function TResourceList.CheckDouble(Pic: TTPicture): Boolean;
+function TResourceList.CheckDouble(Pic: TTPicture; x,y: integer): Boolean;
 var
   l, i, j: integer;
   s1 { ,s2 } : Variant;
 
 begin
-  for l := 0 to Count - 1 do
+  for l := x to Count - 1 do
     for i := 0 to length(FIgnoreList) - 1 do
     begin
-      s1 := VarToStr(Pic.Meta[FIgnoreList[i][0]]);
-      for j := 0 to Items[l].PictureList.Count - 1 do
+      s1 := Pic.Meta[FIgnoreList[i][0]];
+      for j := Items[l].PictureList.Count - 1 downto y do
       begin
         // s2 := Items[l].PictureList[j].Meta[FIgnoreList[i][1]];
 
-        if (VarToStr(s1) <> ' ') and VarSameValue(Pic.Meta[FIgnoreList[i][0]],
-          Items[l].PictureList[j].Meta[FIgnoreList[i][1]]) then
+        if (VarToStr(s1) <> '') and VarSameValue(s1,
+          Items[l].PictureList[j].Meta[FIgnoreList[i][1]]) and
+          Items[l].PictureList[j].Checked then
         begin
-          Result := true;
-          Exit;
+          Items[l].PictureList[j].Checked := false;
+          if Assigned(Items[l].PictureList[j].OnPicChanged) then
+            Items[l].PictureList[j].OnPicChanged(Items[l].PictureList[j],[pcChecked]);
+          //Result := true;
+          //Exit;
         end;
       end;
     end;
@@ -2333,6 +2346,17 @@ begin
   // ThreadHandler.CheckIdle(true);
 end;
 
+procedure TResourceList.UncheckDoubles;
+var
+  i,j: integer;
+begin
+  for i := 0 to Count -1 do
+    for j := Items[i].PictureList.Count-1 downto 0 do
+      if Items[i].PictureList[j].Checked then
+        CheckDouble(Items[i].PictureList[j],i,j + 1);
+  //Result := false;
+end;
+
 { procedure TResourceList.AddToQueue(R: TResource);
   begin
   FThreadHandler.AddToQueue(R);
@@ -2532,7 +2556,7 @@ begin
   FFields.Free;
   FXML.Free;
   FHTTP.Free;
-  FPicture.Free;
+  //FPicture.Free;
   // FTagList.Free;
   FPicList.Free;
   inherited;
@@ -3129,6 +3153,8 @@ procedure TTPicture.MakeFileName(Format: String);
     if main then
       if SameText(s, 'rname') then
         Result := List.Resource.Name
+      else if SameText(s,'short') then
+        Result := List.Resource.Short
       else if SameText(s, 'fname') then
         Result := ValidFName(FPicName)
       else if SameText(s, 'ext') then
@@ -3413,13 +3439,13 @@ var
 begin
   if FCursor < Count then
   begin
-    for i := FCursor to Count do
-      if (Items[FCursor].Status = JOB_NOJOB) and (Items[FCursor].Checked) then
+    for i := FCursor to Count-1 do
+      if (Items[i].Status = JOB_NOJOB) and (Items[i].Checked) then
       begin
-        Items[FCursor].Status := JOB_INPROGRESS;
+        Items[i].Status := JOB_INPROGRESS;
         FCursor := i;
-        Result := Items[FCursor];
-        inc(FCursor);
+        Result := Items[i];
+//        FCursor := i;
         Exit;
       end;
     FCursor := Count;
@@ -3444,13 +3470,13 @@ begin
   i := 0;
 
   for i := i to Count - 1 do
-    if Items[i].Status <> JOB_FINISHED then
+    if (Items[i].Checked) then
       Break;
 
   FCursor := i;
 
   for i := i to Count - 1 do
-    if Items[i].Status <> JOB_FINISHED then
+    if (Items[i].Checked) then
       Items[i].Status := JOB_NOJOB;
 
   AllFinished;

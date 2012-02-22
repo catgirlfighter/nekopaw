@@ -79,6 +79,7 @@
 				<Form>dm</Form>
 				<DesignClass>TDataModule</DesignClass>
 			</DCCReference>
+			<DCCReference Include="UPDUnit.pas"/>
 			<BuildConfiguration Include="Debug">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>
