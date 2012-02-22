@@ -17,7 +17,8 @@ uses
   AES in 'AES.pas',
   ElAES in 'ElAES.pas',
   EncryptStrings in 'EncryptStrings.pas',
-  utils in 'utils.pas' {dm: TDataModule};
+  utils in 'utils.pas' {dm: TDataModule},
+  UPDUnit in 'UPDUnit.pas';
 
 {$R *.res}
 

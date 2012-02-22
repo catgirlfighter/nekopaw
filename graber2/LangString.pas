@@ -78,6 +78,7 @@ var
   _EXTENSION_: String = 'Extension';
   _INFO_: String = 'Pic info';
   _TAGS_: String = 'Tags';
+  _DOUBLES_: String = 'Doubles';
 
 procedure LoadLang(FileName: String);
 
@@ -162,6 +163,8 @@ begin
   _EXTENSION_ :=  INI.ReadString('lang','_EXTENSION_',_EXTENSION_);
   _INFO_ :=  INI.ReadString('lang','_INFO_',_INFO_);
   _TAGS_ :=  INI.ReadString('lang','_TAGS_',_TAGS_);
+  _DOUBLES_ :=  INI.ReadString('lang','_DOUBLES_',_DOUBLES_);
+
   INI.Free;
 end;
 

@@ -151,7 +151,7 @@ begin
     with Formats do
     begin
       INI.WriteString('Formats','List',ListFormat);
-      INI.WriteString('Proxy','Picture',PicFormat);
+      INI.WriteString('Formats','Picture',PicFormat);
     end;
 
   end;

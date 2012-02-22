@@ -37,12 +37,14 @@ type
     iPicChecker: TcxEditRepositoryCheckBoxItem;
     iCheckBox: TcxEditRepositoryCheckBoxItem;
     iPBar: TcxEditRepositoryProgressBar;
+    bbDoubles: TdxBarButton;
     procedure bbColumnsClick(Sender: TObject);
     procedure bbFilterClick(Sender: TObject);
     procedure vGridFocusedRecordChanged(Sender: TcxCustomGridTableView;
       APrevFocusedRecord, AFocusedRecord: TcxCustomGridRecord;
       ANewItemRecordFocusingChanged: Boolean);
     procedure dsDataChange(Sender: TObject; Field: TField);
+    procedure bbDoublesClick(Sender: TObject);
   private
     //FList: TList;
     FFieldList: TStringList;
@@ -130,6 +132,15 @@ end;
 procedure TfGrid.bbColumnsClick(Sender: TObject);
 begin
   TcxGridPopupMenuAccess(GridPopup).GridOperationHelper.DoShowColumnCustomizing(True);
+end;
+
+procedure TfGrid.bbDoublesClick(Sender: TObject);
+begin
+  vGrid.BeginUpdate;
+  md.DisableControls;
+  ResList.UncheckDoubles;
+  md.EnableControls;
+  vGrid.EndUpdate;
 end;
 
 procedure TfGrid.bbFilterClick(Sender: TObject);
@@ -428,15 +439,15 @@ begin
   c := AddField('parent:i');
   c.Visible := false;
   c.VisibleForCustomization := false;
+{  c.SortOrder := soAscending;
+  c.Width := 20;    }
 
+   vgrid.DataController.KeyFieldNames := 'RecId';
+
+  c := vGrid.CreateColumn;
   c.DataBinding.FieldName := 'RecId';
   c.DataBinding.Field.DisplayLabel := _RESID_;
 
-  vgrid.DataController.KeyFieldNames := 'RecId';
-
-  c.SortOrder := soAscending;
-  c.Width := 20;
-//  c.Options.HorzSizing := false;
   c := AddField('resname');
   c.DataBinding.Field.DisplayLabel := _RESNAME_;
   c.GroupBy(0);
@@ -517,6 +528,7 @@ procedure TfGrid.SetLang;
 begin
   bbColumns.Caption := _COLUMNS_;
   bbFilter.Caption := _FILTER_;
+  bbDoubles.Caption := _DOUBLES_;
 end;
 
 procedure TfGrid.vGridFocusedRecordChanged(Sender: TcxCustomGridTableView;

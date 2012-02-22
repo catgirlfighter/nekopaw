@@ -62,7 +62,7 @@ type
     public
     procedure GetList(Tag: String; AAttrs: TAttrList; AList: TTagList);
     procedure CopyList(AList: TTagList; Parent: TTag);
-      property Items[ItemName: integer]: TTag read Get;
+      property Items[ItemName: integer]: TTag read Get; default;
       function CreateChild(Parent: TTag): TTag;
       procedure CopyTag(ATag: TTag; Parent: TTag = nil);
   end;
@@ -121,13 +121,14 @@ begin
     if Items[i].Name = Tag then
     begin
       b := true;
-      for j := 0 to AAttrs.Count -1 do
-        if (Items[i].Attrs.Value(AAttrs[j].Name) <> AAttrs[j].Value) or
-          not ((AAttrs[j].Value = '') and (Items[i].Attrs.Value(AAttrs[j].Name) <> '')) then
-        begin
-          b := false;
-          Break;
-        end;
+      if Assigned(AAttrs) then
+        for j := 0 to AAttrs.Count -1 do
+          if (Items[i].Attrs.Value(AAttrs[j].Name) <> AAttrs[j].Value) or
+            not ((AAttrs[j].Value = '') and (Items[i].Attrs.Value(AAttrs[j].Name) <> '')) then
+          begin
+            b := false;
+            Break;
+          end;
 
       if b then
         AList.CopyTag(Items[i])

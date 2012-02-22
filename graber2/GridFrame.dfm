@@ -160,6 +160,10 @@ object fGrid: TfGrid
         item
           Visible = True
           ItemName = 'bbFilter'
+        end
+        item
+          Visible = True
+          ItemName = 'bbDoubles'
         end>
       NotDocking = [dsNone, dsLeft, dsTop, dsRight, dsBottom]
       OneOnRow = True
@@ -189,6 +193,13 @@ object fGrid: TfGrid
       Category = 0
       Hint = 'bbBestFit'
       Visible = ivAlways
+    end
+    object bbDoubles: TdxBarButton
+      Caption = 'bbDoubles'
+      Category = 0
+      Hint = 'bbDoubles'
+      Visible = ivAlways
+      OnClick = bbDoublesClick
     end
   end
   object GridPopup: TcxGridPopupMenu

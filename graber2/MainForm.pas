@@ -1,4 +1,4 @@
-unit MainForm;
+﻿unit MainForm;
 
 interface
 
@@ -17,7 +17,8 @@ uses
   {graber2}
   common, OpBase, graberU, MyHTTP, AppEvnts, dxsbar, cxListBox, dxNavBarCollns,
   dxNavBarBase, dxNavBar, cxInplaceContainer, cxVGrid, cxCheckListBox,
-  dxSkinsDefaultPainters, dxSkinsdxNavBar2Painter, dxSkinsdxBarPainter;
+  dxSkinsDefaultPainters, dxSkinsdxNavBar2Painter, dxSkinsdxBarPainter,
+  rpVersionInfo;
 
 type
 
@@ -114,6 +115,7 @@ type
     vgCurMain: TcxVerticalGrid;
     nbgCurTagsControl: TdxNavBarGroupControl;
     chlbTags: TcxCheckListBox;
+    vINFO: TrpVersionInfo;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure gLevel2GetGridView(Sender: TcxGridLevel;
@@ -348,6 +350,7 @@ begin
     begin
       pcTables.Options := pcTables.Options + [pcoCloseButton];
       bbStartList.Caption := _STARTLIST_ ;
+      bbStartPics.Caption := _STARTPICS_;
       bbStartList.Enabled := false;
       bbStartPics.Enabled := false;
       dsTags.Hide;
@@ -365,9 +368,18 @@ begin
         bbStartPics.Enabled := false;
       end;
       bbStartList.Enabled := true;
-//      bbStartPics.Enabled := true;
+      //bbStartPics.Enabled := true;
 
-
+      if (TMycxtabSheet(pcTables.ActivePage).MainFrame as TfGrid).ResList.PicsFinished then
+      begin
+        bbStartPics.Caption := _STARTPICS_ ;
+        bbStartList.Enabled := true;
+      end else
+      begin
+        bbStartPics.Caption := _STOPPICS_;
+        bbStartList.Enabled := false;
+      end;
+      //bbStartList.Enabled := true;
 
       pcTables.Options := pcTables.Options + [pcoCloseButton];
 
@@ -377,6 +389,7 @@ begin
     begin
       //dsTags.Hide;
       bbStartList.Caption := _STARTLIST_ ;
+      bbStartPics.Caption := _STARTPICS_;
       bbStartList.Enabled := false;
       bbStartPics.Enabled := false;
       pcTables.Options := pcTables.Options - [pcoCloseButton];
@@ -665,6 +678,7 @@ end;
 
 procedure Tmf.Setlang;
 begin
+  Caption := Caption + ' ' + VINFO.FileVersion + 'α';
   bbNew.Caption := _NEWLIST_;
   bbStartList.Caption := _STARTLIST_;
   bbStartPics.Caption := _STARTPICS_;
