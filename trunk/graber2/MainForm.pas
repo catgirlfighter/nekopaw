@@ -5,7 +5,8 @@ interface
 uses
   {base}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, DB, ActnList, ExtCtrls, DateUtils, ImgList,
+  Dialogs, DB, ActnList, ExtCtrls, DateUtils, ImgList, Commctrl, rpVersionInfo,
+  AppEvnts, Types, ShellAPI,
   {devex}
   dxDockControl, dxDockPanel, cxGraphics, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxStyles, dxSkinsCore, dxSkinscxPCPainter,
@@ -13,12 +14,10 @@ uses
   cxGridLevel, cxClasses, cxGridCustomView, cxGridCustomTableView,
   cxGridTableView, cxGridDBTableView, cxGrid, dxSkinsdxDockControlPainter,
   cxCheckBox, cxTextEdit, cxPC, dxBar, dxBarExtItems, cxContainer,
-  cxMemo,
+  cxMemo,dxsbar, cxListBox, dxNavBarCollns,dxNavBarBase, dxNavBar,
+  cxInplaceContainer, cxVGrid, cxCheckListBox, cxLabel,
   {graber2}
-  common, OpBase, graberU, MyHTTP, AppEvnts, dxsbar, cxListBox, dxNavBarCollns,
-  dxNavBarBase, dxNavBar, cxInplaceContainer, cxVGrid, cxCheckListBox,
-  dxSkinsDefaultPainters, dxSkinsdxNavBar2Painter, dxSkinsdxBarPainter,
-  rpVersionInfo;
+  common, OpBase, graberU, MyHTTP, UPDUnit;
 
 type
 
@@ -116,6 +115,10 @@ type
     nbgCurTagsControl: TdxNavBarGroupControl;
     chlbTags: TcxCheckListBox;
     vINFO: TrpVersionInfo;
+    lUPD: TcxLabel;
+    testo: TdxBarButton;
+    BalloonHint: TBalloonHint;
+    aftertimer: TTimer;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure gLevel2GetGridView(Sender: TcxGridLevel;
@@ -139,6 +142,7 @@ type
     procedure APPLYSETTINGS(var Msg: TMessage); message CM_APPLYSETTINGS;
     procedure STARTJOB(var Msg: TMessage); message CM_STARTJOB;
     procedure ENDJOB(var Msg: TMessage); message CM_ENDJOB;
+    procedure UPDATECHECK(var Msg: TMessage); message CM_UPDATE;
     procedure dxTabClose(Sender: TdxCustomDockControl);
     // procedure APPLYEDITLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
   private
@@ -161,12 +165,16 @@ type
     procedure OnError(Sender: TObject; Msg: String);
     procedure Setlang;
     procedure PicInfo(a: TTPicture);
+    procedure CheckUpdates;
+    procedure ShowUPDHint(title, description: string);
+    procedure StartUpdate;
 
     { Public declarations }
   end;
 
 var
   mf: Tmf;
+  hWndTip: THandle;
 
 implementation
 
@@ -590,6 +598,20 @@ begin
   CloseTab(SttPanel);
 end;
 
+procedure Tmf.CheckUpdates;
+var
+  t: TUPDThread;
+begin
+  t := TUPDThread.Create;
+  t.Job := UPD_CHECK_UPDATES;
+  t.MsgHWND := Self.Handle;
+  t.FreeOnTerminate := true;
+  t.ListURL := GlobalSettings.UPDServ;
+  lupd.Show;
+  lupd.BringToFront;
+  SetEvent(t.Event);
+end;
+
 procedure Tmf.ENDJOB(var Msg: TMessage);
 {var
   t: TMycxTabSheet; }
@@ -599,6 +621,19 @@ begin
   t.SetIcon(0); }
 end;
 
+procedure Tmf.UPDATECHECK(var Msg: TMessage);
+begin
+  lupd.Hide;
+  case MSG.WParam of
+//    0: ShowUPDHint(_UPDATING_,_UPDATEERROR_);
+    1: {ShowUPDHint(_UPDATING_,_NEWUPDATES_);}
+      if MessageDLG(_NEWUPDATES_,mtConfirmation,[mbYes,mbNo],0) = mrYes then
+        StartUpdate;
+//    2: ShowUPDHint(_UPDATING_,_NOUPDATES_);
+  end;
+  ;
+end;
+
 procedure Tmf.STARTJOB(var Msg: TMessage);
 {var
   t: TMycxTabSheet;  }
@@ -606,6 +641,29 @@ begin
   pcTables.Change;
 {  t := TMycxTabSheet(Msg.WParam);
   t.SetIcon(0,15,true); }
+end;
+
+procedure Tmf.StartUpdate;
+var
+  f: tfileStream;
+  r: tresourcestream;
+begin
+  f := tfilestream.Create(IncludeTrailingPathDelimiter(rootdir)
+    + 'NPUpdater.exe',fmCreate);
+  try
+    r := tresourcestream.Create(hInstance,'ZUPDATER','UPDTER');
+    try
+      r.SaveToStream(f);
+    finally
+      r.Free;
+    end;
+  finally
+    f.Free;
+  end;
+
+  ShellExecute(Handle, 'open',PWidechar(IncludeTrailingPathDelimiter(rootdir)
+    + 'NPUpdater.exe'), nil, nil, SW_SHOWNORMAL);
+  Close;
 end;
 
 procedure Tmf.CloseTab(t: TcxTabSheet);
@@ -701,6 +759,15 @@ begin
   end;
 end;
 
+procedure Tmf.ShowUPDHint(title, description: string);
+begin
+//  lupd.Hint := 'Derp';
+
+  balloonhint.Description := description;
+  balloonhint.Title := title;
+  balloonhint.ShowHint(ClientToScreen(Point(mf.ClientWidth - 5,5)));
+end;
+
 procedure Tmf.ShowPanels;
 begin
   if not bmbMain.Visible then
@@ -794,6 +861,7 @@ begin
   dsLogs.Hide;
   dsTags.Hide;
   CurPic := nil;
+  CheckUpdates;
 end;
 
 procedure Tmf.FormDestroy(Sender: TObject);

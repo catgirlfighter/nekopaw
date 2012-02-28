@@ -10,8 +10,8 @@ uses
   cxGridTableView, cxGridDBTableView, cxGrid, graberU, dxmdaset,
   cxEditRepositoryItems, common, ComCtrls, cxContainer, cxLabel, dxStatusBar,
   dxBar, cxGridCustomPopupMenu, cxGridPopupMenu, cxExtEditRepositoryItems,
-  cxDataUtils, dxSkinsCore, dxSkinsDefaultPainters, dxSkinscxPCPainter,
-  dxSkinsdxStatusBarPainter, dxSkinsdxBarPainter;
+  cxDataUtils{, dxSkinsCore, dxSkinsDefaultPainters, dxSkinscxPCPainter,
+  dxSkinsdxStatusBarPainter, dxSkinsdxBarPainter};
 
 type
 

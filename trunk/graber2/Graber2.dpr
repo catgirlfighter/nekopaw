@@ -1,5 +1,7 @@
 program Graber2;
 
+{$R *.dres}
+
 uses
   Forms,
   SysUtils,
