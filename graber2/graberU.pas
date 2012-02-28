@@ -21,7 +21,8 @@ const
   CM_CANCELSETTINGS = WM_USER + 10;
   CM_STARTJOB = WM_USER + 11;
   CM_ENDJOB = WM_USER + 12;
-  CM_UPDATE = WM_USER + 13;
+  //CM_UPDATE = WM_USER + 13;
+  //CM_UPDATEPROGRESS = WM_USER + 14;
 
   THREAD_STOP = 0;
   THREAD_START = 1;
@@ -82,6 +83,7 @@ type
     Proxy: TProxyRec;
     Downl: TDownloadRec;
     Formats: TFormatRec;
+    UPDServ: String;
     OneInstance: Boolean;
     TrayIcon: Boolean;
     HideToTray: Boolean;

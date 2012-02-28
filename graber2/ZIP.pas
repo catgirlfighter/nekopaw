@@ -21,6 +21,7 @@ var
   shellobj: variant;
   srcfldr, destfldr: variant;
   shellfldritems: variant;
+
 begin
   shellobj := CreateOleObject('Shell.Application');
 

@@ -54,8 +54,25 @@ var
   i,j: integer;
   v: tstringlist;
   s: string;
+  dlu: integer;
 begin
+
+  INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + 'settings.ini');
+  profname := INI.ReadString('settings','profile',profname);
+  GlobalSettings.UPDServ := INI.ReadString('settings','updserver',
+    'http://nekopaw.googlecode.com/svn/trunk/release/graber2/');
+  dlu := INI.ReadInteger('settings','delupd',0);
+  if dlu = 1 then
+  begin
+    if FileExists(IncludeTrailingPathDelimiter(rootdir) + 'NPUpdater.exe') then
+      DeleteFile(IncludeTrailingPathDelimiter(rootdir) + 'NPUpdater.exe');
+    INI.DeleteKey('settings','delupd');
+  end;
+
+  INI.Free;
+
   INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+
   with GlobalSettings do
   begin
     //OneInstance := INI.ReadBool('global','oneinstance',true);

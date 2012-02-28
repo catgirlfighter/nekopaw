@@ -36,6 +36,9 @@ var
   _SYMBOLS_IN_SECTOR_NAME_: String = 'Incorrect symbol in sector name';
   _INCORRECT_DECLORATION_: String = 'Incorrect decloration near symbol %s';
   _INCORRECT_FILESIZE_: String = 'Incorrect file size';
+  _NOUPDATES_ : String = 'Nothing to update';
+  _NEWUPDATES_: String = 'New updates avalable. Do you want to download it?';
+  _UPDATEERROR_: String = 'Error on cheking updates';
 
   (* OTHER *)
   _NEWLIST_: String = 'New list';
@@ -79,6 +82,7 @@ var
   _INFO_: String = 'Pic info';
   _TAGS_: String = 'Tags';
   _DOUBLES_: String = 'Doubles';
+  _UPDATING_: String = 'Updating';
 
 procedure LoadLang(FileName: String);
 
@@ -164,7 +168,8 @@ begin
   _INFO_ :=  INI.ReadString('lang','_INFO_',_INFO_);
   _TAGS_ :=  INI.ReadString('lang','_TAGS_',_TAGS_);
   _DOUBLES_ :=  INI.ReadString('lang','_DOUBLES_',_DOUBLES_);
-
+  _UPDATING_ :=  INI.ReadString('lang','_UPDATING_',_UPDATING_);
+  _NEWUPDATES_ :=  INI.ReadString('lang','_NEWUPDATES_',_NEWUPDATES_);
   INI.Free;
 end;
 

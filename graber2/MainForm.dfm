@@ -16,6 +16,9 @@ object mf: Tmf
   Position = poScreenCenter
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  DesignSize = (
+    608
+    412)
   PixelsPerInch = 96
   TextHeight = 13
   object ds: TdxDockSite
@@ -253,6 +256,17 @@ object mf: Tmf
       end
     end
   end
+  object lUPD: TcxLabel
+    Left = 480
+    Top = 0
+    CustomHint = BalloonHint
+    Anchors = [akTop, akRight]
+    AutoSize = False
+    Caption = 'Cheking updates'
+    Visible = False
+    Height = 17
+    Width = 128
+  end
   object ActionList: TActionList
     Left = 496
     Top = 40
@@ -348,6 +362,10 @@ object mf: Tmf
         item
           Visible = True
           ItemName = 'bbSettings'
+        end
+        item
+          Visible = True
+          ItemName = 'testo'
         end>
       NotDocking = [dsNone, dsLeft, dsTop, dsRight, dsBottom]
       OneOnRow = True
@@ -384,6 +402,12 @@ object mf: Tmf
       Hint = 'bbNew'
       Visible = ivAlways
       OnClick = bbNewClick
+    end
+    object testo: TdxBarButton
+      Caption = 'New Item'
+      Category = 0
+      Hint = 'New Item'
+      Visible = ivAlways
     end
   end
   object il: TcxImageList
@@ -477,5 +501,15 @@ object mf: Tmf
   object vINFO: TrpVersionInfo
     Left = 448
     Top = 112
+  end
+  object BalloonHint: TBalloonHint
+    Delay = 200
+    HideAfter = 5000
+    Left = 528
+    Top = 112
+  end
+  object aftertimer: TTimer
+    Left = 400
+    Top = 192
   end
 end

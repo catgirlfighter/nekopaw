@@ -10,7 +10,7 @@ uses
   cxGraphics, cxControls, cxLookAndFeels, cxLookAndFeelPainters,
   cxCustomData, cxStyles, cxTL, cxTextEdit, cxCheckBox, cxTLdxBarBuiltInMenu,
   dxSkinsCore, ExtCtrls, cxSplitter, cxInplaceContainer,
-  cxButtons, dxSkinscxPCPainter, cxFilter, cxData, cxDataStorage, cxEdit,
+  cxButtons, cxFilter, cxData, cxDataStorage, cxEdit,
   cxGridCustomTableView, cxGridTableView, cxGridCustomView, cxClasses,
   cxGridLevel, cxGrid, cxButtonEdit, cxExtEditRepositoryItems, cxPC, cxLabel,
   cxImage, cxEditRepositoryItems, cxVGrid,
