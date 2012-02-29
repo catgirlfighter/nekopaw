@@ -404,9 +404,9 @@ object mf: Tmf
       OnClick = bbNewClick
     end
     object testo: TdxBarButton
-      Caption = 'New Item'
+      Caption = 'Abouto'
       Category = 0
-      Hint = 'New Item'
+      Hint = 'Abouto'
       Visible = ivAlways
     end
   end

@@ -22,7 +22,6 @@ type
     vChilds: TcxGridDBTableView;
     cxEditRepository1: TcxEditRepository;
     iTextEdit: TcxEditRepositoryTextItem;
-    vGrid1: TcxGridTableView;
     md: TdxMemData;
     vGrid: TcxGridDBTableView;
     ds: TDataSource;
@@ -38,6 +37,7 @@ type
     iCheckBox: TcxEditRepositoryCheckBoxItem;
     iPBar: TcxEditRepositoryProgressBar;
     bbDoubles: TdxBarButton;
+    vGrid1: TcxGridTableView;
     procedure bbColumnsClick(Sender: TObject);
     procedure bbFilterClick(Sender: TObject);
     procedure vGridFocusedRecordChanged(Sender: TcxCustomGridTableView;
@@ -48,7 +48,7 @@ type
   private
     //FList: TList;
     FFieldList: TStringList;
-    FPicChanged: TPictureEvent;
+    FPicChanged: TPictureNotifyEvent;
     FCheckColumn: tcxGridDBColumn;
     FIdColumn: tcxGridDBColumn;
     FLabelColumn: tcxGridDBColumn;
@@ -74,7 +74,8 @@ type
     procedure SetLang;
     procedure OnListPicChanged(Pic: TTPicture; Changes: TPicChanges);
     procedure SetColWidths;
-    property OnPicChanged: TPictureEvent read FPicChanged write FPicChanged;
+    procedure updatefocusedrecord;
+    property OnPicChanged: TPictureNotifyEvent read FPicChanged write FPicChanged;
     { Public declarations }
   end;
 
@@ -531,18 +532,25 @@ begin
   bbDoubles.Caption := _DOUBLES_;
 end;
 
-procedure TfGrid.vGridFocusedRecordChanged(Sender: TcxCustomGridTableView;
-  APrevFocusedRecord, AFocusedRecord: TcxCustomGridRecord;
-  ANewItemRecordFocusingChanged: Boolean);
+procedure TfGrid.updatefocusedrecord;
 var
-  n: integer;
+  n: variant;
 
 begin
   if Assigned(FPicChanged) then
   begin
     n := md.FieldValues['id'];
-    FPicChanged(TTPicture(n));
+    if n <> null then
+      FPicChanged(Self,TTPicture(Integer(n)));
   end;
+end;
+
+procedure TfGrid.vGridFocusedRecordChanged(Sender: TcxCustomGridTableView;
+  APrevFocusedRecord, AFocusedRecord: TcxCustomGridRecord;
+  ANewItemRecordFocusingChanged: Boolean);
+
+begin
+  updatefocusedrecord;
 end;
 
 end.

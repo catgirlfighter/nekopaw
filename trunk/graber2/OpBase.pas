@@ -183,7 +183,10 @@ rootdir := ExtractFileDir(paramstr(0));
 if fileexists(IncludeTrailingPathDelimiter(rootdir) + profname) then
   LoadProfileSettings
 else
+begin
+  LoadProfileSettings;
   SaveProfileSettings;
+end;
 
 LoadLang(IncludeTrailingPathDelimiter(rootdir)+IncludeTrailingPathDelimiter('languages')+langname+'.ini');
 

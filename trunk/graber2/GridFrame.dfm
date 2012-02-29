@@ -19,6 +19,7 @@ object fGrid: TfGrid
     Align = alClient
     TabOrder = 0
     LookAndFeel.NativeStyle = False
+    ExplicitTop = 32
     object vChilds: TcxGridDBTableView
       NavigatorButtons.ConfirmDelete = False
       DataController.DataSource = ds
@@ -27,15 +28,6 @@ object fGrid: TfGrid
       DataController.Summary.DefaultGroupSummaryItems = <>
       DataController.Summary.FooterSummaryItems = <>
       DataController.Summary.SummaryGroups = <>
-    end
-    object vGrid1: TcxGridTableView
-      NavigatorButtons.ConfirmDelete = False
-      DataController.Summary.DefaultGroupSummaryItems = <>
-      DataController.Summary.FooterSummaryItems = <>
-      DataController.Summary.SummaryGroups = <>
-      OptionsView.ColumnAutoWidth = True
-      OptionsView.ExpandButtonsForEmptyDetails = False
-      OptionsView.Footer = True
     end
     object vGrid: TcxGridDBTableView
       NavigatorButtons.ConfirmDelete = False
@@ -54,6 +46,12 @@ object fGrid: TfGrid
       OptionsView.ColumnAutoWidth = True
       OptionsView.ExpandButtonsForEmptyDetails = False
       OptionsView.HeaderEndEllipsis = True
+    end
+    object vGrid1: TcxGridTableView
+      NavigatorButtons.ConfirmDelete = False
+      DataController.Summary.DefaultGroupSummaryItems = <>
+      DataController.Summary.FooterSummaryItems = <>
+      DataController.Summary.SummaryGroups = <>
     end
     object GridLevel1: TcxGridLevel
       GridView = vGrid

@@ -113,34 +113,73 @@ type
 
   TPicChanges = Set of TPicChange;
 
-  PListValue = ^TListValue;
+//  PTagedListValue = ^TTagedListValue;
 
-  TListValue = record
-    Name: String;
-    Value: Variant;
+  TTagedListValue = class(TObject)
+  private
+    FName: String;
+    FValue: Pointer;
+  public
+    property Name: String read FName write FName;
+    property Value: Pointer read FValue write FValue;
   end;
 
-  TValueList = class(TList)
+
+  TTagedList = class(TList)
   private
     FNodouble: Boolean;
   protected
-    function Get(Index: integer): PListValue;
-    function GetValue(ItemName: String): Variant;
-    procedure SetValue(ItemName: String; Value: Variant); virtual;
-    function FindItem(ItemName: String): PListValue;
+    function Get(Index: integer): TTagedListValue;
+    function GetValue(ItemName: String): Pointer;
+    procedure SetValue(ItemName: String; Value: Pointer);
+    function FindItem(ItemName: String): TTagedListValue;
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
     destructor Destroy; override;
-    procedure Assign(List: TValueList; AOperator: TListAssignOp = laCopy);
+    procedure Assign(List: TTagedList; AOperator: TListAssignOp = laCopy);
     constructor Create;
     // procedure Add(ItemName: String; Value: Variant);
-    property Items[Index: integer]: PListValue read Get;
-    property ItemByName[ItemName: String]: PListValue read FindItem;
-    property Values[ItemName: String]: Variant read GetValue
+    property Items[Index: integer]: TTagedListValue read Get;
+    property ItemByName[ItemName: String]: TTagedListValue read FindItem;
+    property Values[ItemName: String]: Pointer read GetValue
       write SetValue; default;
     property Count;
     property NoDouble: Boolean read FNodouble write FNodouble;
   end;
+
+  //TListValue
+
+  TListValue = class(TTagedListValue)
+    protected
+      function GetValue: Variant;
+      procedure SetValue(Value: Variant);
+    public
+      constructor Create;
+      destructor Destroy; override;
+      property Value: Variant read GetValue write SetValue;
+  end;
+
+  TValueList = class(TTagedList)
+  protected
+    function Get(ItemIndex: integer): TListValue;
+    function GetValue(ItemName: String): Variant;
+    procedure SetValue(ItemName: String; Value: Variant);
+    procedure Assign(List: TValueList; AOperator: TListAssignOp = laCopy);
+  public
+    property Items[ItemIndex: Integer]: TListValue read Get;
+    property Values[ItemName: String]: Variant read GetValue write SetValue; default;
+  end;
+
+  TMetaList = class(TList)
+  private
+  protected
+    procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+  public
+    function FindPosition(Value: Variant; var exists: boolean): integer;
+    function Add(Value: Variant; Pos: integer): PVariant;
+  end;
+
+
 
   { TPictureValueState = (pvsNone, pvsKey, pvsNoduble);
 
@@ -412,6 +451,7 @@ type
 
   TPictureEvent = procedure(APicture: TTPicture) of object;
   // TResourcePictureEvent = procedure (AResource: TResource; APicture: TTPicture) of object;
+  TPictureNotifyEvent = procedure(Sender: TObject; APicture: TTPicture) of object;
 
   TPicChangeEvent = procedure(APicture: TTPicture; Changes: TPicChanges)
     of object;
@@ -674,6 +714,7 @@ type
     FIgnoreList: TDSArray;
     FListFileFormat: String;
     FPicChanged: TPicChangeEvent;
+    FPictureList: TPictureList;
     // FPicFileFormat: String;
     // procedure SetPicFileFormat(Value: String);
     procedure SetOnError(Value: TLogEvent);
@@ -864,48 +905,48 @@ end;
 
 // TValueList
 
-constructor TValueList.Create;
+constructor TTagedList.Create;
 begin
   FNodouble := true;
 end;
 
-destructor TValueList.Destroy;
+destructor TTagedList.Destroy;
 begin
   inherited;
 end;
 
-procedure TValueList.Notify(Ptr: Pointer; Action: TListNotification);
+procedure TTagedList.Notify(Ptr: Pointer; Action: TListNotification);
 var
-  p: PListValue;
+  p: TTagedListValue;
 begin
   case Action of
     lnDeleted:
       begin
         p := Ptr;
-        Dispose(p);
+        p.Free;
       end;
   end;
 end;
 
-function TValueList.Get(Index: integer): PListValue;
+function TTagedList.Get(Index: integer): TTagedListValue;
 begin
   Result := inherited Get(Index);
 end;
 
-function TValueList.GetValue(ItemName: String): Variant;
+function TTagedList.GetValue(ItemName: String): Pointer;
 var
-  p: PListValue;
+  p: TTagedListValue;
 begin
   p := FindItem(ItemName);
   if p = nil then
-    Result := null
+    Result := nil
   else
     Result := p.Value;
 end;
 
-procedure TValueList.SetValue(ItemName: String; Value: Variant);
+procedure TTagedList.SetValue(ItemName: String; Value: Pointer);
 var
-  p: PListValue;
+  p: TTagedListValue;
 begin
   if ItemName = '' then
     Exit;
@@ -914,7 +955,8 @@ begin
     p := FindItem(ItemName);
     if p = nil then
     begin
-      New(p);
+      //New(p);
+      p := TTagedListValue.Create;
       p.Name := ItemName;
       p.Value := Value;
       inherited Add(p);
@@ -924,14 +966,15 @@ begin
   end
   else
   begin
-    New(p);
+    //New(p);
+    p := TTagedListValue.Create;
     p.Name := ItemName;
     p.Value := Value;
     inherited Add(p);
   end;
 end;
 
-function TValueList.FindItem(ItemName: String): PListValue;
+function TTagedList.FindItem(ItemName: String): TTagedListValue;
 var
   i: integer;
 begin
@@ -960,10 +1003,10 @@ end;
   end;
   end; }
 
-procedure TValueList.Assign(List: TValueList; AOperator: TListAssignOp);
+procedure TTagedList.Assign(List: TTagedList; AOperator: TListAssignOp);
 var
   i: integer;
-  p: PListValue;
+  p: TTagedListValue;
 begin
   case AOperator of
     laCopy:
@@ -972,7 +1015,8 @@ begin
         Capacity := List.Capacity;
         for i := 0 to List.Count - 1 do
         begin
-          New(p);
+          //New(p);
+          p := TTagedListValue.Create;
           p.Name := List.Items[i].Name;
           p.Value := List.Items[i].Value;
           inherited Add(p);
@@ -994,6 +1038,176 @@ begin
   end;
 
 end;
+
+//TListValue
+
+function TListValue.GetValue: Variant;
+begin
+  Result := PVariant(FValue)^;
+end;
+
+procedure TListValue.SetValue(Value: Variant);
+begin
+  PVariant(FValue)^ := Value;
+end;
+
+constructor TListValue.Create;
+var
+  p: PVariant;
+begin
+  inherited;
+  New(p);
+  FValue := p;
+end;
+
+destructor TListValue.Destroy;
+var
+  p: PVariant;
+begin
+  p := FValue;
+  Dispose(p);
+  inherited;
+end;
+
+//TValueList
+
+function TValueList.Get(ItemIndex: integer): TListValue;
+begin
+  Result := (inherited Items[ItemIndex]) as TListValue;
+end;
+
+function TValueList.GetValue(ItemName: String): Variant;
+var
+  p: TTagedListValue;
+
+begin
+  p := FindItem(ItemName);
+
+  if p = nil then
+    Result := null
+  else
+    Result := (p as TListValue).Value;
+end;
+
+procedure TValueList.SetValue(ItemName: String; Value: Variant);
+var
+  p: TListValue;
+begin
+  if ItemName = '' then
+    Exit;
+  if FNodouble then
+  begin
+    p := (FindItem(ItemName) as TListValue);
+    if p = nil then
+    begin
+      //New(p);
+      p := TListValue.Create;
+      p.Name := ItemName;
+      p.Value := Value;
+      inherited Add(p);
+    end
+    else
+      p.Value := Value;
+  end
+  else
+  begin
+    //New(p);
+    p := TListValue.Create;
+    p.Name := ItemName;
+    p.Value := Value;
+    inherited Add(p);
+  end;
+end;
+
+procedure TValueList.Assign(List: TValueList; AOperator: TListAssignOp);
+var
+  i: integer;
+  p: TListValue;
+begin
+  case AOperator of
+    laCopy:
+      begin
+        Clear;
+        Capacity := List.Capacity;
+        for i := 0 to List.Count - 1 do
+        begin
+          //New(p);
+          p := TListValue.Create;
+          p.Name := List.Items[i].Name;
+          p.Value := List.Items[i].Value;
+          inherited Add(p);
+        end;
+      end;
+    laAnd:
+      ;
+    laOr:
+      begin
+        for i := 0 to List.Count - 1 do
+          Values[List.Items[i].Name] := List.Items[i].Value;
+      end;
+    laXor:
+      ;
+    laSrcUnique:
+      ;
+    laDestUnique:
+      ;
+  end;
+
+end;
+
+//TMetaList
+
+procedure TMetaList.Notify(Ptr: Pointer; Action: TListNotification);
+var
+  p: PVariant;
+begin
+  case Action of
+    lnDeleted:
+      begin
+        p := Ptr;
+        Dispose(p);
+      end;
+  end;
+end;
+
+function TMetaList.FindPosition(Value: Variant; var exists: boolean): integer;
+var
+  Hi,Lo,i: integer;
+
+begin
+  Hi := Count;
+  Lo := 0;
+  i := Hi div 2;
+
+  while (Hi - Lo) > 0 do
+  begin
+    if Value = PVariant(Items[i])^ then
+      Break
+    else if Value < PVariant(Items[i])^ then
+      Hi := i
+    else
+      Lo := i;
+    i := (Hi - Lo) div 2;
+  end;
+
+  if Value > PVariant(Items[i])^ then
+    Result := i + 1
+  else
+    Result := i;
+
+  exists := VarSameValue(Value,PVariant(Items[i])^);
+end;
+
+function TMetaList.Add(Value: Variant; Pos: integer): PVariant;
+var
+  p: PVariant;
+
+begin
+  New(p);
+  Insert(Pos,p);
+  Result := p;
+end;
+
 // TPictureValueList
 
 { function TPictureValueList.Get(Index: integer): TPictureValue;
@@ -1410,17 +1624,24 @@ var
 begin
   if FCursor < Count then
   begin
-    for i := FCursor to Count do
+    Result := -1;
+    for i := FCursor to Count-1 do
       if (Items[FCursor].Status = JOB_NOJOB) then
       begin
         Items[FCursor].Status := JOB_INPROGRESS;
+        Result := i;
+        FCursor := i + 1;
+        Break;
+      end;
+
+    for i := FCursor to Count-1 do
+      if (Items[FCursor].Status = JOB_NOJOB) then
+      begin
         FCursor := i;
-        Result := FCursor;
-        inc(FCursor);
         Exit;
       end;
+
     FCursor := Count;
-    Result := -1;
   end
   else
     Result := -1;
@@ -1730,6 +1951,7 @@ begin
     t.XMLScript := XMLScript;
     t.HTTPRec := HTTPRec; }
   t.DownloadRec := DownloadSet;
+  t.HTTPRec := HTTPRec;
   t.Sectors := FSectors;
   t.Fields := FFields;
   t.PictureList.Resource := Self;
@@ -1809,7 +2031,7 @@ var
 begin
   for i := 0 to Values.Count - 1 do
   begin
-    t := Values.Items[i]^;
+    t := Values.Items[i];
     ProcValue(lowercase(t.Name), t.Value);
   end;
 end;
@@ -1962,7 +2184,9 @@ begin
           if Assigned(FOnError) then
             FOnError(Self, t.Error);
         end;
-    end;
+    end
+  else
+    t.Picture.Status := JOB_ERROR;
 
   if (FPictureList.eol) and (FPictureList.AllFinished) then
   begin
@@ -2029,6 +2253,7 @@ begin
   FDwnldHandler := TThreadHandler.Create;
   FDwnldHandler.OnAllThreadsFinished := OnHandlerFinished;
   FDwnldHandler.CreateJob := CreateDWNLDJob;
+  FPictureList := TPictureList.Create;
 
   FMaxThreadCount := 0;
 end;
@@ -2065,7 +2290,7 @@ begin
   for i := 0 to FPicQueue - 1 do
   begin
     R := Items[i];
-    if R.PictureList.eol then
+    if not R.PictureList.eol then
     begin
       R.CreatePicJob(t);
       // R.NextPage := false;
@@ -2203,6 +2428,7 @@ var
 begin
   FOnError := Value;
   FThreadHandler.OnError := Value;
+  FDWNLDHandler.OnError := Value;
   for i := 0 to Count - 1 do
     Items[i].OnError := Value;
 end;
@@ -2220,6 +2446,8 @@ end;
 destructor TResourceList.Destroy;
 begin
   FThreadHandler.Free;
+  FDWNLDHandler.Free;
+  FPictureList.Free;
   inherited;
 end;
 
@@ -2648,6 +2876,16 @@ begin
           Result := DateTimeStrEval(CalcValue(CopyTo(s, ',', ['""'], true), VE,
             LinkedObj), CalcValue(CopyTo(s, ',', ['""'], true), VE, LinkedObj),
             CalcValue(CopyTo(s, ',', ['""'], true), VE, LinkedObj));
+        end else if s = 'trim' then
+        begin
+          s := CopyFromTo(Value, '(', ')', ['()', '""']);
+          tmp := CopyTo(s,',',['""'],true);
+          if s = '' then
+            Result := trim(CalcValue(tmp,VE,LinkedObj),' ')
+          else begin
+            s := CalcValue(s,VE,LinkedObj);
+            Result := trim(CalcValue(tmp,VE,LinkedObj),s[1]);
+          end;
         end;
 
       end;
@@ -3149,7 +3387,7 @@ procedure TTPicture.MakeFileName(Format: String);
 // check names
   function ParamCheck(s: String; main: Boolean): String;
   var
-    n: PListValue;
+    n: TListValue;
 
   begin
     if main then
@@ -3167,7 +3405,7 @@ procedure TTPicture.MakeFileName(Format: String);
         Result := s
     else
     begin
-      n := Meta.FindItem(s);
+      n := Meta.FindItem(s) as TListValue;
 
       if n = nil then
         Result := ValidFName(s)
@@ -3181,14 +3419,23 @@ procedure TTPicture.MakeFileName(Format: String);
     i, n: integer;
     c: Boolean;
     key, rsl: string;
+    isl: array of string;
+
   begin
     c := false;
-    n := CharPosEx(s, ['$', '%'], []);
+    if not b then
+    begin
+      SetLength(isl,1);
+      isl[0] := '<>';
+    end else
+      SetLength(isl,0);
+
+    n := CharPosEx(s, ['$', '%'], isl);
 
     while n <> 0 do
     begin
       i := n;
-      n := CharPosEx(s, ['$', '%'], [], i + 1);
+      n := CharPosEx(s, ['$', '%'], isl, i + 1);
 
       if n = 0 then
         Break
@@ -3202,12 +3449,12 @@ procedure TTPicture.MakeFileName(Format: String);
       begin
         if not c and (rsl <> '') then
           c := true;
-        s := Replace(s, s[i] + key + s[n], rsl, true);
+        s := Replace(s, s[i] + key + s[n], rsl);
       end
       else
         Continue;
 
-      n := CharPosEx(s, ['$', '%'], [], i + 1);
+      n := CharPosEx(s, ['$', '%'], isl, i + 1);
     end;
 
     if b and not c then
@@ -3250,7 +3497,10 @@ procedure TTPicture.MakeFileName(Format: String);
   end;
 
 begin
-  FFileName := ParseSections(Format);
+  if Format = '' then
+    FFileName := Format
+  else
+    FFileName := ParseSections(Format);
 end;
 
 procedure TTPicture.SetParent(Item: TTPicture);
@@ -3441,17 +3691,27 @@ var
 begin
   if FCursor < Count then
   begin
+    Result := nil;
+
     for i := FCursor to Count-1 do
       if (Items[i].Status = JOB_NOJOB) and (Items[i].Checked) then
       begin
         Items[i].Status := JOB_INPROGRESS;
-        FCursor := i;
         Result := Items[i];
+        FCursor := i + 1;
 //        FCursor := i;
+        Break;
+      end;
+
+    for i := FCursor to Count-1 do
+      if (Items[i].Status = JOB_NOJOB) and (Items[i].Checked) then
+      begin
+        FCursor := i;
         Exit;
       end;
+
     FCursor := Count;
-    Result := nil;
+    //Result := nil;
   end
   else
     Result := nil;
