@@ -27,6 +27,7 @@ type
     bSettings: TcxButton;
     iIcon: TImage;
     bExit: TcxButton;
+    bAbout: TcxButton;
     procedure FrameResize(Sender: TObject);
     procedure bNewClick(Sender: TObject);
     procedure bExitClick(Sender: TObject);
@@ -66,8 +67,10 @@ begin
                  ButtonWidth,ButtonHeight);
   bLoad.SetBounds(bNew.Left,bNew.BoundsRect.Bottom + sps*4,ButtonWidth,ButtonHeight);
   bSettings.SetBounds(bNew.Left,bLoad.BoundsRect.Bottom + sps*4,ButtonWidth,ButtonHeight);
-  bExit.SetBounds(bNew.Left,bSettings.BoundsRect.Bottom + sps*4,ButtonWidth,ButtonHeight);
+  bAbout.SetBounds(bNew.Left,bSettings.BoundsRect.Bottom + sps*4,ButtonWidth,ButtonHeight);
   iIcon.SetBounds(bNew.BoundsRect.Right + sps*4, (Height - IconHeight) div 2, IconWidth,IconHeight);
+  bExit.SetBounds(bNew.Left,iIcon.BoundsRect.Bottom - ButtonHeight, ButtonWidth,ButtonHeight);
+
 //  bAdvanced.SetBounds(iIcon.BoundsRect.Right + sps*2,iIcon.BoundsRect.Bottom - ButtonHeight,ButtonWidth,ButtonHeight);
 end;
 

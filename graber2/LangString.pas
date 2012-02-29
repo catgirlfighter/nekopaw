@@ -37,7 +37,7 @@ var
   _INCORRECT_DECLORATION_: String = 'Incorrect decloration near symbol %s';
   _INCORRECT_FILESIZE_: String = 'Incorrect file size';
   _NOUPDATES_ : String = 'Nothing to update';
-  _NEWUPDATES_: String = 'New updates avalable. Do you want to download it?';
+  _NEWUPDATES_: String = 'New updates is avalable. Do you want to download it?';
   _UPDATEERROR_: String = 'Error on cheking updates';
 
   (* OTHER *)

@@ -164,7 +164,7 @@ type
     procedure ShowPanels;
     procedure OnError(Sender: TObject; Msg: String);
     procedure Setlang;
-    procedure PicInfo(a: TTPicture);
+    procedure PicInfo(Sender: TObject; a: TTPicture);
     procedure CheckUpdates;
     procedure ShowUPDHint(title, description: string);
     procedure StartUpdate;
@@ -364,9 +364,10 @@ begin
       dsTags.Hide;
     end
     else if (TMycxtabSheet(pcTables.ActivePage).MainFrame is TfGrid) then
+    with (TMycxtabSheet(pcTables.ActivePage).MainFrame as TfGrid) do
     begin
       //dsTags.Show;
-      if (TMycxtabSheet(pcTables.ActivePage).MainFrame as TfGrid).ResList.ListFinished then
+      if ResList.ListFinished then
       begin
         bbStartList.Caption := _STARTLIST_ ;
         bbStartPics.Enabled := true;
@@ -378,7 +379,7 @@ begin
       bbStartList.Enabled := true;
       //bbStartPics.Enabled := true;
 
-      if (TMycxtabSheet(pcTables.ActivePage).MainFrame as TfGrid).ResList.PicsFinished then
+      if ResList.PicsFinished then
       begin
         bbStartPics.Caption := _STARTPICS_ ;
         bbStartList.Enabled := true;
@@ -393,6 +394,9 @@ begin
 
       if not dsTags.AutoHide then
         dsTags.Show;
+
+      UpdateFocusedRecord;
+
     end else
     begin
       //dsTags.Hide;
@@ -406,12 +410,13 @@ begin
   end;
 end;
 
-procedure Tmf.PicInfo(a: TTPicture);
+procedure Tmf.PicInfo(Sender: TObject; a: TTPicture);
 var
   i: integer;
   //r: TcxEditorRow;
 begin
-  if CurPic = a then
+  if ((pcTables.ActivePage as tMycxTabSheet).MainFrame <> Sender)
+     or (CurPic = a) then
     Exit
   else
     CurPic := a;
@@ -433,7 +438,7 @@ begin
     dm.CreateField(vgCurMain,'vgiSavePath',_SAVEPATH_,'',ftReadOnly,nil,
       a.FileName);
     for i := 0 to a.Meta.Count -1 do
-      with a.Meta.Items[i]^ do
+      with a.Meta.Items[i] do
         dm.CreateField(vgCurMain,'avgi' + Name,Name,
           '',ftReadOnly,nil,VarToStr(Value));
   finally
@@ -773,7 +778,7 @@ begin
   if not bmbMain.Visible then
     bmbMain.Visible := true;
   pcTables.Change;
-  PicInfo(nil);
+  PicInfo(nil,nil);
   if not dsLogs.AutoHide then
     dsLogs.Visible := true;
 end;

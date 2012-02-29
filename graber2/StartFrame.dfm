@@ -1,8 +1,8 @@
 object fStart: TfStart
   Left = 0
   Top = 0
-  Width = 544
-  Height = 319
+  Width = 640
+  Height = 413
   Align = alClient
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -56,5 +56,13 @@ object fStart: TfStart
     Caption = 'bExit'
     TabOrder = 3
     OnClick = bExitClick
+  end
+  object bAbout: TcxButton
+    Left = 360
+    Top = 360
+    Width = 169
+    Height = 25
+    Caption = 'About'
+    TabOrder = 4
   end
 end
