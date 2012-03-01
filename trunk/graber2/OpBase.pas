@@ -2,7 +2,7 @@ unit OpBase;
 
 interface
 
-uses SysUtils, Messages, GraberU, INIFiles, Classes, Common;
+uses Windows, SysUtils, Messages, GraberU, INIFiles, Classes, Common;
 
 var
   FullResList: TResourceList;
