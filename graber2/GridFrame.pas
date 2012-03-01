@@ -171,12 +171,12 @@ begin
   if not Assigned(ResList) then
   begin
     ResList := TResourceList.Create;
-    ResList.OnPicChanged := OnListPicChanged;
+    ResList.PictureList.OnPicChanged := OnListPicChanged;
     //ResList.OnAddPicture := OnPicAdd;
     ResList.OnJobChanged := OnStartJob;
     //ResList.OnEndJob := OnEndJob;
     //ResList.OnBeginPicList := OnBeginPicList;
-    ResList.OnEndPicList := OnEndPicList;
+    ResList.PictureList.OnEndAddList := OnEndPicList;
     FPicChanged := nil;
   end else
     ResList.Clear;
@@ -229,7 +229,7 @@ begin
     try
       //r := vGrid.DataController.InsertRecord(r);
       md.FieldValues['checked'] := APicture.Checked;
-      md.FieldValues['resname'] := APicture.List.Resource.Name;
+      md.FieldValues['resname'] := APicture.Resource.Name;
       md.FieldValues['label'] := APicture.DisplayLabel;
       md.FieldValues['id'] := Integer(APicture.Orig);
       md.FieldValues['parent'] := Integer(Apicture.Orig.Parent);

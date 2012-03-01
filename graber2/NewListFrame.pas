@@ -149,7 +149,7 @@ begin
   begin
     c := dm.CreateCategory(vgSettings,'vgimain',_MAINCONFIG_);
     dm.CreateField(vgSettings,'vgitag',_TAGSTRING_,'',ftString,c,FullResList[n].Fields['tag']);
-    dm.CreateField(vgSettings,'vgidwpath',_SAVEPATH_,'',ftString,c,FullResList[n].PictureList.NameFormat);
+    dm.CreateField(vgSettings,'vgidwpath',_SAVEPATH_,'',ftString,c,FullResList[n].NameFormat);
   end
   else
   with FullResList[n] do begin
@@ -161,9 +161,9 @@ begin
       s := VarToStr(FullResList[0].Fields['tag']);
     dm.CreateField(vgSettings,'vgitag',_TAGSTRING_,'',ftString,c,s);
 
-    s := PictureList.NameFormat;
+    s := NameFormat;
     if (s = '') and Inherit then
-      s := FullResList[0].PictureList.NameFormat;
+      s := FullResList[0].NameFormat;
     dm.CreateField(vgSettings,'vgidwpath',_SAVEPATH_,'',ftString,c,s);
 
     d := FullResList[0].Fields.Count;
@@ -301,7 +301,7 @@ begin
     Fields['tag'] := (vgSettings.RowByName('vgitag') as TcxEditorRow)
       .Properties.Value;
 
-    PictureList.NameFormat := (vgSettings.RowByName('vgidwpath') as TcxEditorRow)
+    NameFormat := (vgSettings.RowByName('vgidwpath') as TcxEditorRow)
       .Properties.Value;
 
     if vgSettings.Tag > 0 then

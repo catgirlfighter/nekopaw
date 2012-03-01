@@ -80,6 +80,7 @@
 				<DesignClass>TDataModule</DesignClass>
 			</DCCReference>
 			<DCCReference Include="UPDUnit.pas"/>
+			<DCCReference Include="NekoDataSet.pas"/>
 			<RcItem Include="..\updater\compiled\NPUpdater.exe">
 				<ContainerId>ResourceItem</ContainerId>
 				<ResourceType>UPDTER</ResourceType>

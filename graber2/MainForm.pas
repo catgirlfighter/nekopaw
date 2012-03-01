@@ -337,9 +337,9 @@ end;
 procedure Tmf.OnError(Sender: TObject; Msg: String);
 begin
   if mErrors.Lines.Count = 0 then
-    mErrors.Lines[0] := FormatDateTime('hh:nn',Time) + ' ' + Msg
+    mErrors.Lines[0] := FormatDateTime('hh:nn:ss',Time) + ' ' + Msg
   else
-    mErrors.Lines.Add(FormatDateTime('hh:nn',Time) + ' ' + Msg);
+    mErrors.Lines.Add(FormatDateTime('hh:nn:ss',Time) + ' ' + Msg);
   dsLogs.AutoHide := false;
   dsLogs.Show;
   dsLogs.ActiveChild := dpErrors;
@@ -415,13 +415,15 @@ var
   i: integer;
   //r: TcxEditorRow;
 begin
-  if ((pcTables.ActivePage as tMycxTabSheet).MainFrame <> Sender)
+  if Sender = nil then
+    CurPic := nil
+  else if ((pcTables.ActivePage as tMycxTabSheet).MainFrame <> Sender)
      or (CurPic = a) then
     Exit
   else
     CurPic := a;
 
-  if a = nil then
+  if CurPic = nil then
   begin
     vgCurMain.ClearRows;
     chlbTags.Clear;
@@ -432,7 +434,7 @@ begin
   try
     vgCurMain.ClearRows;
     dm.CreateField(vgCurMain,'vgiRName',_RESNAME_,'',ftReadOnly,nil,
-      a.List.Resource.Name);
+      a.Resource.Name);
     dm.CreateField(vgCurMain,'vgiName',_FILENAME_,'',ftReadOnly,nil,
       a.PicName + '.' + a.Ext);
     dm.CreateField(vgCurMain,'vgiSavePath',_SAVEPATH_,'',ftReadOnly,nil,
@@ -494,7 +496,7 @@ begin
   f2.ResList.DWNLDHandler.Cookies := FCookie;
   f2.ResList.DWNLDHandler.Proxy := Globalsettings.Proxy;
   f2.ResList.DWNLDHandler.ThreadCount := GlobalSettings.Downl.PicThreads;
-  f2.ResList.PicIgnoreList := IgnoreList;
+  f2.ResList.PictureList.IgnoreList := IgnoreList;
   f2.OnPicChanged := PicInfo;
   f2.ResList.StartJob(JOB_LIST);
   ShowPanels;
