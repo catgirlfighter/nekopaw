@@ -21,7 +21,7 @@ uses
   EncryptStrings in 'EncryptStrings.pas',
   utils in 'utils.pas' {dm: TDataModule},
   UPDUnit in 'UPDUnit.pas',
-  NekoDataSet in 'NekoDataSet.pas';
+  MyDataSet in 'MyDataSet.pas';
 
 {$R *.res}
 

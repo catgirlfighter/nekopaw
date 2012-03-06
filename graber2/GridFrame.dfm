@@ -19,21 +19,15 @@ object fGrid: TfGrid
     Align = alClient
     TabOrder = 0
     LookAndFeel.NativeStyle = False
-    ExplicitTop = 32
     object vChilds: TcxGridDBTableView
       NavigatorButtons.ConfirmDelete = False
-      DataController.DataSource = ds
-      DataController.DetailKeyFieldNames = 'parent'
-      DataController.KeyFieldNames = 'id'
       DataController.Summary.DefaultGroupSummaryItems = <>
       DataController.Summary.FooterSummaryItems = <>
       DataController.Summary.SummaryGroups = <>
     end
-    object vGrid: TcxGridDBTableView
+    object vGrid1: TcxGridDBTableView
       NavigatorButtons.ConfirmDelete = False
-      OnFocusedRecordChanged = vGridFocusedRecordChanged
-      DataController.DataSource = ds
-      DataController.KeyFieldNames = 'id'
+      OnFocusedRecordChanged = vGrid1FocusedRecordChanged
       DataController.Summary.DefaultGroupSummaryItems = <
         item
           Kind = skCount
@@ -47,17 +41,20 @@ object fGrid: TfGrid
       OptionsView.ExpandButtonsForEmptyDetails = False
       OptionsView.HeaderEndEllipsis = True
     end
-    object vGrid1: TcxGridTableView
+    object vGrid: TcxGridTableView
       NavigatorButtons.ConfirmDelete = False
+      OnEditValueChanged = vGridEditValueChanged
+      OnFocusedRecordChanged = vGrid1FocusedRecordChanged
       DataController.Summary.DefaultGroupSummaryItems = <>
       DataController.Summary.FooterSummaryItems = <>
       DataController.Summary.SummaryGroups = <>
+      OptionsView.ColumnAutoWidth = True
+      OptionsView.ExpandButtonsForEmptyDetails = False
     end
     object GridLevel1: TcxGridLevel
       GridView = vGrid
       Options.TabsForEmptyDetails = False
       object GridLevel2: TcxGridLevel
-        GridView = vChilds
       end
     end
   end
@@ -105,19 +102,6 @@ object fGrid: TfGrid
       Properties.AnimationPath = cxapPingPong
     end
   end
-  object md: TdxMemData
-    Indexes = <>
-    SortOptions = []
-    SortedField = 'RecId'
-    Left = 72
-    Top = 80
-  end
-  object ds: TDataSource
-    DataSet = md
-    OnDataChange = dsDataChange
-    Left = 72
-    Top = 128
-  end
   object BarManager: TdxBarManager
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
@@ -158,10 +142,6 @@ object fGrid: TfGrid
         item
           Visible = True
           ItemName = 'bbFilter'
-        end
-        item
-          Visible = True
-          ItemName = 'bbDoubles'
         end>
       NotDocking = [dsNone, dsLeft, dsTop, dsRight, dsBottom]
       OneOnRow = True
@@ -185,19 +165,6 @@ object fGrid: TfGrid
       Visible = ivAlways
       ButtonStyle = bsChecked
       OnClick = bbFilterClick
-    end
-    object dxBarButton1: TdxBarButton
-      Caption = 'bbBestFit'
-      Category = 0
-      Hint = 'bbBestFit'
-      Visible = ivAlways
-    end
-    object bbDoubles: TdxBarButton
-      Caption = 'bbDoubles'
-      Category = 0
-      Hint = 'bbDoubles'
-      Visible = ivAlways
-      OnClick = bbDoublesClick
     end
   end
   object GridPopup: TcxGridPopupMenu

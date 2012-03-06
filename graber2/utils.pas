@@ -5,7 +5,7 @@ interface
 uses
   SysUtils, Classes, cxGridCustomTableView, cxGraphics, cxEdit, Windows,
   cxDataUtils, cxGridCommon, cxGridTableView, cxEditRepositoryItems,
-  cxExtEditRepositoryItems, cxVGrid, GraberU, common;
+  cxExtEditRepositoryItems, cxVGrid, GraberU, common, Math;
 
 type
   Tdm = class(TDataModule)
@@ -29,8 +29,8 @@ type
 var
   dm: Tdm;
 
-function GetBestFitWidth(a: TcxCustomGridTableItem): Integer;
-procedure BestFitWidths(a: TcxGridTableView);
+function GetBestFitWidth(a: TcxCustomGridTableItem; FirstRec: integer): Integer;
+procedure BestFitWidths(a: TcxGridTableView; FirstRec: integer = 0);
 
 implementation
 
@@ -50,7 +50,7 @@ begin
   end;
 end;
 
-function GetBestFitWidth(a: TcxCustomGridTableItem): Integer;
+function GetBestFitWidth(a: TcxCustomGridTableItem; FirstRec: integer): Integer;
 var
   ACanvas: TcxCanvas;
   AIsCalcByValue: Boolean;
@@ -97,7 +97,7 @@ begin
   end;
   AEditViewData := TcxCustomGridTableItemAccess(a).CreateEditViewData(a.GetProperties);
   try
-    for I := GetFirstRecordIndex to GetLastRecordIndex do
+    for I := Max(GetFirstRecordIndex,FirstRec) to GetLastRecordIndex do
     begin
       ARecord := TcxCustomGridTableItemAccess(a).ViewData.Records[I];
       if ARecord.HasCells then
@@ -127,12 +127,22 @@ begin
     Inc(Result, 2 * cxGridEditOffset);
 end;
 
-procedure BestFitWidths(a: TcxGridTableView);
+procedure BestFitWidths(a: TcxGridTableView; FirstRec: integer = 0);
 var
   i: integer;
+  n: integer;
 begin
-  for i := 0 to a.ColumnCount -1 do
-    a.Columns[i].Width := GetBestFitWidth(a.Columns[i]);
+
+
+  for i := FirstRec to a.ColumnCount -1 do
+  begin
+    if FirstRec <> 0 then
+      n := a.Columns[i].Width
+    else
+      n := 0;
+
+    a.Columns[i].Width := Max(n,GetBestFitWidth(a.Columns[i],FirstRec));
+  end;
 end;
 
 function Tdm.CreateCategory(vg: TcxVerticalGrid; AName, ACaption: String): TcxCategoryRow;

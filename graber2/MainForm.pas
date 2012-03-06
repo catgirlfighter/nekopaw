@@ -129,6 +129,8 @@ type
     procedure bbStartListClick(Sender: TObject);
     procedure ApplicationEvents1Exception(Sender: TObject; E: Exception);
     procedure bbStartPicsClick(Sender: TObject);
+    procedure pcTablesPageChanging(Sender: TObject; NewPage: TcxTabSheet;
+      var AllowChange: Boolean);
   private
     mFrame: TFrame;
     // tvMain: TmycxGridTableView;
@@ -395,8 +397,14 @@ begin
       if not dsTags.AutoHide then
         dsTags.Show;
 
+{      Screen.Cursor := crHourGlass;
+      try
+        vd.Open;
+      finally
+        Screen.Cursor := crDefault;
+      end;  }
       UpdateFocusedRecord;
-
+      sBar.Panels[1].Text := 'TTL ' + IntToStr(vGrid.DataController.RecordCount);
     end else
     begin
       //dsTags.Hide;
@@ -408,6 +416,21 @@ begin
       dsTags.Hide;
     end;
   end;
+end;
+
+procedure Tmf.pcTablesPageChanging(Sender: TObject; NewPage: TcxTabSheet;
+  var AllowChange: Boolean);
+begin
+{  if (pcTables.ActivePage <> nil) and (pcTables.ActivePage is TMycxtabSheet) then
+    if (TMycxtabSheet(pcTables.ActivePage).MainFrame is TfGrid) then
+    with (TMycxtabSheet(pcTables.ActivePage).MainFrame as TfGrid) do
+      vd.Close;   }
+
+{  if (NewPage <> nil) and (NewPage is TMycxtabSheet) then
+    if (TMycxtabSheet(NewPage).MainFrame is TfGrid) then
+    with (TMycxtabSheet(NewPage).MainFrame as TfGrid) do
+        vd.Open; }
+
 end;
 
 procedure Tmf.PicInfo(Sender: TObject; a: TTPicture);
@@ -499,6 +522,7 @@ begin
   f2.ResList.PictureList.IgnoreList := IgnoreList;
   f2.OnPicChanged := PicInfo;
   f2.ResList.StartJob(JOB_LIST);
+  //f2.vd.Open;
   ShowPanels;
 end;
 
@@ -563,10 +587,13 @@ begin
   f := TFrame((pcTables.ActivePage as TMycxTabSheet).MainFrame);
   if f is TfGrid then
     with (f as TfGrid) do
+    begin
+      vGrid.DataController.Post;
       if ResList.ListFinished then
         ResList.StartJob(JOB_LIST)
        else
         ResList.StartJob(JOB_STOPLIST);
+    end;
 end;
 
 procedure Tmf.bbStartPicsClick(Sender: TObject);
@@ -577,10 +604,13 @@ begin
   f := TFrame((pcTables.ActivePage as TMycxTabSheet).MainFrame);
   if f is TfGrid then
     with (f as TfGrid) do
+    begin
+      vGrid.DataController.Post;
       if ResList.PicsFinished then
         ResList.StartJob(JOB_PICS)
        else
         ResList.StartJob(JOB_STOPPICS);
+    end;
 end;
 
 procedure Tmf.CANCELNEWLIST(var Msg: TMessage);

@@ -181,12 +181,15 @@ type
   TMetaList = class(TList)
   private
     FType: DB.TFieldType;
+    FVariantType: TVarType;
+    procedure SetValueType(Value: DB.TFieldType);
   protected
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
     function FindPosition(Value: Variant; var i: integer): boolean;
     function Add(Value: Variant; Pos: integer): PVariant;
-    property ValueType: DB.TFieldType read FType write FType;
+    property ValueType: DB.TFieldType read FType write SetValueType;
+    property VariantType: TVarType read FVariantType;
   end;
 
 
@@ -499,6 +502,7 @@ type
     FChanges: TPicChanges;
     FBookMark: integer;
     function GetMD5String: string;
+//    FStatus: Integer;
     // FObj: TObject;
   protected
     procedure SetParent(Item: TTPicture);
@@ -549,6 +553,7 @@ type
   public
     procedure BeginAddList;
     procedure EndAddList;
+    procedure ResetCursors;
     property Items[Index: integer]: TTPicture read Get write Put; default;
     property OnBeginAddList: TNotifyEvent read FBeforePictureList
       write FBeforePictureList;
@@ -558,6 +563,7 @@ type
     function AllFinished(incerrs: Boolean = true): Boolean;
     function NextJob(Status: integer): TTPicture;
     function eol: Boolean;
+    procedure Reset;
     property Cursor: integer read FCursor;
     //property Resource: TResource read FResource write FResource;
   end;
@@ -578,9 +584,10 @@ type
     FMetaContainer: TTagedList;
     FIgnoreList: TDSArray;
     FParentsCount,FChildsCount: integer;
+    FDoublesTickCount: integer;
     procedure SetPicChange(Value: TPicChangeEvent);
   protected
-    procedure AllocateMeta;
+    procedure DeallocateMeta;
     procedure AddPicMeta(pic: TTPicture; MetaName: String; MetaValue: Variant);
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
     property Link;
@@ -599,13 +606,13 @@ type
     property OnAddPicture: TPictureEvent read FOnAddPicture write FOnAddPicture;
     //property CheckDouble: TCheckFunction read FCheckDouble write FCheckDouble;
     property NameFormat: String read FNameFormat write FNameFormat;
-    procedure Reset;
     procedure Clear; override;
     property OnPicChanged: TPicChangeEvent read FPicChange write SetPicChange;
     property IgnoreList: TDSArray read FIgnoreList write FIgnoreList;
     property Meta: TTagedList read FMetaContainer;
     property ParensCount: integer read FParentsCount;
     property ChildsCount: integer read FChildsCount;
+    property DoublestickCount: integer read FDoublesTickCount;
   end;
 
   TResourceEvent = procedure(R: TResource) of object;
@@ -771,7 +778,7 @@ type
     destructor Destroy; override;
     procedure StartJob(JobType: integer);
     procedure CopyResource(R: TResource);
-    function FullPicFieldList: TStringList;
+    procedure CreatePicFields;
     procedure NextPage;
     procedure SetPageMode(Value: Boolean);
     procedure SetMaxThreadCount(Value: integer);
@@ -1254,6 +1261,19 @@ end;
 
 //TMetaList
 
+procedure TMetaList.SetValueType(Value: DB.TFieldType);
+begin
+  FType := Value;
+  case FType of
+    ftInteger: FVariantType := varInteger;
+    ftLargeInt: FVariantType := varInt64;
+    ftBoolean: FVariantType := varBoolean;
+    DB.ftString: FVariantType := varUString;
+    ftDateTime: FVariantType := varDate;
+    ftFloat: FVariantType := varDouble;
+  end;
+end;
+
 procedure TMetaList.Notify(Ptr: Pointer; Action: TListNotification);
 var
   p: PVariant;
@@ -1279,26 +1299,34 @@ begin
     Exit;
   end;
 
+  Value := VarAsType(Value,FVariantType);
+
   Hi := Count;
   Lo := 0;
   i := Hi div 2;
 
-  while (Hi - Lo) > 0 do
-  begin
-    if Value = PVariant(Items[i])^ then
-      Break
-    else if Value < PVariant(Items[i])^ then
-      Hi := i - 1
-    else
-      Lo := i + 1;
+  try
+    while (Hi - Lo) > 0 do
+    begin
+      if Value = PVariant(Items[i])^ then
+        Break
+      else if Value < PVariant(Items[i])^ then
+        Hi := i - 1
+      else
+        Lo := i + 1;
 
-    i := Lo + ((Hi - Lo) div 2);
+      i := Lo + ((Hi - Lo) div 2);
+    end;
+
+    if (i < Count) and (Value > PVariant(Items[i])^) then
+      inc(i);
+
+      Result := (i < Count) and VarSameValue(Value,PVariant(Items[i])^);
+  except
+    on e: exception do
+      raise Exception.Create(e.Message + ' (' + VarToStr(PVariant(Items[i])^) + ') - ('
+                           + VarToStr(Value) + ')');
   end;
-
-  if (i < Count) and (Value > PVariant(Items[i])^) then
-    inc(i);
-
-  Result := (i < Count) and VarSameValue(Value,PVariant(Items[i])^);
 end;
 
 function TMetaList.Add(Value: Variant; Pos: integer): PVariant;
@@ -1854,7 +1882,7 @@ begin
   // FURL := '';
   FIconFile := '';
   FParent := nil;
-  FPictureList := TPictureList.Create;
+  FPictureList := TPictureLinkList.Create;
   //FPictureList.Resource := Self;
   FInherit := true;
   FLoginPrompt := false;
@@ -1970,6 +1998,8 @@ begin
     JOB_PICS:
       begin
         //FPictureList.Reset;
+
+        FPictureList.ResetCursors;
 
         if (FPictureList.Count = 0) or (FPictureList.AllFinished(false)) then
         begin
@@ -2147,72 +2177,72 @@ var
   i: integer;
   //s: LongInt;
 begin
-  if t.InitialScript.NotEmpty then
-  begin
-    t.InitialScript := nil;
-
-    if t.BeforeScript.NotEmpty then
+  try
+    if t.InitialScript.NotEmpty then
     begin
-      if not Assigned(FBeforeScript) then
-        FBeforeScript := TScriptSection.Create;
-      FBeforeScript.Assign(t.BeforeScript);
+      t.InitialScript := nil;
+
+      if t.BeforeScript.NotEmpty then
+      begin
+        if not Assigned(FBeforeScript) then
+          FBeforeScript := TScriptSection.Create;
+        FBeforeScript.Assign(t.BeforeScript);
+      end;
+      if t.AfterScript.NotEmpty then
+      begin
+        if not Assigned(FAfterScript) then
+          FAfterScript := TScriptSection.Create;
+        FAfterScript.Assign(t.AfterScript);
+      end;
+      if t.XMLScript.NotEmpty then
+      begin
+        if not Assigned(FXMLScript) then
+          FXMLScript := TScriptSection.Create;
+        FXMLScript.Assign(t.XMLScript);
+      end;
+      FFields.Assign(t.Fields);
+      HTTPRec := t.HTTPRec;
+
+      for i := HTTPRec.Counter to HTTPRec.Count - 1 do
+        FJobList.Add(HTTPRec.Counter, JOB_LIST);
+
+      CheckIdle(true);
+
+      // FJobInitiated := true;
     end;
-    if t.AfterScript.NotEmpty then
-    begin
-      if not Assigned(FAfterScript) then
-        FAfterScript := TScriptSection.Create;
-      FAfterScript.Assign(t.AfterScript);
-    end;
-    if t.XMLScript.NotEmpty then
-    begin
-      if not Assigned(FXMLScript) then
-        FXMLScript := TScriptSection.Create;
-      FXMLScript.Assign(t.XMLScript);
-    end;
-    FFields.Assign(t.Fields);
-    HTTPRec := t.HTTPRec;
-
-    for i := HTTPRec.Counter to HTTPRec.Count - 1 do
-      FJobList.Add(HTTPRec.Counter, JOB_LIST);
-
-    CheckIdle(true);
-
-    // FJobInitiated := true;
-  end;
-
-  if t.ReturnValue = THREAD_COMPLETE then
-    case t.Job of
-      JOB_LIST:
-        begin
-          FJobList[t.JobId].Status := JOB_FINISHED;
-          if t.PictureList.Count > 0 then
+  finally
+    if t.ReturnValue = THREAD_COMPLETE then
+      case t.Job of
+        JOB_LIST:
           begin
-            //PictureList.Link.AddPicList(t.PictureList, true);
-            //s := GetTickCount;
-            if Assigned(PictureList.Link.OnEndAddList) then
-              PictureList.Link.OnEndAddList(t.PictureList);
-            //FOnError(Self, IntToStr(GetTickCount - s) + ' ms');
+            FJobList[t.JobId].Status := JOB_FINISHED;
+            if t.PictureList.Count > 0 then
+            begin
+              for i := 0 to t.PictureList.Count -1 do
+                FPictureList.Add(t.PictureList[i].Orig);
+              if Assigned(PictureList.Link.OnEndAddList) then
+                PictureList.Link.OnEndAddList(t.PictureList);
+              //s := GetTickCount;
+              //FOnError(Self, IntToStr(GetTickCount - s) + ' ms');
+            end;
           end;
-        end;
-      JOB_ERROR:
-        begin
-          FJobList[t.JobId].Status := JOB_ERROR;
-          if Assigned(FOnError) then
-            FOnError(Self, t.Error);
-        end;
-    end
-  else
-    FJobList[t.JobId].Status := JOB_ERROR;
+        JOB_ERROR:
+          begin
+            FJobList[t.JobId].Status := JOB_ERROR;
+            if Assigned(FOnError) then
+              FOnError(Self, t.Error);
+          end;
+      end
+    else
+      FJobList[t.JobId].Status := JOB_ERROR;
 
 
-  if (FJobList.eol) and (FJobList.AllFinished) then
-  begin
-    // FJobFinished := true;
-    FOnJobFinished(Self);
+    if (FJobList.eol) and (FJobList.AllFinished) then
+      FOnJobFinished(Self);
+
+    dec(FCurrThreadCount);
+    Result := THREAD_START;
   end;
-
-  dec(FCurrThreadCount);
-  Result := THREAD_START;
 end;
 
 procedure TResource.LoadFromFile(fname: String);
@@ -2514,25 +2544,49 @@ begin
   inherited;
 end;
 
-function TResourceList.FullPicFieldList: TStringList;
+procedure TResourceList.CreatePicFields;
 var
   i, j: integer;
-  l: TStringList;
-
+  l,f: TStringList;
+  p: TMetaList;
+  s,n: string;
 begin
-  Result := TStringList.Create;
+  f := TStringList.Create;
   if Count < 1 then
     Exit;
-  Result.Assign(Items[0].PicFieldList);
+  f.Assign(Items[0].PicFieldList);
   for i := 1 to Count - 1 do
   begin
     l := Items[i].PicFieldList;
     for j := 0 to l.Count - 1 do
-      if Result.IndexOf(l[j]) = -1 then
-        Result.Add(l[j]);
-
+      if f.IndexOf(l[j]) = -1 then
+        f.Add(l[j]);
   end;
 
+  for i := 0 to f.Count -1 do
+  begin
+    s := f[i];
+    n := GetNextS(s,':');
+
+    p := FPicturelist.Meta[n];
+    if p = nil then
+    begin
+      p := TMetaList.Create;
+      if s <> '' then
+        case s[1] of
+          'i','p' : p.ValueType := ftInteger;
+          'd' : p.ValueType := ftDateTime;
+          'b' : p.ValueType := ftBoolean;
+          else p.ValueType := DB.ftString;
+        end
+      else
+        p.ValueType := DB.ftString;
+      FPicturelist.Meta[n] := p;
+    end;
+  end;
+
+//  l.Free;
+  f.Free;
 end;
 
 procedure TResourceList.JobFinished(R: TResource);
@@ -2616,7 +2670,7 @@ begin
       begin
         if AllPicsFinished then
           Exit;
-        FPictureList.Reset;
+        //FPictureList.Reset;
         FPicQueue := 0;
         FDwnldHandler.CreateThreads;
         for i := 0 to Count - 1 do
@@ -3148,8 +3202,11 @@ begin
       FAfterScript.Process(SE, DE, FE, VE, VE);
 
       CSection.Enter;
-      FLPicList.AddPicList(FPicList,true);
-      CSection.Leave;
+      try
+        FLPicList.AddPicList(FPicList,true);
+      finally
+        CSection.Leave;
+      end;
 
       Break;
     except
@@ -3566,7 +3623,10 @@ procedure TTPicture.MakeFileName(Format: String);
 
 begin
   if Format = '' then
-    FFileName := Format
+    if FResource.NameFormat = '' then
+      FFileName := ''
+    else
+      FFileName := ParseSections(FResource.NameFormat)
   else
     FFileName := ParseSections(Format);
 end;
@@ -3703,37 +3763,43 @@ end;
 procedure TPictureList.AddPicList(APicList: TPictureList; Orig: Boolean);
 var
   i, j: integer;
+  n: DWORD;
   t, ch: TTPicture;
 begin
   i := 0;
-  while i < APicList.Count do
-    if not CheckDoubles(APicList[i]) then
-    begin
-      if not Assigned(APicList[i].Parent) then
+  n := GetTickCount;
+  try
+    while i < APicList.Count do
+      if not CheckDoubles(APicList[i]) then
       begin
-        t := CopyPicture(APicList[i]);
-        Inc(FParentsCount);
-        t.BookMark := FParentsCount;
-        if Orig then
-          APicList[i].Orig := t;
-        for j := 0 to APicList[i].Linked.Count - 1 do
-          if not CheckDoubles(APicList[i].Linked[j]) then
-          begin
-            ch := CopyPicture(APicList[i].Linked[j]);
-            Inc(FChildsCount);
-            ch.BookMark := FChildsCount;
-            if Orig then
-              APicList[i].Linked[j].Orig := ch;
-            t.Linked.Add(ch);
-            ch.Parent := t;
-          end;
-      end;
-      inc(i);
-    end
-    else if Orig then
-      APicList.Delete(i)
-    else
-      inc(i);
+        if not Assigned(APicList[i].Parent) then
+        begin
+          t := CopyPicture(APicList[i]);
+          Inc(FParentsCount);
+          t.BookMark := FParentsCount;
+          if Orig then
+            APicList[i].Orig := t;
+          for j := 0 to APicList[i].Linked.Count - 1 do
+            if not CheckDoubles(APicList[i].Linked[j]) then
+            begin
+              ch := CopyPicture(APicList[i].Linked[j]);
+              Inc(FChildsCount);
+              ch.BookMark := FChildsCount;
+              if Orig then
+                APicList[i].Linked[j].Orig := ch;
+              t.Linked.Add(ch);
+              ch.Parent := t;
+            end;
+        end;
+        inc(i);
+      end
+      else if Orig then
+        APicList.Delete(i)
+      else
+        inc(i);
+  finally
+    FDoublesTickCount := GetTickCount - n;
+  end;
 end;
 
 procedure TPictureList.AddPicMeta(pic: TTPicture; MetaName: String;
@@ -3743,20 +3809,25 @@ var
   n: integer;
   p: TMetaList;
 begin
-  p := FMetaContainer[MetaName];
+  try
+    p := FMetaContainer[MetaName];
 
-  if p = nil then
-  begin
-    p := TMetaList.Create;
-    FMetaContainer[MetaName] := p;
+    if p = nil then
+    begin
+      p := TMetaList.Create;
+      FMetaContainer[MetaName] := p;
+    end;
+
+    if p.FindPosition(MetaValue,n) then
+      v := p[n]
+    else
+      v := p.Add(MetaValue,n);
+
+    Pic.Meta.SetLink(MetaName,v);
+  except on e: Exception do
+    raise Exception.Create(pic.Meta['url'] + #13#10 + MetaName + ': '
+                         + e.Message);
   end;
-
-  if p.FindPosition(MetaValue,n) then
-    v := p[n]
-  else
-    v := p.Add(MetaValue,n);
-
-  Pic.Meta.SetLink(MetaName,v);
 end;
 
 function TPictureList.CopyPicture(Pic: TTPicture; Child: boolean): TTPicture;
@@ -3806,7 +3877,7 @@ destructor TPictureList.Destroy;
 begin
   Clear;
   FTags.Free;
-  AllocateMeta;
+  DeallocateMeta;
   FMetaContainer.Free;
   inherited;
 end;
@@ -3837,7 +3908,7 @@ begin
   end;
 end;
 
-procedure TPictureList.AllocateMeta;
+procedure TPictureList.DeallocateMeta;
 var
   i: integer;
   p: TMetaList;
@@ -3850,7 +3921,7 @@ begin
   FMetaContainer.Clear;
 end;
 
-procedure TPictureList.Reset;
+procedure TPictureLinkList.Reset;
 var
   i: integer;
 
@@ -3867,9 +3938,18 @@ begin
 
   for i := i to Count - 1 do
     if (Items[i].Checked) then
+    begin
       Items[i].Status := JOB_NOJOB;
+      Items[i].Size := 0;
+    end;
 
   AllFinished;
+end;
+
+procedure TPictureLinkList.ResetCursors;
+begin
+  FCursor := 0;
+  FFinishCursor := 0;
 end;
 
 function TPictureList.CheckDoubles(pic: TTPicture): boolean;
@@ -3884,11 +3964,16 @@ begin
     s1 := Pic.Meta[FIgnoreList[i][0]];
     if (VarToStr(s1) <> '') then
     begin
-      m := FMetaContainer[FIgnoreList[i][1]];
-      if Assigned(m) and (m.FindPosition(s1,pos)) then
-      begin
-        Result := true;
-        Exit;
+      try
+        m := FMetaContainer[FIgnoreList[i][1]];
+        if Assigned(m) and (m.FindPosition(s1,pos)) then
+        begin
+          Result := true;
+          Exit;
+        end;
+      except on e: exception do
+        raise Exception.Create(FIgnoreList[i][0] + ','
+                               + FIgnoreList[i][1] + ': ' + e.Message);
       end;
     end;
   end;
@@ -3899,7 +3984,7 @@ procedure TPictureList.Clear;
 begin
   inherited Clear;
   FTags.Clear;
-  AllocateMeta;
+  DeallocateMeta;
   FMetaContainer.Clear;
   FCursor := 0;
   FParentsCount := 0;
