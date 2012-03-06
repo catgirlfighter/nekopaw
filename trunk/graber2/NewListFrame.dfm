@@ -133,8 +133,6 @@ object fNewList: TfNewList
     object tsList: TcxTabSheet
       Caption = 'tsList'
       ImageIndex = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object gFull: TcxGrid
         Left = 0
         Top = 0
@@ -205,8 +203,6 @@ object fNewList: TfNewList
       Caption = 'tsSettings'
       ImageIndex = 1
       OnShow = tsSettingsShow
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0

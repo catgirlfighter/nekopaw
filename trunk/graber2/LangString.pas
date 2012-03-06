@@ -83,6 +83,9 @@ var
   _TAGS_: String = 'Tags';
   _DOUBLES_: String = 'Doubles';
   _UPDATING_: String = 'Updating';
+  _DOWNLOADED_: String = 'Downloaded';
+  _SIZE_: String = 'Size';
+  _PROGRESS_: String = 'Progress';
 
 procedure LoadLang(FileName: String);
 
@@ -170,6 +173,9 @@ begin
   _DOUBLES_ :=  INI.ReadString('lang','_DOUBLES_',_DOUBLES_);
   _UPDATING_ :=  INI.ReadString('lang','_UPDATING_',_UPDATING_);
   _NEWUPDATES_ :=  INI.ReadString('lang','_NEWUPDATES_',_NEWUPDATES_);
+  _DOWNLOADED_ :=  INI.ReadString('lang','_DOWNLOADED_',_DOWNLOADED_);
+  _SIZE_ :=  INI.ReadString('lang','_SIZE_',_SIZE_);
+  _PROGRESS_ :=  INI.ReadString('lang','_PROGRESS_',_PROGRESS_);
   INI.Free;
 end;
 

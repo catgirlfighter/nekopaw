@@ -78,6 +78,7 @@ object mf: Tmf
             Options = [pcoAlwaysShowGoDialogButton, pcoCloseButton, pcoGradient, pcoGradientClientArea, pcoRedrawOnResize]
             TabOrder = 0
             OnChange = pcTablesChange
+            OnPageChanging = pcTablesPageChanging
             ClientRectBottom = 232
             ClientRectRight = 419
             ClientRectTop = 0
