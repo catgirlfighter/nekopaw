@@ -205,6 +205,9 @@ begin
     t1 := GetTickCount;
     //ResList.OnError(Self,''
     vGrid.BeginUpdate;
+
+    c := vgrid.DataController.RecordCount;
+
     try
 {    vd.DisableControls;
     c := vd.RecNo;
@@ -215,8 +218,6 @@ begin
     vGrid.EndUpdate; }
 
       //FList := Sender as TPictureLinkList;
-
-      c := vgrid.DataController.RecordCount;
 
        vgrid.DataController.RecordCount := ResList.PictureList.Count;
 
@@ -245,12 +246,14 @@ begin
         end;
     finally
       vGrid.EndUpdate;
-      if c = 0 then
-        BestFitWidths(vGrid);
     end;
+
+    if c = 0 then
+      BestFitWidths(vGrid);
 
     t3 := GetTickCount;
     sBar.Panels[1].Text := 'TTL ' + IntToStr(vGrid.DataController.RecordCount)
+      + ' IGN '  + IntToStr(ResList.PictureList.PicCounter.IGN)
       + ' TBL ' + IntToStr(t3 - t1) + 'ms'
       + ' DBL '  + IntToStr(ResList.PictureList.DoublestickCount) + 'ms';
 
@@ -361,14 +364,14 @@ begin
     begin
       if pcSize in Changes then
         if Pic.Size = 0 then
-          Values[n,FSizeColumn.Index] := ''
+          Values[n,FSizeColumn.Index] := null
         else
           Values[n,FSizeColumn.Index] := GetBTString(Pic.Size);
 
       if pcProgress in Changes then
       begin
-        if Pic.Pos = 0 then
-          Values[n,FPosColumn.Index] := ''
+        if (Pic.Pos = 0) or (Pic.Pos = Pic.Size) then
+          Values[n,FPosColumn.Index] := null
         else
           Values[n,FPosColumn.Index] := GetBTString(Pic.Pos);
         if Pic.Size = 0 then
@@ -386,6 +389,24 @@ begin
     if pcChecked in Changes then
       Values[n,FCheckColumn.Index] := Pic.Checked;
     end;
+
+    if (pcChecked in Changes) or (Changes = []) then
+    begin
+      sBar.Panels[1].Text := 'TTL ' + IntToStr(ResList.PictureList.Count)
+        + ' OK ' + IntToStr(ResList.PictureList.PicCounter.OK)
+        + ' SKP ' + IntToStr(ResList.PictureList.PicCounter.SKP)
+        + ' EXS ' + IntToStr(ResList.PictureList.PicCounter.EXS)
+        + ' ERR ' + IntToStr(ResList.PictureList.PicCounter.ERR);
+
+      if (ResList.PictureList.Count - ResList.PictureList.PicCounter.SKP) > 0 then
+        sBar.Panels[0].Text := FormatFloat('0.00%',
+                                           ResList.PictureList.PicCounter.FSH
+                                        / (ResList.PictureList.Count
+                                        -  ResList.PictureList.PicCounter.SKP)
+                                        *  100);
+
+    end;
+
 {    if md.State in [dsEdit] then
       md.Post;    }
 
@@ -519,7 +540,7 @@ begin
 
   FResColumn := AddField(_RESNAME_);
   //c.Caption := ;
-  FResColumn.GroupBy(0);
+//  FResColumn.GroupBy(0);
 
   FLabelColumn := AddField( _PICTURELABEL_);
   //FLabelColumn.Caption :=;
@@ -528,7 +549,7 @@ begin
   with FPosColumn.Options do
   begin
     HorzSizing := false;
-    Filtering := false;
+    //Filtering := false;
     Grouping := false;
     Moving := false;
     Sorting := false;

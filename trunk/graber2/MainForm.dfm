@@ -90,7 +90,7 @@ object mf: Tmf
         Top = 0
         Width = 185
         Height = 236
-        ActiveChildIndex = 1
+        ActiveChildIndex = 0
         AllowFloating = False
         AutoHide = False
         Dockable = False
@@ -111,6 +111,75 @@ object mf: Tmf
           DockType = 1
           OriginalWidth = 185
           OriginalHeight = 140
+          object nvTags: TdxNavBar
+            Left = 0
+            Top = 0
+            Width = 181
+            Height = 208
+            Align = alClient
+            ActiveGroupIndex = 0
+            TabOrder = 0
+            View = 1
+            ExplicitLeft = -2
+            ExplicitTop = -4
+            object nbgTagsMain: TdxNavBarGroup
+              Caption = 'nbgTagsMain'
+              SelectedLinkIndex = -1
+              TopVisibleLinkIndex = 0
+              OptionsGroupControl.ShowControl = True
+              OptionsGroupControl.UseControl = True
+              Links = <>
+            end
+            object nbgTagsTags: TdxNavBarGroup
+              Caption = 'nbgTagsTags'
+              SelectedLinkIndex = -1
+              TopVisibleLinkIndex = 0
+              OptionsGroupControl.ShowControl = True
+              OptionsGroupControl.UseControl = True
+              Links = <>
+            end
+            object dxNavBarGroupControl1: TdxNavBarGroupControl
+              Left = 0
+              Top = 19
+              Width = 181
+              Height = 170
+              Caption = 'nbgCurMainControl'
+              TabOrder = 1
+              GroupIndex = 0
+              OriginalHeight = 41
+              object vgTagsMain: TcxVerticalGrid
+                Left = 0
+                Top = 0
+                Width = 181
+                Height = 170
+                Align = alClient
+                OptionsView.RowHeaderWidth = 84
+                TabOrder = 0
+                Version = 1
+              end
+            end
+            object dxNavBarGroupControl2: TdxNavBarGroupControl
+              Left = 0
+              Top = 38
+              Width = 181
+              Height = 170
+              Caption = 'nbgCurTagsControl'
+              TabOrder = 5
+              GroupIndex = 1
+              OriginalHeight = 41
+              object cxCheckListBox1: TcxCheckListBox
+                Left = 0
+                Top = 0
+                Width = 181
+                Height = 170
+                Align = alClient
+                EditValueFormat = cvfCaptions
+                Items = <>
+                Sorted = True
+                TabOrder = 0
+              end
+            end
+          end
         end
         object dpCurTags: TdxDockPanel
           Left = 0
@@ -409,6 +478,7 @@ object mf: Tmf
       Category = 0
       Hint = 'Abouto'
       Visible = ivAlways
+      OnClick = testoClick
     end
   end
   object il: TcxImageList

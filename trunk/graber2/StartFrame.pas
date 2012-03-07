@@ -32,6 +32,7 @@ type
     procedure bNewClick(Sender: TObject);
     procedure bExitClick(Sender: TObject);
     procedure bSettingsClick(Sender: TObject);
+    procedure bAboutClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -41,9 +42,14 @@ type
 
 implementation
 
-uses MainForm, GraberU, LangString;
+uses MainForm, GraberU, LangString, AboutForm;
 
 {$R *.dfm}
+
+procedure TfStart.bAboutClick(Sender: TObject);
+begin
+  fmAbout.Show;
+end;
 
 procedure TfStart.bExitClick(Sender: TObject);
 begin

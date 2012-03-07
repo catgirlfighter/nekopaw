@@ -119,6 +119,13 @@ type
     testo: TdxBarButton;
     BalloonHint: TBalloonHint;
     aftertimer: TTimer;
+    nvTags: TdxNavBar;
+    nbgTagsMain: TdxNavBarGroup;
+    nbgTagsTags: TdxNavBarGroup;
+    dxNavBarGroupControl1: TdxNavBarGroupControl;
+    vgTagsMain: TcxVerticalGrid;
+    dxNavBarGroupControl2: TdxNavBarGroupControl;
+    cxCheckListBox1: TcxCheckListBox;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure gLevel2GetGridView(Sender: TcxGridLevel;
@@ -131,6 +138,7 @@ type
     procedure bbStartPicsClick(Sender: TObject);
     procedure pcTablesPageChanging(Sender: TObject; NewPage: TcxTabSheet;
       var AllowChange: Boolean);
+    procedure testoClick(Sender: TObject);
   private
     mFrame: TFrame;
     // tvMain: TmycxGridTableView;
@@ -170,6 +178,8 @@ type
     procedure CheckUpdates;
     procedure ShowUPDHint(title, description: string);
     procedure StartUpdate;
+    procedure ChangeResInfo;
+    procedure RefreshResInfo(Sender: TObject);
 
     { Public declarations }
   end;
@@ -180,7 +190,8 @@ var
 
 implementation
 
-uses StartFrame, NewListFrame, LangString, SettingsFrame, GridFrame, utils;
+uses StartFrame, NewListFrame, LangString, SettingsFrame, GridFrame, utils,
+  AboutForm;
 {$R *.dfm}
 
 procedure TMycxTabSheet.OnTimer(Sender: TObject);
@@ -404,7 +415,8 @@ begin
         Screen.Cursor := crDefault;
       end;  }
       UpdateFocusedRecord;
-      sBar.Panels[1].Text := 'TTL ' + IntToStr(vGrid.DataController.RecordCount);
+      ChangeResInfo;
+      //sBar.Panels[1].Text := 'TTL ' + IntToStr(vGrid.DataController.RecordCount);
     end else
     begin
       //dsTags.Hide;
@@ -482,6 +494,45 @@ begin
   end;
 end;
 
+procedure Tmf.RefreshResInfo;
+var
+  i: integer;
+begin
+  vgTagsMain.BeginUpdate;
+  try
+    //vgTagsMain.ClearRows;
+    if (pcTables.ActivePage is TMycxTabSheet)
+    and ((pcTables.ActivePage as TMycxTabSheet).MainFrame is tfGrid) then
+    with ((pcTables.ActivePage as TMycxTabSheet).MainFrame as tfGrid) do
+      for i := 0 to ResList.Count -1 do
+      begin
+        if ResList[i].JobList.ErrorCount = 0 then
+          (vgTagsMain.RowByName('vgT' + IntToStr(i)) as  TcxEditorRow)
+          .Properties.Value :=
+            IntToStr(ResList[i].JobList.OkCount) + '/'
+            + IntToStr(ResList[i].JobList.Count)
+        else
+          (vgTagsMain.RowByName('vgT' + IntToStr(i)) as  TcxEditorRow)
+          .Properties.Value :=
+            IntToStr(ResList[i].JobList.OkCount) + '/'
+            + IntToStr(ResList[i].JobList.Count)
+          + ' err ' + IntToStr(ResList[i].JobList.ErrorCount);
+  {      dm.CreateField(vgCurMain,'vgiRName',_RESNAME_,'',ftReadOnly,nil,
+          a.Resource.Name);
+        dm.CreateField(vgCurMain,'vgiName',_FILENAME_,'',ftReadOnly,nil,
+          a.PicName + '.' + a.Ext);
+        dm.CreateField(vgCurMain,'vgiSavePath',_SAVEPATH_,'',ftReadOnly,nil,
+          a.FileName);
+        for i := 0 to a.Meta.Count -1 do
+          with a.Meta.Items[i] do
+            dm.CreateField(vgCurMain,'avgi' + Name,Name,
+              '',ftReadOnly,nil,VarToStr(Value)); }
+      end;
+  finally
+    vgTagsMain.EndUpdate;
+  end;
+end;
+
 procedure Tmf.ApplicationEvents1Exception(Sender: TObject; E: Exception);
 begin
   OnError(Sender,E.Message);
@@ -496,6 +547,7 @@ var
 
 begin
   n := TMycxTabSheet(Msg.WParam);
+
   f := n.SecondFrame as tfNewList; //TfNewList(n.Tag);
   f2 := TfGrid.Create(n) as tfGrid;
   f2.SetLang;
@@ -505,6 +557,11 @@ begin
     f2.ResList.MaxThreadCount := GlobalSettings.Downl.PerResThreads;
 
   f.ResetItems;
+
+  if VarToStr(FullResList[0].Fields['tag']) <> '' then
+    n.Caption := FullResList[0].Fields['tag'];
+
+  f2.ResList.OnPageComplete := RefreshResInfo;
   with f.tvRes.DataController do
     for i := 0 to RecordCount - 1 do
       if Values[i, 0] <> 0 then
@@ -635,6 +692,43 @@ begin
   CloseTab(SttPanel);
 end;
 
+procedure Tmf.ChangeResInfo;
+var
+  i: integer;
+begin
+  vgTagsMain.BeginUpdate;
+  try
+    vgTagsMain.ClearRows;
+    if (pcTables.ActivePage is TMycxTabSheet)
+    and ((pcTables.ActivePage as TMycxTabSheet).MainFrame is tfGrid) then
+    with ((pcTables.ActivePage as TMycxTabSheet).MainFrame as tfGrid) do
+      for i := 0 to ResList.Count -1 do
+      begin
+        if ResList[i].JobList.ErrorCount = 0 then
+          dm.CreateField(vgTagsMain,'vgT' + IntToStr(i),ResList[i].Name,
+          '',ftReadOnly,nil,IntToStr(ResList[i].JobList.OkCount) + '/'
+          + IntToStr(ResList[i].JobList.Count))
+        else
+          dm.CreateField(vgTagsMain,'vgT' + IntToStr(i),ResList[i].Name,
+          '',ftReadOnly,nil,IntToStr(ResList[i].JobList.OkCount) + '/'
+          + IntToStr(ResList[i].JobList.Count)
+          + ' err ' + IntToStr(ResList[i].JobList.ErrorCount));
+  {      dm.CreateField(vgCurMain,'vgiRName',_RESNAME_,'',ftReadOnly,nil,
+          a.Resource.Name);
+        dm.CreateField(vgCurMain,'vgiName',_FILENAME_,'',ftReadOnly,nil,
+          a.PicName + '.' + a.Ext);
+        dm.CreateField(vgCurMain,'vgiSavePath',_SAVEPATH_,'',ftReadOnly,nil,
+          a.FileName);
+        for i := 0 to a.Meta.Count -1 do
+          with a.Meta.Items[i] do
+            dm.CreateField(vgCurMain,'avgi' + Name,Name,
+              '',ftReadOnly,nil,VarToStr(Value)); }
+      end;
+  finally
+    vgTagsMain.EndUpdate;
+  end;
+end;
+
 procedure Tmf.CheckUpdates;
 var
   t: TUPDThread;
@@ -701,6 +795,11 @@ begin
   ShellExecute(Handle, 'open',PWidechar(IncludeTrailingPathDelimiter(rootdir)
     + 'NPUpdater.exe'), nil, nil, SW_SHOWNORMAL);
   Close;
+end;
+
+procedure Tmf.testoClick(Sender: TObject);
+begin
+  fmAbout.Show;
 end;
 
 procedure Tmf.CloseTab(t: TcxTabSheet);

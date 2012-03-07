@@ -1,8 +1,8 @@
 object fStart: TfStart
   Left = 0
   Top = 0
-  Width = 640
-  Height = 413
+  Width = 504
+  Height = 436
   Align = alClient
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -64,5 +64,6 @@ object fStart: TfStart
     Height = 25
     Caption = 'About'
     TabOrder = 4
+    OnClick = bAboutClick
   end
 end
