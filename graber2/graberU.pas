@@ -539,6 +539,10 @@ type
     // property Obj: TObject read FObj write FObj;
   end;
 
+  TPicCounter = record
+    OK,ERR,SKP,IGN,EXS,FSH: Word;
+  end;
+
   TPictureLinkList = class(TList)
   private
     FBeforePictureList: TNotifyEvent;
@@ -546,6 +550,7 @@ type
     FLinkedOn: TPictureList;
     FFinishCursor: integer;
     FCursor: integer;
+    FPicCounter: TPicCounter;
     //FResource: TResource;
   protected
     function Get(Index: integer): TTPicture;
@@ -554,6 +559,7 @@ type
     procedure BeginAddList;
     procedure EndAddList;
     procedure ResetCursors;
+    procedure ResetPicCounter;
     property Items[Index: integer]: TTPicture read Get write Put; default;
     property OnBeginAddList: TNotifyEvent read FBeforePictureList
       write FBeforePictureList;
@@ -565,7 +571,7 @@ type
     function eol: Boolean;
     procedure Reset;
     property Cursor: integer read FCursor;
-    //property Resource: TResource read FResource write FResource;
+    property PicCounter: TPicCounter read FPicCounter;
   end;
 
   TDoubleString = array [0 .. 1] of String;
@@ -631,6 +637,8 @@ type
     FLastAdded: PJobRec;
     FCursor: integer;
     FFinishCursor: integer;
+    FOkCount: integer;
+    FErrCount: Integer;
   protected
     function Get(Value: integer): PJobRec;
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
@@ -643,6 +651,9 @@ type
     procedure Reset;
     procedure Clear; override;
     property Cursor: integer read FCursor;
+    property FinishCursor: integer read FFinishCursor;
+    property ErrorCount: integer read FErrCount;
+    property OkCount: integer read FOkCount;
   end;
 
   TResource = class(TObject)
@@ -677,7 +688,9 @@ type
     FOnError: TLogEvent;
     FMaxThreadCount: integer;
     FCurrThreadCount: integer;
+    FPictureThreadCount: integer;
     FJobList: TJobList;
+    FOnPageComplete: TNotifyEvent;
     { FPerPageMode: Boolean; }
   protected
     procedure DeclorationEvent(Values: TValueList; LinkedObj: TObject);
@@ -725,8 +738,10 @@ type
     property OnError: TLogEvent read FOnError write FOnError;
     property CurrThreadCount: integer read FCurrThreadCount;
     property MaxThreadCount: integer read FMaxThreadCount write FMaxThreadCount;
+    property PicThreadCount: integer read FPictureThreadCount;
     property JobList: TJobList read FJobList;
     property Short: String read FShort;
+    property OnPageComplete: TNotifyEvent read FOnPageComplete write FOnPageComplete;
   end;
 
   TResourceLinkList = class(TList)
@@ -760,6 +775,7 @@ type
     FPictureList: TPictureList;
     // FPicFileFormat: String;
     // procedure SetPicFileFormat(Value: String);
+    FOnResPageComplete: TNotifyEvent;
     procedure SetOnError(Value: TLogEvent);
     function GetPicsFinished: Boolean;
   protected
@@ -808,6 +824,7 @@ type
     //property PicFileFormat: String read FPicFileFormat write SetPicFileFormat;
     //property OnPicChanged: TPicChangeEvent read FPicChanged write FPicChanged;
     property PictureList: TPictureList read FPictureList;
+    property OnPageComplete: TNotifyEvent read FOnResPageComplete write FOnResPageComplete;
   end;
 
 implementation
@@ -1746,6 +1763,8 @@ begin
       Exit;
     end;
 
+  FFinishCursor := Count;
+
   Result := true;
 end;
 
@@ -1784,19 +1803,25 @@ var
   i: integer;
 
 begin
+  FErrCount := 0;
+  FOkCount := 0;
   FFinishCursor := 0;
 
   i := 0;
 
   for i := i to Count - 1 do
     if Items[i].Status <> JOB_FINISHED then
-      Break;
+      Break
+    else
+      inc(FOkCount);
 
   FCursor := i;
 
   for i := i to Count - 1 do
     if Items[i].Status <> JOB_FINISHED then
-      Items[i].Status := JOB_NOJOB;
+      Items[i].Status := JOB_NOJOB
+    else
+      inc(FOkCount);
 
   AllFinished;
 end;
@@ -1804,7 +1829,7 @@ end;
 procedure TJobList.Clear;
 begin
   inherited Clear;
-  FCursor := 0;
+  Reset;
 end;
 
 function TJobList.eol: Boolean;
@@ -2007,7 +2032,7 @@ begin
           Exit;
         end;
 
-        // FCurrThreadCount := 0;
+        FPictureThreadCount := 0;
         // FJobFinished := false;
 
         // FJobInitiated := FJobList.Count > 0;
@@ -2091,8 +2116,8 @@ begin
   t.Fields := FFields;
   t.Resource := Self;
   t.Job := JOB_PICS;
-  { inc(FHTTPRec.Counter);
-    inc(FCurrThreadCount); }
+  { inc(FHTTPRec.Counter);}
+    inc(FPictureThreadCount);
 end;
 
 procedure TResource.DeclorationEvent(Values: TValueList; LinkedObj: TObject);
@@ -2215,6 +2240,7 @@ begin
       case t.Job of
         JOB_LIST:
           begin
+            inc(FJobList.FOkCount);
             FJobList[t.JobId].Status := JOB_FINISHED;
             if t.PictureList.Count > 0 then
             begin
@@ -2228,16 +2254,22 @@ begin
           end;
         JOB_ERROR:
           begin
+            inc(FJobList.FErrCount);
             FJobList[t.JobId].Status := JOB_ERROR;
             if Assigned(FOnError) then
               FOnError(Self, t.Error);
           end;
       end
     else
+    begin
+      inc(FJobList.FErrCount);
       FJobList[t.JobId].Status := JOB_ERROR;
+    end;
 
+    if Assigned(FOnPageComplete) then
+      FOnPageComplete(Self);
 
-    if (FJobList.eol) and (FJobList.AllFinished) then
+    if (FJobList.AllFinished) and (FJobList.eol) then
       FOnJobFinished(Self);
 
     dec(FCurrThreadCount);
@@ -2300,41 +2332,60 @@ end;
 
 function TResource.PicJobComplete(t: TDownloadThread): integer;
 begin
+  try
+    if t.ReturnValue = THREAD_COMPLETE then
+      case t.Job of
+        JOB_PICS:
+          begin
+            t.Picture.Status := JOB_FINISHED;
+            t.Picture.Checked := false;
 
-  if t.ReturnValue = THREAD_COMPLETE then
-    case t.Job of
-      JOB_PICS:
-        begin
-          t.Picture.Status := JOB_FINISHED;
-          t.Picture.Checked := false;
-          if Assigned(t.Picture.OnPicChanged) then
-            t.Picture.OnPicChanged(t.Picture, [pcChecked]);
-          { if t.PictureList.Count > 0 then
-            begin
-            PictureList.AddPicList(t.PictureList,true);
-            if Assigned(PictureList.OnEndAddList) then
-            PictureList.OnEndAddList(t.PictureList);
-            end; }
-        end;
-      JOB_CANCELED:
-          t.Picture.Status := JOB_NOJOB;
-      JOB_ERROR:
-        begin
-          t.Picture.Status := JOB_ERROR;
-          if Assigned(FOnError) then
-            FOnError(Self, t.Error);
-        end;
-    end
-  else
-    t.Picture.Status := JOB_ERROR;
+            if t.Picture.Size = 0 then
+              inc(PictureList.Link.FPicCounter.EXS)
+            else
+              inc(PictureList.Link.FPicCounter.OK);
 
-  if (FPictureList.eol) and (FPictureList.AllFinished) then
-  begin
-    // FJobFinished := true;
-    FOnPicJobFinished(Self);
+            if Assigned(t.Picture.OnPicChanged) then
+              t.Picture.OnPicChanged(t.Picture, [pcChecked]);
+            { if t.PictureList.Count > 0 then
+              begin
+              PictureList.AddPicList(t.PictureList,true);
+              if Assigned(PictureList.OnEndAddList) then
+              PictureList.OnEndAddList(t.PictureList);
+              end; }
+          end;
+        JOB_CANCELED:
+            t.Picture.Status := JOB_NOJOB;
+        JOB_ERROR:
+          begin
+            t.Picture.Status := JOB_ERROR;
+            inc(PictureList.Link.FPicCounter.ERR);
+            if Assigned(t.Picture.OnPicChanged) then
+              t.Picture.OnPicChanged(t.Picture, []);
+            if Assigned(FOnError) then
+              FOnError(Self, t.Error);
+          end;
+      end
+    else
+    begin
+      t.Picture.Status := JOB_ERROR;
+      inc(PictureList.Link.FPicCounter.ERR);
+      if Assigned(t.Picture.OnPicChanged) then
+        t.Picture.OnPicChanged(t.Picture, []);
+    end;
+
+    inc(PictureList.Link.FPicCounter.FSH);
+
+    if (FPictureList.eol) and (FPictureList.AllFinished) then
+    begin
+      // FJobFinished := true;
+      FOnPicJobFinished(Self);
+    end;
+
+  finally
+    Result := THREAD_START;
+    dec(FPictureThreadCount);
   end;
-
-  Result := THREAD_START;
 end;
 
 // TResourceLinkList
@@ -2375,7 +2426,7 @@ begin
   NR.PictureList.Link := PictureList;
   NR.CheckIdle := ThreadHandler.CheckIdle;
   NR.OnError := FOnError;
-  NR.MaxThreadCount := FMaxThreadCount;
+  NR.OnPageComplete := OnPageComplete;
   // NR.PictureList.CheckDouble := CheckDouble;
   Add(NR);
 end;
@@ -2402,25 +2453,56 @@ function TResourceList.CreateDWNLDJob(t: TDownloadThread): Boolean;
 var
   R: TResource;
   i: integer;
+  n: integer;
+
+  function NextNotEOL(n: integer): integer;
+  var
+    i: integer;
+
+  begin
+    for i := n + 1 to Count -1 do
+    begin
+      if not Items[i].PictureList.eol then
+      begin
+        Result := i;
+        Exit;
+      end;
+    end;
+
+
+    for i := 0 to n do
+    begin
+      if not Items[i].PictureList.eol then
+      begin
+        Result := i;
+        Exit;
+      end;
+    end;
+
+    Result := n;
+
+  end;
 
 begin
-  if FPicQueue > Count - 1 then
-    FPicQueue := 0;
+
 
   // queue of tasks
 
   // check new task
   // from current to end
 
-  for i := FPicQueue to Count - 1 do
+  n := Items[FPicQueue].PicThreadCount;
+
+  for i := FPicQueue + 1 to Count - 1 do
   begin
     R := Items[i];
-    if not R.PictureList.eol then
+    if (n > R.PicThreadCount)
+    and not R.PictureList.eol then
     begin
       R.CreatePicJob(t);
       // R.NextPage := false;
       Result := true;
-      inc(FPicQueue);
+      //inc(FPicQueue);
       Exit;
     end;
   end;
@@ -2430,14 +2512,24 @@ begin
   for i := 0 to FPicQueue - 1 do
   begin
     R := Items[i];
-    if not R.PictureList.eol then
+    if (n > R.PicThreadCount)
+    and not R.PictureList.eol then
     begin
       R.CreatePicJob(t);
       // R.NextPage := false;
       Result := true;
-      inc(FPicQueue);
+      //inc(FPicQueue);
       Exit;
     end;
+  end;
+
+  R := Items[FPicQueue];
+  if not R.PictureList.eol then
+  begin
+    R.CreatePicJob(t);
+    FPicQueue := NextNotEOL(FPicQueue);
+    Result := true;
+    Exit;
   end;
 
   // if no task then result = false
@@ -2682,7 +2774,10 @@ begin
               PictureList.NameFormat := PicFileFormat; }
             StartJob(JobType);
             if not FPictureList.eol then
-              FDwnldHandler.CheckIdle;
+              FDwnldHandler.CheckIdle
+            else
+              if FPicQueue = i then
+                inc(FPicQueue);
           end;
         end;
 
@@ -2971,9 +3066,12 @@ begin
     '@':
       begin
         s := TrimEx(CopyTo(Value, '('), [#13, #10, #9, ' ']);
-        if s = 'calc' then
+        if SameText(s,'calc') then
           Result := CalcValue(trim(CalcValue(CopyFromTo(Value, '(', ')'), VE,
             LinkedObj, true), ''''), VE, LinkedObj)
+        else if SameText(s,'httpencode') then
+          Result := STRINGENCODE(StringDecode(CalcValue(CopyFromTo(Value, '(',
+            ')'), VE, LinkedObj)))
         else if s = 'emptyname' then
           Result := emptyname(StringDecode(CalcValue(CopyFromTo(Value, '(',
             ')'), VE, LinkedObj)))
@@ -3697,6 +3795,8 @@ begin
       Exit;
     end;
 
+  FFinishCursor := Count;
+  FCursor := Count;
   Result := true;
 end;
 
@@ -3793,10 +3893,14 @@ begin
         end;
         inc(i);
       end
-      else if Orig then
-        APicList.Delete(i)
       else
-        inc(i);
+      begin
+         if Orig then
+          APicList.Delete(i)
+        else
+          inc(i);
+        Inc(FPicCounter.IGN);
+      end;
   finally
     FDoublesTickCount := GetTickCount - n;
   end;
@@ -3926,13 +4030,17 @@ var
   i: integer;
 
 begin
+  ResetPicCounter;
+
   FFinishCursor := 0;
 
   i := 0;
 
   for i := i to Count - 1 do
     if (Items[i].Checked) then
-      Break;
+      Break
+    else
+      inc(FPicCOunter.SKP);
 
   FCursor := i;
 
@@ -3940,8 +4048,14 @@ begin
     if (Items[i].Checked) then
     begin
       Items[i].Status := JOB_NOJOB;
-      Items[i].Size := 0;
-    end;
+      if Items[i].Size <> 0 then
+      begin
+        Items[i].Size := 0;
+        if Assigned(Items[i].OnPicChanged) then
+          Items[i].OnPicChanged(Items[i],[pcSize,pcProgress]);
+      end;
+    end else
+      inc(FPicCounter.SKP);
 
   AllFinished;
 end;
@@ -3950,6 +4064,21 @@ procedure TPictureLinkList.ResetCursors;
 begin
   FCursor := 0;
   FFinishCursor := 0;
+
+  AllFinished;
+end;
+
+procedure TPictureLinkList.ResetPicCounter;
+begin
+  with FPicCounter do
+  begin
+    OK := 0;
+    ERR := 0;
+    SKP := 0;
+    IGN := 0;
+    EXS := 0;
+    FSH := 0;
+  end;
 end;
 
 function TPictureList.CheckDoubles(pic: TTPicture): boolean;
@@ -3983,6 +4112,7 @@ end;
 procedure TPictureList.Clear;
 begin
   inherited Clear;
+  ResetPicCounter;
   FTags.Clear;
   DeallocateMeta;
   FMetaContainer.Clear;

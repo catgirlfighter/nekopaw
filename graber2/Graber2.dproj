@@ -81,6 +81,9 @@
 			</DCCReference>
 			<DCCReference Include="UPDUnit.pas"/>
 			<DCCReference Include="MyDataSet.pas"/>
+			<DCCReference Include="AboutForm.pas">
+				<Form>fmAbout</Form>
+			</DCCReference>
 			<RcItem Include="..\updater\compiled\NPUpdater.exe">
 				<ContainerId>ResourceItem</ContainerId>
 				<ResourceType>UPDTER</ResourceType>

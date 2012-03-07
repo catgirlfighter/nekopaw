@@ -45,7 +45,11 @@ object fGrid: TfGrid
       NavigatorButtons.ConfirmDelete = False
       OnEditValueChanged = vGridEditValueChanged
       OnFocusedRecordChanged = vGrid1FocusedRecordChanged
-      DataController.Summary.DefaultGroupSummaryItems = <>
+      DataController.Summary.DefaultGroupSummaryItems = <
+        item
+          Kind = skCount
+          DisplayText = 'count'
+        end>
       DataController.Summary.FooterSummaryItems = <>
       DataController.Summary.SummaryGroups = <>
       OptionsView.ColumnAutoWidth = True

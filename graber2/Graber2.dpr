@@ -21,7 +21,8 @@ uses
   EncryptStrings in 'EncryptStrings.pas',
   utils in 'utils.pas' {dm: TDataModule},
   UPDUnit in 'UPDUnit.pas',
-  MyDataSet in 'MyDataSet.pas';
+  MyDataSet in 'MyDataSet.pas',
+  AboutForm in 'AboutForm.pas' {fmAbout};
 
 {$R *.res}
 
@@ -39,6 +40,7 @@ begin
 
   Application.CreateForm(Tmf, mf);
   Application.CreateForm(Tdm, dm);
+  Application.CreateForm(TfmAbout, fmAbout);
   Application.Run;
 
 end.
