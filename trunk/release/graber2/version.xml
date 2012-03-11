@@ -1,17 +1,18 @@
-<item file="Graber2.exe" archive="Graber2.zip" version=2 />
+<item file="Graber2.exe" archive="Graber2.zip" version=3 />
 
 <item file="resources\xbooru.com.cfg" version=0 />
-<item file="resources\wildcritters.ws.cfg" version=0 />
+<item file="resources\wildcritters.ws.cfg" version=1 />
 <item file="resources\tbib.org.cfg" version=0 />
 <item file="resources\safebooru.org.cfg" version=0 />
 <item file="resources\rule34.xxx.cfg" version=0 />
-<item file="resources\oreno.imouto.org.cfg" version=0 />
+<item file="resources\oreno.imouto.org.cfg" version=0 deleted=1 />
+<item file="resources\yande.re.cfg" version=0/>
 <item file="resources\nekobooru.net.cfg" version=0 />
 <item file="resources\konachan.com.cfg" version=0 />
-<item file="resources\gelbooru.tmpl" version=0 />
+<item file="resources\gelbooru.tmpl" version=1 />
 <item file="resources\gelbooru.com.cfg" version=0 />
 <item file="resources\e621.net.cfg" version=0 />
-<item file="resources\danbooru.tmpl" version=0 />
+<item file="resources\danbooru.tmpl" version=1 />
 <item file="resources\behoimi.org.cfg" version=0 />
 
 <item file="resources\icons\wildcritters.ws.bmp" version=0 />

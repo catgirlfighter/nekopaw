@@ -5,21 +5,23 @@
 [main]
 $picture.fields(url,preview,width:i,height:i,rating,id:i,author,score:i,posted:d,md5,source,sample_url);
 $pictime = '@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy")'; 
+$picurl = '$picture%url';
 
 [listscript]
-$thread.url = "$main.url+'post/index.xml?limit=100&tags='+$tag";
+$thread.url = "$main.url+'post/index.xml?limit=100&tags='+@httpencode($tag)";
 $thread.xml = 'firstpagexml';
 $thread.execute();
 $thread.counter = 2;
 $thread.xml = 'listxml';
-$thread.url = "$main.url+'post/index.xml?limit=100&tags='+$tag+'&page='+$thread.counter";
+$thread.url = "$main.url+'post/index.xml?limit=100&tags='+@httpencode($tag)+'&page='+$thread.counter";
 
 [dwscript]
-$thread.url = $picture%url;
+$thread.url = @calc($picurl);
 
 [firstpagexml]
 ^posts{
 	$thread.count=#count/100+1;
+	$thread.result=#count;
 	^post{
 		addpicture(
 			%url=#file_url,
