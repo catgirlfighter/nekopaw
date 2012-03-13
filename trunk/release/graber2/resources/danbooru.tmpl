@@ -6,17 +6,24 @@
 $picture.fields(url,preview,width:i,height:i,rating,id:i,author,score:i,posted:d,md5,source,sample_url);
 $pictime = '@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy")'; 
 $picurl = '$picture%url';
+$fpxml = 'xml';
+$lxml = 'xml';
+$fcounter = 1;
 
 [listscript]
-$thread.url = "$main.url+'post/index.xml?limit=100&tags='+@httpencode($tag)";
+$thread.url = "$main.url+'post/index.'+$fpxml+'?limit=100&tags='+@httpencode($tag)";
+$thread.jsonitem = 'post';
 $thread.xml = 'firstpagexml';
+$thread.xmlcontent = $fpxml;
 $thread.execute();
-$thread.counter = 2;
+$thread.counter = $fcounter;
 $thread.xml = 'listxml';
-$thread.url = "$main.url+'post/index.xml?limit=100&tags='+@httpencode($tag)+'&page='+$thread.counter";
+$thread.xmlcontent = $lxml;
+$thread.url = "$main.url+'post/index.'+$lxml+'?limit=100&tags='+@httpencode($tag)+'&page='+$thread.counter+1";
 
 [dwscript]
 $thread.url = @calc($picurl);
+$thread.referer = $main.url + 'show/' + $picture%id;
 
 [firstpagexml]
 ^posts{
@@ -43,23 +50,21 @@ $thread.url = @calc($picurl);
 }
 
 [listxml]
-^posts{
-	^post{
-		addpicture(
-			%url=#file_url,
-			%preview=#preview_url,
-			%width=#width,
-			%height=#height,
-			%rating=#rating,
-			%id=#id,
-			%author=#author,
-			%score=#score,
-			%posted=@calc($pictime),
-			%md5=#md5,
-			%source=#source,
-			%sample_url=#sample_url,
-			%tags=csv(#tags," ")
-		);
-		$picture.filename = @emptyname(#file_url);
-	}
+^post{
+	addpicture(
+		%url=#file_url,
+		%preview=#preview_url,
+		%width=#width,
+		%height=#height,
+		%rating=#rating,
+		%id=#id,
+		%author=#author,
+		%score=#score,
+		%posted=@calc($pictime),
+		%md5=#md5,
+		%source=#source,
+		%sample_url=#sample_url,
+		%tags=csv(#tags," ")
+	);
+	$picture.filename = @emptyname(#file_url);
 }

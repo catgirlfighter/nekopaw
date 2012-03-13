@@ -1,4 +1,4 @@
-<item file="Graber2.exe" archive="Graber2.zip" version=4 />
+<item file="Graber2.exe" archive="Graber2.zip" version=5 />
 
 <item file="resources\xbooru.com.cfg" version=0 />
 <item file="resources\wildcritters.ws.cfg" version=1 />
@@ -9,11 +9,13 @@
 <item file="resources\yande.re.cfg" version=0 />
 <item file="resources\nekobooru.net.cfg" version=0 />
 <item file="resources\konachan.com.cfg" version=0 />
-<item file="resources\gelbooru.tmpl" version=1 />
+<item file="resources\gelbooru.tmpl" version=2 />
 <item file="resources\gelbooru.com.cfg" version=0 />
 <item file="resources\e621.net.cfg" version=0 />
-<item file="resources\danbooru.tmpl" version=1 />
+<item file="resources\danbooru.tmpl" version=2 />
 <item file="resources\behoimi.org.cfg" version=0 />
+<item file="resources\chan.sankakucomplex.com.cfg" version=0 />
+<item file="resources\idol.sankakucomplex.com.cfg" version=0 />
 
 <item file="resources\icons\wildcritters.ws.bmp" version=0 />
 <item file="resources\icons\tbib.org.bmp" version=0 />
@@ -25,6 +27,7 @@
 <item file="resources\icons\gelbooru.com.bmp" version=0 />
 <item file="resources\icons\e621.net.bmp" version=0 />
 <item file="resources\icons\behoimi.org.bmp" version=0 />
+<item file="resources\icons\sankakucomplex.com.bmp" version=0 />
 
-<item file="languages\Russian.ini" version=2 />
-<item file="languages\English.ini" version=2 />
+<item file="languages\Russian.ini" version=3 />
+<item file="languages\English.ini" version=3 />
