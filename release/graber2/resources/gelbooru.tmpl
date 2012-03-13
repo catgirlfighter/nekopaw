@@ -14,6 +14,7 @@ $thread.url = "$main.url+'index.php?page=dapi&s=post&q=index&tags='+@httpencode(
 
 [dwscript]
 $thread.url = $picture%url;
+$thread.referer = $main.url + 'index.php?page=post&s=view&id=' + $picture%id;
 
 [firstpagexml]
 ^posts{
