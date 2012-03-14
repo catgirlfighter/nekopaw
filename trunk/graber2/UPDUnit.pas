@@ -83,7 +83,8 @@ var
 //  items: TTagList;
   INI: TINIFile;
   i,v: integer;
-  root: string;
+  root,fname: string;
+  deleted: boolean;
 
 begin
   root := ExtractFilePath(paramstr(0));
@@ -101,8 +102,26 @@ begin
 
   while i < items.Count do
   begin
-    v := INI.ReadInteger('update',items[i].Attrs.Value('file'),-1);
-    if StrToInt(items[i].Attrs.Value('version')) > v then
+    fname := items[i].Attrs.Value('file');
+    v := INI.ReadInteger('update',fname,-1);
+    deleted := items[i].Attrs.Value('deleted') = '1';
+    if deleted then
+      if (v > -1) then
+        case FJOB of
+          UPD_CHECK_UPDATES:
+            inc(i);
+          UPD_DOWNLOAD_UPDATES:
+          begin
+            if fileexists(ExtractFilePath(paramstr(0)) + fname) then
+              DeleteFile(ExtractFilePath(paramstr(0)) + fname);
+
+            INI.DeleteKey('update',fname);
+            items.Delete(i);
+          end
+        end
+      else
+        items.Delete(i)
+    else if StrToInt(items[i].Attrs.Value('version')) > v then
       inc(i)
     else
       items.Delete(i);

@@ -204,8 +204,7 @@ end;
 procedure TfNewList.gRescNameGetProperties(Sender: TcxCustomGridTableItem;
   ARecord: TcxCustomGridRecord; var AProperties: TcxCustomEditProperties);
 begin
-  if (ARecord.Values[0] <> null) and FullResList[ARecord.Values[0]]
-    .LoginPrompt then
+  if (ARecord.Values[0] <> null) and (ARecord.Values[0] <> 0) then
     AProperties := dm.erAuthButton.Properties;
   // ARecord.Values[2] := ARecord.Values[0];
 end;
@@ -230,7 +229,7 @@ begin
   begin
     RecordCount := FullResList.Count - 1;
     for i := 1 to FullResList.Count - 1 do
-    begin
+    try
       Values[i - 1, 1] := i;
       if FullResList[i].IconFile <> '' then
       begin
@@ -244,6 +243,8 @@ begin
       { FileToString(rootdir+'\resources\icons\'+FullResLIst[i].IconFile) };
       Values[i - 1, 3] := FullResList[i].Name;
       // tvFull.DataController.
+    except
+
     end;
 
   end;
