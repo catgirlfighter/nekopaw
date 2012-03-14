@@ -501,7 +501,7 @@ object MainForm: TMainForm
       TabItem = 'tsiSettings'
       object iLain: TImage
         Left = 444
-        Top = 6
+        Top = 3
         Width = 101
         Height = 122
         Anchors = [akRight, akBottom]
@@ -969,7 +969,7 @@ object MainForm: TMainForm
         Left = 312
         Top = 5
         Width = 233
-        Height = 107
+        Height = 104
         Anchors = [akLeft, akTop, akRight, akBottom]
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindowText
@@ -985,7 +985,7 @@ object MainForm: TMainForm
         Left = 3
         Top = 3
         Width = 209
-        Height = 110
+        Height = 107
         ActivePage = tsTags
         Anchors = [akLeft, akTop, akBottom]
         TabOrder = 2
@@ -995,7 +995,7 @@ object MainForm: TMainForm
             Left = 0
             Top = 0
             Width = 201
-            Height = 82
+            Height = 79
             Align = alClient
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clWindowText
@@ -1016,7 +1016,7 @@ object MainForm: TMainForm
             Left = 0
             Top = 0
             Width = 201
-            Height = 82
+            Height = 79
             Align = alClient
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clWindowText
@@ -1280,6 +1280,17 @@ object MainForm: TMainForm
         Items.Strings = (
           'works'
           'favorites')
+      end
+      object bOptions: TButton
+        Left = 272
+        Top = 92
+        Width = 64
+        Height = 23
+        Anchors = [akTop, akRight]
+        Caption = 'Options'
+        PopupMenu = pabOptionsList
+        TabOrder = 15
+        OnClick = bOptionsClick
       end
     end
   end
@@ -1873,7 +1884,7 @@ object MainForm: TMainForm
     Left = 448
     Top = 224
     Bitmap = {
-      494C0101030024008C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103002400980010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -2027,5 +2038,72 @@ object MainForm: TMainForm
     SSLOptions.VerifyDepth = 0
     Left = 384
     Top = 280
+  end
+  object pabOptionsList: TPopupActionBar
+    Left = 376
+    Top = 72
+    object InGalleriesNames1: TMenuItem
+      AutoCheck = True
+      Caption = 'In Galleries Names'
+      Checked = True
+    end
+    object InGalleriesTags1: TMenuItem
+      AutoCheck = True
+      Caption = 'In Galleries Tags'
+      Checked = True
+    end
+    object N1: TMenuItem
+      Caption = '-'
+    end
+    object Doujinshi1: TMenuItem
+      AutoCheck = True
+      Caption = 'Doujinshi'
+      Checked = True
+    end
+    object Manga1: TMenuItem
+      AutoCheck = True
+      Caption = 'Manga'
+      Checked = True
+    end
+    object ArtistCG1: TMenuItem
+      AutoCheck = True
+      Caption = 'Artist CG'
+      Checked = True
+    end
+    object GameCG1: TMenuItem
+      AutoCheck = True
+      Caption = 'Game CG'
+      Checked = True
+    end
+    object Western1: TMenuItem
+      AutoCheck = True
+      Caption = 'Western'
+      Checked = True
+    end
+    object NonH1: TMenuItem
+      AutoCheck = True
+      Caption = 'Non-H'
+      Checked = True
+    end
+    object Imageset1: TMenuItem
+      AutoCheck = True
+      Caption = 'Image set'
+      Checked = True
+    end
+    object Cosplay1: TMenuItem
+      AutoCheck = True
+      Caption = 'Cosplay'
+      Checked = True
+    end
+    object Asianporn1: TMenuItem
+      AutoCheck = True
+      Caption = 'Asian porn'
+      Checked = True
+    end
+    object Misc1: TMenuItem
+      AutoCheck = True
+      Caption = 'Misc'
+      Checked = True
+    end
   end
 end

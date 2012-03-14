@@ -17,7 +17,8 @@ uses {manual}
   SpTBXTabs, SpTBXDkPanels, JvSpin,
   {hacks}
   hacks, IdTCPConnection, IdTCPClient, IdIOHandler, IdIOHandlerSocket,
-  IdIOHandlerStack, IdSSL, IdSSLOpenSSL;
+  IdIOHandlerStack, IdSSL, IdSSLOpenSSL, PlatformDefaultStyleActnCtrls,
+  ActnPopup;
 
 type
 
@@ -288,6 +289,21 @@ type
     Label2: TLabel;
     eContTimeOut: TJvSpinEdit;
     OpSSLHandler: TIdSSLIOHandlerSocketOpenSSL;
+    pabOptionsList: TPopupActionBar;
+    bOptions: TButton;
+    InGalleriesNames1: TMenuItem;
+    InGalleriesTags1: TMenuItem;
+    N1: TMenuItem;
+    Doujinshi1: TMenuItem;
+    Manga1: TMenuItem;
+    ArtistCG1: TMenuItem;
+    GameCG1: TMenuItem;
+    Western1: TMenuItem;
+    NonH1: TMenuItem;
+    Imageset1: TMenuItem;
+    Cosplay1: TMenuItem;
+    Asianporn1: TMenuItem;
+    Misc1: TMenuItem;
     procedure btnBrowseClick(Sender: TObject);
     procedure btnGrabClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -394,6 +410,7 @@ type
     procedure btnFindTagClick(Sender: TObject);
     procedure fdTagFind(Sender: TObject);
     procedure btnAuth2Click(Sender: TObject);
+    procedure bOptionsClick(Sender: TObject);
 
   private
     FThreadList: TThreadList;
@@ -1561,6 +1578,19 @@ begin
   eConnTimeOut.Value := ini.ReadFloat('options','ConnTimeout',eConnTimeOut.Value);
   eContTimeOut.Value := ini.ReadFloat('options','ContTimeout',eContTimeOut.Value);
 
+  InGalleriesNames1.Checked := ini.ReadBool('exhentai','InNames',InGalleriesNames1.Checked);
+  InGalleriesTags1.Checked := ini.ReadBool('exhentai','InTags',InGalleriesTags1.Checked);
+  Doujinshi1.Checked := ini.ReadBool('exhentai','Doujinshi',Doujinshi1.Checked);
+  Manga1.Checked := ini.ReadBool('exhentai','Manga',Manga1.Checked);
+  ArtistCG1.Checked := ini.ReadBool('exhentai','ArtistCG',ArtistCG1.Checked);
+  GameCG1.Checked := ini.ReadBool('exhentai','GameCG',GameCG1.Checked);
+  Western1.Checked := ini.ReadBool('exhentai','Western',Western1.Checked);
+  NonH1.Checked := ini.ReadBool('exhentai','NonH',NonH1.Checked);
+  Imageset1.Checked := ini.ReadBool('exhentai','Imageset',Imageset1.Checked);
+  Cosplay1.Checked := ini.ReadBool('exhentai','Cosplay',Cosplay1.Checked);
+  Asianporn1.Checked := ini.ReadBool('exhentai','Asianporn',Asianporn1.Checked);
+  Misc1.Checked := ini.ReadBool('exhentai','Misc',Misc1.Checked);
+
   for i := 0 to RESOURCE_COUNT - 1 do
   begin
     AuthData[RVLIST[i]].Login := ini.ReadString('authdata' + IntToStr(i),
@@ -2104,8 +2134,8 @@ begin
   begin
     if not AutoMode then
     begin
-      MessageDlg('No selected albmus. Click "Clear" if you want to restart',
-        mtInformation, [mbOk], 0);
+      MessageDlg('No selected albmus. Click "Clear" (close button near ' +
+      '"autoscroll") if you want to restart', mtInformation, [mbOk], 0);
     end;
     Exit;
   end;
@@ -2251,24 +2281,27 @@ begin
           end
         else
           nxt := 'http://behoimi.org/post?tags=' + StringEncode(tmptag);
-      RP_EHENTAI_G:
+      RP_EHENTAI_G,RP_EXHENTAI:
         if (curdest = cbSite.ItemIndex) and (curtag = tmptag) and (tstart = -1)
           and (Length(PreList) > 0) then
           nxt := ''
         else
         begin
-          nxt := 'http://g.e-hentai.org/?f_doujinshi=1&f_manga=1&f_artistcg=1&f_gamecg=1&f_western=1&f_non-h=1&f_imageset=1&f_cosplay=1&f_asianporn=1&f_misc=1&f_apply=Apply+Filter&advsearch=&f_search='
-            + StringEncode(tmptag);
-          tstart := 0;
-        end;
-      RP_EXHENTAI:
-        if (curdest = cbSite.ItemIndex) and (curtag = tmptag) and (tstart = -1)
-          and (Length(PreList) > 0) then
-          nxt := ''
-        else
-        begin
-          nxt := 'http://exhentai.org/?f_doujinshi=1&f_manga=1&f_artistcg=1&f_gamecg=1&f_western=1&f_non-h=1&f_imageset=1&f_cosplay=1&f_asianporn=1&f_misc=1&f_apply=Apply+Filter&advsearch=&f_search='
-            + StringEncode(tmptag);
+          nxt := RESOURCE_URLS[cbSite.ItemIndex] + '?'
+            + ifn(doujinshi1.Checked,'f_doujinshi=1&','')
+            + ifn(manga1.Checked,'f_manga=1&','')
+            + ifn(artistcg1.Checked,'f_artistcg=1&','')
+            + ifn(gamecg1.Checked,'f_gamecg=1&','')
+            + ifn(western1.Checked,'f_western=1&','')
+            + ifn(nonh1.Checked,'f_non-h=1&','')
+            + ifn(imageset1.Checked,'f_imageset=1&','')
+            + ifn(cosplay1.Checked,'f_cosplay=1&','')
+            + ifn(asianporn1.Checked,'f_asianporn=1&','')
+            + ifn(misc1.Checked,'f_misc=1&','')
+            + 'f_apply=Apply+Filter&advsearch=1&'
+            + ifn(InGalleriesNames1.Checked,'f_sname=on&','')
+            + ifn(InGalleriesTags1.Checked,'f_stags=on&','')
+            + 'f_srdd=2&f_sfdd=favall&&f_search=' + StringEncode(tmptag);
           tstart := 0;
         end;
       RP_PAHEAL_RULE34:
@@ -2860,6 +2893,7 @@ begin
   btnCatEdit.Visible := cbSite.ItemIndex = RP_DEVIANTART;
   chbQueryI1.Visible := cbSite.ItemIndex in [RP_EHENTAI_G, RP_EXHENTAI];
   chbQueryI1.Visible := cbSite.ItemIndex in [RP_EHENTAI_G, RP_EXHENTAI];
+  bOptions.Visible := cbSite.ItemIndex in [RP_EHENTAI_G, RP_EXHENTAI];
 end;
 
 procedure TMainForm.cbTaskBarChange(Sender: TObject);
@@ -2924,6 +2958,14 @@ end;
 procedure TMainForm.chbOpenDriveClick(Sender: TObject);
 begin
   updateinterface;
+end;
+
+procedure TMainForm.bOptionsClick(Sender: TObject);
+var
+  p: TPoint;
+begin
+  p := bOptions.ClientToScreen(Point(0,bOptions.Height));
+  pabOptionsList.Popup(p.X,p.Y);
 end;
 
 procedure TMainForm.chbOrigFNamesClick(Sender: TObject);
@@ -3177,6 +3219,19 @@ begin
   ini.WriteInteger('options', 'retries', eRetries.AsInteger);
   ini.WriteFloat('options','ConnTimeout',eConnTimeOut.Value);
   ini.WriteFloat('options','ContTimeout',eContTimeOut.Value);
+
+  ini.WriteBool('exhentai','InNames',InGalleriesNames1.Checked);
+  ini.WriteBool('exhentai','InTags',InGalleriesTags1.Checked);
+  ini.WriteBool('exhentai','Doujinshi',Doujinshi1.Checked);
+  ini.WriteBool('exhentai','Manga',Manga1.Checked);
+  ini.WriteBool('exhentai','ArtistCG',ArtistCG1.Checked);
+  ini.WriteBool('exhentai','GameCG',GameCG1.Checked);
+  ini.WriteBool('exhentai','Western',Western1.Checked);
+  ini.WriteBool('exhentai','NonH',NonH1.Checked);
+  ini.WriteBool('exhentai','Imageset',Imageset1.Checked);
+  ini.WriteBool('exhentai','Cosplay',Cosplay1.Checked);
+  ini.WriteBool('exhentai','Asianporn',Asianporn1.Checked);
+  ini.WriteBool('exhentai','Misc',Misc1.Checked);
 
   { if (cbSite.ItemIndex > -1) and
     (pcMenu.ActivePage = tsSettings) then
@@ -5078,9 +5133,10 @@ begin
               'img2.'), 'thumbnail_', '')), 'images/'))
           else
             xml_tmpi :=
-              AddN(deleteids(REPLACE(REPLACE(batchreplace(Attrs.Value('src'),
+              AddN(deleteids(REPLACE(REPLACE(REPLACE(
+              batchreplace(Attrs.Value('src'),
               ['img3.', 'img4.'], 'img2.'), 'thumbs', 'images'),
-              'thumbnail_', '')));
+              'thumbnail_', ''),'thumbnails','images')));
           if xml_tmpi <> -1 then
           begin
             n[xml_tmpi].Preview := deleteids(Attrs.Value('src'));
