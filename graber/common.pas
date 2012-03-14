@@ -160,6 +160,7 @@ procedure ShutDown;
 function AddZeros(s: string; count: integer): string;
 function DownCharPos(ch: char; dst: string): integer;
 function DownCopyTo(substr: char; dst: string): string;
+function ifn(aif: boolean; athen,aelse: variant): variant;
 
 implementation
 
@@ -1460,6 +1461,14 @@ begin
     Exit;
   end;
   Result := Copy(dst,n + 1,length(dst) - n);
+end;
+
+function ifn(aif: boolean; athen,aelse: variant): variant;
+begin
+  if aif then
+    result := athen
+  else
+    result := aelse;
 end;
 
 end.
