@@ -312,52 +312,6 @@ var
   n{,c}: integer;
 
 begin
-{  n := ResList.PictureList.IndexOf(Pic);
-  vd.RecNo := n + 1;
-  vd.Refresh;    }
-{  VGrid.BeginUpdate;
-
-  n := ResList.PictureList.IndexOf(Pic);
-  if n > -1 then
-  begin
-    c := vd.RecNo;
-    vd.RecNo := n;
-    vd.Refresh;
-    vd.RecNo := c;
-  end;
-
-  vGrid.EndUpdate;   }
-
-{  if vd.Active then
-    vd.Resync([]); }
-
-  //(pcProgress,pcSize,pcLabel,pcDeleted,pcChecked)
-  //md.CurRec := md. ( 'id',Integer(Pic),[]);
-  //md.CurRec := md.GetRecNoByFieldValue(Integer(Pic),'id');
-
-
-
-{  if pcDelete in Changes then
-  begin
-    md.Delete;
-    Exit;
-  end;   }
-
-{  n := vGrid.DataController.FindRecordIndexByText(0,FIdColumn.Index,
-        IntToStr(Integer(pic)),false,false,true); }
-{  if Pic.BookMark = 0 then
-    Exit;
-
-  vGrid.BeginUpdate;
-
-  n := md.RecNo;
-
-  md.RecNo := Pic.BookMark;
-
-  md.Edit;
-
-  //md.GetCurrentRecord;   }
-
     n := Pic.BookMark - 1;
 
     with vGrid.DataController do
@@ -405,26 +359,9 @@ begin
                                         -  ResList.PictureList.PicCounter.SKP)
                                         *  100);
 
+      if Assigned(ResList.OnPageComplete) then
+        ResList.OnPageComplete(Pic.Resource);
     end;
-
-{    if md.State in [dsEdit] then
-      md.Post;    }
-
-
-    //VGrid.ViewData.se
-
-    //vGrid.DataController.PostEditingData;
-{    md.Post;
-
-    md.RecNo := n;
-
-    vGrid.EndUpdate;
-
-    Pic.Changes := [];
-
-  finally
-//    md.Post;
-  end;          }
 end;
 
 procedure TfGrid.OnStartJob(Sender: TObject; Action: integer);

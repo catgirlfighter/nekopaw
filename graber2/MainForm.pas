@@ -494,7 +494,7 @@ begin
   end;
 end;
 
-procedure Tmf.RefreshResInfo;
+procedure Tmf.RefreshResInfo(Sender: TObject);
 var
   i: integer;
 begin
@@ -504,29 +504,26 @@ begin
     if (pcTables.ActivePage is TMycxTabSheet)
     and ((pcTables.ActivePage as TMycxTabSheet).MainFrame is tfGrid) then
     with ((pcTables.ActivePage as TMycxTabSheet).MainFrame as tfGrid) do
-      for i := 0 to ResList.Count -1 do
+      //for i := 0 to ResList.Count -1 do
+      if (Sender is TResource) then
       begin
-        if ResList[i].JobList.ErrorCount = 0 then
-          (vgTagsMain.RowByName('vgT' + IntToStr(i)) as  TcxEditorRow)
-          .Properties.Value :=
-            IntToStr(ResList[i].JobList.OkCount) + '/'
-            + IntToStr(ResList[i].JobList.Count)
-        else
-          (vgTagsMain.RowByName('vgT' + IntToStr(i)) as  TcxEditorRow)
-          .Properties.Value :=
-            IntToStr(ResList[i].JobList.OkCount) + '/'
-            + IntToStr(ResList[i].JobList.Count)
-          + ' err ' + IntToStr(ResList[i].JobList.ErrorCount);
-  {      dm.CreateField(vgCurMain,'vgiRName',_RESNAME_,'',ftReadOnly,nil,
-          a.Resource.Name);
-        dm.CreateField(vgCurMain,'vgiName',_FILENAME_,'',ftReadOnly,nil,
-          a.PicName + '.' + a.Ext);
-        dm.CreateField(vgCurMain,'vgiSavePath',_SAVEPATH_,'',ftReadOnly,nil,
-          a.FileName);
-        for i := 0 to a.Meta.Count -1 do
-          with a.Meta.Items[i] do
-            dm.CreateField(vgCurMain,'avgi' + Name,Name,
-              '',ftReadOnly,nil,VarToStr(Value)); }
+        i := ResList.IndexOf(Sender);
+        if i = -1 then
+          Exit;
+        (vgTagsMain.RowByName('vgT' + IntToStr(i)) as  TcxEditorRow)
+        .Properties.Value :=
+          ifn(ResList.ListFinished,
+          ifn(ResList.PicsFinished,'',   //if pics
+          IntToStr(ResList[i].PictureList.PicCounter.FSH + ResList[i].PictureList.PicCounter.SKP)
+          + '/' + IntToStr(ResList[i].PictureList.Count)
+          + ifn(ResList[i].PictureList.PicCounter.ERR > 0,
+          ' err ' + IntToStr(ResList[i].PictureList.PicCounter.ERR),'')),
+
+          IntToStr(ResList[i].JobList.OkCount) + '/'    //if pages
+          + IntToStr(ResList[i].JobList.Count)
+          + ' (' + IntToStr(ResList[i].HTTPRec.Theor) + ')'
+          + ifn(ResList[i].JobList.ErrorCount > 0,
+          ' err ' + IntToStr(ResList[i].JobList.ErrorCount),''));
       end;
   finally
     vgTagsMain.EndUpdate;
@@ -706,23 +703,19 @@ begin
       begin
         if ResList[i].JobList.ErrorCount = 0 then
           dm.CreateField(vgTagsMain,'vgT' + IntToStr(i),ResList[i].Name,
-          '',ftReadOnly,nil,IntToStr(ResList[i].JobList.OkCount) + '/'
-          + IntToStr(ResList[i].JobList.Count))
-        else
-          dm.CreateField(vgTagsMain,'vgT' + IntToStr(i),ResList[i].Name,
-          '',ftReadOnly,nil,IntToStr(ResList[i].JobList.OkCount) + '/'
-          + IntToStr(ResList[i].JobList.Count)
-          + ' err ' + IntToStr(ResList[i].JobList.ErrorCount));
-  {      dm.CreateField(vgCurMain,'vgiRName',_RESNAME_,'',ftReadOnly,nil,
-          a.Resource.Name);
-        dm.CreateField(vgCurMain,'vgiName',_FILENAME_,'',ftReadOnly,nil,
-          a.PicName + '.' + a.Ext);
-        dm.CreateField(vgCurMain,'vgiSavePath',_SAVEPATH_,'',ftReadOnly,nil,
-          a.FileName);
-        for i := 0 to a.Meta.Count -1 do
-          with a.Meta.Items[i] do
-            dm.CreateField(vgCurMain,'avgi' + Name,Name,
-              '',ftReadOnly,nil,VarToStr(Value)); }
+          '',ftReadOnly,nil,
+            ifn(ResList.ListFinished,
+            ifn(ResList.PicsFinished,'',   //if pics
+            IntToStr(ResList[i].PictureList.PicCounter.FSH + ResList[i].PictureList.PicCounter.SKP)
+            + '/' + IntToStr(ResList[i].PictureList.Count)
+            + ifn(ResList[i].PictureList.PicCounter.ERR > 0,
+            ' err ' + IntToStr(ResList[i].PictureList.PicCounter.ERR),'')),
+
+            IntToStr(ResList[i].JobList.OkCount) + '/'    //if pages
+            + IntToStr(ResList[i].JobList.Count)
+            + ' (' + IntToStr(ResList[i].HTTPRec.Theor) + ')'
+            + ifn(ResList[i].JobList.ErrorCount > 0,
+            ' err ' + IntToStr(ResList[i].JobList.ErrorCount),'')));
       end;
   finally
     vgTagsMain.EndUpdate;
@@ -879,10 +872,12 @@ begin
   bbSettings.Caption := _SETTINGS_;
   dpLog.Caption := _LOG_;
   dpErrors.Caption := _ERRORS_;
-  dpTags.Caption := _GENERAL_;
+  dpTags.Caption := _COMMON_;
   dpCurTags.Caption := _INFO_;
   nbgCurMain.Caption := _GENERAL_;
+  nbgTagsMain.Caption := _GENERAL_;
   nbgCurTags.Caption := _TAGS_;
+  nbgTagsTags.Caption := _TAGS_;
 end;
 
 procedure Tmf.ShowDs;

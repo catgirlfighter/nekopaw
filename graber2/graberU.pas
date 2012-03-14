@@ -95,8 +95,14 @@ type
   THTTPRec = record
     DefUrl: String;
     Url: string;
+    Referer: string;
+    ParseMethod: string;
+    JSONItem: String;
+    CookieStr: string;
+    LoginStr: string;
     Method: THTTPMethod;
     Counter, Count: integer;
+    Theor: Word;
   end;
 
   { TListValue = class(TObject)
@@ -1315,8 +1321,13 @@ begin
     i := 0;
     Exit;
   end;
+  try
+    Value := VarAsType(Value,FVariantType);
+  except
+    on e: exception do
+      raise Exception.Create('"' + Value + '" - ' + e.Message);
 
-  Value := VarAsType(Value,FVariantType);
+  end;
 
   Hi := Count;
   Lo := 0;
@@ -1776,6 +1787,7 @@ begin
   if FCursor < Count then
   begin
     Result := -1;
+
     for i := FCursor to Count-1 do
       if (Items[FCursor].Status = JOB_NOJOB) then
       begin
@@ -1889,7 +1901,9 @@ begin
   FShort := R.Short;
   FHTTPRec.DefUrl := R.HTTPRec.DefUrl;
   FHTTPRec.Url := '';
+  FHTTPRec.Referer := '';
   FHTTPRec.Method := hmGet;
+  FHTTPRec.ParseMethod := 'xml';
   FHTTPRec.Counter := 0;
   FHTTPRec.Count := 0;
 end;
@@ -2134,7 +2148,7 @@ procedure TResource.DeclorationEvent(Values: TValueList; LinkedObj: TObject);
       FHTTPRec.DefUrl := ItemValue
     else if ItemName = '$main.icon' then
       FIconFile := ItemValue
-    else if ItemName = '$main.authorization' then
+    else if ItemName = '$main.loginprompt' then
       FLoginPrompt := true
     else if ItemName = '$main.short' then
       FShort := ItemValue
@@ -2333,6 +2347,10 @@ end;
 function TResource.PicJobComplete(t: TDownloadThread): integer;
 begin
   try
+
+    inc(PictureList.Link.FPicCounter.FSH);
+    inc(PictureList.FPicCounter.FSH);
+
     if t.ReturnValue = THREAD_COMPLETE then
       case t.Job of
         JOB_PICS:
@@ -2341,9 +2359,14 @@ begin
             t.Picture.Checked := false;
 
             if t.Picture.Size = 0 then
-              inc(PictureList.Link.FPicCounter.EXS)
-            else
+            begin
+              inc(PictureList.Link.FPicCounter.EXS);
+              inc(PictureList.FPicCounter.EXS);
+            end else
+            begin
               inc(PictureList.Link.FPicCounter.OK);
+              inc(PictureList.FPicCounter.OK);
+            end;
 
             if Assigned(t.Picture.OnPicChanged) then
               t.Picture.OnPicChanged(t.Picture, [pcChecked]);
@@ -2360,6 +2383,7 @@ begin
           begin
             t.Picture.Status := JOB_ERROR;
             inc(PictureList.Link.FPicCounter.ERR);
+            inc(PictureList.FPicCounter.ERR);
             if Assigned(t.Picture.OnPicChanged) then
               t.Picture.OnPicChanged(t.Picture, []);
             if Assigned(FOnError) then
@@ -2370,11 +2394,10 @@ begin
     begin
       t.Picture.Status := JOB_ERROR;
       inc(PictureList.Link.FPicCounter.ERR);
+      inc(PictureList.FPicCounter.ERR);
       if Assigned(t.Picture.OnPicChanged) then
         t.Picture.OnPicChanged(t.Picture, []);
     end;
-
-    inc(PictureList.Link.FPicCounter.FSH);
 
     if (FPictureList.eol) and (FPictureList.AllFinished) then
     begin
@@ -3037,7 +3060,7 @@ end;
 procedure TDownloadThread.VE(const ValS: Char; const Value: String;
   var Result: Variant; var LinkedObj: TObject);
 var
-  // t: TTag;
+  t: TTag;
   s, tmp: string;
   // i: integer;
 
@@ -3094,6 +3117,17 @@ begin
             s := CalcValue(s,VE,LinkedObj);
             Result := trim(CalcValue(tmp,VE,LinkedObj),s[1]);
           end;
+        end else if SameText(s,'JSONTime') then
+        begin
+          if (LinkedObj is TTag) then
+            with (LinkedObj as TTag) do
+            begin
+              s := CopyFromTo(Value, '(', ')');
+              t := Childs.FirstItemByName(s);
+              if Assigned(t) then
+                Result := UnixToDateTime(StrToInt(t.Attrs.Value('s')));
+            end;
+
         end;
 
       end;
@@ -3164,21 +3198,33 @@ procedure TDownloadThread.DE(Values: TValueList; LinkedObj: TObject);
     n: integer;
 
   begin
-    if Name = '$thread.url' then
+    if SameText(Name,'$thread.url') then
       FHTTPRec.Url := Value
-    else if Name = '$thread.xml' then
+    else if SameText(Name,'$thread.xml') then
       FXMLScript.ParseValues(FSectors[Value])
-    else if Name = '$thread.count' then
+    else if SameText(Name,'$thread.xmlcontent') then
+      FHTTPRec.ParseMethod := Value
+    else if SameText(Name,'$thread.jsonitem') then
+      FHTTPRec.JSONItem := Value
+    else if SameText(Name,'$thread.count') then
       FHTTPRec.Count := Trunc(Value)
-    else if Name = '$thread.counter' then
+    else if SameText(Name,'$thread.counter') then
       FHTTPRec.Counter := Trunc(Value)
-    else if Name = '@thread.execute' then
+    else if SameText(Name,'@thread.execute') then
       ProcHTTP
-    else if Name = '$picture.displaylabel' then
+    else if SameText(Name,'$picture.displaylabel') then
       FPicture.DisplayLabel := Value
-    else if Name = '$picture.filename' then
+    else if SameText(Name,'$picture.filename') then
       FPicture.PicName := Value
-    else if Name = '@addpicture' then
+    else if SameText(Name,'$thread.result') then
+      FHTTPRec.Theor := Value
+    else if SameText(Name,'$thread.referer') then
+      FHTTPRec.Referer := Value
+    else if SameText(Name,'$thread.checkcookie') then
+      FHTTPRec.CookieStr := Value
+    else if SameText(Name,'$thread.login') then
+      FHTTPRec.LoginStr := Value
+    else if SameText(Name,'@addpicture') then
     begin
       { if FAddPic then
         Synchronize(AddPicture); }
@@ -3271,11 +3317,12 @@ begin
       // FHTTP.ResponseCode := 0;
       try
         Url := CalcValue(FHTTPRec.Url, VE, nil);
+        FHTTP.Request.Referer := FHTTPRec.Referer;
         s := FHTTP.Get(Url);
         inc(FHTTPRec.Counter);
       except
         on e: Exception do
-          if (FHTTP.ResponseCode = 404) or (FHTTP.ResponseCode = -1) then
+          if (FHTTP.ResponseCode = 404){ or (FHTTP.ResponseCode = -1) }then
           begin
             FErrorString := Url + ': ' + e.Message;
             FJob := JOB_ERROR;
@@ -3289,7 +3336,15 @@ begin
             Break;
       end;
 
-      FXML.Parse(s);
+      if SameText(FHTTPRec.ParseMethod,'xml') then
+        FXML.Parse(s)
+      else if SameText(FHTTPRec.ParseMethod,'json') then
+        FXML.JSON(FHTTPREC.JSONItem,s)
+      else raise Exception.Create(Format(_UNKNOWNMETHOD_,[FHTTPRec.ParseMethod]));
+
+      {FXMl.TagList.ExportToFile(ExtractFilePath(paramstr(0))
+        + IntToStr(FHTTPRec.Counter) + '.xml');}
+
       // Synchronize(LockList);
       FXMLScript.Process(SE, DE, FE, VE, VE, FXML.TagList);
       { if FAddPic then
@@ -3348,8 +3403,10 @@ begin
     end;
 
     try
-      HTTP.Request.ContentRangeStart := f.Size;
+      //HTTP.Request.ContentRangeStart := f.Size;
+      HTTP.Request.Referer := FHTTPRec.Referer;
       HTTP.Get(HTTPRec.Url, f);
+
 
       if ReturnValue = THREAD_FINISH then
       begin
@@ -3929,7 +3986,7 @@ begin
 
     Pic.Meta.SetLink(MetaName,v);
   except on e: Exception do
-    raise Exception.Create(pic.Meta['url'] + #13#10 + MetaName + ': '
+    raise Exception.Create({pic.Meta['url'] + #13#10 + }MetaName + ': '
                          + e.Message);
   end;
 end;
@@ -4065,6 +4122,7 @@ begin
   FCursor := 0;
   FFinishCursor := 0;
 
+  ResetPicCounter;
   AllFinished;
 end;
 

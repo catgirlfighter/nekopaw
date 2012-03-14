@@ -39,6 +39,7 @@ var
   _NOUPDATES_ : String = 'Nothing to update';
   _NEWUPDATES_: String = 'New updates is avalable. Do you want to download it?';
   _UPDATEERROR_: String = 'Error on cheking updates';
+  _UNKNOWNMETHOD_: String = 'Unknown method: %s';
 
   (* OTHER *)
   _NEWLIST_: String = 'New list';
@@ -86,6 +87,7 @@ var
   _DOWNLOADED_: String = 'Downloaded';
   _SIZE_: String = 'Size';
   _PROGRESS_: String = 'Progress';
+  _COMMON_: String = 'Common';
 
 procedure LoadLang(FileName: String);
 
@@ -128,6 +130,7 @@ begin
   _SCRIPT_READ_ERROR_ := INI.ReadString('lang','_SCRIPT_READ_ERROR_',_SCRIPT_READ_ERROR_);
   _SYMBOLS_IN_SECTOR_NAME_ := INI.ReadString('lang','_SYMBOLS_IN_SECTOR_NAME_',_SYMBOLS_IN_SECTOR_NAME_);
   _INCORRECT_DECLORATION_ := INI.ReadString('lang','_INCORRECT_DECLORATION_',_INCORRECT_DECLORATION_);
+  _UNKNOWNMETHOD_ := INI.ReadString('lang','_UNKNOWNMETHOD_',_UNKNOWNMETHOD_);
 
   (* OTHER *)
   _NEWLIST_ := INI.ReadString('lang','_NEWLIST_',_NEWLIST_);
@@ -176,6 +179,7 @@ begin
   _DOWNLOADED_ :=  INI.ReadString('lang','_DOWNLOADED_',_DOWNLOADED_);
   _SIZE_ :=  INI.ReadString('lang','_SIZE_',_SIZE_);
   _PROGRESS_ :=  INI.ReadString('lang','_PROGRESS_',_PROGRESS_);
+  _COMMON_ :=  INI.ReadString('lang','_COMMON_',_COMMON_);
   INI.Free;
 end;
 

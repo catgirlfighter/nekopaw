@@ -62,6 +62,8 @@ type
     public
     procedure GetList(Tag: String; AAttrs: TAttrList; AList: TTagList);
     procedure CopyList(AList: TTagList; Parent: TTag);
+    procedure ExportToFile(fname: string);
+    function FirstItemByName(tagname: string): ttag;
       property Items[ItemName: integer]: TTag read Get; default;
       function CreateChild(Parent: TTag): TTag;
       procedure CopyTag(ATag: TTag; Parent: TTag = nil);
@@ -80,6 +82,8 @@ type
     FTagList: TTagList;
   protected
   public
+    procedure JSON(starttag: string; const S: TStrings); overload;
+    procedure JSON(starttag: string; S: String); overload;
     property OnStartTag: TXMLOnTagEvent read FOnStartTag write FOnStartTag;
     property OnEmptyTag: TXMLOnTagEvent read FOnEmptyTag write FOnEmptyTag;
     property OnEndTag: TXMLOnTagEvent read FOnEndTag write FOnEndTag;
@@ -89,7 +93,113 @@ type
     property TagList: TTagList read FTagList;
   end;
 
+  procedure JSONParseChilds(parent: TTag; TagList: TTagList; tagname,s: string);
+  procedure JSONParseValue(tag: ttag; TagList: TTagList; s: string);
+  procedure JSONParseTag(tag: ttag; TagList: TTagList; S: String);
+
 implementation
+
+{*********** JSON ********************}
+
+const
+  JSONISL: array[0..2] of string = ('""','[]','{}');
+
+//parse childs
+procedure JSONParseChilds(parent: TTag; TagList: TTagList; tagname,s: string);
+var
+  n: string;
+  tag: TTag;
+
+begin
+  while s <> '' do
+  begin
+    n := Trim(CopyTo(s,',',JSONISL,true));
+
+    tag := TagList.CreateChild(parent);
+    tag.Name := tagname;
+    tag.Attrs := TAttrList.Create;
+
+    if n <> '' then
+    case n[1] of
+      '[': JSONParseChilds(tag,TagList,'',Copy(n,2,Length(n)-2));
+      '{': JSONParseTag(tag,TagList,Copy(n,2,Length(n)-2));
+      else
+        if CharPos(n,':',JSONISL) = -1 then
+          tag.Text := n
+        else
+          JSONParseValue(tag,TagList,n);
+    end;
+
+
+    //JSONParseValue(tag,TagList,trim(n));
+  end;
+end;
+
+//parsetag
+
+procedure JSONParseValue(tag: ttag; TagList: TTagList; s: string);
+var
+  tagname: string;
+  value: string;
+  child: ttag;
+
+begin
+
+  if s = '' then
+    raise Exception.Create('JSON Parse: empty value');
+
+  tagname := TrimEx(CopyTo(s,':',JSONISL,true),[' ','"']);
+  s := TrimEx(s,[' ','"']);
+
+  if s = '' then
+  begin
+    value := tagname;
+    tagname := '';
+  end else
+    value := s;
+
+  case value[1] of
+    '{':
+    begin
+      child := TagList.CreateChild(tag);
+      child.Name := tagname;
+      child.Attrs := TAttrList.Create;
+
+      JSONParseTag(child,TagList,Copy(value,2,Length(value)-2));
+    end;
+    '[': JSONParseChilds(tag,TagList,tagname,Copy(value,2,Length(value)-2));
+    else
+    begin
+      if tag = nil then
+      begin
+        tag := TagList.CreateChild(nil);
+        tag.Attrs := TAttrList.Create;
+      end;
+      if tagname = '' then
+        tag.Text := trim(value,'"')
+      else
+        tag.Attrs.Add(tagname,value);
+    end;
+  end;
+
+
+end;
+
+procedure JSONParseTag(tag: ttag; TagList: TTagList; S: String);
+
+var
+  n: string;
+
+begin
+  while s <> '' do
+  begin
+    n := Trim(CopyTo(s,',',JSONISL,true));
+
+    JSONParseValue(tag,TagList,n);
+  end;
+end;
+
+{*********** JSON ********************}
 
 procedure TTagList.Notify(Ptr: Pointer; Action: TListNotification);
 var
@@ -147,6 +257,55 @@ begin
     Parent.Childs.Add(Result)
   else
     Add(Result);
+end;
+
+procedure TTagList.ExportToFile(fname: string);
+
+  procedure WriteList(List: TTagList; s: tstringlist);
+  var
+    i,j: integer;
+    tmp: string;
+  begin
+    for i := 0 to List.Count -1 do
+    begin
+      tmp := '<' + List[i].Name;
+      for j := 0 to List[i].Attrs.Count-1 do
+          tmp := tmp + ' ' + List[i].Attrs[j].Name + '="'
+          + List[i].Attrs[j].Value + '"';
+      if List[i].Childs.Count = 0 then
+        s.Add(tmp + ' />')
+      else
+      begin
+        s.Add(tmp + '>');
+        WriteList(List[i].Childs,s);
+        s.Add('</' + List[i].Name + '>');
+      end;
+    end;
+  end;
+
+var
+  s: tstringlist;
+begin
+  s := tstringlist.Create;
+  try
+    WriteList(Self,s);
+    s.SaveToFile(fname,TEncoding.UTF8);
+  finally
+    s.Free;
+  end;
+end;
+
+function TTagList.FirstItemByName(tagname: string): ttag;
+var
+  i: integer;
+begin
+  for I := 0 to Count -1 do
+    if SameText(Items[i].Name,tagname) then
+    begin
+      Result := Items[i];
+      Exit;
+    end;
+  Result := nil;
 end;
 
 procedure TTagList.CopyList(AList: TTagList; Parent: TTag);
@@ -494,9 +653,9 @@ var
 
 begin
   if not Assigned(FTagList) then
-    FTagList := TTagList.Create;
-
-  FTagList.Clear;
+    FTagList := TTagList.Create
+  else
+    FTagList.Clear;
 
   FTag := nil;
 
@@ -549,6 +708,27 @@ begin
 {  finally
     FTag.Free;
   end;   }
+end;
+
+procedure TMyXMLParser.JSON(starttag: string; S: String);
+var
+  i: integer;
+begin
+  if not Assigned(FTagList) then
+    FTagList := TTagList.Create
+  else
+    FTagList.Clear;
+
+  JSONParseTag(nil,FTagList,S);
+
+  for i := 0 to FTagList.Count -1 do
+    if FTagList[i].Name = '' then
+      FTagList[i].Name := starttag;
+end;
+
+procedure TMyXMLParser.JSON(starttag: string; const S: TStrings);
+begin
+  JSON(starttag,s.Text);
 end;
 
 procedure TMyXMLParser.Parse(S: TStrings);

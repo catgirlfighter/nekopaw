@@ -120,8 +120,6 @@ object mf: Tmf
             ActiveGroupIndex = 0
             TabOrder = 0
             View = 1
-            ExplicitLeft = -2
-            ExplicitTop = -4
             object nbgTagsMain: TdxNavBarGroup
               Caption = 'nbgTagsMain'
               SelectedLinkIndex = -1
