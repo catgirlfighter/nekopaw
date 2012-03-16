@@ -24,6 +24,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DCC_UsePackage>vclx;vcl;VclSmp;rtl;vclimg;svnui;svn;bdertl;TeeUI;TeeDB;Tee;vclactnband;vcldb;dbrtl;vcldbx;vcltouch;xmlrtl;dsnap;dsnapcon;adortl;vclie;dbexpress;DataSnapProviderClient;DbxCommonDriver;DbxClientDriver;inet;IndyProtocols;inetdbbde;inetdbxpress;DataSnapIndy10ServerTransport;DataSnapClient;dbxcds;IndySystem;IndyCore;inetdb;DataSnapServer;AzureCloud;DBXInterBaseDriver;DBXMySQLDriver;dxCoreD15;cxLibraryD15;cxEditorsD15;cxExtEditorsD15;dxBarD15;dxBarDBNavD15;dxBarExtDBItemsD15;dxBarExtItemsD15;dxRibbonD15;cxBarEditItemD15;dxdbtrD15;dxtrmdD15;dxmdsD15;dxDockingD15;dxThemeD15;dxGDIPlusD15;dxFlowChartD15;cxPageControlD15;dxLayoutControlD15;dxNavBarD15;dxorgcD15;dxdborD15;cxGridD15;cxPivotGridD15;cxPivotGridChartD15;cxPivotGridOLAPD15;cxTreeListD15;cxTreeListdxBarPopupMenuD15;cxSchedulerD15;cxSchedulerGridD15;dxComnD15;dxsbD15;dcldxSkinsCoreD15;dxSkinsCoreD15;dxSkinscxPCPainterD15;dxSkinscxScheduler3PainterD15;dxSkinsdxDLPainterD15;dxSkinsdxBarPainterD15;dxSkinsdxNavBar2PainterD15;dxSpellCheckerD15;cxSpreadSheetD15;cxVerticalGridD15;dxPSCoreD15;dxPSLnksD15;dxPScxCommonD15;dxPScxExtCommonD15;dxPScxGrid6LnkD15;dxPScxPivotGrid2LnkD15;dxPScxScheduler3LnkD15;dxPScxSSLnkD15;dxPScxTL5LnkD15;dxPScxVGridLnkD15;dxPSTeeChartD15;dxPSDBTeeChartD15;dxPSdxOCLnkD15;dxPSdxDBOCLnkD15;dxPSdxDBTVLnkD15;dxPSdxFCLnkD15;dxPSdxLC2LnkD15;dxPScxPCProdD15;dxPsPrVwAdvD15;dxPSPrVwRibbonD15;dxSkinsdxRibbonPainterD15;tmsd2011;tmsexd2011;tmswizd2011;tmsxlsd2011;JclVcl;Jcl;JvCore;JvSystem;JvStdCtrls;JvAppFrm;JvBands;JvDB;JvDlgs;JvBDE;JvControls;JvCmp;JvCrypt;JvCustom;JvDocking;JvDotNetCtrls;JvGlobus;JvHMI;JvJans;JvManagedThreads;JvMM;JvNet;JvPageComps;JvPascalInterpreter;JclDeveloperTools;JvPluginSystem;JvPrintPreview;JvRuntimeDesign;JvTimeFramework;JvWizards;JvXPCtrls;tb2k_d12;SpTBXLib_d15;rpVersionInfo_pkg;DotNet4Delphi_XE</DCC_UsePackage>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
 			<DCC_DcuOutput>.\$(Config)\$(Platform)</DCC_DcuOutput>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
@@ -113,6 +114,15 @@
 					<Source>
 						<Source Name="MainSource">NPUpdater.dpr</Source>
 					</Source>
+					<Parameters>
+						<Parameters Name="LoadAllSymbols">False</Parameters>
+					</Parameters>
+					<Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclwebsnap150.bpl">Embarcadero WebSnap Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclwbm150.bpl">Embarcadero InternetExpress Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclDBXDriversEnt150.bpl">Embarcadero Enterprise Driver Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclDataSnapIndy10ServerTransport150.bpl">Embarcadero DBExpress DataSnap Server Transport Components</Excluded_Packages>
+					</Excluded_Packages>
 				</Delphi.Personality>
 				<Platforms>
 					<Platform value="Win32">True</Platform>

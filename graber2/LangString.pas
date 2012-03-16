@@ -58,11 +58,11 @@ var
   _FILTER_: String = 'Filter';
   _ON_AIR_: String = 'ON AIR';
   _WORK_: String = 'Work';
-  _THREADS_: String = 'Threads';
+  _THREAD_COUNT_: String = 'Threads count';
   _USE_PER_RES_: String = 'Threads per resource';
-  _PER_RES_: String = 'Thr. per res.';
-  _PIC_THREADS_: String = 'Pic. threads';
-  _RETRIES_: String = 'Retries';
+  _PER_RES_: String = 'Threads per resource';
+  _PIC_THREADS_: String = 'Picitures threads';
+  _RETRIES_: String = 'Retries count';
   _DEBUGMODE_: String = 'Debug';
   _PROXY_: String = 'Proxy';
   _USE_PROXY_: String = 'Use proxy';
@@ -88,6 +88,15 @@ var
   _SIZE_: String = 'Size';
   _PROGRESS_: String = 'Progress';
   _COMMON_: String = 'Common';
+  _HOST_: String = 'Server';
+  _PORT_: String = 'Port';
+  _LOGIN_: String = 'Login';
+  _PASSWORD_: String = 'Password';
+  _LANGUAGE_: String = 'Language';
+  _RESOURCES_: String = 'Resources';
+  _INTERFACE_: String = 'Interface';
+  _THREADS_: String = 'Threads';
+
 
 procedure LoadLang(FileName: String);
 
@@ -149,7 +158,7 @@ begin
   _FILTER_ := INI.ReadString('lang','_FILTER_',_FILTER_);
   _ON_AIR_ := INI.ReadString('lang','_ON_AIR_',_ON_AIR_);
   _WORK_ := INI.ReadString('lang','_WORK_',_WORK_);
-  _THREADS_ := INI.ReadString('lang','_THREADS_',_THREADS_);
+  _THREAD_COUNT_ := INI.ReadString('lang','_THREAD_COUNT_',_THREAD_COUNT_);
   _USE_PER_RES_ := INI.ReadString('lang','_USE_PER_RES_',_USE_PER_RES_);
   _PER_RES_ := INI.ReadString('lang','_PER_RES_',_PER_RES_);
   _PIC_THREADS_ := INI.ReadString('lang','_PIC_THREADS_',_PIC_THREADS_);
@@ -180,6 +189,14 @@ begin
   _SIZE_ :=  INI.ReadString('lang','_SIZE_',_SIZE_);
   _PROGRESS_ :=  INI.ReadString('lang','_PROGRESS_',_PROGRESS_);
   _COMMON_ :=  INI.ReadString('lang','_COMMON_',_COMMON_);
+  _HOST_ :=  INI.ReadString('lang','_HOST_',_HOST_);
+  _PORT_ :=  INI.ReadString('lang','_PORT_',_PORT_);
+  _LOGIN_ :=  INI.ReadString('lang','_LOGIN_',_LOGIN_);
+  _PASSWORD_ :=  INI.ReadString('lang','_PASSWORD_',_PASSWORD_);
+  _LANGUAGE_ :=  INI.ReadString('lang','_LANGUAGE_',_LANGUAGE_);
+  _THREADS_ :=  INI.ReadString('lang','_THREADS_',_THREADS_);
+  _INTERFACE_ :=  INI.ReadString('lang','_INTERFACE_',_INTERFACE_);
+  _RESOURCES_ :=  INI.ReadString('lang','_RESOURCES_',_RESOURCES_);
   INI.Free;
 end;
 
