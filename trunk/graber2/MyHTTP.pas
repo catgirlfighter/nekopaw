@@ -39,6 +39,8 @@ begin
   result.AllowCookies := False;
   result.Request.UserAgent :=
     'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; en)';
+{  result.ReadTimeout := 30000;
+  result.ConnectTimeout := 10000;    }
 end;
 
 var

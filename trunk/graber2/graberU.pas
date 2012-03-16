@@ -4,7 +4,7 @@ interface
 
 uses Classes, Messages, Windows, SysUtils, SyncObjs, Variants, VarUtils,
   IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP,
-  MyXMLParser, DateUtils, MyHTTP, StrUtils, md5, DB;
+  MyXMLParser, DateUtils, MyHTTP, StrUtils, md5, DB, IdStack;
 
 const
   UNIQUE_ID = 'GRABER2LOCK';
@@ -23,6 +23,7 @@ const
   CM_ENDJOB = WM_USER + 12;
   //CM_UPDATE = WM_USER + 13;
   //CM_UPDATEPROGRESS = WM_USER + 14;
+  CM_LANGUAGECHANGED = WM_USER + 15;
 
   THREAD_STOP = 0;
   THREAD_START = 1;
@@ -782,6 +783,8 @@ type
     // FPicFileFormat: String;
     // procedure SetPicFileFormat(Value: String);
     FOnResPageComplete: TNotifyEvent;
+    FStopTick: DWORD;
+    FStopPicsTick: DWORD;
     procedure SetOnError(Value: TLogEvent);
     function GetPicsFinished: Boolean;
   protected
@@ -2369,7 +2372,7 @@ begin
             end;
 
             if Assigned(t.Picture.OnPicChanged) then
-              t.Picture.OnPicChanged(t.Picture, [pcChecked]);
+              t.Picture.OnPicChanged(t.Picture, [pcChecked,pcProgress]);
             { if t.PictureList.Count > 0 then
               begin
               PictureList.AddPicList(t.PictureList,true);
@@ -2385,18 +2388,24 @@ begin
             inc(PictureList.Link.FPicCounter.ERR);
             inc(PictureList.FPicCounter.ERR);
             if Assigned(t.Picture.OnPicChanged) then
-              t.Picture.OnPicChanged(t.Picture, []);
+              t.Picture.OnPicChanged(t.Picture, [pcProgress]);
             if Assigned(FOnError) then
               FOnError(Self, t.Error);
           end;
       end
-    else
+    else if t.ReturnValue = THREAD_FINISH then
     begin
+      t.Picture.Status := JOB_CANCELED;
+{      t.Picture.Pos := 0;
+      t.Picture.Size := 0;   }
+      if Assigned(t.Picture.OnPicChanged) then
+        t.Picture.OnPicChanged(t.Picture, [pcProgress]);
+    end else begin
       t.Picture.Status := JOB_ERROR;
       inc(PictureList.Link.FPicCounter.ERR);
       inc(PictureList.FPicCounter.ERR);
       if Assigned(t.Picture.OnPicChanged) then
-        t.Picture.OnPicChanged(t.Picture, []);
+        t.Picture.OnPicChanged(t.Picture, [pcProgress]);
     end;
 
     if (FPictureList.eol) and (FPictureList.AllFinished) then
@@ -2749,9 +2758,25 @@ var
 begin
   case JobType of
     JOB_STOPLIST:
-      FThreadHandler.FinishThreads(false);
+      if FStopTick = 0 then
+      begin
+        FStopTick := GetTickCount;
+        FThreadHandler.FinishThreads(false);
+      end else if (FStopTick - GetTickCount) > 5000 then
+      begin
+        FStopTick := 0;
+        FThreadHandler.FinishThreads(true);
+      end;
     JOB_STOPPICS:
-      FDwnldHandler.FinishThreads(false);
+      if FStopPicsTick = 0 then
+      begin
+        FStopPicsTick := GetTickCount;
+        FDwnldHandler.FinishThreads(false);
+      end else if (FStopPicsTick - GetTickCount) > 5000 then
+      begin
+        FStopPicsTick := 0;
+        FDwnldHandler.FinishThreads(true);
+      end;
     JOB_LIST:
       if ListFinished then
       begin
@@ -2838,12 +2863,19 @@ end;
 procedure TResourceList.OnHandlerFinished(Sender: TObject);
 begin
   if Sender = FThreadHandler then
-    if (FThreadHandler.Count = 0) and Assigned(FJobChanged) then
-      FJobChanged(Self, JOB_STOPLIST)
-    else
+    if (FThreadHandler.Count = 0) then
+    begin
+      FStopTick := 0;
+      if Assigned(FJobChanged) then
+        FJobChanged(Self, JOB_STOPLIST);
+    end else
   else if Sender = FDwnldHandler then
-    if (FDwnldHandler.Count = 0) and Assigned(FJobChanged) then
-      FJobChanged(Self, JOB_STOPPICS)
+    if (FDwnldHandler.Count = 0) then
+    begin
+      FStopPicsTick := 0;
+      if Assigned(FJobChanged) then
+        FJobChanged(Self, JOB_STOPPICS);
+    end;
 end;
 
 procedure TResourceList.PicJobFinished(R: TResource);
@@ -3317,8 +3349,13 @@ begin
       // FHTTP.ResponseCode := 0;
       try
         Url := CalcValue(FHTTPRec.Url, VE, nil);
+        try
+          FHTTP.Disconnect;
+        except
+        end;
         FHTTP.Request.Referer := FHTTPRec.Referer;
         s := FHTTP.Get(Url);
+        //FHTTP.Disconnect;
         inc(FHTTPRec.Counter);
       except
         on e: Exception do
@@ -3365,8 +3402,7 @@ begin
     except
       on e: Exception do
       begin
-        FErrorString := e.Message;
-        FJob := JOB_ERROR;
+        SetHTTPError(e.Message);
         Break;
       end;
     end;
@@ -3376,71 +3412,115 @@ procedure TDownloadThread.ProcPic;
 var
   f: TFileStream;
   Dir: string;
+  
 begin
 
   f := nil;
-
-  try
-    Dir := ExtractFileDir(FPicture.FileName);
-
-    FCS.Enter;
+  FRetries := 0;
+  while true do
+  begin
     try
-      if fileexists(FPicture.FileName) then
-      begin
-        { FPicture.Size := 1;
-          FPicture.Pos; }
-        FPicture.Changes := [pcSize, pcProgress];
-        Synchronize(PicChanged);
-        Exit;
+      Dir := ExtractFileDir(FPicture.FileName);
+
+      FCS.Enter;
+      try
+        if fileexists(FPicture.FileName) then
+        begin
+          { FPicture.Size := 1;
+            FPicture.Pos; }
+          FPicture.Changes := [pcSize, pcProgress];
+          Synchronize(PicChanged);
+          Exit;
+        end;
+
+        if not DirectoryExists(Dir) then
+          CreateDirExt(Dir);
+
+        f := TFileStream.Create(FPicture.FileName, fmCreate);
+      finally
+        FCS.Leave;
       end;
 
-      if not DirectoryExists(Dir) then
-        CreateDirExt(Dir);
+      try
+        //HTTP.Request.ContentRangeStart := f.Size;
+        HTTP.Request.Referer := FHTTPRec.Referer;
+        HTTP.Get(HTTPRec.Url, f);
+        //HTTP.Disconnect;
 
-      f := TFileStream.Create(FPicture.FileName, fmCreate);
-    finally
-      FCS.Leave;
-    end;
+        if ReturnValue = THREAD_FINISH then
+        begin
+          FJOB := JOB_CANCELED;
+        end;
 
-    try
-      //HTTP.Request.ContentRangeStart := f.Size;
-      HTTP.Request.Referer := FHTTPRec.Referer;
-      HTTP.Get(HTTPRec.Url, f);
+        if FPicture.Size <> f.Size then
+        begin
+          f.Free;
+          FPicture.Size := 0;
+          FPicture.Pos := 0;
+          DeleteFile(FPicture.FileName);
+          if (FRetries < FMAXRetries) and (ReturnValue <> THREAD_FINISH) then
+          begin
+            inc(FRetries);
+            Continue;
+          end else
+            if ReturnValue <> THREAD_FINISH then
+              SetHTTPError(HTTPRec.Url + ': ' +_INCORRECT_FILESIZE_);
+        end else
+          f.Free;
 
+        Break;
 
-      if ReturnValue = THREAD_FINISH then
-      begin
-        FJOB := JOB_CANCELED;
-      end;
-
-      if FPicture.Size <> f.Size then
-      begin
-        f.Free;
-        DeleteFile(FPicture.FileName);
-        if ReturnValue <> THREAD_FINISH then
-          SetHTTPError(HTTPRec.Url + ': ' +_INCORRECT_FILESIZE_);
-      end else
-        f.Free;
-
+      except
+        on e: EIdSocketError do
+        begin
+          f.Free;
+          DeleteFile(FPicture.FileName);
+          FPicture.Size := 0;
+          FPicture.Pos := 0;
+          if e.LastError = 10054 then
+            try
+              HTTP.Disconnect
+            except
+            end
+          else
+            if (FRetries < FMAXRetries) and (ReturnValue <> THREAD_FINISH) then
+              inc(FRetries)
+            else
+            begin
+              SetHTTPError(HTTPRec.Url + ': ' + e.Message);
+              Break;
+            end;
+        end;
+        on e: Exception do
+        begin
+          f.Free;
+          DeleteFile(FPicture.FileName);
+          FPicture.Size := 0;
+          FPicture.Pos := 0;
+            if (HTTP.ResponseCode = 404)
+            or (FRetries < FMAXRetries) and (ReturnValue <> THREAD_FINISH) then
+              inc(FRetries)
+            else
+            begin
+              SetHTTPError(HTTPRec.Url + ': ' + e.Message);
+              Break;
+            end;
+        end;
+      end; //on http except
     except
       on e: Exception do
       begin
-        f.Free;
-        DeleteFile(FPicture.FileName);
-        SetHTTPError(HTTPRec.Url + ': ' + e.Message);
+        if Assigned(f) then
+          f.Free;
+        if fileexists(FPicture.FileName) then
+          DeleteFile(FPicture.FileName);
+        FPicture.Size := 0;
+        FPicture.Pos := 0;
+        SetHTTPError(e.Message);
+        Break;
       end;
-    end;
-  except
-    on e: Exception do
-    begin
-      if Assigned(f) then
-        f.Free;
-      if fileexists(FPicture.FileName) then
-        DeleteFile(FPicture.FileName);
-      FErrorString := e.Message;
-      FJob := JOB_ERROR;
-    end;
-  end;
+    end;  //on other except
+  end; //while true
 
 end;
 
@@ -3681,6 +3761,8 @@ procedure TTPicture.MakeFileName(Format: String);
         Result := Ext
       else if SameText(s, 'rootdir') then
         Result := ExtractFileDir(paramstr(0))
+      else if SameText(s,'tag') then
+        Result := ValidFName(Resource.Fields['tag'])
       else
         Result := s
     else
@@ -3800,6 +3882,8 @@ end;
 procedure TTPicture.SetPicName(Value: String);
 begin
   FExt := trim(ExtractFileExt(Value), '.');
+  if SameText(FExt,'jpeg') then
+    delete(FExt,3,1);
   FPicName := ChangeFileExt(Value, '');
 end;
 
@@ -4107,6 +4191,7 @@ begin
       Items[i].Status := JOB_NOJOB;
       if Items[i].Size <> 0 then
       begin
+        Items[i].Pos := 0;
         Items[i].Size := 0;
         if Assigned(Items[i].OnPicChanged) then
           Items[i].OnPicChanged(Items[i],[pcSize,pcProgress]);

@@ -78,6 +78,9 @@ type
     procedure OnListPicChanged(Pic: TTPicture; Changes: TPicChanges);
     procedure SetColWidths;
     procedure updatefocusedrecord;
+    procedure ForceStop(Sender: TObject);
+    procedure ForcePicsStop(Sender: TObject);
+    procedure SetSettings;
     property OnPicChanged: TPictureNotifyEvent read FPicChanged write FPicChanged;
     { Public declarations }
   end;
@@ -86,7 +89,7 @@ type
   TcxGridPopupMenuAccess = class(TcxGridPopupMenu);
 implementation
 
-uses LangString, utils;
+uses LangString, utils, OpBase;
 
 {$R *.dfm}
 
@@ -180,6 +183,16 @@ begin
     FPicChanged := nil;
   end else
     ResList.Clear;
+end;
+
+procedure TfGrid.ForcePicsStop(Sender: TObject);
+begin
+  ResList.DWNLDHandler.FinishThreads(true);
+end;
+
+procedure TfGrid.ForceStop(Sender: TObject);
+begin
+
 end;
 
 procedure TfGrid.OnBeginPicList(Sender: TObject);
@@ -328,13 +341,22 @@ begin
           Values[n,FPosColumn.Index] := null
         else
           Values[n,FPosColumn.Index] := GetBTString(Pic.Pos);
-        if Pic.Size = 0 then
-          if Pic.Checked then
-            Values[n,FProgressColumn.Index] := 0
+
+        case Pic.Status of
+          JOB_INPROGRESS:
+          if Pic.Size = 0 then
+            Values[n,FProgressColumn.Index] := 'START'
           else
-            Values[n,FProgressColumn.Index] := 100
-        else
-          Values[n,FProgressColumn.Index] := Pic.Pos/Pic.Size * 100;
+            Values[n,FProgressColumn.Index] :=
+              FormatFloat('00.00%',Pic.Pos/Pic.Size * 100);
+          JOB_FINISHED:
+            if Pic.Size = 0 then
+              Values[n,FProgressColumn.Index] := 'SKIP'
+            else
+              Values[n,FProgressColumn.Index] := 'OK';
+          JOB_ERROR: Values[n,FProgressColumn.Index] := 'ERROR';
+          JOB_CANCELED: Values[n,FProgressColumn.Index] := 'ABORT';
+        end;
       end;
 
     if pcLabel in Changes then
@@ -506,7 +528,7 @@ begin
   FSizeColumn.Visible := false;
   FSizeColumn.VisibleForCustomization := false;
 
-  FProgressColumn := AddField(_PROGRESS_ + ':p');
+  FProgressColumn := AddField(_PROGRESS_);
   with FProgressColumn.Options do
   begin
     HorzSizing := false;
@@ -564,6 +586,23 @@ begin
   bbColumns.Caption := _COLUMNS_;
   bbFilter.Caption := _FILTER_;
   //bbDoubles.Caption := _DOUBLES_;
+end;
+
+procedure TfGrid.SetSettings;
+begin
+  if GlobalSettings.Downl.UsePerRes then
+    ResList.MaxThreadCount := GlobalSettings.Downl.PerResThreads
+  else
+    ResList.MaxThreadCount := 0;
+
+  ResList.ThreadHandler.Proxy := Globalsettings.Proxy;
+  ResList.ThreadHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
+  ResList.ThreadHandler.Retries := GlobalSettings.Downl.Retries;
+
+  ResList.DWNLDHandler.Proxy := Globalsettings.Proxy;
+  ResList.DWNLDHandler.ThreadCount := GlobalSettings.Downl.PicThreads;
+  ResList.DWNLDHandler.Retries := GlobalSettings.Downl.Retries;
+  ResList.PictureList.IgnoreList := IgnoreList;
 end;
 
 procedure TfGrid.updatefocusedrecord;

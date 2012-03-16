@@ -141,6 +141,7 @@ type
     procedure testoClick(Sender: TObject);
   private
     mFrame: TFrame;
+    FOldCaption: String;
     // tvMain: TmycxGridTableView;
   protected
 //    procedure EXPANDROW(var Msg: TMessage); message CM_EXPROW;
@@ -153,6 +154,7 @@ type
     procedure STARTJOB(var Msg: TMessage); message CM_STARTJOB;
     procedure ENDJOB(var Msg: TMessage); message CM_ENDJOB;
     procedure UPDATECHECK(var Msg: TMessage); message CM_UPDATE;
+    procedure LANGUAGECHANGED(var Msg: TMessage); message CM_LANGUAGECHANGED;
     procedure dxTabClose(Sender: TdxCustomDockControl);
     // procedure APPLYEDITLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
   private
@@ -191,7 +193,7 @@ var
 implementation
 
 uses StartFrame, NewListFrame, LangString, SettingsFrame, GridFrame, utils,
-  AboutForm;
+  AboutForm, WaitForm;
 {$R *.dfm}
 
 procedure TMycxTabSheet.OnTimer(Sender: TObject);
@@ -550,8 +552,6 @@ begin
   f2.SetLang;
   f2.CreateList;
   f2.ResList.OnError := OnError;
-  if GlobalSettings.Downl.UsePerRes then
-    f2.ResList.MaxThreadCount := GlobalSettings.Downl.PerResThreads;
 
   f.ResetItems;
 
@@ -559,22 +559,21 @@ begin
     n.Caption := FullResList[0].Fields['tag'];
 
   f2.ResList.OnPageComplete := RefreshResInfo;
+
   with f.tvRes.DataController do
     for i := 0 to RecordCount - 1 do
       if Values[i, 0] <> 0 then
         f2.ResList.CopyResource(FullResList[Values[i, 0]]);
+
   FreeAndNil(n.SecondFrame);
   f2.Reset;
   n.MainFrame := f2;
   f2.Parent := n;
   f2.ResList.ThreadHandler.Cookies := FCookie;
-  f2.ResList.ThreadHandler.Proxy := Globalsettings.Proxy;
-  f2.ResList.ThreadHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
   f2.ResList.DWNLDHandler.Cookies := FCookie;
-  f2.ResList.DWNLDHandler.Proxy := Globalsettings.Proxy;
-  f2.ResList.DWNLDHandler.ThreadCount := GlobalSettings.Downl.PicThreads;
-  f2.ResList.PictureList.IgnoreList := IgnoreList;
   f2.OnPicChanged := PicInfo;
+  f2.SetSettings;
+
   f2.ResList.StartJob(JOB_LIST);
   //f2.vd.Open;
   ShowPanels;
@@ -585,40 +584,10 @@ var
   // n: TdxDockPanel;
   f: TfSettings;
 begin
-  // n := Pointer(Msg.WParam);
   f := SttPanel.MainFrame as tfSettings;
 
-  with f, GlobalSettings do
-  begin
-    Proxy.UseProxy := chbProxy.Checked;
-    Proxy.Host := eHost.Text;
-    Proxy.Port := ePort.Value;
-    Proxy.Auth := chbProxyAuth.Checked;
-    Proxy.Login := eProxyLogin.Text;
-    Proxy.Password := eProxyPassword.Text;
-    Proxy.SavePWD := chbProxySavePWD.Checked;
-
-    Downl.ThreadCount := eThreads.Value;
-    Downl.Retries := eRetries.Value;
-    Downl.Debug := chbDebug.Checked;
-
-    Downl.UsePerRes := chbUseThreadPerRes.Checked;
-    Downl.PerResThreads := eThreadPerRes.EditValue;
-    Downl.PicThreads := ePicThreads.EditValue;
-    //Downl.Interval := eInterval.Value;
-    //Downl.BeforeU := chbBeforeU.Checked;
-    //Downl.BeforeP := chbBeforeP.Checked;
-    //Downl.AfterP := chbAfterP.Checked;
-
-    TrayIcon := chbTrayIcon.Checked;
-    HideToTray := chbHideToTray.Checked;
-    OneInstance := chbOneInstance.Checked;
-    SaveConfirm := chbSaveConfirm.Checked;
-  end;
-
   SaveProfileSettings;
-
-  FreeAndNil(SttPanel.MainFrame);
+  f.OnClose;
   CloseTab(SttPanel as TcxTabSheet);
   // SttPanel := nil;
 end;
@@ -644,8 +613,10 @@ begin
     begin
       vGrid.DataController.Post;
       if ResList.ListFinished then
-        ResList.StartJob(JOB_LIST)
-       else
+      begin
+        SetSettings;
+        ResList.StartJob(JOB_LIST);
+      end else
         ResList.StartJob(JOB_STOPLIST);
     end;
 end;
@@ -659,10 +630,12 @@ begin
   if f is TfGrid then
     with (f as TfGrid) do
     begin
-      vGrid.DataController.Post;
+      //vGrid.DataController.Post;
       if ResList.PicsFinished then
+      begin
+        SetSettings;
         ResList.StartJob(JOB_PICS)
-       else
+      end else
         ResList.StartJob(JOB_STOPPICS);
     end;
 end;
@@ -684,8 +657,9 @@ var
 
 begin
   // n := Pointer(Msg.WParam);
-  f := TfSettings(SttPanel.Tag);
-  f.Free;
+  f := SttPanel.MainFrame as TfSettings;
+  f.OnClose;
+//  f.Free;
   CloseTab(SttPanel);
 end;
 
@@ -767,6 +741,33 @@ begin
   t.SetIcon(0,15,true); }
 end;
 
+procedure Tmf.LANGUAGECHANGED(var Msg: TMessage);
+var
+  i: integer;
+begin
+  LoadLang(IncludeTrailingPathDelimiter(ExtractFilePath(paramstr(0))
+  + 'languages') + langname+'.ini');
+
+  SetLang;
+  for i := 0 to pcTables.PageCount-1 do
+    if pcTables.Pages[i] is tMycxTabSheet then
+      with (pcTables.Pages[i] as tMycxTabSheet) do
+      begin
+        if Assigned(MainFrame) then
+          if MainFrame is tfGrid then
+            (MainFrame as tfGrid).SetLang
+          else if MainFrame is tfNewList then
+            (MainFrame as tfNewList).SetLang
+          else if MainFrame is tfSettings then
+            (MainFrame as tfSettings).SetLang;
+        if Assigned(SecondFrame) then
+          if SecondFrame is tfNewList then
+            (SecondFrame as tfNewList).SetLang;
+      end;
+
+
+end;
+
 procedure Tmf.StartUpdate;
 var
   f: tfileStream;
@@ -805,19 +806,21 @@ begin
     f := (t as tMycxTabSheet).MainFrame;
     if f is TfGrid then
     with (f as TfGrid) do
-      if not ResList.ListFinished then
+      if not ResList.ListFinished
+      or not ResList.PicsFinished then
       begin
         MessageDlg(_TAB_IS_BUSY_,mtError,[mbOk],0);
         Exit;
       end else
         Relise;
-    f := (t as tMycxTabSheet).MainFrame;
+{    f := (t as tMycxTabSheet).MainFrame;
     if f is TfNewList then
     begin
       PostMessage(Handle, CM_CANCELNEWLIST, Integer(t), 0)
-    end;
-
+    end;      }
+    FreeAndNil(f);
   end;
+
   t.Free;
   pcTables.Change;
   // FreeAndNil(t);
@@ -865,7 +868,7 @@ end;
 
 procedure Tmf.Setlang;
 begin
-  Caption := Caption + ' ' + VINFO.FileVersion + 'α';
+  Caption := FoldCaption + ' ' + VINFO.FileVersion + 'α';
   bbNew.Caption := _NEWLIST_;
   bbStartList.Caption := _STARTLIST_;
   bbStartPics.Caption := _STARTPICS_;
@@ -935,6 +938,8 @@ begin
 
   f := TfSettings.Create(SttPanel);
   f.SetLang;
+  f.LoadSettings;
+{  f.GetLanguages;
 
   with f, GlobalSettings do
   begin
@@ -948,21 +953,13 @@ begin
 
     eThreads.Value := Downl.ThreadCount;
     eRetries.Value := Downl.Retries;
-    chbDebug.Checked := Downl.Debug;
+    //chbDebug.Checked := Downl.Debug;
 
     chbUseThreadPerRes.Checked := Downl.UsePerRes;
     eThreadPerRes.EditValue := Downl.PerResThreads;
     ePicThreads.EditValue := Downl.PicThreads;
-    //eInterval.Value := Downl.Interval;
-    //chbBeforeU.Checked := Downl.BeforeU;
-    //chbBeforeP.Checked := Downl.BeforeP;
-    //chbAfterP.Checked := Downl.AfterP;
 
-    chbTrayIcon.Checked := TrayIcon;
-    chbHideToTray.Checked := HideToTray;
-    chbOneInstance.Checked := OneInstance;
-    chbSaveConfirm.Checked := SaveConfirm;
-  end;
+  end;                }
 
   //f.Tag := integer(SttPanel);
   SttPanel.MainFrame := f;
@@ -974,6 +971,7 @@ end;
 
 procedure Tmf.FormCreate(Sender: TObject);
 begin
+  FOldCaption := Caption;
   SetLang;
   pcTables.OnPageClose := OnTabClose;
   FullResList.OnError := OnError;

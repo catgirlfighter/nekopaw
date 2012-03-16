@@ -3,8 +3,9 @@ unit MainForm;
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, Gauges, INIFiles, UPDUnit, ShellAPI;
+  Messages, SysUtils, Dialogs, Forms, Windows,
+  INIFiles, UPDUnit, ShellAPI, Classes, Controls, StdCtrls,
+  Gauges;
 
 type
   Tmf = class(TForm)
