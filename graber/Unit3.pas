@@ -228,6 +228,10 @@ begin
       FPThread.FHTTP.Disconnect;
       FPThread.FHTTP.Request.Referer := freferer;
       FPThread.furl := furl;
+      if pos('https:',lowercase(furl)) = 1 then
+        FPThread.FHTTP.IOHandler := MainForm.OpSSLHandler
+      else
+        FPThread.FHTTP.IOHandler := nil;
       FPThread.n := false;
       FPThread.Suspended := false;
     finally
@@ -239,7 +243,7 @@ procedure TfPreview.Execute(AURL: string; AReferer: String = '';
   AName: String = '');
 begin
   timer.Enabled := false;
-  if (UPPERCASE(furl) = UPPERCASE(AURL)) and (furl <> '') then
+  if SameText(furl,AURL) and (furl <> '') then
     Exit;
   iCaption.Hide;
   { if AName = '' then
@@ -257,6 +261,8 @@ begin
     MainForm.log('preview = '+furl);
     MainForm.log('referer = ' + AReferer);
   end;   }
+
+{  if pos('https:',lowercase(furl)) =1 then }
 
 
   if furl <> '' then

@@ -468,10 +468,10 @@ type
     procedure loadoptions;
     function AddN(aurl: string; achck: Boolean = true): Integer;
     procedure GenGrid;
-    function CreateHTTP(AType: Integer = 0): TMyIdHTTP;
+    function CreateHTTP(AType: Integer = 0; SSL: Boolean = false): TMyIdHTTP;
     procedure ThreadTerminate(Sender: TObject);
     { procedure TagThreadTerminate(Sender: TObject); }
-    function CreateThread: TDownloadThread;
+    function CreateThread(SSL: Boolean = false): TDownloadThread;
     procedure updatecaption(s: string = '');
     procedure InsertN(index: Integer);
     procedure DeleteN(index: Integer);
@@ -745,7 +745,7 @@ begin
       HTTP.Tag := num;
 
       case curdest of
-        RP_IMOUTO, RP_KONACHAN, RP_DEVIANTART:
+        RP_YANDE, RP_KONACHAN, RP_DEVIANTART:
           xcp := 0;
         RP_EHENTAI_G, RP_EXHENTAI, RP_RMART:
           xcp := 4;
@@ -893,7 +893,7 @@ begin
 
           case curdest of
             RP_PIXIV:
-              if c then
+              if c and (xcp = 5) then
                 o := ChangeFileExt(n[num].URL, '_big_p' + IntToStr(j) +
                   ExtractFileExt(n[num].URL));
             RP_DEVIANTART:
@@ -955,7 +955,7 @@ begin
 
                   if (n[num].URL <> o) and
                     not(curdest in [RP_EHENTAI_G, RP_EXHENTAI]) and
-                    ((xcp > 1) or (curdest in [RP_IMOUTO])) then
+                    ((xcp > 1) or (curdest in [RP_YANDE])) then
                   begin
                     n[num].URL := o;
                     SMSG(msFNAME);
@@ -1099,7 +1099,7 @@ begin
           if not c then
           begin
             if (n[num].URL <> o) and not(curdest in [RP_EHENTAI_G, RP_EXHENTAI])
-              and ((xcp > 1) or (curdest in [RP_IMOUTO])) then
+              and ((xcp > 1) or (curdest in [RP_YANDE])) then
             begin
               n[num].URL := o;
 
@@ -1113,16 +1113,20 @@ begin
             SMSG(msOK);
 
           if c then
-            inc(j)
-          else
+          begin
+            inc(j);
+            xcp := 5;
+          end else
             Break;
+
+
         except
           on E: Exception do
           begin
             if HTTP.Connected then
               HTTP.Disconnect;
             FreeFile;
-            if pos('404 Not Found', E.Message) > 0 then
+            if HTTP.ResponseCode = 404 then
             begin
               case xcp of
                 0:
@@ -1141,22 +1145,22 @@ begin
                 4, 5:
                   if downloadalbums then
                     case curdest of
-                      RP_PIXIV:
-                        begin
-                          case xcp of
-                            4:
-                              c := true;
-                            5:
-                              if c then
-                                o := REPLACE(o, '_big_p', '_p');
-                          end;
-                        end;
-                    else
-                      begin
-                        SMSG(msERR, true, 'Line: ' + IntToStr(num) + ', ' +
-                          n[num].URL + ' ' + E.Message);
-                        Break;
+                    RP_PIXIV:
+                    begin
+                      case xcp of
+                        4:
+                          c := true;
+                        5:
+                          if c then
+                            o := REPLACE(o, '_big_p', '_p');
                       end;
+                    end;
+                    else
+                    begin
+                      SMSG(msERR, true, 'Line: ' + IntToStr(num) + ', ' +
+                        n[num].URL + ' ' + E.Message);
+                      Break;
+                    end;
                     end
                   else
                   begin
@@ -1815,8 +1819,8 @@ begin
             s.Add('username=' + AuthData[iindex].Login);
             s.Add('password=' + AuthData[iindex].Password);
             s.Add('action=Login');
-            HTTP := CreateHTTP;
-            HTTP.IOHandler := OpSSLHandler;
+            HTTP := CreateHTTP(0,true);
+            //HTTP.IOHandler := OpSSLHandler;
             HTTP.Request.Referer := 'http://www.deviantart.com/';
             try
               s.Text := HTTP.Post('https://www.deviantart.com/users/login', s);
@@ -2226,18 +2230,18 @@ begin
         else
           nxt := 'http://konachan.com/post?searchDefault=Search&tags=' +
             StringEncode(tmptag);
-      RP_IMOUTO:
+      RP_YANDE:
         if chbInPools.Checked then
           if (curdest = cbSite.ItemIndex) and (curtag = tmptag) and
             (tstart = -1) and (Length(PreList) > 0) then
             nxt := ''
           else
           begin
-            nxt := 'http://oreno.imouto.org/pool?query=' + StringEncode(tmptag);
+            nxt := RESOURCE_URLS[cbSite.ItemIndex] + 'pool?query=' + StringEncode(tmptag);
             tstart := 0;
           end
         else
-          nxt := 'http://oreno.imouto.org/post?searchDefault=Search&tags=' +
+          nxt := RESOURCE_URLS[cbSite.ItemIndex] + 'post?searchDefault=Search&tags=' +
             StringEncode(tmptag);
       RP_PIXIV:
         if not chbByAuthor.Checked then
@@ -2423,6 +2427,9 @@ begin
 
     i := 0;
     npp := 0;
+
+    if pos('https:',nxt) = 1 then
+      HTTP.IOHandler := OpSSLHandler;
 
     while true do
     begin
@@ -2841,7 +2848,7 @@ begin
         end;
     end;
     sdList.FileName := ExtractFileName(fname);
-    saved := false;
+    saved := true;
     log('List "' + ExtractFileName(fname) + '" saved');
   except
     on E: Exception do
@@ -3072,7 +3079,7 @@ begin
   Close;
 end;
 
-function TMainForm.CreateHTTP(AType: Integer = 0): TMyIdHTTP;
+function TMainForm.CreateHTTP(AType: Integer = 0; SSL: Boolean = false): TMyIdHTTP;
 // 0: simple
 // 1: downloading
 begin
@@ -3100,9 +3107,11 @@ begin
         result.OnWork := HTTPWork;
       end;
   end;
+  if SSL then
+    result.IOHandler := OpSSLHandler;
 end;
 
-function TMainForm.CreateThread: TDownloadThread;
+function TMainForm.CreateThread(SSL: Boolean = false): TDownloadThread;
 begin
   result := TDownloadThread.Create(true);
   // Result.Form := Form1;
@@ -3114,7 +3123,7 @@ begin
   result.CSection := FSection;
   result.spth := edir.Text;
   // result.LogErr := LogErr;
-  result.HTTP := CreateHTTP(1);
+  result.HTTP := CreateHTTP(1,SSL);
   result.HTTP.OnWorkBegin := result.DwnldHTTPWorkBegin;
   result.HTTP.OnWork := result.DwnldHTTPWork;
 
@@ -4101,6 +4110,7 @@ end;
 procedure TMainForm.btnGrabClick(Sender: TObject);
 var
   i: Integer;
+  ssl: boolean;
   // s: TStringList;
   // SHTTP: TidHTTP;
 begin
@@ -4170,8 +4180,9 @@ begin
     if nsel > 0 then
     begin
       FThreadList := TThreadList.Create;
+      ssl := pos('https:',lowercase(n[0].URL)) = 1;
       for i := 1 to MIN(nsel, eThreadCount.AsInteger) do
-        FThreadList.Add(CreateThread);
+        FThreadList.Add(CreateThread(ssl));
       saved := false;
     end
     else
@@ -4327,7 +4338,7 @@ begin
           3:
             tmpurl := Attrs.Value('href');
         end;
-    RP_KONACHAN, RP_IMOUTO:
+    RP_KONACHAN, RP_YANDE:
       begin
         if chbInPools.Checked then
           if (tstart = 0) then
@@ -4614,12 +4625,13 @@ begin
         n[xml_tmpi].pageurl := n[xml_tmpi].URL;
       end;
     RP_PAHEAL_RULE34, RP_PAHEAL_RULE63, RP_PAHEAL_COSPLAY, RP_TENTACLERAPE:
-      if (tstart = 0) and (ATag = 'div') then
+      if (tstart = 0) and ((ATag = 'div') or (ATag = 'section')) then
         if ((lowercase(Attrs.Value('id')) = 'navigationleft')) or
           (lowercase(Attrs.Value('id')) = 'navigation') then
           tstart := -1
-        else if (lowercase(Attrs.Value('id')) = 'imagesmain') or
-          (lowercase(Attrs.Value('id')) = 'images') then
+        else if (lowercase(Attrs.Value('id')) = 'imagesmain')
+          or (lowercase(Attrs.Value('id')) = 'images')
+          or (lowercase(Attrs.Value('id')) = 'image-list') then
           tstart := 1
         else
       else if (tstart < 0) then
@@ -5009,7 +5021,7 @@ begin
           tstart := 3
         else
       end;
-    RP_KONACHAN, RP_IMOUTO:
+    RP_KONACHAN, RP_YANDE:
       if chbInPools.Checked then
         if (tstart = 1) and (ATag = 'table') or (tstart = 3) and
           (ATag = 'div') then
@@ -5054,7 +5066,7 @@ begin
       else if (tstart = 8) and (ATag = 'h1') then
         tstart := -1;
     RP_PAHEAL_RULE34, RP_PAHEAL_RULE63, RP_PAHEAL_COSPLAY, RP_TENTACLERAPE:
-      if (ATag = 'div') then
+      if (ATag = 'div') or (ATag = 'section') then
         if tstart > 0 then
           dec(tstart)
         else if (tstart < 0) then
@@ -5395,7 +5407,7 @@ begin
         n[xml_tmpi].Preview := RESOURCE_URLS[cbSite.ItemIndex] +
           trim(CopyFromTo(AContent, '.src=''', ''';'), '/');
       end;
-    RP_KONACHAN, RP_IMOUTO:
+    RP_KONACHAN, RP_YANDE:
       if chbInPools.Checked then
         if (tstart = 2) and (xml_tmpi > 0) then
           if PreList[xml_tmpi - 1].Name = '' then
@@ -5797,6 +5809,8 @@ begin
     ClearHTML(n[l].category));
   result := result + ch(n[l].pageurl, ch(result, #13#10) + 'page: ' +
     ClearHTML(n[l].pageurl));
+{  result := result + ch(n[l].pageurl, ch(result, #13#10) + 'preview: ' +
+    ClearHTML(n[l].preview));   }
 end;
 
 procedure TMainForm.GridCanEditCell(Sender: TObject; ARow, ACol: Integer;
