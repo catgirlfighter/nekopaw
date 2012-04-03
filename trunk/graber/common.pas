@@ -24,36 +24,37 @@ const
 
   RP_GELBOORU = 10;
   RP_DONMAI_DANBOORU = 4;
-  RP_KONACHAN = 12;
-  RP_IMOUTO = 11;
-  RP_PIXIV = 18;
-  RP_SAFEBOORU = 20;
-  RP_SANKAKU_CHAN = 21;
+  RP_KONACHAN = 11;
+//  RP_IMOUTO = 11;
+  RP_PIXIV = 17;
+  RP_SAFEBOORU = 19;
+  RP_SANKAKU_CHAN = 20;
   RP_BEHOIMI = 1;
   RP_EHENTAI_G = 7;
   RP_EXHENTAI = 9;
-  RP_PAHEAL_RULE34 = 16;
-  RP_SANKAKU_IDOL = 22;
+  RP_PAHEAL_RULE34 = 15;
+  RP_SANKAKU_IDOL = 21;
   RP_DEVIANTART = 3;
   RP_E621 = 8;
   RP_413CHAN_PONIBOORU = 0;
   RP_BOORU_II = 2;
   RP_ZEROCHAN = 29;
-  RP_PAHEAL_RULE63 = 17;
-  RP_PAHEAL_COSPLAY = 15;
-  RP_XBOORU = 27;
-  RP_WILDCRITTERS = 26;
-  RP_XXX_RULE34 = 28;
-  RP_RMART = 19;
+  RP_PAHEAL_RULE63 = 16;
+  RP_PAHEAL_COSPLAY = 14;
+  RP_XBOORU = 26;
+  RP_WILDCRITTERS = 25;
+  RP_XXX_RULE34 = 27;
+  RP_RMART = 18;
   RP_DONMAI_HIJIRIBE = 5;
   RP_DONMAI_SONOHARA = 6;
-  RP_NEKOBOORU = 14;
-  RP_THEDOUJIN = 25;
-  RP_MINITOKYO = 13;
-  RP_TBIB = 23;
-  RP_TENTACLERAPE = 24;
+  RP_NEKOBOORU = 13;
+  RP_THEDOUJIN = 24;
+  RP_MINITOKYO = 12;
+  RP_TBIB = 22;
+  RP_TENTACLERAPE = 23;
+  RP_YANDE = 28;
 
-  RS_POOLS = [RP_BEHOIMI, RP_SANKAKU_CHAN, RP_IMOUTO, RP_DONMAI_DANBOORU,
+  RS_POOLS = [RP_BEHOIMI, RP_SANKAKU_CHAN, RP_YANDE, RP_DONMAI_DANBOORU,
   RP_SANKAKU_IDOL, RP_E621, RP_KONACHAN, RP_WILDCRITTERS, RP_DONMAI_HIJIRIBE,
   RP_DONMAI_SONOHARA, RP_NEKOBOORU];
 
@@ -75,29 +76,30 @@ const
               {08} 'http://e621.net/',
               {09} 'http://exhentai.org/',
               {10} 'http://gelbooru.com/',
-              {11} 'http://oreno.imouto.org/',
-              {12} 'http://konachan.com/',
-              {13} 'http://www.minitokyo.net/',
-              {14} 'http://nekobooru.net/',
-              {15} 'http://cosplay.paheal.net/',
-              {16} 'http://rule34.paheal.net/',
-              {17} 'http://rule63.paheal.net/',
-              {18} 'http://pixiv.net/',
-              {19} 'http://rmart.org/',
-              {20} 'http://safebooru.org/',
-              {21} 'http://chan.sankakucomplex.com/',
-              {22} 'http://idol.sankakucomplex.com/',
-              {23} 'http://tbib.org/',
-              {24} 'http://tentaclerape.net/',
-              {25} 'http://thedoujin.com/',
-              {26} 'http://wildcritters.ws/',
-              {27} 'http://xbooru.com/',
-              {28} 'http://rule34.xxx/',
+//              {11} 'http://oreno.imouto.org/',     good night sweet prince
+              {11} 'http://konachan.com/',
+              {12} 'http://www.minitokyo.net/',
+              {13} 'http://nekobooru.net/',
+              {14} 'http://cosplay.paheal.net/',
+              {15} 'http://rule34.paheal.net/',
+              {16} 'http://rule63.paheal.net/',
+              {17} 'http://pixiv.net/',
+              {18} 'http://rmart.org/',
+              {19} 'http://safebooru.org/',
+              {20} 'http://chan.sankakucomplex.com/',
+              {21} 'http://idol.sankakucomplex.com/',
+              {22} 'http://tbib.org/',
+              {23} 'http://tentaclerape.net/',
+              {24} 'http://thedoujin.com/',
+              {25} 'http://wildcritters.ws/',
+              {26} 'http://xbooru.com/',
+              {27} 'http://rule34.xxx/',
+              {28} 'https://yande.re/',
               {29} 'http://www.zerochan.net/');
 
 
   RVLIST: array [0 .. RESOURCE_COUNT - 1] of Integer =
-    (RP_GELBOORU, RP_DONMAI_DANBOORU, RP_KONACHAN, RP_IMOUTO, RP_PIXIV,
+    (RP_GELBOORU, RP_DONMAI_DANBOORU, RP_KONACHAN, RP_YANDE, RP_PIXIV,
     RP_SAFEBOORU, RP_SANKAKU_CHAN, RP_BEHOIMI, RP_EHENTAI_G, RP_EXHENTAI,
     RP_PAHEAL_RULE34, RP_SANKAKU_IDOL, RP_DEVIANTART, RP_E621,
     RP_413CHAN_PONIBOORU, RP_BOORU_II, RP_ZEROCHAN, RP_PAHEAL_RULE63,

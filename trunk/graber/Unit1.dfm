@@ -121,373 +121,6 @@ object MainForm: TMainForm
       Width = 32
       Height = 32
     end
-    object tsDownloading: TSpTBXTabSheet
-      Left = 0
-      Top = 26
-      Width = 548
-      Height = 132
-      Caption = 'Download'
-      ImageIndex = -1
-      DesignSize = (
-        548
-        132)
-      TabItem = 'tsiDownloading'
-      object ldir: TLabel
-        Left = 3
-        Top = 7
-        Width = 24
-        Height = 13
-        Caption = ' path'
-      end
-      object lIfExists: TLabel
-        Left = 9
-        Top = 35
-        Width = 45
-        Height = 13
-        AutoSize = False
-        Caption = 'if exists'
-      end
-      object btnGrab: TButton
-        Left = 414
-        Top = 3
-        Width = 51
-        Height = 23
-        Anchors = [akTop, akRight]
-        Caption = 'Grab!'
-        Default = True
-        TabOrder = 0
-        OnClick = btnGrabClick
-      end
-      object chbdownloadalbums: TCheckBox
-        Left = 9
-        Top = 82
-        Width = 144
-        Height = 17
-        Caption = 'download albums'
-        TabOrder = 1
-        OnClick = chbdownloadalbumsClick
-      end
-      object chbcreatenewdirs: TCheckBox
-        Left = 9
-        Top = 103
-        Width = 144
-        Height = 17
-        Caption = 'create new dirs for albums'
-        TabOrder = 2
-      end
-      object cbExistingFile: TComboBox
-        Left = 52
-        Top = 32
-        Width = 101
-        Height = 21
-        Style = csDropDownList
-        ItemIndex = 0
-        TabOrder = 3
-        Text = 'skip'
-        Items.Strings = (
-          'skip'
-          'replace'
-          'rename')
-      end
-      object chbTagsIn: TCheckBox
-        Left = 173
-        Top = 59
-        Width = 66
-        Height = 17
-        Caption = 'all tags in'
-        TabOrder = 4
-        OnClick = chbNameFormatClick
-      end
-      object edir: TJvDirectoryEdit
-        Left = 33
-        Top = 4
-        Width = 259
-        Height = 21
-        AcceptFiles = False
-        DisabledColor = clBtnFace
-        DialogKind = dkWin32
-        AutoCompleteOptions = [acoAutoSuggest, acoAutoAppend]
-        DialogOptionsWin32 = [odStatusAvailable, odEditBox, odNewDialogStyle]
-        ClickKey = 0
-        Anchors = [akLeft, akTop, akRight]
-        TabOrder = 5
-        Text = 'edir'
-      end
-      object btnBrowse: TBitBtn
-        Left = 298
-        Top = 3
-        Width = 23
-        Height = 23
-        Hint = 'Browse'
-        Anchors = [akTop, akRight]
-        DoubleBuffered = True
-        Glyph.Data = {
-          36030000424D3603000000000000360000002800000010000000100000000100
-          18000000000000030000C40E0000C40E0000000000000000000080FFFF80FFFF
-          80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FF
-          FFD5D7D6D3D2CF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80
-          FFFF80FFFF80FFFF80FFFF80FFFFB1ACA9877280646786B9AEAB80FFFF80FFFF
-          80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFFB1ACA98F73
-          7F6D7AB6378AE483ACD180FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80
-          FFFF80FFFF80FFFFB1ADAA92747F6D79B53993E858C0FFBEE5FF80FFFF80FFFF
-          80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFFB6B0AE8F737E6D78B53B95
-          EA57BFFFC9E6FD80FFFF80FFFF80FFFF80FFFFE7E8E9BBB5B6ADA5A7B4AFB0DA
-          D9DBE9EDEE8F83856474B23993E957BFFFC5E4FD80FFFF80FFFF80FFFF80FFFF
-          C1BDBF877D75C6AE99E1CBB1CFB7A0B9998A9D8583817B7D5695D457BDFDC8E6
-          FD80FFFF80FFFF80FFFF80FFFFC1C1C18B7879F4EAE0FFFFFAFFFFE6FFFFD8FF
-          FDCAF2CFA9B4928AC9CAC9DEEEFB80FFFF80FFFF80FFFF80FFFFECEFEF897672
-          ECDED0FFFFFFFFFFFFFFFFFFFFFED5FFF4C0FFF6C3EDC8A3D4C5C180FFFF80FF
-          FF80FFFF80FFFF80FFFFD0CCCDAA8C82FFFFE7FFFFFFFFFFFFFFFFFFFFFFDBFF
-          F3C3FFE2B1FDEFBDE0C8BE80FFFF80FFFF80FFFF80FFFF80FFFFCEC7C9C0A690
-          FFFFDCFFFFECFFFFF4FFFFF4FFFED3FFF1C0FFD6A6FEEFBDE2C8B6F9F4F580FF
-          FF80FFFF80FFFF80FFFFD0CCD0BBA18FFFFFD1FFFDD2FFFED1FFFED1FFF9C7FF
-          E5B2FFDFACFFF4C2E1C6B3F9F4F580FFFF80FFFF80FFFF80FFFFECECEDAB8F89
-          FDEFBFFFF4C2FFECBBFFEEBDFFE0AEFFE4BBFFF8EAF8F0D3DEC7BA80FFFF80FF
-          FF80FFFF80FFFF80FFFF80FFFFC8C0C2CDA68BFFF7C2FFEBB7FFDCAAFFE5B5FF
-          FEF5FCFBFDDFC5B8F8F2EE80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF
-          C4B8BAD4B097F8E2B4FFF4C4FDF0C5ECDFC2DAC0B9F0E7E480FFFF80FFFF80FF
-          FF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFFE5DEE0DDC2B9C4B6AABEAEA5E0
-          D0CCF5EEEB80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF}
-        ParentDoubleBuffered = False
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 6
-        OnClick = btnBrowseClick
-      end
-      object btnDefDir: TBitBtn
-        Left = 327
-        Top = 3
-        Width = 23
-        Height = 23
-        Hint = 'Set as default'
-        Anchors = [akTop, akRight]
-        DoubleBuffered = True
-        Glyph.Data = {
-          36030000424D3603000000000000360000002800000010000000100000000100
-          18000000000000030000120B0000120B0000000000000000000000F0FF00F0FF
-          00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0
-          FF00F0FF00F0FF00F0FF00F0FF00F0FFE8E8E8E8E8E8E8E8E8E8E8E8E8E8E8E8
-          E8E8E8E8E8E8E8E8E8E8E8E8E8E8E8E8E8E8E8E8E8E8E800F0FF00F0FFD0D0D0
-          7171715959595959595959595959595959595959595959595959595959595959
-          59595959717171D0D0D000F0FF1D82B51B81B3187EB0167CAE1379AB1076A80D
-          73A50B71A3086EA0066C9E046A9C02689A0167994141417171712287BA67CCFF
-          2085B899FFFF6FD4FF6FD4FF6FD4FF6FD4FF3A66C43A66C46FD4FF6FD4FF3BA0
-          D399FFFF016799595959258ABD67CCFF278CBF99FFFF7BE0FF7BE0FF7BE0FF7B
-          E0FF1628AA0C14A177D8FB7BE0FF44A9DC99FFFF02689A595959288DC067CCFF
-          2D92C599FFFF85EBFF85EBFF85EBFF3A66C4101CA41A2DAB2C4DB985EBFF4EB3
-          E699FFFF046A9C5959592A8FC267CCFF3398CB99FFFF91F7FF91F7FF6AB3E30C
-          15A171BFE876C7EB0C14A076C7EB57BCEF99FFFF066C9E5959592D92C56FD4FF
-          3499CC99FFFF99FFFF8CE9F6101BA3416DC499FFFF99FFFF2F4FB81F34AD60C5
-          F899FFFF086EA05959592F94C77BE0FF2D92C5FFFFFFFFFFFFFFFFFFFFFFFFFA
-          FAFDFFFFFFFFFFFFF5F6FB0E15A15699DCFFFFFF0B71A37171713196C985EBFF
-          81E6FF2D92C52D92C52D92C52D92C52D92C52D92C5288DC02489BC1446AA0B16
-          A01B81B31B81B3D8D8D83398CB91F7FF8EF4FF8EF4FF8EF4FF8EF4FF8EF4FFFF
-          FFFFFFFFFFFFFFFFFFFFFFFFFFFF0B18A02C3082666666D2D2D23499CCFFFFFF
-          99FFFF99FFFF99FFFF99FFFFFFFFFF258ABD2287BA1F84B71D82B51B81B3135A
-          AA0D14A07F808FB6B6B600F0FF3499CCFFFFFFFFFFFFFFFFFFFFFFFF2A8FC2D0
-          D0D000F0FF00F0FF00F0FF00F0FF00F0FF353BB07175C200F0FF00F0FF00F0FF
-          3499CC3398CB3196C92F94C7E8E8E800F0FF00F0FF00F0FF00F0FF00F0FF00F0
-          FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00
-          F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF}
-        ParentDoubleBuffered = False
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 7
-        OnClick = btnDefDirClick
-      end
-      object btnLoadDefDir: TBitBtn
-        Left = 356
-        Top = 3
-        Width = 23
-        Height = 23
-        Hint = 'Load default'
-        Anchors = [akTop, akRight]
-        DoubleBuffered = True
-        Glyph.Data = {
-          36030000424D3603000000000000360000002800000010000000100000000100
-          18000000000000030000120B0000120B0000000000000000000000F0FF00F0FF
-          00F0FF00F0FF00F0FF00F0FF00F0FFEECEA8EECEA800F0FF00F0FF00F0FF00F0
-          FF00F0FF00F0FF00F0FF00F0FF00F0FFDFDFDFD6D6D6D6D6D6D6D6D6EECEA811
-          6A01307001EECEA8D6D6D6D6D6D6D6D6D6D6D6D6DFDFDF00F0FF00F0FFC8C8C8
-          8383836D6D6D6D6D6DEECEA8016A0148E07B48E07B1D6901EECEA86D6D6D6D6D
-          6D6D6D6D838383C8C8C8DFDFDF1D82B51B81B3187EB0EECEA8056E0848E07B48
-          E07B48E07B48E07B0E6701EECEA802689A0167994C4C4C8383832287BA67CCFF
-          2085B8EECEA807740E3BD36E3BD36E3BD36E3BD36E3BD36E3BD36E046D07EECE
-          A899FFFF0167996E6E6E258ABD67CCFFEECEA809791131C96131C96131C96131
-          C96131C96131C96131C96131C961036D06EECEA802689A6D6D6D288DC067CCFF
-          01670101670101670101670121B94121B94121B94121B9410167010167010167
-          01016701046A9C6D6D6D2A8FC267CCFF3398CB99FFFF91F7FF01670115AD2715
-          AD2715AD2715AD2701670191F7FF57BCEF99FFFF066C9E6D6D6D2D92C56FD4FF
-          3499CC99FFFF99FFFF01670108A00E08A00E08A00E08A00E01670199FFFF60C5
-          F899FFFF086EA06E6E6E2F94C77BE0FF2D92C5FFFFFFFFFFFF01670101670101
-          6701016701016701016701FFFFFF81E6FFFFFFFF0B71A38C8C8C3196C985EBFF
-          81E6FF2D92C52D92C52D92C52D92C52D92C52D92C5288DC02489BC2085B81C81
-          B41B81B31B81B3DFDFDF3398CB91F7FF8EF4FF8EF4FF8EF4FF8EF4FF8EF4FFFF
-          FFFFFFFFFFFFFFFFFFFFFFFFFFFF167CAE8C8C8CDEDEDE00F0FF3499CCFFFFFF
-          99FFFF99FFFF99FFFF99FFFFFFFFFF258ABD2287BA1F84B71D82B51B81B3187E
-          B0DFDFDF00F0FF00F0FF00F0FF3499CCFFFFFFFFFFFFFFFFFFFFFFFF2A8FC2C8
-          C8C800F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF
-          3499CC3398CB3196C92F94C7DFDFDF00F0FF00F0FF00F0FF00F0FF00F0FF00F0
-          FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00
-          F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF}
-        ParentDoubleBuffered = False
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 8
-        OnClick = btnLoadDefDirClick
-      end
-      object chbAutoDirName: TCheckBox
-        Left = 173
-        Top = 34
-        Width = 97
-        Height = 17
-        Hint = '?s - res.name; ?t - tag string'
-        Caption = 'auto dir name (&?)'
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 9
-        OnClick = chbAutoDirNameClick
-      end
-      object eAutoDirName: TEdit
-        Left = 276
-        Top = 32
-        Width = 56
-        Height = 21
-        Hint = '?s - res.name; ?t - tag string'
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 10
-        Text = '?t\?s'
-      end
-      object chbSaveJPEGMeta: TCheckBox
-        Left = 9
-        Top = 59
-        Width = 144
-        Height = 17
-        Caption = 'save meta to JPEG'
-        Checked = True
-        State = cbChecked
-        TabOrder = 11
-        OnClick = chbdownloadalbumsClick
-      end
-      object chbNameFormat: TCheckBox
-        Left = 173
-        Top = 82
-        Width = 97
-        Height = 17
-        Hint = 
-          '?a - author nicname, ?l - author loginname,  ?n - title, ?i - im' +
-          'age id, ?p - page, ?t - tagtring'
-        Caption = 'name format (&?)'
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 12
-        OnClick = chbNameFormatClick
-      end
-      object eNameFormat: TEdit
-        Left = 276
-        Top = 80
-        Width = 56
-        Height = 21
-        Hint = 
-          '?a - author nicname, ?l - author loginname,  ?n - title, ?i - im' +
-          'age id, ?p[{text}/] - page string, ?t - tagtring'
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 13
-        Text = '?i?p_p/'
-      end
-      object cbTagsIn: TComboBox
-        Left = 245
-        Top = 57
-        Width = 87
-        Height = 21
-        Style = csDropDownList
-        ItemIndex = 0
-        TabOrder = 14
-        Text = 'filename'
-        Items.Strings = (
-          'filename'
-          'csv file')
-      end
-      object chbOrigFNames: TCheckBox
-        Left = 173
-        Top = 103
-        Width = 159
-        Height = 17
-        Caption = 'original filenames'
-        TabOrder = 15
-        OnClick = chbOrigFNamesClick
-      end
-      object chbQueryI2: TCheckBox
-        Left = 346
-        Top = 82
-        Width = 97
-        Height = 17
-        Caption = 'query interval'
-        Checked = True
-        Enabled = False
-        State = cbChecked
-        TabOrder = 16
-      end
-      object chbIncFNames: TCheckBox
-        Left = 346
-        Top = 59
-        Width = 159
-        Height = 17
-        Caption = 'incremental filenames'
-        TabOrder = 17
-      end
-      object btnAuth2: TBitBtn
-        Left = 385
-        Top = 3
-        Width = 23
-        Height = 23
-        Hint = 'Authentication'
-        Anchors = [akTop, akRight]
-        DoubleBuffered = True
-        Glyph.Data = {
-          36030000424D3603000000000000360000002800000010000000100000000100
-          18000000000000030000120B0000120B000000000000000000000000FF4AA1D6
-          4399D04093CF97C7DF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000
-          FF0000FF0000FF0000FF67BCE7C4EBF77FE1F69FE6F73F91CC8FC0D80000FF00
-          00FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF44B0E3C6F4FB
-          43D6F148DBF582E1F53D8FCB89BBD40000FF0000FF0000FF0000FF0000FF0000
-          FF0000FF0000FF0000FF4EB4E4BBEFFA39D1F128C5EE4EDCF685E2F74093CE87
-          B8D20000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF44B0E3F0FCFE
-          B0EEFA43D8F428C8EE41D7F489E2F74093CF80B3CE0000FF0000FF0000FF0000
-          FF0000FF0000FF0000FF91D1EF44B0E344B0E3ABEAF94ED8F32BC9EF3DD6F38A
-          E1F74092CE4F94C2297DD62C85D85FA5CE0000FF0000FF0000FF0000FF0000FF
-          44B0E3F1FCFEBBF1FB7BE4F628D2F037D4F583E0F63EA9E3A0F3FCA9F5FC2B82
-          D75BA1CB0000FF0000FF0000FF0000FF91D1EF44B0E345B2E376C5EAACEEFA39
-          D6F24DDBF565E4F73CCEF232C9EF85EFFB2B81D7579CC60000FF0000FF0000FF
-          0000FF0000FFFEFEFF91D1EF6FC4EA80E5F73DD1F15DDBF569DFF650D7F334CD
-          EF85EFFB297FD65399C50000FF0000FF0000FF0000FF0000FF44B0E3D5F7FC89
-          E7F87EE4F77EE4F77EE4F782E5F747D6F238CEF0AEF5FC297CD60000FF0000FF
-          0000FF0000FF0000FF44B0E3BEF2FB7EE4F77EE4F781E5F794E9F8BCF1FB8BDA
-          F349DDF5C1F8FD3090DA0000FF0000FF0000FF0000FF0000FF44B0E3DEF8FC8D
-          E7F87EE4F794E9F8BCE9F844B0E342ACE3EEFCFE3298DD6BB0D60000FF0000FF
-          0000FF0000FF0000FF91D1EF44B0E3CEF5FC8DE7F8A1ECF944B0E344B0E3FFFF
-          FF39A1DF6BB0D60000FF0000FF0000FF0000FF0000FF0000FF0000FF91D1EF44
-          B0E3CEF5FC9EEBF9BEF2FBFEFFFF44B0E38BCCEB0000FF0000FF0000FF0000FF
-          0000FF0000FF0000FF0000FF0000FF91D1EF44B0E3DEF8FCDEF8FC44B0E391D1
-          EF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF00
-          00FF91D1EF44B0E344B0E391D1EF0000FF0000FF0000FF0000FF}
-        ParentDoubleBuffered = False
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 18
-        OnClick = btnAuth2Click
-      end
-      object chbFullSize: TCheckBox
-        Left = 346
-        Top = 103
-        Width = 119
-        Height = 17
-        Caption = 'Full Size (spends GP)'
-        TabOrder = 19
-      end
-    end
     object tsSettings: TSpTBXTabSheet
       Left = 0
       Top = 26
@@ -501,7 +134,7 @@ object MainForm: TMainForm
       TabItem = 'tsiSettings'
       object iLain: TImage
         Left = 444
-        Top = 3
+        Top = 2
         Width = 101
         Height = 122
         Anchors = [akRight, akBottom]
@@ -969,7 +602,7 @@ object MainForm: TMainForm
         Left = 312
         Top = 5
         Width = 233
-        Height = 104
+        Height = 103
         Anchors = [akLeft, akTop, akRight, akBottom]
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindowText
@@ -985,7 +618,7 @@ object MainForm: TMainForm
         Left = 3
         Top = 3
         Width = 209
-        Height = 107
+        Height = 106
         ActivePage = tsTags
         Anchors = [akLeft, akTop, akBottom]
         TabOrder = 2
@@ -995,7 +628,7 @@ object MainForm: TMainForm
             Left = 0
             Top = 0
             Width = 201
-            Height = 79
+            Height = 78
             Align = alClient
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clWindowText
@@ -1016,7 +649,7 @@ object MainForm: TMainForm
             Left = 0
             Top = 0
             Width = 201
-            Height = 79
+            Height = 78
             Align = alClient
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clWindowText
@@ -1041,6 +674,373 @@ object MainForm: TMainForm
         Value = 1.000000000000000000
         TabOrder = 3
         OnChange = eCFilterChange
+      end
+    end
+    object tsDownloading: TSpTBXTabSheet
+      Left = 0
+      Top = 26
+      Width = 548
+      Height = 132
+      Caption = 'Download'
+      ImageIndex = -1
+      DesignSize = (
+        548
+        132)
+      TabItem = 'tsiDownloading'
+      object ldir: TLabel
+        Left = 3
+        Top = 7
+        Width = 24
+        Height = 13
+        Caption = ' path'
+      end
+      object lIfExists: TLabel
+        Left = 9
+        Top = 35
+        Width = 45
+        Height = 13
+        AutoSize = False
+        Caption = 'if exists'
+      end
+      object btnGrab: TButton
+        Left = 414
+        Top = 3
+        Width = 51
+        Height = 23
+        Anchors = [akTop, akRight]
+        Caption = 'Grab!'
+        Default = True
+        TabOrder = 0
+        OnClick = btnGrabClick
+      end
+      object chbdownloadalbums: TCheckBox
+        Left = 9
+        Top = 82
+        Width = 144
+        Height = 17
+        Caption = 'download albums'
+        TabOrder = 1
+        OnClick = chbdownloadalbumsClick
+      end
+      object chbcreatenewdirs: TCheckBox
+        Left = 9
+        Top = 103
+        Width = 144
+        Height = 17
+        Caption = 'create new dirs for albums'
+        TabOrder = 2
+      end
+      object cbExistingFile: TComboBox
+        Left = 52
+        Top = 32
+        Width = 101
+        Height = 21
+        Style = csDropDownList
+        ItemIndex = 0
+        TabOrder = 3
+        Text = 'skip'
+        Items.Strings = (
+          'skip'
+          'replace'
+          'rename')
+      end
+      object chbTagsIn: TCheckBox
+        Left = 173
+        Top = 59
+        Width = 66
+        Height = 17
+        Caption = 'all tags in'
+        TabOrder = 4
+        OnClick = chbNameFormatClick
+      end
+      object edir: TJvDirectoryEdit
+        Left = 33
+        Top = 4
+        Width = 259
+        Height = 21
+        AcceptFiles = False
+        DisabledColor = clBtnFace
+        DialogKind = dkWin32
+        AutoCompleteOptions = [acoAutoSuggest, acoAutoAppend]
+        DialogOptionsWin32 = [odStatusAvailable, odEditBox, odNewDialogStyle]
+        ClickKey = 0
+        Anchors = [akLeft, akTop, akRight]
+        TabOrder = 5
+        Text = 'edir'
+      end
+      object btnBrowse: TBitBtn
+        Left = 298
+        Top = 3
+        Width = 23
+        Height = 23
+        Hint = 'Browse'
+        Anchors = [akTop, akRight]
+        DoubleBuffered = True
+        Glyph.Data = {
+          36030000424D3603000000000000360000002800000010000000100000000100
+          18000000000000030000C40E0000C40E0000000000000000000080FFFF80FFFF
+          80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FF
+          FFD5D7D6D3D2CF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80
+          FFFF80FFFF80FFFF80FFFF80FFFFB1ACA9877280646786B9AEAB80FFFF80FFFF
+          80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFFB1ACA98F73
+          7F6D7AB6378AE483ACD180FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80
+          FFFF80FFFF80FFFFB1ADAA92747F6D79B53993E858C0FFBEE5FF80FFFF80FFFF
+          80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFFB6B0AE8F737E6D78B53B95
+          EA57BFFFC9E6FD80FFFF80FFFF80FFFF80FFFFE7E8E9BBB5B6ADA5A7B4AFB0DA
+          D9DBE9EDEE8F83856474B23993E957BFFFC5E4FD80FFFF80FFFF80FFFF80FFFF
+          C1BDBF877D75C6AE99E1CBB1CFB7A0B9998A9D8583817B7D5695D457BDFDC8E6
+          FD80FFFF80FFFF80FFFF80FFFFC1C1C18B7879F4EAE0FFFFFAFFFFE6FFFFD8FF
+          FDCAF2CFA9B4928AC9CAC9DEEEFB80FFFF80FFFF80FFFF80FFFFECEFEF897672
+          ECDED0FFFFFFFFFFFFFFFFFFFFFED5FFF4C0FFF6C3EDC8A3D4C5C180FFFF80FF
+          FF80FFFF80FFFF80FFFFD0CCCDAA8C82FFFFE7FFFFFFFFFFFFFFFFFFFFFFDBFF
+          F3C3FFE2B1FDEFBDE0C8BE80FFFF80FFFF80FFFF80FFFF80FFFFCEC7C9C0A690
+          FFFFDCFFFFECFFFFF4FFFFF4FFFED3FFF1C0FFD6A6FEEFBDE2C8B6F9F4F580FF
+          FF80FFFF80FFFF80FFFFD0CCD0BBA18FFFFFD1FFFDD2FFFED1FFFED1FFF9C7FF
+          E5B2FFDFACFFF4C2E1C6B3F9F4F580FFFF80FFFF80FFFF80FFFFECECEDAB8F89
+          FDEFBFFFF4C2FFECBBFFEEBDFFE0AEFFE4BBFFF8EAF8F0D3DEC7BA80FFFF80FF
+          FF80FFFF80FFFF80FFFF80FFFFC8C0C2CDA68BFFF7C2FFEBB7FFDCAAFFE5B5FF
+          FEF5FCFBFDDFC5B8F8F2EE80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF
+          C4B8BAD4B097F8E2B4FFF4C4FDF0C5ECDFC2DAC0B9F0E7E480FFFF80FFFF80FF
+          FF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFFE5DEE0DDC2B9C4B6AABEAEA5E0
+          D0CCF5EEEB80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF80FFFF}
+        ParentDoubleBuffered = False
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 6
+        OnClick = btnBrowseClick
+      end
+      object btnDefDir: TBitBtn
+        Left = 327
+        Top = 3
+        Width = 23
+        Height = 23
+        Hint = 'Set as default'
+        Anchors = [akTop, akRight]
+        DoubleBuffered = True
+        Glyph.Data = {
+          36030000424D3603000000000000360000002800000010000000100000000100
+          18000000000000030000120B0000120B0000000000000000000000F0FF00F0FF
+          00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0
+          FF00F0FF00F0FF00F0FF00F0FF00F0FFE8E8E8E8E8E8E8E8E8E8E8E8E8E8E8E8
+          E8E8E8E8E8E8E8E8E8E8E8E8E8E8E8E8E8E8E8E8E8E8E800F0FF00F0FFD0D0D0
+          7171715959595959595959595959595959595959595959595959595959595959
+          59595959717171D0D0D000F0FF1D82B51B81B3187EB0167CAE1379AB1076A80D
+          73A50B71A3086EA0066C9E046A9C02689A0167994141417171712287BA67CCFF
+          2085B899FFFF6FD4FF6FD4FF6FD4FF6FD4FF3A66C43A66C46FD4FF6FD4FF3BA0
+          D399FFFF016799595959258ABD67CCFF278CBF99FFFF7BE0FF7BE0FF7BE0FF7B
+          E0FF1628AA0C14A177D8FB7BE0FF44A9DC99FFFF02689A595959288DC067CCFF
+          2D92C599FFFF85EBFF85EBFF85EBFF3A66C4101CA41A2DAB2C4DB985EBFF4EB3
+          E699FFFF046A9C5959592A8FC267CCFF3398CB99FFFF91F7FF91F7FF6AB3E30C
+          15A171BFE876C7EB0C14A076C7EB57BCEF99FFFF066C9E5959592D92C56FD4FF
+          3499CC99FFFF99FFFF8CE9F6101BA3416DC499FFFF99FFFF2F4FB81F34AD60C5
+          F899FFFF086EA05959592F94C77BE0FF2D92C5FFFFFFFFFFFFFFFFFFFFFFFFFA
+          FAFDFFFFFFFFFFFFF5F6FB0E15A15699DCFFFFFF0B71A37171713196C985EBFF
+          81E6FF2D92C52D92C52D92C52D92C52D92C52D92C5288DC02489BC1446AA0B16
+          A01B81B31B81B3D8D8D83398CB91F7FF8EF4FF8EF4FF8EF4FF8EF4FF8EF4FFFF
+          FFFFFFFFFFFFFFFFFFFFFFFFFFFF0B18A02C3082666666D2D2D23499CCFFFFFF
+          99FFFF99FFFF99FFFF99FFFFFFFFFF258ABD2287BA1F84B71D82B51B81B3135A
+          AA0D14A07F808FB6B6B600F0FF3499CCFFFFFFFFFFFFFFFFFFFFFFFF2A8FC2D0
+          D0D000F0FF00F0FF00F0FF00F0FF00F0FF353BB07175C200F0FF00F0FF00F0FF
+          3499CC3398CB3196C92F94C7E8E8E800F0FF00F0FF00F0FF00F0FF00F0FF00F0
+          FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00
+          F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF}
+        ParentDoubleBuffered = False
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 7
+        OnClick = btnDefDirClick
+      end
+      object btnLoadDefDir: TBitBtn
+        Left = 356
+        Top = 3
+        Width = 23
+        Height = 23
+        Hint = 'Load default'
+        Anchors = [akTop, akRight]
+        DoubleBuffered = True
+        Glyph.Data = {
+          36030000424D3603000000000000360000002800000010000000100000000100
+          18000000000000030000120B0000120B0000000000000000000000F0FF00F0FF
+          00F0FF00F0FF00F0FF00F0FF00F0FFEECEA8EECEA800F0FF00F0FF00F0FF00F0
+          FF00F0FF00F0FF00F0FF00F0FF00F0FFDFDFDFD6D6D6D6D6D6D6D6D6EECEA811
+          6A01307001EECEA8D6D6D6D6D6D6D6D6D6D6D6D6DFDFDF00F0FF00F0FFC8C8C8
+          8383836D6D6D6D6D6DEECEA8016A0148E07B48E07B1D6901EECEA86D6D6D6D6D
+          6D6D6D6D838383C8C8C8DFDFDF1D82B51B81B3187EB0EECEA8056E0848E07B48
+          E07B48E07B48E07B0E6701EECEA802689A0167994C4C4C8383832287BA67CCFF
+          2085B8EECEA807740E3BD36E3BD36E3BD36E3BD36E3BD36E3BD36E046D07EECE
+          A899FFFF0167996E6E6E258ABD67CCFFEECEA809791131C96131C96131C96131
+          C96131C96131C96131C96131C961036D06EECEA802689A6D6D6D288DC067CCFF
+          01670101670101670101670121B94121B94121B94121B9410167010167010167
+          01016701046A9C6D6D6D2A8FC267CCFF3398CB99FFFF91F7FF01670115AD2715
+          AD2715AD2715AD2701670191F7FF57BCEF99FFFF066C9E6D6D6D2D92C56FD4FF
+          3499CC99FFFF99FFFF01670108A00E08A00E08A00E08A00E01670199FFFF60C5
+          F899FFFF086EA06E6E6E2F94C77BE0FF2D92C5FFFFFFFFFFFF01670101670101
+          6701016701016701016701FFFFFF81E6FFFFFFFF0B71A38C8C8C3196C985EBFF
+          81E6FF2D92C52D92C52D92C52D92C52D92C52D92C5288DC02489BC2085B81C81
+          B41B81B31B81B3DFDFDF3398CB91F7FF8EF4FF8EF4FF8EF4FF8EF4FF8EF4FFFF
+          FFFFFFFFFFFFFFFFFFFFFFFFFFFF167CAE8C8C8CDEDEDE00F0FF3499CCFFFFFF
+          99FFFF99FFFF99FFFF99FFFFFFFFFF258ABD2287BA1F84B71D82B51B81B3187E
+          B0DFDFDF00F0FF00F0FF00F0FF3499CCFFFFFFFFFFFFFFFFFFFFFFFF2A8FC2C8
+          C8C800F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF
+          3499CC3398CB3196C92F94C7DFDFDF00F0FF00F0FF00F0FF00F0FF00F0FF00F0
+          FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00
+          F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF00F0FF}
+        ParentDoubleBuffered = False
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 8
+        OnClick = btnLoadDefDirClick
+      end
+      object chbAutoDirName: TCheckBox
+        Left = 173
+        Top = 34
+        Width = 97
+        Height = 17
+        Hint = '?s - res.name; ?t - tag string'
+        Caption = 'auto dir name (&?)'
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 9
+        OnClick = chbAutoDirNameClick
+      end
+      object eAutoDirName: TEdit
+        Left = 276
+        Top = 32
+        Width = 56
+        Height = 21
+        Hint = '?s - res.name; ?t - tag string'
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 10
+        Text = '?t\?s'
+      end
+      object chbSaveJPEGMeta: TCheckBox
+        Left = 9
+        Top = 59
+        Width = 144
+        Height = 17
+        Caption = 'save meta to JPEG'
+        Checked = True
+        State = cbChecked
+        TabOrder = 11
+        OnClick = chbdownloadalbumsClick
+      end
+      object chbNameFormat: TCheckBox
+        Left = 173
+        Top = 82
+        Width = 97
+        Height = 17
+        Hint = 
+          '?a - author nicname, ?l - author loginname,  ?n - title, ?i - im' +
+          'age id, ?p - page, ?t - tagtring'
+        Caption = 'name format (&?)'
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 12
+        OnClick = chbNameFormatClick
+      end
+      object eNameFormat: TEdit
+        Left = 276
+        Top = 80
+        Width = 56
+        Height = 21
+        Hint = 
+          '?a - author nicname, ?l - author loginname,  ?n - title, ?i - im' +
+          'age id, ?p[{text}/] - page string, ?t - tagtring'
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 13
+        Text = '?i?p_p/'
+      end
+      object cbTagsIn: TComboBox
+        Left = 245
+        Top = 57
+        Width = 87
+        Height = 21
+        Style = csDropDownList
+        ItemIndex = 0
+        TabOrder = 14
+        Text = 'filename'
+        Items.Strings = (
+          'filename'
+          'csv file')
+      end
+      object chbOrigFNames: TCheckBox
+        Left = 173
+        Top = 103
+        Width = 159
+        Height = 17
+        Caption = 'original filenames'
+        TabOrder = 15
+        OnClick = chbOrigFNamesClick
+      end
+      object chbQueryI2: TCheckBox
+        Left = 346
+        Top = 82
+        Width = 97
+        Height = 17
+        Caption = 'query interval'
+        Checked = True
+        Enabled = False
+        State = cbChecked
+        TabOrder = 16
+      end
+      object chbIncFNames: TCheckBox
+        Left = 346
+        Top = 59
+        Width = 159
+        Height = 17
+        Caption = 'incremental filenames'
+        TabOrder = 17
+      end
+      object btnAuth2: TBitBtn
+        Left = 385
+        Top = 3
+        Width = 23
+        Height = 23
+        Hint = 'Authentication'
+        Anchors = [akTop, akRight]
+        DoubleBuffered = True
+        Glyph.Data = {
+          36030000424D3603000000000000360000002800000010000000100000000100
+          18000000000000030000120B0000120B000000000000000000000000FF4AA1D6
+          4399D04093CF97C7DF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000
+          FF0000FF0000FF0000FF67BCE7C4EBF77FE1F69FE6F73F91CC8FC0D80000FF00
+          00FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF44B0E3C6F4FB
+          43D6F148DBF582E1F53D8FCB89BBD40000FF0000FF0000FF0000FF0000FF0000
+          FF0000FF0000FF0000FF4EB4E4BBEFFA39D1F128C5EE4EDCF685E2F74093CE87
+          B8D20000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF44B0E3F0FCFE
+          B0EEFA43D8F428C8EE41D7F489E2F74093CF80B3CE0000FF0000FF0000FF0000
+          FF0000FF0000FF0000FF91D1EF44B0E344B0E3ABEAF94ED8F32BC9EF3DD6F38A
+          E1F74092CE4F94C2297DD62C85D85FA5CE0000FF0000FF0000FF0000FF0000FF
+          44B0E3F1FCFEBBF1FB7BE4F628D2F037D4F583E0F63EA9E3A0F3FCA9F5FC2B82
+          D75BA1CB0000FF0000FF0000FF0000FF91D1EF44B0E345B2E376C5EAACEEFA39
+          D6F24DDBF565E4F73CCEF232C9EF85EFFB2B81D7579CC60000FF0000FF0000FF
+          0000FF0000FFFEFEFF91D1EF6FC4EA80E5F73DD1F15DDBF569DFF650D7F334CD
+          EF85EFFB297FD65399C50000FF0000FF0000FF0000FF0000FF44B0E3D5F7FC89
+          E7F87EE4F77EE4F77EE4F782E5F747D6F238CEF0AEF5FC297CD60000FF0000FF
+          0000FF0000FF0000FF44B0E3BEF2FB7EE4F77EE4F781E5F794E9F8BCF1FB8BDA
+          F349DDF5C1F8FD3090DA0000FF0000FF0000FF0000FF0000FF44B0E3DEF8FC8D
+          E7F87EE4F794E9F8BCE9F844B0E342ACE3EEFCFE3298DD6BB0D60000FF0000FF
+          0000FF0000FF0000FF91D1EF44B0E3CEF5FC8DE7F8A1ECF944B0E344B0E3FFFF
+          FF39A1DF6BB0D60000FF0000FF0000FF0000FF0000FF0000FF0000FF91D1EF44
+          B0E3CEF5FC9EEBF9BEF2FBFEFFFF44B0E38BCCEB0000FF0000FF0000FF0000FF
+          0000FF0000FF0000FF0000FF0000FF91D1EF44B0E3DEF8FCDEF8FC44B0E391D1
+          EF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF0000FF00
+          00FF91D1EF44B0E344B0E391D1EF0000FF0000FF0000FF0000FF}
+        ParentDoubleBuffered = False
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 18
+        OnClick = btnAuth2Click
+      end
+      object chbFullSize: TCheckBox
+        Left = 346
+        Top = 103
+        Width = 119
+        Height = 17
+        Caption = 'Full Size (spends GP)'
+        TabOrder = 19
       end
     end
     object tsPicsList: TSpTBXTabSheet
@@ -1884,7 +1884,7 @@ object MainForm: TMainForm
     Left = 448
     Top = 224
     Bitmap = {
-      494C010103002400980010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101030024009C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
