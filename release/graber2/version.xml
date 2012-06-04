@@ -1,7 +1,8 @@
-<item file="Graber2.exe" archive="Graber2.zip" version=6 />
+<item file="Graber2.exe" archive="Graber2.zip" version=7 />
 
 <item file="resources\xbooru.com.cfg" version=1 />
 <item file="resources\wildcritters.ws.cfg" version=1 />
+<item file="resources\wildcritters.net.cfg" version=0 />
 <item file="resources\tbib.org.cfg" version=0 />
 <item file="resources\safebooru.org.cfg" version=0 />
 <item file="resources\rule34.xxx.cfg" version=0 />
@@ -29,6 +30,7 @@
 <item file="resources\icons\behoimi.org.bmp" version=0 />
 <item file="resources\icons\sankakucomplex.com.bmp" version=0 />
 <item file="resources\icons\xbooru.com.bmp" version=0 />
+<item file="resources\icons\wildcritters.net.bmp" version=0 />
 
 <item file="languages\Russian.ini" version=4 />
 <item file="languages\English.ini" version=4 />
