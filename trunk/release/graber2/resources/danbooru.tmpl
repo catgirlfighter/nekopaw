@@ -11,10 +11,10 @@ $lxml = 'xml';
 $fcounter = 1;
 $userstring = 'user[name]';
 $pwdstring = 'user[password]';
+$main.checkcookie = 'login';
+$main.login = '$main.url+"user/authenticate?"+$userstring+"="+$login+"&"+$pwdstring+"="+$password+"&commit=Login"';
 
 [listscript]
-$thread.checkcookie = 'login';
-$thread.login = '$main.url+"user/authenticate?"+$userstring+"="+$login+"&"+$pwdstring+"="+$password+"&commit=Login"';
 $thread.url = "$main.url+'post/index.'+$fpxml+'?limit=100&tags='+@httpencode($tag)";
 $thread.jsonitem = 'post';
 $thread.xml = 'firstpagexml';

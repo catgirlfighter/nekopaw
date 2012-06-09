@@ -4,6 +4,11 @@
 
 [main]
 $picture.fields(url,preview,width:i,height:i,rating,id:i,posted:d,md5,sample_url);
+$main.checkcookie = 'user_id';
+$userstring = 'user';
+$pwdstring = 'pass';
+$main.login = '$main.url+"index.php?page=account&s=login&code=00"';
+$main.loginpost = '$userstring+"="+$login+"&"+$pwdstring+"="+$password+"&submit=Log in"';
 
 [listscript]
 $thread.url = "$main.url+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)";
