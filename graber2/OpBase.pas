@@ -48,6 +48,58 @@ implementation
 
 uses LangString, EncryptStrings, AES;
 
+procedure LoadResourceSettings(INI: TINIFile);
+begin
+
+end;
+
+procedure SaveResourceSettings(INI: TINIFile);
+var
+  i,j,n: integer;
+  pref,s: string;
+begin
+  pref := 'resource-';
+  n := FullResList[0].Fields.Count;
+
+  INI.WriteString('defaultresource','NameFormat',FullResList[0].NameFormat);
+
+  for i := 1 to FullResList.Count-1 do
+  begin
+    //if FullResList[n].Inherit then
+    INI.WriteBool(pref+FullResList[i].Name,'Inherit',FullResList[i].Inherit);
+
+    if not FullResList[i].Inherit then
+    begin
+      INI.WriteBool(pref+FullResList[i].Name,'Inherit',FullResList[i].Inherit);
+      INI.WriteString(pref+FullResList[i].Name,'NameFormat',FullResList[i].NameFormat);
+    end else
+    begin
+      INI.DeleteKey(pref+FullResList[i].Name,'Inherit');
+      INI.DeleteKey(pref+FullResList[i].Name,'NameFormat');
+    end;
+
+    s := nullstr( FullResList[i].Fields['login']);
+    if s<>'' then
+      INI.WriteString(pref+FullResList[i].Name,'Login',s)
+    else
+      INI.DeleteKey(pref+FullResList[i].Name,'Login');
+
+    s := nullstr(FullResList[i].Fields['password']);
+    if s<>'' then
+      INI.WriteString(pref+FullResList[i].Name,'Password',EncryptString(s,KeyString))
+    else
+      INI.DeleteKey(pref+FullResList[i].Name,'Password');
+
+    for j := n to FullResList[i].Fields.Count-1 do
+      if FullResList[i].Fields.Items[j].restype <> ftNone then
+      begin
+        INI.WriteString(pref+FullResList[i].Name,
+          FullResList[i].Fields.Items[j].resname,
+          FullResList[i].Fields.Items[j].resvalue);
+      end;
+  end;
+end;
+
 procedure LoadProfileSettings;
 var
   INI: TINIFile;
@@ -104,13 +156,13 @@ begin
       if Password <> '' then
         Password := DecryptString(Password,KeyString);
     end;
-
+{
     with Formats do
     begin
       ListFormat := INI.ReadString('formats','list','$rootdir$\lists\$tag$.ngl');
       PicFormat := INI.ReadString('formats','picture','$rootdir$\pics\$rname$\$fname$.$ext$');
     end;
-
+}
     v := tstringlist.Create;
     INI.ReadSection('IgnoreList',v);
     j := 0;
@@ -125,9 +177,9 @@ begin
         IgnoreList[j-1][1] := CopyTo(s,',',[],true);
       end;
     end;
-
-
     v.Free;
+
+    LoadResourceSettings(INI);
   end;
   INI.Free;
 end;
@@ -164,12 +216,14 @@ begin
       else
         INI.WriteString('Proxy','Password',Password);
     end;
-
+{
     with Formats do
     begin
       INI.WriteString('Formats','List',ListFormat);
       INI.WriteString('Formats','Picture',PicFormat);
     end;
+}
+    SaveResourceSettings(INI);
 
   end;
   INI.Free;
@@ -179,6 +233,7 @@ initialization
 
 FullResList := TResourceList.Create;
 rootdir := ExtractFileDir(paramstr(0));
+FullResList.LoadList(rootdir + '\resources');
 
 if fileexists(IncludeTrailingPathDelimiter(rootdir) + profname) then
   LoadProfileSettings

@@ -947,8 +947,8 @@ begin
   if pcTables.PageCount = 0 then
   begin
     pcTables.HideTabs :=  true;
-    dpLog.Visible := false;
-    dpErrors.Visible := false;
+    //dpLog.Visible := false;
+    //dpErrors.Visible := false;
   end;
 
 
@@ -958,6 +958,7 @@ begin
 
   f := TfSettings.Create(SttPanel);
   f.SetLang;
+  f.CreateResources;
   f.LoadSettings;
 {  f.GetLanguages;
 

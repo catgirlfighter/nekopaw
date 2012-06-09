@@ -75,16 +75,16 @@ type
     // AfterP: boolean;
     Debug: Boolean;
   end;
-
+{
   TFormatRec = record
     ListFormat: String;
     PicFormat: String;
   end;
-
+}
   TSettingsRec = record
     Proxy: TProxyRec;
     Downl: TDownloadRec;
-    Formats: TFormatRec;
+    //Formats: TFormatRec;
     UPDServ: String;
     OneInstance: Boolean;
     TrayIcon: Boolean;
@@ -282,7 +282,7 @@ type
   TPictureList = class;
   // TResource = class;
 
-  TFieldType = (ftNone, ftString, ftReadOnly, ftNumber, ftCombo, ftCheck);
+  TFieldType = (ftNone, ftString, ftPassword, ftReadOnly, ftNumber, ftCombo, ftCheck);
 
   PResourceField = ^TResourceField;
 
