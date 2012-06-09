@@ -35,8 +35,7 @@ begin
   Application.MainFormOnTaskbar := True;
   Application.Title := 'nekopaw grabber';
 
-  FullResList.LoadList(rootdir + '\resources');
-  FullResList[0].NameFormat := GlobalSettings.Formats.PicFormat;
+  //FullResList[0].NameFormat := GlobalSettings.Formats.PicFormat;
   //FullResList.PicFileFormat := GlobalSettings.Formats.PicFormat;
 
   Application.CreateForm(Tmf, mf);

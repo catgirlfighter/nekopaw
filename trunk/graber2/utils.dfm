@@ -64,5 +64,9 @@ object dm: Tdm
     object erReadOnlyText: TcxEditRepositoryTextItem
       Properties.ReadOnly = True
     end
+    object erPassword: TcxEditRepositoryTextItem
+      Properties.EchoMode = eemPassword
+      Properties.PasswordChar = #9679
+    end
   end
 end

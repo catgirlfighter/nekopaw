@@ -17,10 +17,12 @@ type
     erSpinEdit: TcxEditRepositorySpinItem;
     erCombo: TcxEditRepositoryComboBoxItem;
     erReadOnlyText: TcxEditRepositoryTextItem;
+    erPassword: TcxEditRepositoryTextItem;
   private
     { Private declarations }
   public
-    function CreateCategory(vg: TcxVerticalGrid; AName, ACaption: String): TcxCategoryRow;
+    function CreateCategory(vg: TcxVerticalGrid; AName, ACaption: String;
+      Collapsed: boolean = false): TcxCategoryRow;
     function CreateField(vg: TcxVerticalGrid; AName,ACaption,ComboItems: string;
   FieldType: TFieldType; Category: TcxCategoryRow; DefaultValue: Variant): TcxEditorRow;
     { Public declarations }
@@ -145,9 +147,12 @@ begin
   end;
 end;
 
-function Tdm.CreateCategory(vg: TcxVerticalGrid; AName, ACaption: String): TcxCategoryRow;
+function Tdm.CreateCategory(vg: TcxVerticalGrid; AName, ACaption: String;
+      Collapsed: boolean = false): TcxCategoryRow;
 begin
   Result := vg.Add(TcxCategoryRow) as TcxCategoryRow;
+  if Collapsed then
+    Result.Collapse(false);
   Result.Name := AName;
   Result.Properties.Caption := ACaption;
 end;
@@ -161,6 +166,8 @@ begin
   case FieldType of
     ftString:
       ;
+    ftPassword:
+      Result.Properties.RepositoryItem := erPassword;
     ftReadOnly:
       Result.Properties.RepositoryItem := erReadOnlyText;
     ftNumber:

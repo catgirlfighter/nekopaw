@@ -204,7 +204,8 @@ begin
   end
   else
   with FullResList[n] do begin
-    c := dm.CreateCategory(vgSettings,'vgimain',_MAINCONFIG_);
+    c := dm.CreateCategory(vgSettings,'vgimain',_MAINCONFIG_ + ' ' +
+      FullResList[n].Name);
     dm.CreateField(vgSettings,'vgiinherit',_INHERIT_,'',ftCheck,c,Inherit);
 
     s := VarToStr(Fields['tag']);
