@@ -22,7 +22,8 @@ uses
   utils in 'utils.pas' {dm: TDataModule},
   UPDUnit in 'UPDUnit.pas',
   MyDataSet in 'MyDataSet.pas',
-  AboutForm in 'AboutForm.pas' {fmAbout};
+  AboutForm in 'AboutForm.pas' {fmAbout},
+  LoginForm in 'LoginForm.pas' {fLogin};
 
 {$R *.res}
 
@@ -41,6 +42,7 @@ begin
   Application.CreateForm(Tmf, mf);
   Application.CreateForm(Tdm, dm);
   Application.CreateForm(TfmAbout, fmAbout);
+  //Application.CreateForm(TfLogin, fLogin);
   Application.Run;
 
 end.

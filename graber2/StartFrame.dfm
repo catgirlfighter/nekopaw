@@ -1,8 +1,8 @@
 object fStart: TfStart
   Left = 0
   Top = 0
-  Width = 504
-  Height = 436
+  Width = 451
+  Height = 304
   Align = alClient
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -12,8 +12,6 @@ object fStart: TfStart
   ParentFont = False
   TabOrder = 0
   OnResize = FrameResize
-  ExplicitWidth = 451
-  ExplicitHeight = 304
   object iIcon: TImage
     Left = 32
     Top = 85
@@ -37,6 +35,7 @@ object fStart: TfStart
     Width = 169
     Height = 25
     Caption = 'bLoad'
+    Enabled = False
     TabOrder = 1
   end
   object bSettings: TcxButton

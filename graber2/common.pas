@@ -322,7 +322,6 @@ function Replace(src, AFrom, ATo: string;
 var
   n: Integer;
 begin
-
   if AFrom = ATo then
   begin
     Result := src;

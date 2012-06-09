@@ -4,18 +4,21 @@ interface
 
 uses
   Messages, SysUtils, Dialogs, Forms, Windows,
-  INIFiles, UPDUnit, ShellAPI, Classes, Controls, StdCtrls,
-  Gauges;
+  INIFiles, UPDUnit, ShellAPI, Classes, Controls, StdCtrls, ComCtrls, XPMan;
 
 type
   Tmf = class(TForm)
-    gttl: TGauge;
-    gfile: TGauge;
-    ltext: TLabel;
+    pttl: TProgressBar;
+    pcurr: TProgressBar;
+    bOk: TButton;
+    lLog: TListBox;
+    XPManifest1: TXPManifest;
     procedure FormCreate(Sender: TObject);
+    procedure bOkClick(Sender: TObject);
   private
     UPDServ: String;
     fName: string;
+    t: TUPDThread;
     { Private declarations }
   protected
     procedure UPDCHECK(var Msg: TMessage); message CM_UPDATE;
@@ -37,15 +40,17 @@ uses common;
 procedure tmf.UPDCHECK(var Msg: TMessage);
 begin
   case Msg.WParam of
-    0: MessageDlg('Download error',mtError,[mbOk],0);
+    0: lLog.Items.Add(t.Error);
+    2: lLog.Items.Add('Nothing new');
+    else
+    begin
+      pttl.Position := pttl.Max;
+      lLog.Items.Add('Update finished');
+    end;
   end;
 
-  if FileExists(ExtractFilePath(paramstr(0)) + 'graber2.exe') then
-  ShellExecute(Handle, 'open',PWidechar(ExtractFilePath(paramstr(0))
-    + 'graber2.exe'), nil, nil, SW_SHOWNORMAL);
-
-  Close;
-  //ShowMessage('Finished');
+  t.Free;
+  bOk.Enabled := true;
 end;
 
 procedure tmf.UPDPROG(var Msg: TMessage);
@@ -55,34 +60,42 @@ begin
   case Msg.WParam of
     0:
     begin
-      gttl.MaxValue := Msg.LParam;
-      gttl.Progress := 0;
+      pttl.Max := Msg.LParam;
+      pttl.Position := 0;
+      lLog.Items.Add(IntToStr(pttl.Max) + ' new items');
     end;
-    1: gttl.Progress := Msg.LParam;
+    1: pttl.Position := Msg.LParam;
     2:
     begin
-      gfile.MaxValue := Msg.LParam;
-      gfile.Progress := 0;
+      pcurr.Max := Msg.LParam;
+      pcurr.Position := 0;
     end;
     3:
     begin
-      gfile.Progress := Msg.LParam;
-      ltext.Caption := fname + ' (' + GetBTString(gfile.Progress) + '/'
-        + GetBTString(gfile.MaxValue) + ') '
-        + IntToStr(gttl.Progress) + '/' + IntToStr(gttl.MaxValue)
+      pcurr.Position := Msg.LParam;
+      lLog.Items[lLog.Items.Count-1] := fname
+        + ' (' + GetBTString(pcurr.Position) + '/'
+        + GetBTString(pcurr.Max) + ')';
     end;
     4:
     begin
      s := Pointer(Msg.LParam);
      fname := s^;
-     ltext.Caption := s^;
+     lLog.Items.Add(s^);
     end;
   end;
 end;
 
+procedure Tmf.bOkClick(Sender: TObject);
+begin
+  if FileExists(ExtractFilePath(paramstr(0)) + 'graber2.exe') then
+  ShellExecute(Handle, 'open',PWidechar(ExtractFilePath(paramstr(0))
+    + 'graber2.exe'), nil, nil, SW_SHOWNORMAL);
+
+  Close;
+end;
+
 procedure Tmf.FormCreate(Sender: TObject);
-var
-  t: TUPDThread;
 begin
   LoadSettings;
 
@@ -90,7 +103,7 @@ begin
   t.MsgHWND := Self.Handle;
   t.ListURL := UPDServ;
   t.Job := UPD_DOWNLOAD_UPDATES;
-  t.FreeOnTerminate := true;
+  t.FreeOnTerminate := false;
   SetEvent(t.Event);
 end;
 

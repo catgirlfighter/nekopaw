@@ -21,6 +21,7 @@ var
   _FINISH_: String = 'Finish';
 
   (* ERRORS *)
+  _ERROR_LOGIN_: String = 'Login error for %s';
   _ERROR_OCCURED_: String = 'Error occured: %s';
   _NO_DIRECTORY_: String = 'Directory ''%s'' not exists';
   _NO_FILE_: String = 'File ''%s'' not found';
@@ -40,6 +41,7 @@ var
   _NEWUPDATES_: String = 'New updates is avalable. Do you want to download it?';
   _UPDATEERROR_: String = 'Error on cheking updates';
   _UNKNOWNMETHOD_: String = 'Unknown method: %s';
+  _BUSY_MAIN_LIST_: String = 'List is busy. You need to finish another new or editing list';
 
   (* OTHER *)
   _NEWLIST_: String = 'New list';
@@ -91,6 +93,7 @@ var
   _HOST_: String = 'Server';
   _PORT_: String = 'Port';
   _LOGIN_: String = 'Login';
+  _LOGINON_: String = 'Login on %s';
   _PASSWORD_: String = 'Password';
   _LANGUAGE_: String = 'Language';
   _RESOURCES_: String = 'Resources';
