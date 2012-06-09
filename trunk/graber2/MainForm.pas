@@ -333,11 +333,21 @@ var
   f: TfNewList;
 
 begin
+  if Assigned(FullResList.OnJobChanged) then
+  begin
+    MessageDlg(_BUSY_MAIN_LIST_,mtInformation,[mbOk],0);
+    Exit;
+  end;
+
+
   n := CreateTab(pcTables);
   n.ImageIndex := 0;
   f := TfNewList.Create(n);
   f.SetLang;
   f.State := lfsNew;
+  FullResList.OnError := f.OnErrorEvent;
+  FullResList.OnJobChanged := f.JobStatus;
+  f.OnError := OnError;
   //f.Tag := integer(n);
   //n.Tag := integer(f);
   n.SecondFrame := f;
@@ -565,6 +575,9 @@ begin
       if Values[i, 0] <> 0 then
         f2.ResList.CopyResource(FullResList[Values[i, 0]]);
 
+  FullResList.OnError := OnError;
+  FullResList.OnJobChanged := nil;
+
   FreeAndNil(n.SecondFrame);
   f2.Reset;
   n.MainFrame := f2;
@@ -648,6 +661,8 @@ var
 begin
   n := Pointer(Msg.WParam);
 //  FreeAndNil(n.SecondFrame);
+  FullResList.OnError := OnError;
+  FullResList.OnJobChanged := nil;
   CloseTab(n);
 end;
 
@@ -813,6 +828,11 @@ begin
         Exit;
       end else
         Relise;
+    if (t as tMycxTabSheet).SecondFrame is tfNewList then
+    begin
+      FullResList.OnError := OnError;
+      FullResList.OnJobChanged := nil;
+    end;
 {    f := (t as tMycxTabSheet).MainFrame;
     if f is TfNewList then
     begin
@@ -978,6 +998,10 @@ begin
   dsFirstShow := true;
   SttPanel := nil;
   FCookie := TMyCookieList.Create;
+  FullResList.ThreadHandler.Cookies := FCookie;
+  FullResList.ThreadHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
+  FullResList.DWNLDHandler.Cookies := FCookie;
+  FullResList.DWNLDHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
 
   mFrame := TfStart.Create(Self);
   (mFrame as TfStart).SetLang;

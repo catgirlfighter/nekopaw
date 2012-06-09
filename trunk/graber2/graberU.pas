@@ -4,7 +4,7 @@ interface
 
 uses Classes, Messages, Windows, SysUtils, SyncObjs, Variants, VarUtils,
   IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP,
-  MyXMLParser, DateUtils, MyHTTP, StrUtils, md5, DB, IdStack;
+  MyXMLParser, DateUtils, MyHTTP, StrUtils, md5, DB, IdStack, IdSSLOpenSSL;
 
 const
   UNIQUE_ID = 'GRABER2LOCK';
@@ -41,6 +41,7 @@ const
   JOB_STOPPICS = 6;
   JOB_SKIP = 7;
   JOB_CANCELED = 8;
+  JOB_LOGIN = 9;
 
   SAVEFILE_VERSION = 0;
 
@@ -101,6 +102,7 @@ type
     JSONItem: String;
     CookieStr: string;
     LoginStr: string;
+    LoginPost: string;
     Method: THTTPMethod;
     Counter, Count: integer;
     Theor: Word;
@@ -314,6 +316,7 @@ type
   private
     FHTTP: TMyIdHTTP;
     FEventHandle: THandle;
+    FSSLHandler: TIdSSLIOHandlerSocketOpenSSL;
     FJob: integer;
     // FThreadJob: integer;
     FJobComplete: TThreadEvent;
@@ -364,16 +367,17 @@ type
     procedure IdHTTPWork(ASender: TObject; AWorkMode: TWorkMode;
       AWorkCount: Int64);
     procedure PicChanged;
+    procedure ProcHTTP;
+    procedure ProcPic;
+    procedure ProcLogin;
   public
     procedure Execute; override;
     constructor Create;
     destructor Destroy; override;
     procedure AddPicture;
-    procedure ProcHTTP;
     procedure SetSectors(Value: TValueList);
     procedure LockList;
     procedure UnlockList;
-    procedure ProcPic;
     procedure SetHTTPError(s: string);
     property HTTP: TMyIdHTTP read FHTTP;
     property Job: integer read FJob write FJob;
@@ -671,6 +675,7 @@ type
     FIconFile: String;
     FShort: String;
     FNameFormat: String;
+    FRelogin: boolean;
     FParent: TResource;
     FLoginPrompt: Boolean;
     FInherit: Boolean;
@@ -704,6 +709,7 @@ type
     function JobComplete(t: TDownloadThread): integer;
     function StringFromFile(fname: string): string;
     function PicJobComplete(t: TDownloadThread): integer;
+    function LoginJobComplete(t: TDownloadThread): integer;
   public
     constructor Create;
     destructor Destroy; override;
@@ -715,9 +721,11 @@ type
     procedure GetSectors(s: string; R: TValueList);
     function CanAddThread: Boolean;
     procedure CreatePicJob(t: TDownloadThread);
+    procedure CreateLoginJob(t: tDownloadThread);
     property FileName: String read FFileName;
     property Name: String read FResName write FResName;
     // property Url: String read FURL;
+    property Relogin: boolean read FRelogin write FRelogin;
     property IconFile: String read FIconFile;
     property Fields: TResourceFields read FFields;
     property Parent: TResource read FParent write FParent;
@@ -772,6 +780,7 @@ type
     FQueueIndex: integer;
     FPicQueue: integer;
     FPageMode: Boolean;
+    FLoginMode: Boolean;
     // FFinished: Boolean;
     // FOnLog: TLogEvent;
     FOnError: TLogEvent;
@@ -790,6 +799,7 @@ type
   protected
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
     procedure JobFinished(R: TResource);
+    procedure PicJobFinished(R: TResource);
     //procedure AddToQueue(R: TResource);
     //procedure SetOnPictureAdd(Value: TPictureEvent);
     procedure OnHandlerFinished(Sender: TObject);
@@ -797,7 +807,6 @@ type
     function GetListFinished: Boolean;
     //function CheckDouble(Pic: TTPicture; x,y: integer): Boolean;
     function CreateDWNLDJob(t: TDownloadThread): Boolean;
-    procedure PicJobFinished(R: TResource);
   public
     constructor Create;
     destructor Destroy; override;
@@ -1905,6 +1914,9 @@ begin
   FHTTPRec.DefUrl := R.HTTPRec.DefUrl;
   FHTTPRec.Url := '';
   FHTTPRec.Referer := '';
+  FHTTPRec.CookieStr := '';
+  FHTTPRec.LoginStr := '';
+  FHTTPRec.LoginPost := '';
   FHTTPRec.Method := hmGet;
   FHTTPRec.ParseMethod := 'xml';
   FHTTPRec.Counter := 0;
@@ -1928,8 +1940,11 @@ begin
   //FPictureList.Resource := Self;
   FInherit := true;
   FLoginPrompt := false;
+  FRelogin := false;
   FFields := TResourceFields.Create;
   FFields.AddField('tag', ftString, null, '');
+  FFields.AddField('login',ftNone,null,'');
+  FFields.AddField('password',ftNone,null,'');
   FSectors := TValueList.Create;
   FPicFieldList := TStringList.Create;
   FInitialScript := nil;
@@ -2037,6 +2052,9 @@ begin
           FJobList.Add(0, JOB_LIST);
         end;
       end;
+{    JOB_LOGIN:
+      begin
+      end;        }
     JOB_PICS:
       begin
         //FPictureList.Reset;
@@ -2112,6 +2130,22 @@ begin
   inc(FCurrThreadCount);
 end;
 
+procedure TResource.CreateLoginJob(t: tDownloadThread);
+begin
+  t.JobId := 0;
+  t.JobComplete := LoginJobComplete;
+  t.InitialScript := nil;
+  t.BeforeScript := nil;
+  t.AfterScript := nil;
+  t.XMLScript := nil;
+  t.HTTPRec := HTTPRec;
+  t.DownloadRec := DownloadSet;
+  t.Fields := FFields;
+  t.Resource := Self;
+  t.Job := JOB_LOGIN;
+  inc(FCurrThreadCount);
+end;
+
 procedure TResource.CreatePicJob(t: TDownloadThread);
 begin
   // t.JobId := ;
@@ -2147,14 +2181,20 @@ procedure TResource.DeclorationEvent(Values: TValueList; LinkedObj: TObject);
     i: integer;
     // f: TResourceField;
   begin
-    if ItemName = '$main.url' then
+    if SameText(ItemName,'$main.url') then
       FHTTPRec.DefUrl := ItemValue
-    else if ItemName = '$main.icon' then
+    else if SameText(ItemName,'$main.icon') then
       FIconFile := ItemValue
-    else if ItemName = '$main.loginprompt' then
+    else if SameText(ItemName,'$main.loginprompt') then
       FLoginPrompt := true
-    else if ItemName = '$main.short' then
+    else if SameText(ItemName,'$main.short') then
       FShort := ItemValue
+    else if SameText(ItemName,'$main.checkcookie') then
+      FHTTPRec.CookieStr := ItemValue
+    else if SameText(ItemName,'$main.login') then
+      FHTTPRec.LoginStr := ItemValue
+    else if SameText(ItemName,'$main.loginpost') then
+      FHTTPRec.LoginPost := ItemValue
     else if ItemName = '$main.template' then
     begin
       s := StringFromFile(ExtractFilePath(paramstr(0)) + 'resources\' +
@@ -2292,6 +2332,18 @@ begin
     dec(FCurrThreadCount);
     Result := THREAD_START;
   end;
+end;
+
+function TResource.LoginJobComplete(t: TDownloadThread): integer;
+begin
+  if (t.ReturnValue <> THREAD_COMPLETE)
+  or (t.Job = JOB_ERROR) then
+    if Assigned(FOnError) then
+      FOnError(Self,t.Error);
+  FRelogin := false;
+  dec(FCurrThreadCount);
+  FOnJobFinished(Self);
+  Result := THREAD_START;
 end;
 
 procedure TResource.LoadFromFile(fname: String);
@@ -2452,11 +2504,11 @@ var
 begin
   NR := TResource.Create;
   // NR.AddToQueue := AddToQueue;
-  NR.OnJobFinished := JobFinished;
-  NR.OnPicJobFinished := PicJobFinished;
   NR.Assign(R);
   NR.PictureList.Link := PictureList;
   NR.CheckIdle := ThreadHandler.CheckIdle;
+  NR.OnJobFinished := JobFinished;
+  NR.OnPicJobFinished := PicJobFinished;
   NR.OnError := FOnError;
   NR.OnPageComplete := OnPageComplete;
   // NR.PictureList.CheckDouble := CheckDouble;
@@ -2479,6 +2531,7 @@ begin
   FPictureList.OnEndAddList := FOnEndPicList;
   FPictureList.OnPicChanged := OnPicChanged; }
   FMaxThreadCount := 0;
+  FLoginMode := false;
 end;
 
 function TResourceList.CreateDWNLDJob(t: TDownloadThread): Boolean;
@@ -2587,7 +2640,12 @@ var
 
 begin
   if FQueueIndex > Count - 1 then
-    FQueueIndex := 0;
+    if FLoginMode then
+    begin
+      Result := false;
+      Exit;
+    end else
+      FQueueIndex := 0;
 
   // queue of tasks
 
@@ -2597,36 +2655,52 @@ begin
   for i := FQueueIndex to Count - 1 do
   begin
     R := Items[i];
-    if (not(FPageMode and not R.NextPage) and
-      (not R.JobInitiated or (not R.JobList.eol))) and R.CanAddThread then
-    begin
-      R.CreateJob(t);
-      // R.NextPage := false;
-      Result := true;
-      inc(FQueueIndex);
-      Exit;
-    end;
+    if FLoginMode then
+      if R.Relogin and (r.HTTPRec.CookieStr <> '') and
+        (t.HTTP.CookieList.GetCookieValue(r.HTTPRec.CookieStr,
+        trim(DeleteTo(DeleteTo(lowercase(r.HTTPRec.DefUrl), ':/'),'www.'), '/'))
+        = '') then
+      begin
+        r.CreateLoginJob(t);
+        Result := true;
+        FQueueIndex := i + 1;
+        Exit;
+      end else
+    else
+      if (not(FPageMode and not R.NextPage) and
+        (not R.JobInitiated or (not R.JobList.eol))) and R.CanAddThread then
+      begin
+        R.CreateJob(t);
+        // R.NextPage := false;
+        Result := true;
+        inc(FQueueIndex);
+        Exit;
+      end;
   end;
 
   // from start to current
-
-  for i := 0 to FQueueIndex - 1 do
-  begin
-    R := Items[i];
-    if (not(FPageMode and not R.NextPage) and
-      (not R.JobInitiated or (not R.JobList.eol))) and R.CanAddThread then
+  if not FLoginMode then
+    for i := 0 to FQueueIndex - 1 do
     begin
-      R.CreateJob(t);
-      R.NextPage := false;
-      Result := true;
-      inc(FQueueIndex);
-      Exit;
+      R := Items[i];
+      if (not(FPageMode and not R.NextPage) and
+        (not R.JobInitiated or (not R.JobList.eol))) and R.CanAddThread then
+      begin
+        R.CreateJob(t);
+        R.NextPage := false;
+        Result := true;
+        inc(FQueueIndex);
+        Exit;
+      end;
     end;
-  end;
 
   // if no task then result = false
 
   Result := false;
+
+  if FLoginMode then
+    FThreadHandler.FinishQueue;
+
 end;
 
 procedure TResourceList.SetMaxThreadCount(Value: integer);
@@ -2718,9 +2792,22 @@ var
   i: integer;
 
 begin
-  for i := 0 to Count - 1 do
-    if not Items[i].JobList.AllFinished then
-      Exit;
+  if FLoginMode then
+  begin
+    if ThreadHandler.Cookies.GetCookieValue(r.HTTPRec.CookieStr,
+      trim(DeleteTo(DeleteTo(lowercase(r.HTTPRec.DefUrl), ':/'),'www.'), '/'))
+      = '' then
+      if Assigned(FOnError) then
+        FOnError(Self,Format(_ERROR_LOGIN_,[r.Name]));
+
+    for i := 0 to Count - 1 do
+      if Items[i].Relogin then
+        Exit;
+  end
+  else
+    for i := 0 to Count - 1 do
+      if not Items[i].JobList.AllFinished then
+        Exit;
   ThreadHandler.FinishQueue;
 end;
 
@@ -2735,7 +2822,6 @@ begin
       Items[i].NextPage := true;
       ThreadHandler.CheckIdle;
     end;
-
 end;
 
 procedure TResourceList.Notify(Ptr: Pointer; Action: TListNotification);
@@ -2788,7 +2874,7 @@ begin
         begin
           with Items[i] do
           begin
-            MaxThreadCount := MaxThreadCount;
+            MaxThreadCount := Self.MaxThreadCount;
             { if Inherit then
               PictureList.NameFormat := PicFileFormat; }
             StartJob(JobType);
@@ -2804,6 +2890,24 @@ begin
           NextPage;
 
         // FFinished := false;
+      end;
+    JOB_LOGIN:
+      if ListFinished then
+      begin
+        FQueueIndex := 0;
+        ThreadHandler.CreateThreads;
+        for i := 0 to Count - 1 do
+          with Items[i] do
+          begin
+            MaxThreadCount := Self.MaxThreadCount;
+            StartJob(JobType);
+          end;
+        FLoginMode := true;
+        ThreadHandler.CheckIdle;
+
+        if Assigned(FJobChanged) then
+          FJobChanged(Self, JobType);
+
       end;
     JOB_PICS:
       if PicsFinished then
@@ -2868,6 +2972,8 @@ begin
       FStopTick := 0;
       if Assigned(FJobChanged) then
         FJobChanged(Self, JOB_STOPLIST);
+      if FLoginMode then
+        FLoginMode := false;
     end else
   else if Sender = FDwnldHandler then
     if (FDwnldHandler.Count = 0) then
@@ -2907,6 +3013,12 @@ begin
   R := TResource.Create;
   R.Inherit := false;
   R.Name := _GENERAL_;
+  R.PictureList.Link := PictureList;
+  R.CheckIdle := ThreadHandler.CheckIdle;
+  R.OnJobFinished := JobFinished;
+  R.OnPicJobFinished := PicJobFinished;
+  R.OnError := FOnError;
+  R.OnPageComplete := OnPageComplete;
   Add(R);
 
   R := nil;
@@ -2920,6 +3032,12 @@ begin
         R := TResource.Create;
         R.LoadFromFile(Dir + a.Name);
         R.Parent := Items[0];
+        R.PictureList.Link := PictureList;
+        R.CheckIdle := ThreadHandler.CheckIdle;
+        R.OnJobFinished := JobFinished;
+        R.OnPicJobFinished := PicJobFinished;
+        R.OnError := FOnError;
+        R.OnPageComplete := OnPageComplete;
         Add(R);
       except
         on e: Exception do
@@ -2971,13 +3089,18 @@ begin
           HTTP.OnWork := nil;
         end;
 
-        if FInitialScript.NotEmpty then
-          FInitialScript.Process(SE, DE, FE, VE, VE)
+        if Job = JOB_LOGIN then
+          ProcLogin
         else
-          ProcHTTP;
+        begin
+          if FInitialScript.NotEmpty then
+            FInitialScript.Process(SE, DE, FE, VE, VE)
+          else
+            ProcHTTP;
 
-        if Job = JOB_PICS then
-          ProcPic;
+          if Job = JOB_PICS then
+            ProcPic;
+        end;
 
         Self.ReturnValue := THREAD_COMPLETE;
       finally
@@ -3021,6 +3144,7 @@ begin
   FFinish := nil;
   inherited Create(false);
   FHTTP := CreateHTTP;
+  FSSLHandler := TIdSSLIOHandlerSocketOpenSSL.Create;
   FInitialScript := TScriptSection.Create;
   FBeforeScript := TScriptSection.Create;
   FAfterScript := TScriptSection.Create;
@@ -3045,6 +3169,7 @@ begin
   FXMLScript.Free;
   FFields.Free;
   FXML.Free;
+  FSSLHandler.Free;
   FHTTP.Free;
   //FPicture.Free;
   // FTagList.Free;
@@ -3252,10 +3377,10 @@ procedure TDownloadThread.DE(Values: TValueList; LinkedObj: TObject);
       FHTTPRec.Theor := Value
     else if SameText(Name,'$thread.referer') then
       FHTTPRec.Referer := Value
-    else if SameText(Name,'$thread.checkcookie') then
+{    else if SameText(Name,'$thread.checkcookie') then
       FHTTPRec.CookieStr := Value
     else if SameText(Name,'$thread.login') then
-      FHTTPRec.LoginStr := Value
+      FHTTPRec.LoginStr := Value      }
     else if SameText(Name,'@addpicture') then
     begin
       { if FAddPic then
@@ -3348,11 +3473,15 @@ begin
       FBeforeScript.Process(SE, DE, FE, VE, VE);
       // FHTTP.ResponseCode := 0;
       try
-        Url := CalcValue(FHTTPRec.Url, VE, nil);
         try
           FHTTP.Disconnect;
         except
         end;
+        Url := CalcValue(FHTTPRec.Url, VE, nil);
+        if SameText(Copy(URL,1,6),'https:') then
+          FHTTP.IOHandler := FSSLHandler
+        else
+          FHTTP.IOHandler := nil;
         FHTTP.Request.Referer := FHTTPRec.Referer;
         s := FHTTP.Get(Url);
         //FHTTP.Disconnect;
@@ -3444,6 +3573,12 @@ begin
       try
         //HTTP.Request.ContentRangeStart := f.Size;
         HTTP.Request.Referer := FHTTPRec.Referer;
+
+        if SameText(Copy(HTTPRec.Url,1,6),'https:') then
+          FHTTP.IOHandler := FSSLHandler
+        else
+          FHTTP.IOHandler := nil;
+
         HTTP.Get(HTTPRec.Url, f);
         //HTTP.Disconnect;
 
@@ -3522,6 +3657,60 @@ begin
     end;  //on other except
   end; //while true
 
+end;
+
+procedure TDownloadThread.ProcLogin;
+
+  procedure GetPostStrings(s:string;outs: TStrings);
+  var
+    tmp: string;
+  begin
+    s := trim(CopyFromTo(s,'?',''));
+    while s <> '' do
+    begin
+      tmp := GetNextS(s,'&');
+      outs.Add(tmp);
+    end;
+  end;
+
+var
+  url: string;
+  poststr: string;
+//  s: string;
+  post: TStringList;
+begin
+  try
+    try
+      FHTTP.Disconnect;
+    except
+    end;
+    Url := CalcValue(FHTTPRec.LoginStr, VE, nil);
+    if Url = '' then
+      Exit;
+    if SameText(Copy(URL,1,6),'https:') then
+      FHTTP.IOHandler := FSSLHandler
+    else
+      FHTTP.IOHandler := nil;
+
+    FHTTP.Request.Referer := FHTTPRec.Referer;
+    post := TStringList.Create;
+    try
+      if FHTTPRec.LoginPost = '' then
+      begin
+        GetPostStrings(Url,post);
+        Url := CopyTo(Url,'?');
+      end else
+      begin
+        poststr := CalcValue(FHTTPRec.LoginPost, VE, nil);
+        GetPostStrings(poststr,post);
+      end;
+      FHTTP.Post(Url,post);
+    finally
+      post.Free;
+    end;
+  except on e:exception do begin
+    SetHTTPError(e.Message);
+  end; end;
 end;
 
 procedure TDownloadThread.SetInitialScript(Value: TScriptSection);

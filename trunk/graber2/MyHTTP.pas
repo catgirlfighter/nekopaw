@@ -2,13 +2,14 @@ unit MyHTTP;
 
 interface
 
-uses IdHTTP, Classes, SysUtils, SyncObjs, Common;
+uses IdHTTP, Classes, SysUtils, SyncObjs, Strutils, Common;
 
 type
   TMyCookieList = class(TStringList)
     public
       function GetCookieValue(CookieName,CookieDomain: string): string;
       function GetCookieByValue(CookieName,CookieDomain: string): string;
+      procedure DeleteCookie(CookieDomain: string);
   end;
 
   TMyIdHTTP = class(TIdCustomHTTP)
@@ -61,15 +62,15 @@ begin
   Result:=''; Cookie := lowercase(Cookie);
   i:=Pos('domain=',Cookie);
   if i=0 then Exit;
-{  j := PosEx('www.',Cookie,i + 1);
+  j := PosEx('www.',Cookie,i + 1);
   if j > 0 then
-    i := i + 4;    }
+    i := i + 4;
   j:=CharPos(Cookie,';',[],i);
   if j=0 then j:=Length(Cookie)+1;
   Result:=Copy(Cookie,i+7,j-i-7);
   // Remove dot
-{  if (Result<>'') and (Result[1]='.') then
-    Result:=Copy(Result,2,Length(Result)-1);   }
+  if (Result<>'') and (Result[1]='.') then
+    Result:=Copy(Result,2,Length(Result)-1);
 end;
 
 function GetURLDomain(url: string): string;
@@ -112,6 +113,20 @@ begin
   Result := CopyFromTo(Cookie,'=',';');
 end;
 
+procedure TMyCookieList.DeleteCookie(CookieDomain: string);
+var i: integer;
+begin
+  //Result := '';
+  for i := 0 to Self.Count - 1 do
+  if (GetCookieDomain(Self[i])=CookieDomain)
+  {and (GetCookieName(Self[i])=CookieName)} then
+  begin
+    //Result := MyHTTP.GetCookieValue(Self[i]);
+    //Exit;
+    Self.Delete(i);
+  end;
+end;
+
 function TMyCookieList.GetCookieValue(CookieName,CookieDomain: string): string;
 var i: integer;
 begin
@@ -121,7 +136,7 @@ begin
   and (GetCookieName(Self[i])=CookieName) then
   begin
     Result := MyHTTP.GetCookieValue(Self[i]);
-    Exit
+    Exit;
   end;
 end;
 

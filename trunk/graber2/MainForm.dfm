@@ -2,7 +2,7 @@ object mf: Tmf
   Left = 0
   Top = 0
   Caption = 'nekopaw grabber'
-  ClientHeight = 412
+  ClientHeight = 423
   ClientWidth = 608
   Color = clBtnFace
   Constraints.MinHeight = 450
@@ -18,23 +18,23 @@ object mf: Tmf
   OnDestroy = FormDestroy
   DesignSize = (
     608
-    412)
+    423)
   PixelsPerInch = 96
   TextHeight = 13
   object ds: TdxDockSite
     Left = 0
     Top = 26
     Width = 608
-    Height = 386
+    Height = 397
     Align = alClient
     DockType = 0
     OriginalWidth = 608
-    OriginalHeight = 386
+    OriginalHeight = 397
     object dxLayoutDockSite4: TdxLayoutDockSite
       Left = 0
       Top = 0
       Width = 608
-      Height = 236
+      Height = 247
       DockType = 1
       OriginalWidth = 300
       OriginalHeight = 200
@@ -42,7 +42,7 @@ object mf: Tmf
         Left = 185
         Top = 0
         Width = 423
-        Height = 236
+        Height = 247
         DockType = 1
         OriginalWidth = 300
         OriginalHeight = 200
@@ -50,7 +50,7 @@ object mf: Tmf
           Left = 0
           Top = 0
           Width = 423
-          Height = 236
+          Height = 247
           DockType = 1
           OriginalWidth = 300
           OriginalHeight = 200
@@ -59,7 +59,7 @@ object mf: Tmf
           Left = 0
           Top = 0
           Width = 423
-          Height = 236
+          Height = 247
           AllowFloating = False
           AutoHide = False
           Caption = 'dpTable'
@@ -72,14 +72,14 @@ object mf: Tmf
             Left = 0
             Top = 0
             Width = 419
-            Height = 232
+            Height = 243
             Align = alClient
             Images = il
             Options = [pcoAlwaysShowGoDialogButton, pcoCloseButton, pcoGradient, pcoGradientClientArea, pcoRedrawOnResize]
             TabOrder = 0
             OnChange = pcTablesChange
             OnPageChanging = pcTablesPageChanging
-            ClientRectBottom = 232
+            ClientRectBottom = 243
             ClientRectRight = 419
             ClientRectTop = 0
           end
@@ -89,7 +89,7 @@ object mf: Tmf
         Left = 0
         Top = 0
         Width = 185
-        Height = 236
+        Height = 247
         ActiveChildIndex = 0
         AllowFloating = False
         AutoHide = False
@@ -103,7 +103,7 @@ object mf: Tmf
           Left = 0
           Top = 0
           Width = 181
-          Height = 208
+          Height = 219
           AllowFloating = False
           AutoHide = False
           Caption = 'dpTags'
@@ -115,7 +115,7 @@ object mf: Tmf
             Left = 0
             Top = 0
             Width = 181
-            Height = 208
+            Height = 219
             Align = alClient
             ActiveGroupIndex = 0
             TabOrder = 0
@@ -140,7 +140,7 @@ object mf: Tmf
               Left = 0
               Top = 19
               Width = 181
-              Height = 170
+              Height = 181
               Caption = 'nbgCurMainControl'
               TabOrder = 1
               GroupIndex = 0
@@ -149,10 +149,11 @@ object mf: Tmf
                 Left = 0
                 Top = 0
                 Width = 181
-                Height = 170
+                Height = 181
                 Align = alClient
                 OptionsView.RowHeaderWidth = 84
                 TabOrder = 0
+                ExplicitHeight = 170
                 Version = 1
               end
             end
@@ -183,7 +184,7 @@ object mf: Tmf
           Left = 0
           Top = 0
           Width = 181
-          Height = 208
+          Height = 219
           AllowFloating = False
           AutoHide = False
           Caption = 'dpCurTags'
@@ -195,7 +196,7 @@ object mf: Tmf
             Left = 0
             Top = 0
             Width = 181
-            Height = 208
+            Height = 219
             Align = alClient
             ActiveGroupIndex = 0
             TabOrder = 0
@@ -220,7 +221,7 @@ object mf: Tmf
               Left = 0
               Top = 19
               Width = 181
-              Height = 170
+              Height = 181
               Caption = 'nbgCurMainControl'
               TabOrder = 1
               GroupIndex = 0
@@ -229,10 +230,11 @@ object mf: Tmf
                 Left = 0
                 Top = 0
                 Width = 181
-                Height = 170
+                Height = 181
                 Align = alClient
                 OptionsView.RowHeaderWidth = 86
                 TabOrder = 0
+                ExplicitHeight = 170
                 Version = 1
               end
             end
@@ -263,7 +265,7 @@ object mf: Tmf
     end
     object dsLogs: TdxTabContainerDockSite
       Left = 0
-      Top = 236
+      Top = 247
       Width = 608
       Height = 150
       ActiveChildIndex = 0
@@ -383,8 +385,8 @@ object mf: Tmf
   object BarManager: TdxBarManager
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
-    Font.Height = -12
-    Font.Name = 'Segoe UI'
+    Font.Height = -11
+    Font.Name = 'Tahoma'
     Font.Style = []
     Categories.Strings = (
       'Default')

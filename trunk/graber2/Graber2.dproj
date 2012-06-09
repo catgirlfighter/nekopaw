@@ -84,6 +84,9 @@
 			<DCCReference Include="AboutForm.pas">
 				<Form>fmAbout</Form>
 			</DCCReference>
+			<DCCReference Include="LoginForm.pas">
+				<Form>fLogin</Form>
+			</DCCReference>
 			<RcItem Include="..\updater\compiled\NPUpdater.exe">
 				<ContainerId>ResourceItem</ContainerId>
 				<ResourceType>UPDTER</ResourceType>
@@ -118,7 +121,7 @@
 						<VersionInfo Name="MajorVer">2</VersionInfo>
 						<VersionInfo Name="MinorVer">0</VersionInfo>
 						<VersionInfo Name="Release">0</VersionInfo>
-						<VersionInfo Name="Build">15</VersionInfo>
+						<VersionInfo Name="Build">17</VersionInfo>
 						<VersionInfo Name="Debug">False</VersionInfo>
 						<VersionInfo Name="PreRelease">False</VersionInfo>
 						<VersionInfo Name="Special">False</VersionInfo>
@@ -130,7 +133,7 @@
 					<VersionInfoKeys>
 						<VersionInfoKeys Name="CompanyName">catgirl group</VersionInfoKeys>
 						<VersionInfoKeys Name="FileDescription">Nekopaw Grabber</VersionInfoKeys>
-						<VersionInfoKeys Name="FileVersion">2.0.0.15</VersionInfoKeys>
+						<VersionInfoKeys Name="FileVersion">2.0.0.17</VersionInfoKeys>
 						<VersionInfoKeys Name="InternalName"/>
 						<VersionInfoKeys Name="LegalCopyright">nekopaw.googlecode.com</VersionInfoKeys>
 						<VersionInfoKeys Name="LegalTrademarks"/>

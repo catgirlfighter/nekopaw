@@ -28,31 +28,40 @@ type
     procedure Clear;
     function Value(AName: String): String;
     function IndexOf(AName: String): Integer;
+    function AsString: String;
     constructor Create;
     destructor Destroy; override;
   end;
 
   TTagList = class;
 
+  TTagKind = (tkTag,tkText);
+
+  TTextKind = (txkFullWithTags,txkFull,txkCurrent);
+
   TTag = class(TObject)
   private
     FParent: TTag;
     FName: String;
     FAttrList: TAttrList;
-    FText: String;
+    //FText: String;
     FChilds: TTagList;
+    FKind: TTagKind;
   protected
     procedure SetName(Value: String);
     procedure SetText(Value: String);
+    function GetText: String; overload;
   public
-    constructor Create;
+    constructor Create(AName: String = ''; AKind: TTagKind = tkTag);
     destructor Destroy; override;
     function FindParent(TagString: String): TTag;
+    function GetText(TextKind: TTextKind; AddOwnTag: boolean): string;  overload;
     property Name: String read FName write SetName;
-    property Attrs: TAttrList read FAttrList write FAttrList;
-    property Text: String read FText write SetText;
+    property Attrs: TAttrList read FAttrList{ write FAttrList};
+    property Text: String read GetText write SetText;
     property Childs: TTagList read FChilds;
     property Parent: TTag read FParent write FParent;
+    property Kind: TTagKind read FKind write FKind;
   end;
 
   TTagList = class(TList)
@@ -60,12 +69,13 @@ type
       function Get(ItemIndex: Integer): TTag;
       procedure Notify(Ptr: Pointer; Action: TListNotification); override;
     public
-    procedure GetList(Tag: String; AAttrs: TAttrList; AList: TTagList);
-    procedure CopyList(AList: TTagList; Parent: TTag);
-    procedure ExportToFile(fname: string);
-    function FirstItemByName(tagname: string): ttag;
+      procedure GetList(Tag: String; AAttrs: TAttrList; AList: TTagList);
+      procedure CopyList(AList: TTagList; Parent: TTag);
+      procedure ExportToFile(fname: string);
+      function FirstItemByName(tagname: string): ttag;
       property Items[ItemName: integer]: TTag read Get; default;
-      function CreateChild(Parent: TTag): TTag;
+      function CreateChild(Parent: TTag; AName: String = '';
+        TagKind: TTagKind = tkTag): TTag;
       procedure CopyTag(ATag: TTag; Parent: TTag = nil);
   end;
 
@@ -117,7 +127,7 @@ begin
 
     tag := TagList.CreateChild(parent);
     tag.Name := tagname;
-    tag.Attrs := TAttrList.Create;
+    //tag.Attrs := TAttrList.Create;
 
     if n <> '' then
     case n[1] of
@@ -125,7 +135,7 @@ begin
       '{': JSONParseTag(tag,TagList,Copy(n,2,Length(n)-2));
       else
         if CharPos(n,':',JSONISL) = -1 then
-          tag.Text := n
+          tag.Childs.CreateChild(tag,n,tkText)
         else
           JSONParseValue(tag,TagList,n);
     end;
@@ -163,7 +173,7 @@ begin
     begin
       child := TagList.CreateChild(tag);
       child.Name := tagname;
-      child.Attrs := TAttrList.Create;
+      //child.Attrs := TAttrList.Create;
 
       JSONParseTag(child,TagList,Copy(value,2,Length(value)-2));
     end;
@@ -173,10 +183,10 @@ begin
       if tag = nil then
       begin
         tag := TagList.CreateChild(nil);
-        tag.Attrs := TAttrList.Create;
+        //tag.Attrs := TAttrList.Create;
       end;
       if tagname = '' then
-        tag.Text := trim(value,'"')
+        tag.Childs.CreateChild(tag,trim(value,'"'),tkText)
       else
         tag.Attrs.Add(tagname,value);
     end;
@@ -249,9 +259,10 @@ begin
   end;
 end;
 
-function TTagList.CreateChild(Parent: TTag): TTag;
+function TTagList.CreateChild(Parent: TTag; AName: String = '';
+  TagKind: TTagKind = tkTag): TTag;
 begin
-  Result := TTag.Create;
+  Result := TTag.Create(AName,TagKind);
   Result.Parent := Parent;
   if Parent <> nil then
     Parent.Childs.Add(Result)
@@ -324,25 +335,28 @@ var
 begin
   p := CreateChild(Parent);
   p.Name := ATag.Name;
-  p.Text := ATag.Text;
-  p.Attrs := TAttrList.Create;
+  //p.Text := ATag.Text;
+  //p.Attrs := TAttrList.Create;
   p.Attrs.Assign(ATag.Attrs);
   p.Childs.CopyList(ATag.Childs,p);
   //Add(p);
 end;
 
-constructor TTag.Create;
+constructor TTag.Create(AName: String = ''; AKind: TTagKind = tkTag);
 begin
-  inherited;
+  inherited Create;
   FChilds := TTagList.Create;
+  FAttrList := TAttrList.Create;
   FParent := nil;
-  FText := '';
+  Name := AName;
+  FKind := AKind;
   //FAttrList := TAttrList.Create;
 end;
 
 destructor TTag.Destroy;
 begin
   FChilds.Free;
+  FAttrList.Free;
   inherited;
 end;
 
@@ -375,9 +389,52 @@ begin
   FName := lowercase(Value);
 end;
 
+function TTag.GetText(TextKind: TTextKind; AddOwnTag: boolean): string;
+var
+  i: integer;
+
+  function AttrString: String;
+  begin
+    if FAttrList.Count = 0 then
+      Result := ''
+    else
+      Result := ' ' + FAttrList.AsString;
+  end;
+
+begin
+  if FKind = tkText then
+    Result := FName
+  else
+  begin
+    Result := '';
+
+    case TextKind of
+      txkFullWithTags,txkFull:
+        for i := 0 to Childs.Count do
+          Result := Result + Childs[i].GetText(TextKind,AddOwntag);
+      txkCurrent:
+        for i := 0 to Childs.Count do
+          if Childs[i].Kind = tkText then
+            Result := Result + Childs[i].Text;
+    end;
+
+    if AddOwnTag and (FKind = tkTag) then
+      if Result = '' then
+        Result := '<' + FName + AttrString + ' />'
+      else
+        Result := '<' + FName + AttrString + '>' + Result + '</' + FName + '>';
+  end;
+end;
+
+function TTag.GetText: String;
+begin
+  Result := GetText(txkFull,false);
+end;
+
 procedure TTag.SetText(Value: String);
 begin
-  FText := Value;
+  if FKind = tkText then
+    FName := Value;
   {if Assigned(FParent) then
     FParent.Text := FParent.Text + Value;    }
 end;
@@ -446,6 +503,17 @@ begin
     end;
 end;
 
+function TAttrList.AsString: String;
+var
+  i: integer;
+begin
+  Result := '';
+  for i := 0 to Count-1 do
+    if Result = '' then
+      Result :=  Attribute[i].Name + '="' + Attribute[i].Value + '"'
+    else
+      Result := Result + ' ' + Attribute[i].Name + '="' + Attribute[i].Value + '"'
+end;
 constructor TAttrList.Create;
 begin
   inherited;
@@ -612,7 +680,8 @@ var
       begin
         FTag := TagList.CreateChild(FTag);
         FTag.Name := tagname;
-        FTag.Attrs := Attrs;
+        FTag.Attrs.Assign(Attrs);
+        //Attrs.Free;
 
         if Assigned(FOnEmptyTag) then
           //FOnEmptyTag(tagname, Attrs);
@@ -624,14 +693,15 @@ var
       begin
         FTag := TagList.CreateChild(FTag);
         FTag.Name := tagname;
-        FTag.Attrs := Attrs;
+        FTag.Attrs.Assign(Attrs);
+        //Attrs.Free;
 
         if Assigned(FOnStartTag) then
           //FOnStartTag(tagname, Attrs);
           FOnStartTag(FTag);
       end;
     end;
-    //Attrs.Free;
+    Attrs.Free;
   end;
 
   function checkstr(S: string): boolean;
@@ -671,7 +741,7 @@ begin
         inc(i);
       txt := copy(S, li, i - li);
       if Assigned(FTag) then
-        FTag.Text := FTag.Text + txt;
+        FTag.Childs.CreateChild(FTag,txt,tkText);
       if Assigned(FOnContent) and (checkstr(txt)) then
         FOnContent(FTag,txt);
       inc(i);

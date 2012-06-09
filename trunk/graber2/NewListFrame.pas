@@ -43,6 +43,8 @@ type
     tgRescIcon: TcxGridColumn;
     vgSettings: TcxVerticalGrid;
     btnNext: TcxButton;
+    EditRepository: TcxEditRepository;
+    erAuthButton: TcxEditRepositoryButtonItem;
     procedure gRescButtonGetProperties(Sender: TcxCustomGridTableItem;
       ARecord: TcxCustomGridRecord; var AProperties: TcxCustomEditProperties);
     procedure pcMainChange(Sender: TObject);
@@ -58,9 +60,16 @@ type
     procedure tsSettingsShow(Sender: TObject);
     procedure btnNextClick(Sender: TObject);
     procedure btnPreviousClick(Sender: TObject);
+    procedure erAuthButtonPropertiesButtonClick(Sender: TObject;
+      AButtonIndex: Integer);
   private
     { Private declarations }
+    FOnError: TLogEvent;
   protected
+    function ResetRelogin(idx: integer = -1): boolean;
+    procedure SetIntrfEnabled(b: boolean);
+    procedure LoginCallBack(Sender: TObject; N: integer; Login,Password: String;
+    const Cancel: boolean);
   public
     State: TListFrameState;
     procedure AddItem(index: Integer);
@@ -70,17 +79,21 @@ type
     procedure LoadItems;
     procedure ResetItems;
     procedure SetLang;
+    procedure OnErrorEvent(Sender: TObject; Msg: String);
+    procedure JobStatus(Sander: TObject; Action: integer);
+    property OnError: TLogEvent read FOnError write FOnError;
     { Public declarations }
   end;
 
-var
-  LList: array of TcxLabelProperties;
-
 implementation
 
-uses OpBase, LangString, utils;
+uses OpBase, LangString, utils, LoginForm;
 
 {$R *.dfm}
+
+var
+  LList: array of TcxLabelProperties;
+  FLoggedOn: boolean;
 
 function Min(n1, n2: Integer): Integer;
 begin
@@ -88,6 +101,35 @@ begin
     Result := n1
   else
     Result := n2;
+end;
+
+function  TfNewList.ResetRelogin(idx: integer = -1): boolean;
+var
+  i: integer;
+  n: TResource;
+begin
+  Result := false;
+  for i := 0 to FullResList.Count -1 do
+    FullResList[i].Relogin := false;
+  if idx = -1 then
+    for i := 1 to tvRes.DataController.RecordCount-1 do
+    begin
+      n := FullResList[tvRes.DataController.Values[i, 0]];
+      if (n.HTTPRec.CookieStr<>'')and(n.LoginPrompt or (nullstr(n.Fields['login'])<>''))then
+      begin
+        n.Relogin := true;
+        Result := true;
+      end;
+    end
+  else
+  begin
+    n := FullResList[idx{tvRes.DataController.Values[idx, 0]}];
+    if(n.HTTPRec.CookieStr<>'')and(n.LoginPrompt or (nullstr(n.Fields['login'])<>''))then
+    begin
+      n.Relogin := true;
+      Result := true;
+    end;
+  end;
 end;
 
 procedure TfNewList.AddItem(index: Integer);
@@ -111,12 +153,18 @@ end;
 procedure TfNewList.btnNextClick(Sender: TObject);
 begin
   if pcMain.ActivePage = tsSettings then
-    case State of
-      lfsNew:
-        PostMessage(Application.MainForm.Handle, CM_APPLYNEWLIST, Integer(Parent), 0);
-      lfsEdit:
-        PostMessage(Application.MainForm.Handle, CM_APPLYEDITLIST, Integer(Parent), 0);
-    end
+  begin
+    FLoggedOn := true;
+    if ResetRelogin then
+      FullResList.StartJob(JOB_LOGIN)
+    else
+      case State of
+        lfsNew:
+          PostMessage(Application.MainForm.Handle, CM_APPLYNEWLIST, Integer(Parent), 0);
+        lfsEdit:
+          PostMessage(Application.MainForm.Handle, CM_APPLYEDITLIST, Integer(Parent), 0);
+      end;
+  end
   else
   begin
     tvRes.Controller.FocusedRowIndex := 0;
@@ -130,6 +178,9 @@ procedure TfNewList.btnPreviousClick(Sender: TObject);
 begin
   if pcMain.ActivePage = tsSettings then
     pcMain.ActivePage := tsList;
+  if not FullResList.ListFinished then
+    FullResList.StartJob(JOB_STOPLIST);
+  FLoggedOn := false;
 end;
 
 procedure TfNewList.CreateSettings(n: Integer);
@@ -188,6 +239,21 @@ begin
   vgSettings.EndUpdate;
 end;
 
+procedure TfNewList.erAuthButtonPropertiesButtonClick(Sender: TObject;
+  AButtonIndex: Integer);
+var
+  n: integer;
+begin
+  n := tvRes.DataController.Values[tvRes.DataController.FocusedRecordIndex,0];
+  Application.CreateForm(TfLogin, fLogin);
+  fLogin.Execute(n,
+    Format(_LOGINON_,[FullResList[n].Name]),
+    nullstr(FullResList[n].Fields['login']),
+    nullstr(FullResList[n].Fields['password']),
+    LoginCallback
+    );
+end;
+
 procedure TfNewList.gRescButtonGetProperties(Sender: TcxCustomGridTableItem;
   ARecord: TcxCustomGridRecord; var AProperties: TcxCustomEditProperties);
 begin
@@ -205,8 +271,37 @@ procedure TfNewList.gRescNameGetProperties(Sender: TcxCustomGridTableItem;
   ARecord: TcxCustomGridRecord; var AProperties: TcxCustomEditProperties);
 begin
   if (ARecord.Values[0] <> null) and (ARecord.Values[0] <> 0) then
-    AProperties := dm.erAuthButton.Properties;
+    AProperties := erAuthButton.Properties;
   // ARecord.Values[2] := ARecord.Values[0];
+end;
+
+procedure TfNewList.OnErrorEvent(Sender: TObject; Msg: String);
+begin
+  if FLoggedOn then
+    FLoggedOn := false;
+  if Assigned(FOnError) then
+    FOnError(Sender,Msg);
+end;
+
+procedure TfNewList.JobStatus(Sander: TObject; Action: integer);
+begin
+  if Action = JOB_STOPLIST then
+  begin
+    SetIntrfEnabled(true);
+    if Assigned(fLogin) then
+      if FLoggedOn then
+        fLogin.Close
+      else
+        fLogin.bOk.Enabled := true
+    else if FLoggedOn then
+      case State of
+        lfsNew:
+          PostMessage(Application.MainForm.Handle, CM_APPLYNEWLIST, Integer(Parent), 0);
+        lfsEdit:
+          PostMessage(Application.MainForm.Handle, CM_APPLYEDITLIST, Integer(Parent), 0);
+      end;
+  end else
+    SetIntrfEnabled(false);
 end;
 
 procedure TfNewList.LoadItems;
@@ -320,6 +415,37 @@ begin
               as TcxEditorRow).Properties.Value;
           end;
     end;
+  end;
+end;
+
+procedure TfNewList.SetIntrfEnabled(b: boolean);
+begin
+  gFull.Enabled := b;
+  gRes.Enabled := b;
+  btnNext.Enabled := b;
+  vgSettings.Enabled := b;
+end;
+
+procedure TfNewList.LoginCallBack(Sender: TObject; N: integer; Login,Password: String;
+    const Cancel: boolean);
+begin
+  if Cancel then
+  begin
+    FLoggedOn := false;
+    if not FullResList.ListFinished then
+      FullResList.StartJob(JOB_STOPLIST)
+    else
+      fLogin.bOk.Enabled := true
+  end else
+  begin
+    if ResetRelogin(N) then
+    begin
+      FLoggedOn := true;
+      FullResList[n].Fields['login'] := Login;
+      FullResList[n].Fields['password'] := Password;
+      FullResLIst.StartJob(JOB_LOGIN);
+    end else
+      fLogin.Close;
   end;
 end;
 
