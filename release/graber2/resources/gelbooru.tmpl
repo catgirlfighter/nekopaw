@@ -3,12 +3,18 @@
 ;template of gelbooru engine
 
 [main]
-$picture.fields(url,preview,width:i,height:i,rating,id:i,posted:d,md5,sample_url);
+$picture.fields(url,preview,sample_url,post_url,width:i,height:i,rating,id:i,posted:d,post_date:d,md5,score:i,source);
+
 $main.checkcookie = 'user_id';
 $userstring = 'user';
 $pwdstring = 'pass';
 $main.login = '$main.url+"index.php?page=account&s=login&code=00"';
 $main.loginpost = '$userstring+"="+$login+"&"+$pwdstring+"="+$password+"&submit=Log in"';
+
+$gui_thumbs_dir = 'thumbs/';
+$gui_images_dir = 'images/';
+$gui_thumbs_part = 'thumbnail_';
+$gui_images_part = '';
 
 [listscript]
 $thread.url = "$main.url+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)";
@@ -29,13 +35,16 @@ $thread.referer = $main.url + 'index.php?page=post&s=view&id=' + $picture%id;
 		addpicture(
 			%url=#file_url,
 			%preview=#preview_url,
+			%sample_url=#sample_url,
+			%post_url=$main.url+'index.php?page=post&s=view&id='+#id,
 			%width=#width,
 			%height=#height,
 			%rating=#rating,
 			%id=#id,
 			%posted=@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy"),
+			%post_date=@datepart(@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy")),
 			%md5=#md5,
-			%sample_url=#sample_url,
+			%source=#source,
 			%tags=csv(#tags," ")
 		);
 		$picture.filename = @emptyname(#file_url);
@@ -48,15 +57,39 @@ $thread.referer = $main.url + 'index.php?page=post&s=view&id=' + $picture%id;
 		addpicture(
 			%url=#file_url,
 			%preview=#preview_url,
+			%sample_url=#sample_url,
+			%post_url=$main.url+'index.php?page=post&s=view&id='+#id,
 			%width=#width,
 			%height=#height,
 			%rating=#rating,
 			%id=#id,
 			%posted=@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy"),
+			%post_date=@datepart(@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy")),
 			%md5=#md5,
-			%sample_url=#sample_url,
+			%source=#source,
 			%tags=csv(#tags," ")
 		);
 		$picture.filename = @emptyname(#file_url);
+	}
+}
+
+[fpgui]
+^div#class~'content'{
+	^span#class~'thumb'{
+		^a{
+			$post_url = #href;
+		}
+		^img#class~'preview'{
+			addpicture(
+				%url=$main.url+@replace(@replace(@removevars(@removedomain($post_url)),$gui_thumbs_dir,$gui_images_dir),$gui_thumbs_part,$gui_images_part),
+				%preview=#src,
+				%post_url=$post_url,
+				%rating=@trim(@copyfromtoex(#alt,"rating:"," ")),
+				%score=@trim(@copyfromtoex(#alt,"score:"," ")),
+				%id=@urlvar($post_url,"id"),
+				%tags=csv(@trim(@copyto(#alt,"score:"))," ")
+			);
+			$picture.filename = @emptyname(@removevars(#src));
+		}
 	}
 }
