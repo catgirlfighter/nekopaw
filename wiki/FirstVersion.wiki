@@ -1,5 +1,5 @@
 #summary Описание 1й версии
-#labels Featured,Phase-Support
+#labels Featured,Phase-Deploy
 Процесс закачки состоит из 2х основных шагов:
  # Получение списка;
  # Закачка изображений по списку.
