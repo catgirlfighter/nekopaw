@@ -1,4 +1,4 @@
-<item file="Graber2.exe" archive="Graber2.zip" version=13 />
+<item file="Graber2.exe" archive="Graber2.zip" version=14 />
 
 <item file="resources\danbooru.tmpl" version=6 />
 <item file="resources\gelbooru.tmpl" version=4 />
@@ -35,5 +35,5 @@
 <item file="resources\icons\wildcritters.net.bmp" version=0 />
 <item file="resources\icons\donmai.us.bmp" version=0 />
 
-<item file="languages\Russian.ini" version=7 />
-<item file="languages\English.ini" version=7 />
+<item file="languages\Russian.ini" version=8 />
+<item file="languages\English.ini" version=8 />
