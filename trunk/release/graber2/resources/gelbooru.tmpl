@@ -11,21 +11,32 @@ $pwdstring = 'pass';
 $main.login = '$main.url+"index.php?page=account&s=login&code=00"';
 $main.loginpost = '$userstring+"="+$login+"&"+$pwdstring+"="+$password+"&submit=Log in"';
 
+$source = 'api';
+$picsperpage = 28;
 $gui_thumbs_dir = 'thumbs/';
 $gui_images_dir = 'images/';
 $gui_thumbs_part = 'thumbnail_';
 $gui_images_part = '';
 
 [listscript]
-$thread.url = "$main.url+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)";
-$thread.xml = 'firstpagexml';
-$thread.execute();
-$thread.xml = 'listxml';
-$thread.url = "$main.url+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)+'&pid='+$thread.counter";
+?$source = 'api'{
+	$thread.url = "$main.url+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)";
+	$thread.xml = 'firstpagexml';
+	$thread.execute();
+	$thread.xml = 'listxml';
+	$thread.url = "$main.url+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)+'&pid='+$thread.counter";
+}
+?$source = 'gui'{
+	$thread.url = "$main.url+'index.php?page=post&s=list&tags='+@httpencode($tag)";
+	$thread.xml = 'fpgui';
+	$thread.execute();
+	$thread.xml = 'listgui';
+	$thread.url = "$main.url+'index.php?page=post&s=list&tags='+@httpencode($tag)+'&pid='+$thread.counter*$picsperpage";	
+}
 
 [dwscript]
 $thread.url = $picture%url;
-$thread.referer = $main.url + 'index.php?page=post&s=view&id=' + $picture%id;
+$thread.referer = $picture%post_url;
 
 [firstpagexml]
 ^posts{
@@ -74,22 +85,45 @@ $thread.referer = $main.url + 'index.php?page=post&s=view&id=' + $picture%id;
 }
 
 [fpgui]
-^div#class~'content'{
-	^span#class~'thumb'{
-		^a{
-			$post_url = #href;
-		}
-		^img#class~'preview'{
-			addpicture(
-				%url=$main.url+@replace(@replace(@removevars(@removedomain($post_url)),$gui_thumbs_dir,$gui_images_dir),$gui_thumbs_part,$gui_images_part),
-				%preview=#src,
-				%post_url=$post_url,
-				%rating=@trim(@copyfromtoex(#alt,"rating:"," ")),
-				%score=@trim(@copyfromtoex(#alt,"score:"," ")),
-				%id=@urlvar($post_url,"id"),
-				%tags=csv(@trim(@copyto(#alt,"score:"))," ")
-			);
-			$picture.filename = @emptyname(@removevars(#src));
-		}
+^span#class='thumb'{
+	^a{
+		$post_url = #href;
+	}
+	^img{
+		addpicture(
+			%url=@replace($gui_images_part,$gui_thumbs_part,@replace($gui_images_dir,$gui_thumbs_dir,@removevars(#src))),
+			%preview=#src,
+			%post_url=$main.url+@trim($post_url,"/"),
+			%rating=@trim(@copyfromtoex(" ","rating:",#title + " ")),
+			%score=@isempty(@trim(@copyfromtoex(" ","score:",#title + " ")),0),
+			%id=@isempty(@urlvar("id",$post_url),0),
+			%tags=csv(@trim(@copyto("score:",#title))," ")
+		);
+		$picture.filename = @emptyname($picture%url);
+	}
+}
+^div#id='paginator'{
+	^a#alt='last page'{
+		$thread.count=@isempty(@urlvar("pid",#href),0)/$picsperpage + 1;
+		$thread.result=($thread.count)*$picsperpage;
+	}
+}
+
+[listgui]
+^span#class='thumb'{
+	^a{
+		$post_url = #href;
+	}
+	^img{
+		addpicture(
+			%url=@replace($gui_images_part,$gui_thumbs_part,@replace($gui_images_dir,$gui_thumbs_dir,@removevars(#src))),
+			%preview=#src,
+			%post_url=$main.url+@trim($post_url,"/"),
+			%rating=@trim(@copyfromtoex(" ","rating:",#title + " ")),
+			%score=@trim(@copyfromtoex(" ","score:",#title + " ")),
+			%id=@urlvar("id",$post_url),
+			%tags=csv(@trim(@copyto("score:",#title))," ")
+		);
+		$picture.filename = @emptyname($picture%url);
 	}
 }

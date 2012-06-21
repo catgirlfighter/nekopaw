@@ -28,7 +28,7 @@ $thread.url = "$main.url+'post/index.'+$lxml+'?limit=100&tags='+@httpencode($tag
 
 [dwscript]
 $thread.url = @calc($picurl);
-$thread.referer = $main.url + 'show/' + $picture%id;
+$thread.referer = $picture%post_url;
 
 [firstpagexml]
 ^posts{
