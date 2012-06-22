@@ -80,10 +80,10 @@ end;
 
 procedure TfLogin.SetLang;
 begin
-  lLogin.Caption := _LOGIN_;
-  lPassword.Caption := _PASSWORD_;
-  bOk.Caption := _OK_;
-  bCancel.Caption := _CANCEL_;
+  lLogin.Caption := lang('_LOGIN_');
+  lPassword.Caption := lang('_PASSWORD_');
+  bOk.Caption := lang('_OK_');
+  bCancel.Caption := lang('_CANCEL_');
 end;
 
 end.

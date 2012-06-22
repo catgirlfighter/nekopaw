@@ -3,7 +3,7 @@
 interface
 
 uses Classes, Variants, SysUtils, Math, Forms, StdCtrls, ExtCtrls, ComCtrls,
-  Controls, DateUtils,
+  Controls, DateUtils,StrUtils,
   HTTPApp, ShellAPI, Windows, Graphics, JPEG, GIFImg, PNGImage, VarUtils;
 
 type
@@ -11,8 +11,8 @@ type
   TArrayOfString = array of string;
   TSetOfChar = Set of Char;
 
-function Replace(src, AFrom, ATo: string;
-  rpall: boolean = false): string;
+{function Replace(src, AFrom, ATo: string;    use SysUtils.StringReplace
+  rpall: boolean = false): string;     }
 function emptyname(s: string): string;
 function deleteids(s: string; slsh: boolean = false): string;
 function addstr(s1, s2: string): string;
@@ -34,7 +34,7 @@ function STRINGENCODE(s: STRING): STRING;
 function STRINGDECODE(s: STRING): STRING;
 function Trim(s: String; ch: Char = ' '): String;
 function TrimEx(s: String; ch: TSetOfChar): String;
-function CopyTo(s, substr: string): string; overload;
+function CopyTo(s, substr: string; back: boolean = false): string; overload;
 function CopyTo(var Source: String; ATo: Char; Isl: array of string; cut: boolean = false): string; overload;
 function CopyFromTo(s, sub1, sub2: String; re: boolean = false): String; overload;
 function CopyFromTo(Source: String; AFrom,ATo: Char; Isl: array of string): String; overload;
@@ -63,15 +63,23 @@ function GetNextS(var s: string; del: Char = ';'; ins: Char = #0): string;
 function GetNextSEx(var s: string; del: TSetOfChar = [';'];
   ins: TSetOfChar = []): string;
 procedure FileToString(FileName: String; var AValue: AnsiString);
-function MathCalcStr(s: string): variant;
+function MathCalcStr(s: variant): variant;
 function DateTimeStrEval(const DateTimeFormat: string;
   const DateTimeStr: string; locale: string): TDateTime;
+function strnull(s: variant): variant;
 function nullstr(Value: Variant): Variant;
 function ifn(b: boolean; thn, els: variant): variant;
+function DeleteEx(S: String; Index,Count: integer): String;
+procedure SaveStrToFile(S, FileName: String);
 
 implementation
 
-uses LangString;
+const
+  _SYMBOL_MISSED_ = 'Cant found symbol "%s" for #%d "%s" in "%s"';
+  _OPERATOR_MISSED_ = 'Must be an operator instead of #%d "%s" in "%s"';
+  _OPERAND_MISSED_ = 'Must be an oparand instead of #%d "%s" in "%s"';
+  _INVALID_TYPECAST_ = 'Invalid typecast for "%s" %s "%s" near #%d in "%s"';
+  _INCORRECT_SYMBOL_ = 'Incorrect value "%s" near #%d in "%s"';
 
 function ClearHTML(s: string): string; // Заебись
 
@@ -317,7 +325,8 @@ begin
   Result := s;
 end;
 
-function Replace(src, AFrom, ATo: string;
+//use SysUtils.StringReplace
+{function Replace(src, AFrom, ATo: string;
   rpall: boolean = false): string;
 var
   n: Integer;
@@ -341,7 +350,7 @@ begin
       n := 0;
   end;
   Result := Result + src;
-end;
+end;    }
 
 function deleteids(s: string; slsh: boolean): string;
 var
@@ -497,7 +506,7 @@ var
   i: Integer;
 begin
   for i := 0 to length(substr1) - 1 do
-    src := Replace(src, substr1[i], substr2);
+    src := StringReplace(src, substr1[i], substr2,[]);
   Result := src;
 end;
 
@@ -702,15 +711,34 @@ begin
   end;
 end;
 
-function CopyTo(s, substr: string): string;
+function CopyTo(s, substr: string; back: boolean): string;
 var
   i: Integer;
 begin
-  i := pos(substr, s);
-  if i = 0 then
-    Result := copy(s, 1, length(s))
+  if back then
+  begin
+    i := length(s)-length(substr) + 1;
+    while i > 0 do
+    begin
+      if PosEx(substr,S,i) > 0 then
+        break;
+      dec(i);
+    end;
+
+    if i = 0 then
+        Result := copy(s, 1, length(s))
+    else
+      Result := copy(s, i + 1, length(s) - i + length(substr));
+  end
   else
-    Result := copy(s, 1, i - 1);
+  begin
+    i := pos(substr, s);
+
+    if i = 0 then
+        Result := copy(s, 1, length(s))
+    else
+      Result := copy(s, 1, i - 1);
+  end;
 end;
 
 function CopyTo(var Source: String; ATo: Char; Isl: array of string; cut: boolean = false): string;
@@ -732,25 +760,25 @@ end;
 function CopyFromTo(s, sub1, sub2: String; re: boolean = false): String;
 var
   l1, l2: Integer;
-  tmp: string;
+//  tmp: string;
 begin
-  tmp := s;
+//  tmp := lowercase(s);
   Result := '';
 
-  l1 := pos(LOWERCASE(sub1), LOWERCASE(tmp));
-  if l1 > 0 then
-    Delete(tmp, 1, l1 + length(sub1) - 1)
-  else if re then
+  l1 := Pos(lowercase(sub1), lowercase(s));
+  if (l1 = 0) and re then
+//    Delete(tmp, 1, l1 + length(sub1) - 1)
     Exit;
 
-  l2 := pos(LOWERCASE(sub2), LOWERCASE(tmp));
+  l2 := PosEx(lowercase(sub2),lowercase(s),l1 + 1);
+
   if l2 = 0 then
     if re then
       Exit
     else
-      l2 := length(s) + 1
-  else
-    l2 := l2 + length(s) - length(tmp);
+      l2 := length(s) + 1;
+{  else
+    l2 := l2 + length(s) - length(tmp);    }
 
   if l1 > 0 then
     Result := copy(s, l1 + length(sub1), l2 - l1 - length(sub1))
@@ -1313,21 +1341,24 @@ function CharPosEx(str: string; ch: TSetOfChar; Isolators: array of string;
   From: Integer = 1): Integer;
 var
   i, j: Integer;
-  n: boolean;
-  s: Char;
+  n: integer;
+  s1,s2: Char;
   st: TSetOfChar;
 begin
   st := [];
   for i := 0 to length(Isolators) - 1 do
     st := st + [Isolators[i][1]];
 
-  n := false;
-  s := #0;
+  n := 0;
+  s1 := #0;
+  s2 := #0;
 
   for i := From to length(str) do
-    if n then
-      if str[i] = s then
-        n := false
+    if n > 0 then
+      if str[i] = s2 then
+        dec(n)
+      else if str[i] = s1 then
+        inc(n)
       else
     else if CharInSet(str[i], ch) then
     begin
@@ -1339,10 +1370,11 @@ begin
       for j := 0 to length(Isolators) - 1 do
         if (str[i] = Isolators[j][1]) then
         begin
-          s := Isolators[j][2];
+          s1 := Isolators[j][1];
+          s2 := Isolators[j][2];
           break;
         end;
-      n := true;
+      inc(n);
     end;
   Result := 0;
 end;
@@ -1361,7 +1393,7 @@ begin
   end;
 end;
 
-function MathCalcStr(s: string): variant;
+function MathCalcStr(s: variant): variant;
 const
   ops = ['+', '-', '/', '|', '\', '*', '<', '=', '>', '!'];
   { lvl1 = ['+', '-'];
@@ -1422,7 +1454,7 @@ const
 
             op := true;
           end;
-        '+', '-', '/', '|', '\', '*', '<', '=', '>', '!', '&':
+        '+', '-', '/', '|', '\', '*', '<', '=', '>', '!', '&', '~':
           begin
             if not op and (s[i] <> '!') then
               if s[i] = '-' then
@@ -1436,7 +1468,7 @@ const
                 lvl := 1;
               '&':
                 lvl := 2;
-              '<', '>', '!', '=':
+              '<', '>', '!', '=', '~':
                 lvl := 3;
               '+', '-':
                 lvl := 4;
@@ -1483,6 +1515,8 @@ const
                   Result := Result > d;
                 '=':
                   Result := Result = d;
+                '~':
+                  Result := pos(d,Result) > 0;
                 '!':
                   if op then
                     Result := Result <> d
@@ -1567,11 +1601,21 @@ const
 var
   i: Integer;
 //  s: variant;
+  st: string;
   ls: variant;
+  tp: word;
 begin
+  tp := VarType(s);
+  if not((tp = varOleStr) or (tp = varString) or (tp = varUString)) then
+  begin
+    result := s;
+    Exit;
+  end else
+    st := s;
+
   i := 1;
   ls := null;
-  Result := Proc(0, s, i, length(s), ls);
+  Result := Proc(0, st, i, length(s), ls);
 end;
 
 function DateTimeStrEval(const DateTimeFormat: string;
@@ -1790,6 +1834,14 @@ begin
   Result := Retvar;
 end;
 
+function strnull(s: variant): variant;
+begin
+  if s = '' then
+    result := null
+  else
+    result := s;
+end;
+
 function nullstr(Value: Variant): Variant;
 begin
   if value = null then
@@ -1804,6 +1856,25 @@ begin
     result := thn
   else
     result:= els;
+end;
+
+function DeleteEx(S: String; Index,Count: integer): String;
+begin
+  Delete(S,Index,Count);
+  Result := S;
+end;
+
+procedure SaveStrToFile(S, FileName: String);
+var
+  l: tstringlist;
+begin
+  l := tstringlist.Create;
+  try
+    l.Text := s;
+    l.SaveToFile(FileName);
+  finally
+    l.Free
+  end;
 end;
 
 end.

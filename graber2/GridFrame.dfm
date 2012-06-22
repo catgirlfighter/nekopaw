@@ -19,6 +19,7 @@ object fGrid: TfGrid
     Align = alClient
     TabOrder = 0
     LookAndFeel.NativeStyle = False
+    ExplicitTop = 20
     object vChilds: TcxGridDBTableView
       NavigatorButtons.ConfirmDelete = False
       DataController.Summary.DefaultGroupSummaryItems = <>
@@ -52,8 +53,13 @@ object fGrid: TfGrid
         end>
       DataController.Summary.FooterSummaryItems = <>
       DataController.Summary.SummaryGroups = <>
+      OptionsSelection.MultiSelect = True
       OptionsView.ColumnAutoWidth = True
       OptionsView.ExpandButtonsForEmptyDetails = False
+      object vGridColumn1: TcxGridColumn
+        DataBinding.ValueType = 'Float'
+        PropertiesClassName = 'TcxCurrencyEditProperties'
+      end
     end
     object GridLevel1: TcxGridLevel
       GridView = vGrid
@@ -105,12 +111,16 @@ object fGrid: TfGrid
     object iPBar: TcxEditRepositoryProgressBar
       Properties.AnimationPath = cxapPingPong
     end
+    object iFloatEdit: TcxEditRepositoryCurrencyItem
+      Properties.AssignedValues.EditFormat = True
+      Properties.DisplayFormat = '0.00'
+    end
   end
   object BarManager: TdxBarManager
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
-    Font.Height = -12
-    Font.Name = 'Segoe UI'
+    Font.Height = -11
+    Font.Name = 'Tahoma'
     Font.Style = []
     Categories.Strings = (
       'Default')
@@ -141,11 +151,23 @@ object fGrid: TfGrid
       ItemLinks = <
         item
           Visible = True
+          ItemName = 'siCheck'
+        end
+        item
+          Visible = True
+          ItemName = 'siUncheck'
+        end
+        item
+          Visible = True
           ItemName = 'bbColumns'
         end
         item
           Visible = True
           ItemName = 'bbFilter'
+        end
+        item
+          Visible = True
+          ItemName = 'bbAdditional'
         end>
       NotDocking = [dsNone, dsLeft, dsTop, dsRight, dsBottom]
       OneOnRow = True
@@ -169,6 +191,177 @@ object fGrid: TfGrid
       Visible = ivAlways
       ButtonStyle = bsChecked
       OnClick = bbFilterClick
+    end
+    object dxBarButton1: TdxBarButton
+      Caption = 'New Button'
+      Category = 0
+      Hint = 'New Button'
+      Visible = ivAlways
+    end
+    object bbSelect: TdxBarButton
+      Caption = 'bbSelect'
+      Category = 0
+      Hint = 'bbSelect'
+      Visible = ivAlways
+    end
+    object bbUnselect: TdxBarButton
+      Caption = 'bbUnselect'
+      Category = 0
+      Hint = 'bbUnselect'
+      Visible = ivAlways
+    end
+    object siCheck: TdxBarSubItem
+      Caption = 'siCheck'
+      Category = 0
+      Visible = ivAlways
+      ItemLinks = <
+        item
+          Visible = True
+          ItemName = 'bbCheckAll'
+        end
+        item
+          Visible = True
+          ItemName = 'bbCheckSelected'
+        end
+        item
+          Visible = True
+          ItemName = 'bbCheckFiltered'
+        end
+        item
+          Visible = True
+          ItemName = 'bbInverseChecked'
+        end>
+    end
+    object siUncheck: TdxBarSubItem
+      Caption = 'siUncheck'
+      Category = 0
+      Visible = ivAlways
+      ItemLinks = <
+        item
+          Visible = True
+          ItemName = 'bbUncheckAll'
+        end
+        item
+          Visible = True
+          ItemName = 'bbUncheckSelected'
+        end
+        item
+          Visible = True
+          ItemName = 'bbUncheckFiltered'
+        end>
+    end
+    object dxBarSubItem3: TdxBarSubItem
+      Caption = 'New SubItem'
+      Category = 0
+      Visible = ivAlways
+      ItemLinks = <>
+    end
+    object dxBarSubItem4: TdxBarSubItem
+      Caption = 'New SubItem'
+      Category = 0
+      Visible = ivAlways
+      ItemLinks = <>
+    end
+    object bbCheckAll: TdxBarButton
+      Caption = 'bbCheckAll'
+      Category = 0
+      Hint = 'bbCheckAll'
+      Visible = ivAlways
+      OnClick = bbCheckAllClick
+    end
+    object bbCheckSelected: TdxBarButton
+      Caption = 'bbCheckSelected'
+      Category = 0
+      Hint = 'bbCheckSelected'
+      Visible = ivAlways
+      OnClick = bbCheckSelectedClick
+    end
+    object bbCheckFiltered: TdxBarButton
+      Caption = 'bbCheckFiltered'
+      Category = 0
+      Hint = 'bbCheckFiltered'
+      Visible = ivAlways
+      OnClick = bbCheckFilteredClick
+    end
+    object dxBarButton2: TdxBarButton
+      Caption = 'New Button'
+      Category = 0
+      Hint = 'New Button'
+      Visible = ivAlways
+    end
+    object bbInverseChecked: TdxBarButton
+      Caption = 'bbInverseChecked'
+      Category = 0
+      Hint = 'bbInverseChecked'
+      Visible = ivAlways
+      OnClick = bbInverseCheckedClick
+    end
+    object bbUncheckAll: TdxBarButton
+      Caption = 'bbUncheckAll'
+      Category = 0
+      Hint = 'bbUncheckAll'
+      Visible = ivAlways
+      OnClick = bbUncheckAllClick
+    end
+    object bbUncheckSelected: TdxBarButton
+      Caption = 'bbUncheckSelected'
+      Category = 0
+      Hint = 'bbUncheckSelected'
+      Visible = ivAlways
+      OnClick = bbUncheckSelectedClick
+    end
+    object bbUncheckFiltered: TdxBarButton
+      Caption = 'bbUncheckFiltered'
+      Category = 0
+      Hint = 'bbUncheckFiltered'
+      Visible = ivAlways
+      OnClick = bbUncheckFilteredClick
+    end
+    object dxBarListItem1: TdxBarListItem
+      Caption = 'New Item'
+      Category = 0
+      Visible = ivAlways
+    end
+    object cxBarEditItem1: TcxBarEditItem
+      Caption = 'New Item'
+      Category = 0
+      Hint = 'New Item'
+      Visible = ivAlways
+      Width = 100
+      PropertiesClassName = 'TcxCheckBoxProperties'
+    end
+    object cxBarEditItem2: TcxBarEditItem
+      Category = 0
+      Visible = ivAlways
+      ShowCaption = True
+      Width = 100
+      PropertiesClassName = 'TcxCheckBoxProperties'
+    end
+    object bbAdditional: TdxBarSubItem
+      Caption = 'bbAdditional'
+      Category = 0
+      Visible = ivAlways
+      ItemLinks = <
+        item
+          Visible = True
+          ItemName = 'bbDALF'
+        end>
+    end
+    object cxBarEditItem3: TcxBarEditItem
+      Caption = 'New Item'
+      Category = 0
+      Hint = 'New Item'
+      Visible = ivAlways
+      Width = 100
+      PropertiesClassName = 'TcxCheckBoxProperties'
+    end
+    object bbDALF: TdxBarButton
+      Caption = 'bbDALF'
+      Category = 0
+      Hint = 'bbDALF'
+      Visible = ivAlways
+      ButtonStyle = bsChecked
+      OnClick = bbDALFClick
     end
   end
   object GridPopup: TcxGridPopupMenu

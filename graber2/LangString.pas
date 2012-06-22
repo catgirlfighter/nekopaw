@@ -4,7 +4,7 @@ interface
 
 uses SysUtils,INIFiles;
 
-var
+{var
 
   _FILELANGUAGE_: String = 'English';
 
@@ -99,13 +99,33 @@ var
   _RESOURCES_: String = 'Resources';
   _INTERFACE_: String = 'Interface';
   _THREADS_: String = 'Threads';
+  _AUTOUPDATE_: String = 'autoupdate after application starts';
+  _UPDATENOW_: String = 'Check updates now';                }
 
 
-procedure LoadLang(FileName: String);
+//procedure LoadLang(FileName: String);
+
+var
+  LangINI: TINIFile = nil;
+
+procedure CreateLangINI(filename: string);
+function lang(SName: String): String;
 
 implementation
 
-procedure LoadLang(FileName: String);
+procedure CreateLangINI(filename: string);
+begin
+  if Assigned(LangINI) then
+    LangINI.Free;
+  LangINI := TINIFile.Create(filename);
+end;
+
+function lang(SName: String): String;
+begin
+  Result := LangINI.ReadString('lang',SName,SName);
+end;
+
+{procedure LoadLang(FileName: String);
 var
   INI: TINIFile;
 begin
@@ -143,6 +163,7 @@ begin
   _SYMBOLS_IN_SECTOR_NAME_ := INI.ReadString('lang','_SYMBOLS_IN_SECTOR_NAME_',_SYMBOLS_IN_SECTOR_NAME_);
   _INCORRECT_DECLORATION_ := INI.ReadString('lang','_INCORRECT_DECLORATION_',_INCORRECT_DECLORATION_);
   _UNKNOWNMETHOD_ := INI.ReadString('lang','_UNKNOWNMETHOD_',_UNKNOWNMETHOD_);
+  _BUSY_MAIN_LIST_ := INI.ReadString('lang','_BUSY_MAIN_LIST_',_BUSY_MAIN_LIST_);
 
   (* OTHER *)
   _NEWLIST_ := INI.ReadString('lang','_NEWLIST_',_NEWLIST_);
@@ -200,7 +221,16 @@ begin
   _THREADS_ :=  INI.ReadString('lang','_THREADS_',_THREADS_);
   _INTERFACE_ :=  INI.ReadString('lang','_INTERFACE_',_INTERFACE_);
   _RESOURCES_ :=  INI.ReadString('lang','_RESOURCES_',_RESOURCES_);
+  _AUTOUPDATE_ := INI.ReadString('lang','_AUTOUPDATE_',_AUTOUPDATE_);
+  _UPDATENOW_  := INI.ReadString('lang','_AUTOUPDATE_',_AUTOUPDATE_);
+
   INI.Free;
-end;
+end;       }
+initialization
+
+finalization
+
+if Assigned(LangINI) then
+  LangINI.Free;
 
 end.

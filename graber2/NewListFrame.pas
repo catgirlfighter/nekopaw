@@ -198,25 +198,27 @@ begin
   vgSettings.Tag := n;
   if n = 0 then
   begin
-    c := dm.CreateCategory(vgSettings,'vgimain',_MAINCONFIG_);
-    dm.CreateField(vgSettings,'vgitag',_TAGSTRING_,'',ftString,c,FullResList[n].Fields['tag']);
-    dm.CreateField(vgSettings,'vgidwpath',_SAVEPATH_,'',ftString,c,FullResList[n].NameFormat);
+    c := dm.CreateCategory(vgSettings,'vgimain',lang('_MAINCONFIG_'));
+    dm.CreateField(vgSettings,'vgitag',lang('_TAGSTRING_'),'',ftString,c,FullResList[n].Fields['tag']);
+    dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftString,c,FullResList[n].NameFormat);
+    dm.CreateField(vgSettings,'vgisdalf',lang('_SDALF_'),'',ftCheck,c,GlobalSettings.Downl.SDALF);
   end
   else
   with FullResList[n] do begin
-    c := dm.CreateCategory(vgSettings,'vgimain',_MAINCONFIG_ + ' ' +
+    c := dm.CreateCategory(vgSettings,'vgimain',lang('_MAINCONFIG_') + ' ' +
       FullResList[n].Name);
-    dm.CreateField(vgSettings,'vgiinherit',_INHERIT_,'',ftCheck,c,Inherit);
 
     s := VarToStr(Fields['tag']);
-    if (s = '') and Inherit then
+    if (s = '') or Inherit then
       s := VarToStr(FullResList[0].Fields['tag']);
-    dm.CreateField(vgSettings,'vgitag',_TAGSTRING_,'',ftString,c,s);
+    dm.CreateField(vgSettings,'vgitag',lang('_TAGSTRING_'),'',ftString,c,s);
+
+    dm.CreateField(vgSettings,'vgiinherit',lang('_INHERIT_'),'',ftCheck,c,Inherit);
 
     s := NameFormat;
-    if (s = '') and Inherit then
+    if (s = '') or Inherit then
       s := FullResList[0].NameFormat;
-    dm.CreateField(vgSettings,'vgidwpath',_SAVEPATH_,'',ftString,c,s);
+    dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftString,c,s);
 
     d := FullResList[0].Fields.Count;
 
@@ -229,7 +231,7 @@ begin
           if Items[i].restype <> ftNone then
           begin
             if not Assigned(c) then
-              c := dm.CreateCategory(vgSettings,'vgieditional',_EDITIONALCONFIG_);
+              c := dm.CreateCategory(vgSettings,'vgieditional',lang('_EDITIONALCONFIG_'));
             with FullResList[n].Fields.Items[i]^ do
               dm.CreateField(vgSettings,'evgi' + resname,resname,resitems,restype,c,resvalue);
 
@@ -248,7 +250,7 @@ begin
   n := tvRes.DataController.Values[tvRes.DataController.FocusedRecordIndex,0];
   Application.CreateForm(TfLogin, fLogin);
   fLogin.Execute(n,
-    Format(_LOGINON_,[FullResList[n].Name]),
+    Format(lang('_LOGINON_'),[FullResList[n].Name]),
     nullstr(FullResList[n].Fields['login']),
     nullstr(FullResList[n].Fields['password']),
     LoginCallback
@@ -318,7 +320,7 @@ begin
   begin
     RecordCount := 1;
     Values[0, 0] := 0;
-    Values[0, 2] := _GENERAL_;
+    Values[0, 2] := lang('_GENERAL_');
   end;
 
   with tvFull.DataController do
@@ -356,9 +358,9 @@ begin
     gRescButton.Visible := ActivePage = tsList;
     btnPrevious.Enabled := ActivePage = tsSettings;
     if ActivePage = tsSettings then
-      btnNext.Caption := _FINISH_
+      btnNext.Caption := lang('_FINISH_')
     else
-      btnNext.Caption := _NEXTSTEP_;
+      btnNext.Caption := lang('_NEXTSTEP_');
   end;
 end;
 
@@ -401,7 +403,10 @@ begin
     NameFormat := (vgSettings.RowByName('vgidwpath') as TcxEditorRow)
       .Properties.Value;
 
-    if vgSettings.Tag > 0 then
+    if vgSettings.Tag = 0 then
+      GlobalSettings.Downl.SDALF := (vgSettings.RowByName('vgisdalf') as TcxEditorRow)
+      .Properties.Value
+    else if vgSettings.Tag > 0 then
     begin
       Inherit := (vgSettings.RowByName('vgiinherit') as TcxEditorRow)
         .Properties.Value;
@@ -439,11 +444,11 @@ begin
       fLogin.bOk.Enabled := true
   end else
   begin
+    FullResList[n].Fields['login'] := Login;
+    FullResList[n].Fields['password'] := Password;
     if ResetRelogin(N) then
     begin
       FLoggedOn := true;
-      FullResList[n].Fields['login'] := Login;
-      FullResList[n].Fields['password'] := Password;
       FullResLIst.StartJob(JOB_LOGIN);
     end else
       fLogin.Close;
@@ -452,8 +457,8 @@ end;
 
 procedure TfNewList.SetLang;
 begin
-  btnPrevious.Caption := _PREVIOUSSTEP_;
-  btnNext.Caption := _NEXTSTEP_;
+  btnPrevious.Caption := lang('_PREVIOUSSTEP_');
+  btnNext.Caption := lang('_NEXTSTEP_');
 end;
 
 procedure TfNewList.tsSettingsShow(Sender: TObject);

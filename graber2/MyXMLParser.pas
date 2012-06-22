@@ -231,32 +231,65 @@ begin
 end;
 
 procedure TTagList.GetList(Tag: String; AAttrs: TAttrList; AList: TTagList);
+
+function CheckRule(v1,v2: string): boolean;
+var
+  tmp: string;
+
+begin
+  if (v1 = '') then
+  begin
+    Result := false;
+    Exit;
+  end;
+
+  if Pos(' ',v2) > 0 then     //string with spaces
+  begin
+    Result := SameText(v1,v2);
+    Exit;
+  end;
+
+  tmp := GetNextS(v1,' ');  //tags
+  if SameText(tmp,v2) then
+  begin
+    Result := true;
+    Exit;
+  end;
+
+  Result := false;
+end;
+
 var
   i,j: integer;
   b: boolean;
+  s: string;
+
 begin
-  Tag := lowercase(Tag);
+  //Tag := lowercase(Tag);
   for i := 0 to Count -1 do
-  begin
-    if Items[i].Name = Tag then
-    begin
-      b := true;
-      if Assigned(AAttrs) then
-        for j := 0 to AAttrs.Count -1 do
-          if (Items[i].Attrs.Value(AAttrs[j].Name) <> AAttrs[j].Value) or
-            not ((AAttrs[j].Value = '') and (Items[i].Attrs.Value(AAttrs[j].Name) <> '')) then
+    if (Items[i].Kind = tkTag) then
+      if SameText(Items[i].Name,Tag) then
+      begin
+        b := true;
+        if Assigned(AAttrs) then
+          for j := 0 to AAttrs.Count -1 do
           begin
-            b := false;
-            Break;
+            s := Items[i].Attrs.Value(AAttrs[j].Name);
+            if not CheckRule(s,AAttrs[j].Value) and
+              not ((AAttrs[j].Value = '') and (s <> '')) then
+            begin
+              b := false;
+              Break;
+            end;
           end;
 
-      if b then
-        AList.CopyTag(Items[i])
-      else
+
+        if b then
+          AList.CopyTag(Items[i])
+        else
+          Items[i].Childs.GetList(Tag,AAttrs,AList);
+      end else
         Items[i].Childs.GetList(Tag,AAttrs,AList);
-    end else
-      Items[i].Childs.GetList(Tag,AAttrs,AList);
-  end;
 end;
 
 function TTagList.CreateChild(Parent: TTag; AName: String = '';
@@ -272,34 +305,43 @@ end;
 
 procedure TTagList.ExportToFile(fname: string);
 
-  procedure WriteList(List: TTagList; s: tstringlist);
+  procedure WriteList(List: TTagList; var s: String);
   var
     i,j: integer;
     tmp: string;
   begin
     for i := 0 to List.Count -1 do
     begin
-      tmp := '<' + List[i].Name;
-      for j := 0 to List[i].Attrs.Count-1 do
-          tmp := tmp + ' ' + List[i].Attrs[j].Name + '="'
-          + List[i].Attrs[j].Value + '"';
-      if List[i].Childs.Count = 0 then
-        s.Add(tmp + ' />')
+      if List[i].Kind = tkText then
+        s := s + List[i].Name
       else
       begin
-        s.Add(tmp + '>');
-        WriteList(List[i].Childs,s);
-        s.Add('</' + List[i].Name + '>');
+        tmp := '<' + List[i].Name;
+        for j := 0 to List[i].Attrs.Count-1 do
+            tmp := tmp + ' ' + List[i].Attrs[j].Name + '="'
+            + List[i].Attrs[j].Value + '"';
+        if List[i].Childs.Count = 0 then
+          s := s + (tmp + ' />')
+        else
+        begin
+          s := s + (tmp + '>');
+          WriteList(List[i].Childs,s);
+          s := s + ('</' + List[i].Name + '>');
+        end;
       end;
     end;
+
   end;
 
 var
   s: tstringlist;
+  st: string;
 begin
+  st := '';
   s := tstringlist.Create;
   try
-    WriteList(Self,s);
+    WriteList(Self,st);
+    s.Text := st;
     s.SaveToFile(fname,TEncoding.UTF8);
   finally
     s.Free;
@@ -335,6 +377,7 @@ var
 begin
   p := CreateChild(Parent);
   p.Name := ATag.Name;
+  p.Kind := ATag.Kind;
   //p.Text := ATag.Text;
   //p.Attrs := TAttrList.Create;
   p.Attrs.Assign(ATag.Attrs);
@@ -410,10 +453,10 @@ begin
 
     case TextKind of
       txkFullWithTags,txkFull:
-        for i := 0 to Childs.Count do
+        for i := 0 to Childs.Count-1 do
           Result := Result + Childs[i].GetText(TextKind,AddOwntag);
       txkCurrent:
-        for i := 0 to Childs.Count do
+        for i := 0 to Childs.Count-1 do
           if Childs[i].Kind = tkText then
             Result := Result + Childs[i].Text;
     end;
@@ -483,7 +526,7 @@ var
 begin
   Result := '';
   for i := 0 to length(FAttrs) - 1 do
-    if UPPERCASE(FAttrs[i].Name) = UPPERCASE(AName) then
+    if SameText(FAttrs[i].Name,AName) then
     begin
       Result := FAttrs[i].Value;
       Break;
@@ -553,8 +596,9 @@ var
     lastattr := '';
     tagname := '';
     stat := 1;
-    adata := REPLACE(adata, #13#10, ' ', true);
-    adata := REPLACE(adata, #9, ' ', true);
+//    adata := StringReplace(adata, #13, '', [rfReplaceAll]);
+//    adata := StringReplace(adata, #10, ' ', [rfReplaceAll]);
+//    adata := StringReplace(adata, #9, ' ', [rfReplaceAll]);
     // adata := REPLACE(adata,'  ',' ',false,true);
     adata := trim(adata) + ' ';
     li := 1;
@@ -580,7 +624,8 @@ var
                   Attrs.Add(lastattr, attrparams);
                 lastattr := copy(adata, li, i - li);
                 attrparams := '';
-                Attrs.Add(lastattr, attrparams);
+                if (lastattr <> '') then
+                  Attrs.Add(lastattr, attrparams);
                 stat := 0;
                 Break;
               end;
@@ -595,7 +640,7 @@ var
                 Break;
               end;
           end;
-        ' ':
+        ' ',#13,#10,#9:
           case state of
             0:
               begin
@@ -628,7 +673,7 @@ var
               begin
                 state := 0;
                 attrparams := trimquotes(copy(adata, li, i - li));
-                if i = l then
+                if (i = l) and (lastattr<>'') then
                   Attrs.Add(lastattr, attrparams);
                 li := i + 1;
                 while (li < l) and (adata[li] = ' ') do
@@ -740,10 +785,13 @@ begin
       while (i <= l) and (S[i] <> '<') do
         inc(i);
       txt := copy(S, li, i - li);
-      if Assigned(FTag) then
-        FTag.Childs.CreateChild(FTag,txt,tkText);
-      if Assigned(FOnContent) and (checkstr(txt)) then
-        FOnContent(FTag,txt);
+      if trim(txt) <> '' then
+      begin
+        if Assigned(FTag) then
+          FTag.Childs.CreateChild(FTag,txt,tkText);
+        if Assigned(FOnContent) and (checkstr(txt)) then
+          FOnContent(FTag,txt);
+      end;
       inc(i);
       li := i;
       if i >= l then

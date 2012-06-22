@@ -166,18 +166,19 @@ begin
       v1 := StrToInt(items[i].Attrs.Value('version'));
       v2 := INI.ReadInteger('update',fname,-1);
 
-      if v2 >= v1 then
-        Continue;
-
-      PostMessage(FHWND,CM_UPDATEPROGRESS,UPD_FILENAME,LongInt(@fname));
       aname := items[i].Attrs.Value('archive');
 
       if aname <> '' then
         pname := aname
       else
         pname := fname;
+
+      if (v2 >= v1)and(FileExists(aroot + aname)) then
+        Continue;
+
+      PostMessage(FHWND,CM_UPDATEPROGRESS,UPD_FILENAME,LongInt(@fname));
       
-      o :=  FListURL + Replace(pname,'\','/',true);
+      o :=  FListURL + StringReplace(pname,'\','/',[rfReplaceAll]);
 
       dir := ExtractFilePath(aroot+pname);
 

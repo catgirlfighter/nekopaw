@@ -61,12 +61,26 @@ object dm: Tdm
     object erCombo: TcxEditRepositoryComboBoxItem
       Properties.DropDownListStyle = lsFixedList
     end
-    object erReadOnlyText: TcxEditRepositoryTextItem
-      Properties.ReadOnly = True
-    end
     object erPassword: TcxEditRepositoryTextItem
       Properties.EchoMode = eemPassword
       Properties.PasswordChar = #9679
+    end
+    object erFloatEdit: TcxEditRepositoryCurrencyItem
+      Properties.DisplayFormat = '0.##'
+    end
+    object erRDFloatEdit: TcxEditRepositoryCurrencyItem
+      Properties.DisplayFormat = '0.##'
+      Properties.ReadOnly = True
+    end
+    object erRDTextEdit: TcxEditRepositoryTextItem
+      Properties.ReadOnly = True
+    end
+    object erRDPassword: TcxEditRepositoryTextItem
+      Properties.EchoMode = eemPassword
+      Properties.PasswordChar = #9679
+    end
+    object erRDCheckBox: TcxEditRepositoryCheckBoxItem
+      Properties.ReadOnly = True
     end
   end
 end
