@@ -1,7 +1,8 @@
-<item file="Graber2.exe" archive="Graber2.zip" version=15 />
+<item file="Graber2.exe" archive="Graber2.zip" version=16 />
+<item file="versionlog.txt" version=0 />
 
-<item file="resources\danbooru.tmpl" version=7 />
-<item file="resources\gelbooru.tmpl" version=5 />
+<item file="resources\danbooru.tmpl" version=8 />
+<item file="resources\gelbooru.tmpl" version=6 />
 
 <item file="resources\xbooru.com.cfg" version=1 />
 <item file="resources\wildcritters.ws.cfg" version=1 />
@@ -22,6 +23,8 @@
 <item file="resources\lolibooru.com.cfg" version=0 />
 <item file="resources\ponibooru.413chan.net.cfg" version=0 />
 <item file="resources\ii.booru.org.cfg" version=0 />
+<item file="resources\zerochan.net.cfg" version=0 />
+<item file="resources\rmart.org.cfg" version=0 />
 
 <item file="resources\icons\wildcritters.ws.bmp" version=0 />
 <item file="resources\icons\tbib.org.bmp" version=0 />
@@ -40,6 +43,8 @@
 <item file="resources\icons\lolibooru.com.bmp" version=0 />
 <item file="resources\icons\ponibooru.413chan.net.bmp" version=0 />
 <item file="resources\icons\ii.booru.org.bmp" version=0 />
+<item file="resources\icons\zerochan.net.bmp" version=0 />
+<item file="resources\icons\rmart.org.bmp" version=0 />
 
-<item file="languages\Russian.ini" version=8 />
-<item file="languages\English.ini" version=8 />
+<item file="languages\Russian.ini" version=9 />
+<item file="languages\English.ini" version=9 />

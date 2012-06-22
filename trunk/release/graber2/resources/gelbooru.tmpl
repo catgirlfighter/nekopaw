@@ -3,7 +3,7 @@
 ;template of gelbooru engine
 
 [main]
-$picture.fields(url,preview,sample_url,post_url,width:i,height:i,rating,id:i,posted:d,post_date:d,md5,score:i,source);
+$picture.fields(url,preview,sample_url,post_url,width:i,height:i,rating,id:i,posted:d,post_date:d,md5,score:i,source,aspect_ratio:f);
 
 $main.checkcookie = 'user_id';
 $userstring = 'user';
@@ -56,6 +56,7 @@ $thread.referer = $picture%post_url;
 			%post_date=@datepart(@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy")),
 			%md5=#md5,
 			%source=#source,
+			%aspect_ratio=#width/#height,
 			%tags=csv(#tags," ")
 		);
 		$picture.filename = @emptyname(#file_url);
@@ -78,6 +79,7 @@ $thread.referer = $picture%post_url;
 			%post_date=@datepart(@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy")),
 			%md5=#md5,
 			%source=#source,
+			%aspect_ratio=#width/#height,
 			%tags=csv(#tags," ")
 		);
 		$picture.filename = @emptyname(#file_url);
