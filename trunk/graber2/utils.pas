@@ -16,15 +16,20 @@ type
     erCheckBox: TcxEditRepositoryCheckBoxItem;
     erSpinEdit: TcxEditRepositorySpinItem;
     erCombo: TcxEditRepositoryComboBoxItem;
-    erReadOnlyText: TcxEditRepositoryTextItem;
     erPassword: TcxEditRepositoryTextItem;
+    erFloatEdit: TcxEditRepositoryCurrencyItem;
+    erRDFloatEdit: TcxEditRepositoryCurrencyItem;
+    erRDTextEdit: TcxEditRepositoryTextItem;
+    erRDPassword: TcxEditRepositoryTextItem;
+    erRDCheckBox: TcxEditRepositoryCheckBoxItem;
   private
     { Private declarations }
   public
     function CreateCategory(vg: TcxVerticalGrid; AName, ACaption: String;
       Collapsed: boolean = false): TcxCategoryRow;
     function CreateField(vg: TcxVerticalGrid; AName,ACaption,ComboItems: string;
-  FieldType: TFieldType; Category: TcxCategoryRow; DefaultValue: Variant): TcxEditorRow;
+      FieldType: TFieldType; Category: TcxCategoryRow; DefaultValue: Variant;
+      ReadOnly: Boolean = false): TcxEditorRow;
     { Public declarations }
   end;
 
@@ -158,20 +163,33 @@ begin
 end;
 
 function Tdm.CreateField(vg: TcxVerticalGrid; AName,ACaption,ComboItems: string;
-  FieldType: TFieldType; Category: TcxCategoryRow; DefaultValue: Variant): TcxEditorRow;
+  FieldType: TFieldType; Category: TcxCategoryRow; DefaultValue: Variant;
+  ReadOnly: boolean = false): TcxEditorRow;
 begin
   Result := vg.AddChild(Category, TcxEditorRow) as TcxEditorRow;
   Result.Name := AName;
   Result.Properties.Caption := ACaption;
   case FieldType of
     ftString:
-      ;
+      if ReadOnly then
+        Result.Properties.RepositoryItem := erRDTextEdit;
     ftPassword:
-      Result.Properties.RepositoryItem := erPassword;
-    ftReadOnly:
-      Result.Properties.RepositoryItem := erReadOnlyText;
+      if  ReadOnly then
+        Result.Properties.RepositoryItem := erRDPassword
+      else
+        Result.Properties.RepositoryItem := erPassword;
+{    ftReadOnly:
+      Result.Properties.RepositoryItem := erReadOnlyText;    }
     ftNumber:
-      Result.Properties.RepositoryItem := erSpinEdit;
+      if ReadOnly then
+        Result.Properties.RepositoryItem := erRDTextEdit
+      else
+        Result.Properties.RepositoryItem := erSpinEdit;
+    ftFloatNumber:
+      if ReadOnly then
+        Result.Properties.RepositoryItem := erRDFloatEdit
+      else
+        Result.Properties.RepositoryItem := erFloatEdit;
     ftCombo:
       begin
         erCombo.Properties.Items.Clear;
@@ -179,7 +197,10 @@ begin
         Result.Properties.RepositoryItem := erCombo;
       end;
     ftCheck:
-      Result.Properties.RepositoryItem := erCheckBox;
+      if ReadOnly then
+        Result.Properties.RepositoryItem := erRDCheckBox
+      else
+        Result.Properties.RepositoryItem := erCheckBox;
   end;
   Result.Properties.Value := DefaultValue;
 end;

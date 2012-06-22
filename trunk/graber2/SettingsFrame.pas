@@ -8,7 +8,9 @@ uses
   cxInplaceContainer, cxMaskEdit, cxGraphics, cxLookAndFeels,
   cxLookAndFeelPainters, Menus, cxControls, cxTextEdit, cxContainer, cxEdit,
   cxVGrid, cxLabel, cxCheckBox, cxSpinEdit, cxPC, cxSplitter, StdCtrls,
-  cxButtons, ExtCtrls, INIFiles;
+  cxButtons, ExtCtrls, INIFiles, cxEditRepositoryItems, ShellAPI,
+  {Graber}
+  Common, GraberU, ImgList;
 
 type
   TfSettings = class(TFrame)
@@ -46,16 +48,38 @@ type
     vgSettings: TcxVerticalGrid;
     lcLanguage: TcxLabel;
     cbLanguage: TcxComboBox;
-    procedure btnCancelClick(Sender: TObject);
+    chbAutoUpdate: TcxCheckBox;
+    lCheckNow: TcxLabel;
+    cxEditRepository: TcxEditRepository;
+    eAuthButton: TcxEditRepositoryButtonItem;
+    cxTabSheet5: TcxTabSheet;
+    cxLabel1: TcxLabel;
+    cxLabel2: TcxLabel;
+    cxLabel3: TcxLabel;
+    cxLabel4: TcxLabel;
+    cxLabel5: TcxLabel;
+    btnApply: TcxButton;
+    ilIcons: TcxImageList;
+    chbShowWhatsNew: TcxCheckBox;
     procedure btnOkClick(Sender: TObject);
     procedure chbProxyPropertiesEditValueChanged(Sender: TObject);
     procedure chbProxyAuthPropertiesEditValueChanged(Sender: TObject);
     procedure tlListFocusedNodeChanged(Sender: TcxCustomTreeList;
       APrevFocusedNode, AFocusedNode: TcxTreeListNode);
+    procedure lCheckNowClick(Sender: TObject);
+    procedure cxeAuthButtonPropertiesButtonClick(Sender: TObject;
+      AButtonIndex: Integer);
+    procedure cxLabel5Click(Sender: TObject);
+    procedure btnApplyClick(Sender: TObject);
+    procedure btnCancelClick(Sender: TObject);
   private
     FLangList: TStringList;
+    FOnError: TLogEvent;
+    function ResetRelogin(idx: integer): boolean;
     procedure CreateResFields(n: Integer);
     procedure SaveResFields;
+    procedure LoginCallBack(Sender: TObject; N: integer; Login,Password: String;
+      const Cancel: boolean);
     { Private declarations }
   public
     procedure ResetButons;
@@ -65,6 +89,9 @@ type
     procedure ApplySettings;
     procedure OnClose;
     procedure CreateResources;
+    procedure OnErrorEvent(Sender: TObject; Msg: String);
+    procedure JobStatus(Sander: TObject; Action: integer);
+    property OnError: TLogEvent read FOnError write FOnError;
     { Public declarations }
   end;
 
@@ -73,9 +100,12 @@ const
 
 implementation
 
-uses GraberU, LangString, OpBase, utils;
+uses UpdUnit, LangString, OpBase, utils, LoginForm;
 
 {$R *.dfm}
+
+var
+  FLoggedOn: boolean = false;
 
 procedure TfSettings.ApplySettings;
 begin
@@ -84,6 +114,9 @@ begin
 
   with GlobalSettings do
   begin
+    AutoUPD := chbAutoupdate.Checked;
+    ShowWhatsNew := chbShowWhatsNew.Checked;
+
     Proxy.UseProxy := chbProxy.Checked;
     Proxy.Host := eHost.Text;
     Proxy.Port := ePort.Value;
@@ -108,7 +141,12 @@ begin
     PostMessage(Application.MainForm.Handle, CM_LANGUAGECHANGED,
       0, 0);
   end;
+end;
 
+procedure TfSettings.btnApplyClick(Sender: TObject);
+begin
+  ApplySettings;
+  SaveProfileSettings;
 end;
 
 procedure TfSettings.btnCancelClick(Sender: TObject);
@@ -143,14 +181,40 @@ end;
 
 procedure TfSettings.CreateResources;
 var
-  i: integer;
+  i,idx: integer;
   item: tcxTreeListNode;
+  bmp: tbitmap;
 begin
+  bmp := TBitmap.Create;
   for i := 1 to FulLResList.Count -1 do
   begin
     item := tlList.Items[3].AddChild;
     item.Values[0] := FullResList[i].Name;
+    if FullResList[i].IconFile <> '' then
+      bmp.LoadFromFile(rootdir + '\resources\icons\' + FullResList[i].IconFile);
+    idx := ilIcons.Add(bmp,nil);
+    item.ImageIndex := idx;
   end;
+end;
+
+procedure TfSettings.cxeAuthButtonPropertiesButtonClick(Sender: TObject;
+  AButtonIndex: Integer);
+var
+  n: integer;
+begin
+  n := tlList.FocusedNode.Index + 1;
+  Application.CreateForm(TfLogin, fLogin);
+  fLogin.Execute(n,
+    Format(lang('_LOGINON_'),[FullResList[n].Name]),
+    nullstr(FullResList[n].Fields['login']),
+    nullstr(FullResList[n].Fields['password']),
+    LoginCallback);
+end;
+
+procedure TfSettings.cxLabel5Click(Sender: TObject);
+begin
+  ShellExecute(Handle,nil,'http://code.google.com/p/nekopaw/',
+    nil,nil,SW_SHOWNORMAL);
 end;
 
 procedure TfSettings.GetLanguages;
@@ -173,12 +237,21 @@ begin
     until FindNext(fs) <> 0;
 end;
 
+procedure TfSettings.lCheckNowClick(Sender: TObject);
+begin
+  PostMessage(Application.MainForm.Handle, CM_UPDATE,
+    0, 0);
+end;
+
 procedure TfSettings.LoadSettings;
 begin
   GetLanguages;
 
   with GlobalSettings do
   begin
+    chbAutoupdate.Checked := AutoUPD;
+    chbShowWhatsNew.Checked := ShowWhatsNew;
+
     chbProxy.Checked := Proxy.UseProxy;
     eHost.Text := Proxy.Host;
     ePort.Value := Proxy.Port;
@@ -202,12 +275,12 @@ procedure TfSettings.OnClose;
 begin
   if Assigned(FLangList) then
     FLangList.Free;
+  FullResList.OnError := nil;
+  FullResList.OnJobChanged := nil;
 end;
 
 procedure TfSettings.ResetButons;
 begin
-  btnOk.Caption := _OK_;
-  btnCancel.Caption := _CANCEL_;
   eHost.Enabled := chbProxy.Checked;
   ePort.Enabled := chbProxy.Checked;
   chbProxyAuth.Enabled := chbProxy.Checked;
@@ -221,25 +294,33 @@ end;
 procedure TfSettings.SetLang;
 begin
 //  gpWork.Caption := _WORK_;
-  lcThreads.Caption := _THREAD_COUNT_;
-  chbUseThreadPerRes.Caption := _USE_PER_RES_;
-  lcThreadPerRes.Caption := _PER_RES_;
-  lcPicThreads.Caption := _PIC_THREADS_;
-  lcRetries.Caption := _RETRIES_;
-  lcProxyHost.Caption := _HOST_;
-  lcProxyPort.Caption := _PORT_;
-  lcProxyLogin.Caption := _LOGIN_;
-  lcProxyPassword.Caption := _PASSWORD_;
-  lcLanguage.Caption := _LANGUAGE_;
-  tlList.Items[0].Texts[0] := _INTERFACE_;
-  tlList.Items[1].Texts[0] := _THREADS_;
-  tlList.Items[2].Texts[0] := _PROXY_;
-  tlList.Items[3].Texts[0] := _RESOURCES_;
+  cxLabel1.Caption := 'About ' + Application.MainForm.Caption;
+  btnOk.Caption := lang('_OK_');
+  btnCancel.Caption := lang('_CANCEL_');
+  btnApply.Caption := lang('_APPLY_');
+  lcThreads.Caption := lang('_THREAD_COUNT_');
+  chbUseThreadPerRes.Caption := lang('_USE_PER_RES_');
+  lcThreadPerRes.Caption := lang('_PER_RES_');
+  lcPicThreads.Caption := lang('_PIC_THREADS_');
+  lcRetries.Caption := lang('_RETRIES_');
+  lcProxyHost.Caption := lang('_HOST_');
+  lcProxyPort.Caption := lang('_PORT_');
+  lcProxyLogin.Caption := lang('_LOGIN_');
+  lcProxyPassword.Caption := lang('_PASSWORD_');
+  lcLanguage.Caption := lang('_LANGUAGE_');
+  tlList.Items[0].Texts[0] := lang('_INTERFACE_');
+  tlList.Items[1].Texts[0] := lang('_THREADS_');
+  tlList.Items[2].Texts[0] := lang('_PROXY_');
+  tlList.Items[3].Texts[0] := lang('_RESOURCES_');
+  tlList.Items[4].Texts[0] := lang('_ABOUT_');
   //chbDebug.Caption := _DEBUGMODE_;
 //  gpProxy.Caption := _PROXY_;
-  chbProxy.Caption := _USE_PROXY_;
-  chbProxyAuth.Caption := _AUTHORISATION_;
-  chbProxySavePwd.Caption := _SAVE_PASSWORD_;
+  chbProxy.Caption := lang('_USE_PROXY_');
+  chbProxyAuth.Caption := lang('_AUTHORISATION_');
+  chbProxySavePwd.Caption := lang('_SAVE_PASSWORD_');
+  chbAutoupdate.Caption := lang('_AUTOUPDATE_');
+  lCheckNow.Caption := lang('_UPDATENOW_');
+  chbShowWhatsNew.Caption := lang('_SHOW_WHATSNEW_');
 end;
 
 procedure TfSettings.tlListFocusedNodeChanged(Sender: TcxCustomTreeList;
@@ -279,15 +360,16 @@ begin
   vgSettings.Tag := n;
   if n = 0 then
   begin
-    c := dm.CreateCategory(vgSettings,'vgimain',_MAINCONFIG_);
+    c := dm.CreateCategory(vgSettings,'vgimain',lang('_MAINCONFIG_'));
     //dm.CreateField(vgSettings,'vgitag',_TAGSTRING_,'',ftString,c,FullResList[n].Fields['tag']);
-    dm.CreateField(vgSettings,'vgidwpath',_SAVEPATH_,'',ftString,c,FullResList[n].NameFormat);
+    dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftString,c,FullResList[n].NameFormat);
+    dm.CreateField(vgSettings,'vgisdalf',lang('_SDALF_'),'',ftCheck,c,GlobalSettings.Downl.SDALF);
   end
   else
   with FullResList[n] do begin
-    c := dm.CreateCategory(vgSettings,'vgimain',_MAINCONFIG_ + ' ' +
+    c := dm.CreateCategory(vgSettings,'vgimain',lang('_MAINCONFIG_') + ' ' +
       FullResList[n].Name);
-    dm.CreateField(vgSettings,'vgiinherit',_INHERIT_,'',ftCheck,c,Inherit);
+    dm.CreateField(vgSettings,'vgiinherit',lang('_INHERIT_'),'',ftCheck,c,Inherit);
 
     {s := VarToStr(Fields['tag']);
     if (s = '') and Inherit then
@@ -295,15 +377,18 @@ begin
     dm.CreateField(vgSettings,'vgitag',_TAGSTRING_,'',ftString,c,s);  }
 
     s := NameFormat;
-    if (s = '') and Inherit then
+    if (s = '') or Inherit then
       s := FullResList[0].NameFormat;
-    dm.CreateField(vgSettings,'vgidwpath',_SAVEPATH_,'',ftString,c,s);
+    dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftString,c,s);
 
-    c := dm.CreateCategory(vgSettings,'vgiauth',_AUTHORISATION_,true);
-    dm.CreateField(vgSettings,'vgilogin',_LOGIN_,'',ftString,c,
+{    c := dm.CreateCategory(vgSettings,'vgiauth',lang('_AUTHORISATION_'),true);
+    dm.CreateField(vgSettings,'vgilogin',lang('_LOGIN_'),'',ftString,c,
       FullResLIst[n].Fields['login']);
-    dm.CreateField(vgSettings,'vgipassword',_PASSWORD_,'',ftPassword,c,
-      FullResLIst[n].Fields['password']);
+    dm.CreateField(vgSettings,'vgipassword',lang('_PASSWORD_'),'',ftPassword,c,
+      FullResLIst[n].Fields['password']);   }
+
+    dm.CreateField(vgSettings,'vgiauth',lang('_AUTHORISATION_'),'',ftString,c,'')
+      .Properties.RepositoryItem := eAuthButton;
 
     d := FullResList[0].Fields.Count;
 
@@ -316,7 +401,7 @@ begin
           if Items[i].restype <> ftNone then
           begin
             if not Assigned(c) then
-              c := dm.CreateCategory(vgSettings,'vgieditional',_EDITIONALCONFIG_);
+              c := dm.CreateCategory(vgSettings,'vgieditional',lang('_EDITIONALCONFIG_'));
             with FullResList[n].Fields.Items[i]^ do
               dm.CreateField(vgSettings,'evgi' + resname,resname,resitems,restype,c,resvalue);
 
@@ -340,16 +425,19 @@ begin
     NameFormat := (vgSettings.RowByName('vgidwpath') as TcxEditorRow)
       .Properties.Value;
 
-    if vgSettings.Tag > 0 then
+    if vgSettings.Tag = 0 then
+      GlobalSettings.Downl.SDALF := (vgSettings.RowByName('vgisdalf') as TcxEditorRow)
+        .Properties.Value
+    else if vgSettings.Tag > 0 then
     begin
       Inherit := (vgSettings.RowByName('vgiinherit') as TcxEditorRow)
         .Properties.Value;
 
-      Fields['login'] := (vgSettings.RowByName('vgilogin') as TcxEditorRow)
+{      Fields['login'] := (vgSettings.RowByName('vgilogin') as TcxEditorRow)
         .Properties.Value;
 
       Fields['password'] := (vgSettings.RowByName('vgipassword') as TcxEditorRow)
-        .Properties.Value;
+        .Properties.Value;   }
 
       d := FullResList[0].Fields.Count;
 
@@ -364,6 +452,64 @@ begin
           end;
     end;
   end;
+end;
+
+procedure TfSettings.LoginCallBack(Sender: TObject; N: integer; Login,Password: String;
+    const Cancel: boolean);
+begin
+  if Cancel then
+  begin
+    FLoggedOn := false;
+    if not FullResList.ListFinished then
+      FullResList.StartJob(JOB_STOPLIST)
+    else
+      fLogin.bOk.Enabled := true
+  end else
+  begin
+    if ResetRelogin(N) then
+    begin
+      FLoggedOn := true;
+      FullResList[n].Fields['login'] := Login;
+      FullResList[n].Fields['password'] := Password;
+      FullResLIst.StartJob(JOB_LOGIN);
+    end else
+      fLogin.Close;
+  end;
+end;
+
+function TfSettings.ResetRelogin(idx: integer): boolean;
+var
+  i: integer;
+  n: TResource;
+begin
+  Result := false;
+  for i := 0 to FullResList.Count -1 do
+    FullResList[i].Relogin := false;
+
+  n := FullResList[idx{tvRes.DataController.Values[idx, 0]}];
+  if(n.HTTPRec.CookieStr<>'')and(n.LoginPrompt or (nullstr(n.Fields['login'])<>''))then
+  begin
+    n.Relogin := true;
+    Result := true;
+  end;
+end;
+
+procedure TfSettings.OnErrorEvent(Sender: TObject; Msg: String);
+begin
+  if FLoggedOn then
+    FLoggedOn := false;
+  if Assigned(FOnError) then
+    FOnError(Sender,Msg);
+end;
+
+procedure TfSettings.JobStatus(Sander: TObject; Action: integer);
+begin
+  if Action = JOB_STOPLIST then
+    if Assigned(fLogin) then
+      if FLoggedOn then
+        fLogin.Close
+      else
+        fLogin.bOk.Enabled := true;
 end;
 
 end.

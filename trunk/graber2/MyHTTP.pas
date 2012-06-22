@@ -30,6 +30,8 @@ type
   end;
 
   function CreateHTTP{(AOwner: TComponent)}: TMyIdHTTP;
+  function RemoveURLDomain(url: string) : string;
+  function GetUrlVarValue(URL,Variable: String): String;
 
 implementation
 
@@ -46,6 +48,24 @@ end;
 
 var
   cs: TCriticalSection;
+
+function GetUrlVarValue(URL,Variable: String): String;
+var
+  s: string;
+begin
+  URL := CopyFromTo(URL,'?','');
+  while url <> '' do
+  begin
+    s := GetNextS(URL,'&');
+    Result := GetNextS(S,'=');
+    if SameText(Result,Variable) then
+    begin
+      Result := S;
+      Exit;
+    end;
+  end;
+  Result := '';
+end;
 
 function GetCookieName(Cookie: string): string;
   var i: integer;
@@ -73,11 +93,29 @@ begin
     Result:=Copy(Result,2,Length(Result)-1);
 end;
 
-function GetURLDomain(url: string): string;
-  var i,j,l: integer;
+function RemoveURLDomain(url: string) : string;
+var
+  n: integer;
 begin
-  Result:=SysUtils.StringReplace(LowerCase(url),'http://','',[]);
-//  Result:=SysUtils.StringReplace(Result,'www.','.',[]);
+  Result := url;
+  n := pos('://',Result);
+  if n > 0 then
+  begin
+    Delete(Result,1,n+2);
+    n := pos('/',Result);
+    Delete(Result,1,n);
+  end;
+
+end;
+
+function GetURLDomain(url: string): string;
+//  var i,j,l: integer;
+begin
+  Result:=DeleteTo(url,'://');
+  Result := CopyFromTo(Result,'www.','/');
+  //  Result:=SysUtils.StringReplace(Result,'www.','.',[]);
+  {if StrLIComp(PWideChar(url),PWideChar('www.'),4) = 0 then
+  CompareText(
   if Pos('www.',Result) = 1 then
     i:=CharPos(Result,'.',[],4)
   else
@@ -103,7 +141,7 @@ begin
         Exit;
       end;
     end;
-  end;
+  end; }
 end;
 
 function GetCookieValue(Cookie: String): string;

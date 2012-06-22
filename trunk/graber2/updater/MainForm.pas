@@ -115,6 +115,7 @@ begin
   UPDServ := INI.ReadString('settings','updserver',
     'http://nekopaw.googlecode.com/svn/trunk/release/graber2/');
   INI.WriteInteger('settings','delupd',1);
+  INI.WriteBool('settings','IsNew',true);
   INI.Free;
 end;
 

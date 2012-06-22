@@ -116,9 +116,6 @@ type
     chlbTags: TcxCheckListBox;
     vINFO: TrpVersionInfo;
     lUPD: TcxLabel;
-    testo: TdxBarButton;
-    BalloonHint: TBalloonHint;
-    aftertimer: TTimer;
     nvTags: TdxNavBar;
     nbgTagsMain: TdxNavBarGroup;
     nbgTagsTags: TdxNavBarGroup;
@@ -155,6 +152,7 @@ type
     procedure ENDJOB(var Msg: TMessage); message CM_ENDJOB;
     procedure UPDATECHECK(var Msg: TMessage); message CM_UPDATE;
     procedure LANGUAGECHANGED(var Msg: TMessage); message CM_LANGUAGECHANGED;
+    procedure WHATSNEW(var Msg: TMessage); message CM_WHATSNEW;
     procedure dxTabClose(Sender: TdxCustomDockControl);
     // procedure APPLYEDITLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
   private
@@ -178,7 +176,6 @@ type
     procedure Setlang;
     procedure PicInfo(Sender: TObject; a: TTPicture);
     procedure CheckUpdates;
-    procedure ShowUPDHint(title, description: string);
     procedure StartUpdate;
     procedure ChangeResInfo;
     procedure RefreshResInfo(Sender: TObject);
@@ -193,7 +190,7 @@ var
 implementation
 
 uses StartFrame, NewListFrame, LangString, SettingsFrame, GridFrame, utils,
-  AboutForm, WaitForm;
+  AboutForm, WaitForm, Whatsnewform;
 {$R *.dfm}
 
 procedure TMycxTabSheet.OnTimer(Sender: TObject);
@@ -335,7 +332,7 @@ var
 begin
   if Assigned(FullResList.OnJobChanged) then
   begin
-    MessageDlg(_BUSY_MAIN_LIST_,mtInformation,[mbOk],0);
+    MessageDlg(lang('_BUSY_MAIN_LIST_'),mtInformation,[mbOk],0);
     Exit;
   end;
 
@@ -382,8 +379,10 @@ begin
     if (TMycxtabSheet(pcTables.ActivePage).SecondFrame is TfNewList) then
     begin
       pcTables.Options := pcTables.Options + [pcoCloseButton];
-      bbStartList.Caption := _STARTLIST_ ;
-      bbStartPics.Caption := _STARTPICS_;
+      bbStartList.Caption := lang('_STARTLIST_');
+      bbStartList.ImageIndex := 3;
+      bbStartPics.Caption := lang('_STARTPICS_');
+      bbStartPics.ImageIndex := 5;
       bbStartList.Enabled := false;
       bbStartPics.Enabled := false;
       dsTags.Hide;
@@ -394,11 +393,13 @@ begin
       //dsTags.Show;
       if ResList.ListFinished then
       begin
-        bbStartList.Caption := _STARTLIST_ ;
+        bbStartList.Caption := lang('_STARTLIST_');
+        bbStartList.ImageIndex := 3;
         bbStartPics.Enabled := true;
       end else
       begin
-        bbStartList.Caption := _STOPLIST_;
+        bbStartList.Caption := lang('_STOPLIST_');
+        bbStartList.ImageIndex := 4;
         bbStartPics.Enabled := false;
       end;
       bbStartList.Enabled := true;
@@ -406,11 +407,13 @@ begin
 
       if ResList.PicsFinished then
       begin
-        bbStartPics.Caption := _STARTPICS_ ;
+        bbStartPics.Caption := lang('_STARTPICS_');
+        bbStartPics.ImageIndex := 5;
         bbStartList.Enabled := true;
       end else
       begin
-        bbStartPics.Caption := _STOPPICS_;
+        bbStartPics.Caption := lang('_STOPPICS_');
+        bbStartPics.ImageIndex := 6;
         bbStartList.Enabled := false;
       end;
       //bbStartList.Enabled := true;
@@ -432,8 +435,8 @@ begin
     end else
     begin
       //dsTags.Hide;
-      bbStartList.Caption := _STARTLIST_ ;
-      bbStartPics.Caption := _STARTPICS_;
+      bbStartList.Caption := lang('_STARTLIST_');
+      bbStartPics.Caption := lang('_STARTPICS_');
       bbStartList.Enabled := false;
       bbStartPics.Enabled := false;
       pcTables.Options := pcTables.Options - [pcoCloseButton];
@@ -461,6 +464,18 @@ procedure Tmf.PicInfo(Sender: TObject; a: TTPicture);
 var
   i: integer;
   //r: TcxEditorRow;
+
+function VrType(a: variant): TFieldType;
+begin
+  case VarType(a) of
+    varInteger,varInt64: Result := ftNumber;
+    varBoolean: Result := ftCheck;
+    varUString,varDate: Result := ftString;
+    varDouble: Result := ftFloatNumber;
+    else Result := ftString;
+  end;
+end;
+
 begin
   if Sender = nil then
     CurPic := nil
@@ -480,16 +495,16 @@ begin
   vgCurMain.BeginUpdate;
   try
     vgCurMain.ClearRows;
-    dm.CreateField(vgCurMain,'vgiRName',_RESNAME_,'',ftReadOnly,nil,
-      a.Resource.Name);
-    dm.CreateField(vgCurMain,'vgiName',_FILENAME_,'',ftReadOnly,nil,
-      a.PicName + '.' + a.Ext);
-    dm.CreateField(vgCurMain,'vgiSavePath',_SAVEPATH_,'',ftReadOnly,nil,
-      a.FileName);
+    dm.CreateField(vgCurMain,'vgiRName',lang('_RESNAME_'),'',ftString,nil,
+      a.Resource.Name,true);
+    dm.CreateField(vgCurMain,'vgiName',lang('_FILENAME_'),'',ftString,nil,
+      a.PicName + '.' + a.Ext,true);
+    dm.CreateField(vgCurMain,'vgiSavePath',lang('_SAVEPATH_'),'',ftString,nil,
+      a.FileName,true);
     for i := 0 to a.Meta.Count -1 do
       with a.Meta.Items[i] do
         dm.CreateField(vgCurMain,'avgi' + Name,Name,
-          '',ftReadOnly,nil,VarToStr(Value));
+          '',VrType(Value),nil,VarToStr(Value),true);
   finally
     vgCurMain.EndUpdate;
   end;
@@ -509,6 +524,7 @@ end;
 procedure Tmf.RefreshResInfo(Sender: TObject);
 var
   i: integer;
+  c: TcxEditorRow;
 begin
   vgTagsMain.BeginUpdate;
   try
@@ -522,11 +538,13 @@ begin
         i := ResList.IndexOf(Sender);
         if i = -1 then
           Exit;
-        (vgTagsMain.RowByName('vgT' + IntToStr(i)) as  TcxEditorRow)
-        .Properties.Value :=
+        c := (vgTagsMain.RowByName('vgT' + IntToStr(i)) as  TcxEditorRow);
+        c.Properties.Value :=
           ifn(ResList.ListFinished,
           ifn(ResList.PicsFinished,'',   //if pics
-          IntToStr(ResList[i].PictureList.PicCounter.FSH + ResList[i].PictureList.PicCounter.SKP)
+          IntToStr(ResList[i].PictureList.PicCounter.FSH
+                   +ResList[i].PictureList.PicCounter.SKP
+                   +ResList[i].PictureList.PicCounter.UNCH)
           + '/' + IntToStr(ResList[i].PictureList.Count)
           + ifn(ResList[i].PictureList.PicCounter.ERR > 0,
           ' err ' + IntToStr(ResList[i].PictureList.PicCounter.ERR),'')),
@@ -536,6 +554,16 @@ begin
           + ' (' + IntToStr(ResList[i].HTTPRec.Theor) + ')'
           + ifn(ResList[i].JobList.ErrorCount > 0,
           ' err ' + IntToStr(ResList[i].JobList.ErrorCount),''));
+          c.Visible :=
+            ifn(ResList.ListFinished,
+            ifn(ResList.PicsFinished,false,
+              not(ResList[i].PictureList.PicCounter.FSH
+                  +ResList[i].PictureList.PicCounter.SKP
+                  +ResList[i].PictureList.PicCounter.UNCH
+                  =ResList[i].PictureList.Count)),
+               not(ResList[i].JobList.OkCount
+                   = ResList[i].JobList.Count));
+
       end;
   finally
     vgTagsMain.EndUpdate;
@@ -598,7 +626,6 @@ var
   f: TfSettings;
 begin
   f := SttPanel.MainFrame as tfSettings;
-
   SaveProfileSettings;
   f.OnClose;
   CloseTab(SttPanel as TcxTabSheet);
@@ -681,6 +708,7 @@ end;
 procedure Tmf.ChangeResInfo;
 var
   i: integer;
+  c: TcxEditorRow;
 begin
   vgTagsMain.BeginUpdate;
   try
@@ -690,21 +718,33 @@ begin
     with ((pcTables.ActivePage as TMycxTabSheet).MainFrame as tfGrid) do
       for i := 0 to ResList.Count -1 do
       begin
-        if ResList[i].JobList.ErrorCount = 0 then
-          dm.CreateField(vgTagsMain,'vgT' + IntToStr(i),ResList[i].Name,
-          '',ftReadOnly,nil,
-            ifn(ResList.ListFinished,
-            ifn(ResList.PicsFinished,'',   //if pics
-            IntToStr(ResList[i].PictureList.PicCounter.FSH + ResList[i].PictureList.PicCounter.SKP)
-            + '/' + IntToStr(ResList[i].PictureList.Count)
-            + ifn(ResList[i].PictureList.PicCounter.ERR > 0,
-            ' err ' + IntToStr(ResList[i].PictureList.PicCounter.ERR),'')),
+        c := dm.CreateField(vgTagsMain,'vgT' + IntToStr(i),ResList[i].Name,
+        '',ftString,nil,
+          ifn(ResList.ListFinished,
+          ifn(ResList.PicsFinished,'',   //if pics
+          IntToStr(ResList[i].PictureList.PicCounter.FSH
+                   +ResList[i].PictureList.PicCounter.SKP
+                   +ResList[i].PictureList.PicCounter.UNCH)
+          + '/' + IntToStr(ResList[i].PictureList.Count)
+          + ifn(ResList[i].PictureList.PicCounter.ERR > 0,
+          ' err ' + IntToStr(ResList[i].PictureList.PicCounter.ERR),'')),
 
-            IntToStr(ResList[i].JobList.OkCount) + '/'    //if pages
-            + IntToStr(ResList[i].JobList.Count)
-            + ' (' + IntToStr(ResList[i].HTTPRec.Theor) + ')'
-            + ifn(ResList[i].JobList.ErrorCount > 0,
-            ' err ' + IntToStr(ResList[i].JobList.ErrorCount),'')));
+          IntToStr(ResList[i].JobList.OkCount) + '/'    //if pages
+          + IntToStr(ResList[i].JobList.Count)
+          + ' (' + IntToStr(ResList[i].HTTPRec.Theor) + ')'
+          + ifn(ResList[i].JobList.ErrorCount > 0,
+          ' err ' + IntToStr(ResList[i].JobList.ErrorCount),''))
+          ,true);
+
+          c.Visible :=
+            ifn(ResList.ListFinished,
+            ifn(ResList.PicsFinished,true,
+              not(ResList.PictureList.PicCounter.FSH
+                  +ResList[i].PictureList.PicCounter.SKP
+                  +ResList[i].PictureList.PicCounter.UNCH
+                  =ResList[i].PictureList.Count)),
+               not(ResList[i].JobList.OkCount
+                   = ResList[i].JobList.Count));
       end;
   finally
     vgTagsMain.EndUpdate;
@@ -738,11 +778,10 @@ procedure Tmf.UPDATECHECK(var Msg: TMessage);
 begin
   lupd.Hide;
   case MSG.WParam of
-//    0: ShowUPDHint(_UPDATING_,_UPDATEERROR_);
-    1: {ShowUPDHint(_UPDATING_,_NEWUPDATES_);}
-      if MessageDLG(_NEWUPDATES_,mtConfirmation,[mbYes,mbNo],0) = mrYes then
+    0: CheckUpdates;
+    1:
+      if MessageDLG(lang('_NEWUPDATES_'),mtConfirmation,[mbYes,mbNo],0) = mrYes then
         StartUpdate;
-//    2: ShowUPDHint(_UPDATING_,_NOUPDATES_);
   end;
   ;
 end;
@@ -760,10 +799,11 @@ procedure Tmf.LANGUAGECHANGED(var Msg: TMessage);
 var
   i: integer;
 begin
-  LoadLang(IncludeTrailingPathDelimiter(ExtractFilePath(paramstr(0))
+  //LoadLang(IncludeTrailingPathDelimiter(ExtractFilePath(paramstr(0))
+  //+ 'languages') + langname+'.ini');
+  CreateLangINI(IncludeTrailingPathDelimiter(ExtractFilePath(paramstr(0))
   + 'languages') + langname+'.ini');
 
-  SetLang;
   for i := 0 to pcTables.PageCount-1 do
     if pcTables.Pages[i] is tMycxTabSheet then
       with (pcTables.Pages[i] as tMycxTabSheet) do
@@ -781,6 +821,11 @@ begin
       end;
 
 
+end;
+
+procedure Tmf.WHATSNEW(var Msg: TMessage);
+begin
+  fWhatsNew.Execute;
 end;
 
 procedure Tmf.StartUpdate;
@@ -824,7 +869,7 @@ begin
       if not ResList.ListFinished
       or not ResList.PicsFinished then
       begin
-        MessageDlg(_TAB_IS_BUSY_,mtError,[mbOk],0);
+        MessageDlg(lang('_TAB_IS_BUSY_'),mtError,[mbOk],0);
         Exit;
       end else
         Relise;
@@ -861,7 +906,7 @@ begin
 
   n := TMycxTabSheet.Create(Self);
   //n.ImageIndex := 0;
-  n.Caption := _NEWTABCAPTION_ + IntToStr(TabList.Count + 1);
+  n.Caption := lang('_NEWTABCAPTION_') + IntToStr(TabList.Count + 1);
   // n.OnClose := dxTabClose;
   // n.Dockable := false;
   // n.ShowCaption := false;
@@ -889,18 +934,18 @@ end;
 procedure Tmf.Setlang;
 begin
   Caption := FoldCaption + ' ' + VINFO.FileVersion + 'α';
-  bbNew.Caption := _NEWLIST_;
-  bbStartList.Caption := _STARTLIST_;
-  bbStartPics.Caption := _STARTPICS_;
-  bbSettings.Caption := _SETTINGS_;
-  dpLog.Caption := _LOG_;
-  dpErrors.Caption := _ERRORS_;
-  dpTags.Caption := _COMMON_;
-  dpCurTags.Caption := _INFO_;
-  nbgCurMain.Caption := _GENERAL_;
-  nbgTagsMain.Caption := _GENERAL_;
-  nbgCurTags.Caption := _TAGS_;
-  nbgTagsTags.Caption := _TAGS_;
+  bbNew.Caption := lang('_NEWLIST_');
+  bbStartList.Caption := lang('_STARTLIST_');
+  bbStartPics.Caption := lang('_STARTPICS_');
+  bbSettings.Caption := lang('_SETTINGS_');
+  dpLog.Caption := lang('_LOG_');
+  dpErrors.Caption := lang('_ERRORS_');
+  dpTags.Caption := lang('_COMMON_');
+  dpCurTags.Caption := lang('_INFO_');
+  nbgCurMain.Caption := lang('_GENERAL_');
+  nbgTagsMain.Caption := lang('_GENERAL_');
+  nbgCurTags.Caption := lang('_TAGS_');
+  nbgTagsTags.Caption := lang('_TAGS_');
 end;
 
 procedure Tmf.ShowDs;
@@ -911,15 +956,6 @@ begin
     // bmbMain.Visible := true;
     ds.Show;
   end;
-end;
-
-procedure Tmf.ShowUPDHint(title, description: string);
-begin
-//  lupd.Hint := 'Derp';
-
-  balloonhint.Description := description;
-  balloonhint.Title := title;
-  balloonhint.ShowHint(ClientToScreen(Point(mf.ClientWidth - 5,5)));
 end;
 
 procedure Tmf.ShowPanels;
@@ -954,9 +990,11 @@ begin
 
   SttPanel := CreateTab(pcTables, false);
   SttPanel.ImageIndex := 1;
-  SttPanel.Caption := _SETTINGS_;
+  SttPanel.Caption := lang('_SETTINGS_');
 
   f := TfSettings.Create(SttPanel);
+  FullResList.OnError := f.OnErrorEvent;
+  FulLResList.OnJobChanged := f.JobStatus;
   f.SetLang;
   f.CreateResources;
   f.LoadSettings;
@@ -1015,7 +1053,11 @@ begin
   dsLogs.Hide;
   dsTags.Hide;
   CurPic := nil;
-  CheckUpdates;
+  if GlobalSettings.AutoUPD then
+    PostMessage(Handle,CM_UPDATE,0,0);
+  if GlobalSettings.ShowWhatsNew and GlobalSettings.IsNew then
+    PostMessage(Handle,CM_WHATSNEW,0,0);
+  //CheckUpdates;
 end;
 
 procedure Tmf.FormDestroy(Sender: TObject);

@@ -56,7 +56,6 @@ object mf: Tmf
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 3
-    ExplicitWidth = 249
   end
   object XPManifest1: TXPManifest
     Left = 136

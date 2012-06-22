@@ -10,7 +10,7 @@ uses
   cxGridTableView, cxGridDBTableView, cxGrid, graberU, dxmdaset,
   cxEditRepositoryItems, common, ComCtrls, cxContainer, cxLabel, dxStatusBar,
   dxBar, cxGridCustomPopupMenu, cxGridPopupMenu, cxExtEditRepositoryItems,
-  Delphi.Extensions.VirtualDataset;
+  Delphi.Extensions.VirtualDataset, cxCheckBox, cxBarEditItem, cxCurrencyEdit;
 
 type
 
@@ -33,6 +33,29 @@ type
     iCheckBox: TcxEditRepositoryCheckBoxItem;
     iPBar: TcxEditRepositoryProgressBar;
     vGrid: TcxGridTableView;
+    dxBarButton1: TdxBarButton;
+    bbSelect: TdxBarButton;
+    bbUnselect: TdxBarButton;
+    siCheck: TdxBarSubItem;
+    siUncheck: TdxBarSubItem;
+    dxBarSubItem3: TdxBarSubItem;
+    dxBarSubItem4: TdxBarSubItem;
+    bbCheckAll: TdxBarButton;
+    bbCheckSelected: TdxBarButton;
+    bbCheckFiltered: TdxBarButton;
+    dxBarButton2: TdxBarButton;
+    bbInverseChecked: TdxBarButton;
+    bbUncheckAll: TdxBarButton;
+    bbUncheckSelected: TdxBarButton;
+    bbUncheckFiltered: TdxBarButton;
+    dxBarListItem1: TdxBarListItem;
+    cxBarEditItem1: TcxBarEditItem;
+    cxBarEditItem2: TcxBarEditItem;
+    bbAdditional: TdxBarSubItem;
+    cxBarEditItem3: TcxBarEditItem;
+    bbDALF: TdxBarButton;
+    vGridColumn1: TcxGridColumn;
+    iFloatEdit: TcxEditRepositoryCurrencyItem;
     procedure bbColumnsClick(Sender: TObject);
     procedure bbFilterClick(Sender: TObject);
     procedure vGrid1FocusedRecordChanged(Sender: TcxCustomGridTableView;
@@ -45,6 +68,14 @@ type
     procedure vdBeforeOpen(DataSet: TDataSet);
     procedure vGridEditValueChanged(Sender: TcxCustomGridTableView;
       AItem: TcxCustomGridTableItem);
+    procedure bbCheckAllClick(Sender: TObject);
+    procedure bbUncheckAllClick(Sender: TObject);
+    procedure bbCheckSelectedClick(Sender: TObject);
+    procedure bbUncheckSelectedClick(Sender: TObject);
+    procedure bbCheckFilteredClick(Sender: TObject);
+    procedure bbUncheckFilteredClick(Sender: TObject);
+    procedure bbInverseCheckedClick(Sender: TObject);
+    procedure bbDALFClick(Sender: TObject);
   private
     //FList: TList;
 //    FFieldList: TStringList;
@@ -81,6 +112,10 @@ type
     procedure ForceStop(Sender: TObject);
     procedure ForcePicsStop(Sender: TObject);
     procedure SetSettings;
+    procedure SelectAll(b: boolean);
+    procedure SelectSelected(b: boolean);
+    procedure SelectFiltered(b: boolean);
+    procedure InverseSelection;
     property OnPicChanged: TPictureNotifyEvent read FPicChanged write FPicChanged;
     { Public declarations }
   end;
@@ -95,36 +130,9 @@ uses LangString, utils, OpBase;
 
 function TfGrid.AddField(s: string; base: boolean = false): TcxGridColumn;
 var
-  //f: TField;
   n: string;
 
 begin
-{  ;
-
-  if s <> '' then
-    case s[1] of
-      'i' : f := TIntegerField.Create(vd);
-      'l' : f := TLargeIntField.Create(vd);
-      'd' : f := TDateTimeField.Create(vd);
-      'b' : f := TBooleanField.Create(vd);
-      'f','p' : f := TFloatField.Create(vd);
-    else
-    begin
-      f := TStringField.Create(vd);
-      f.Size := 256;
-    end end
-  else
-  begin
-    f := TStringField.Create(vd);
-    f.Size := 256;
-  end;
-  //f := TStringField.Create(md);
-//  f.FieldNo := vd.FieldCount;
-  f.FieldName := chu + n;
-  f.DisplayLabel := n;
-
-  f.FieldKind := fkData;
-  f.DataSet := vd;       }
   n := GetNextS(s,':');
 
   result := vGrid.CreateColumn;
@@ -149,6 +157,8 @@ begin
       result.RepositoryItem := iPicChecker
     else
       result.RepositoryItem := iCheckBox
+  else if SameText(s,'f') then
+    result.RepositoryItem := iFloatEdit
   else if SameText(s,'p') then
     result.RepositoryItem := iPBar
   else
@@ -156,9 +166,29 @@ begin
   //result.DataBinding.ValueType := 'String';
 end;
 
+procedure TfGrid.bbCheckAllClick(Sender: TObject);
+begin
+  SelectAll(true);
+end;
+
+procedure TfGrid.bbCheckFilteredClick(Sender: TObject);
+begin
+  SelectFiltered(true);
+end;
+
+procedure TfGrid.bbCheckSelectedClick(Sender: TObject);
+begin
+  SelectSelected(true);
+end;
+
 procedure TfGrid.bbColumnsClick(Sender: TObject);
 begin
   TcxGridPopupMenuAccess(GridPopup).GridOperationHelper.DoShowColumnCustomizing(True);
+end;
+
+procedure TfGrid.bbDALFClick(Sender: TObject);
+begin
+  GlobalSettings.Downl.SDALF := bbDALF.Down;
 end;
 
 procedure TfGrid.bbFilterClick(Sender: TObject);
@@ -167,6 +197,26 @@ begin
     vGrid.FilterBox.Visible := fvAlways
   else
     vGrid.FilterBox.Visible := fvNonEmpty;
+end;
+
+procedure TfGrid.bbInverseCheckedClick(Sender: TObject);
+begin
+  InverseSelection;
+end;
+
+procedure TfGrid.bbUncheckAllClick(Sender: TObject);
+begin
+  SelectAll(false);
+end;
+
+procedure TfGrid.bbUncheckFilteredClick(Sender: TObject);
+begin
+  SelectFiltered(false);
+end;
+
+procedure TfGrid.bbUncheckSelectedClick(Sender: TObject);
+begin
+  SelectSelected(false);
 end;
 
 procedure TfGrid.CreateList;
@@ -193,6 +243,25 @@ end;
 procedure TfGrid.ForceStop(Sender: TObject);
 begin
 
+end;
+
+procedure TfGrid.InverseSelection;
+var
+  i: integer;
+  b: boolean;
+begin
+  vGrid.BeginUpdate;
+  try
+    for i := 0 to vGrid.DataController.RecordCount-1 do
+    begin
+      b := not vGrid.DataController.Values[i,FCheckColumn.Index];
+      vGrid.DataController.Values[i,FCheckColumn.Index] := b;
+      ResList.PictureList[i].Checked := b;
+    end;
+    vGrid.DataController.Post(true);
+  finally
+    vGrid.EndUpdate;
+  end;
 end;
 
 procedure TfGrid.OnBeginPicList(Sender: TObject);
@@ -351,8 +420,10 @@ begin
               FormatFloat('00.00%',Pic.Pos/Pic.Size * 100);
           JOB_FINISHED:
             if Pic.Size = 0 then
-              Values[n,FProgressColumn.Index] := 'SKIP'
-            else
+            begin
+              Values[n,FProgressColumn.Index] := 'SKIP';
+              Application.ProcessMessages;
+            end else
               Values[n,FProgressColumn.Index] := 'OK';
           JOB_ERROR: Values[n,FProgressColumn.Index] := 'ERROR';
           JOB_CANCELED: Values[n,FProgressColumn.Index] := 'ABORT';
@@ -391,7 +462,7 @@ begin
   PostMessage(Application.MainForm.Handle,CM_STARTJOB,Integer(Self.Parent),0);
   case Action of
     JOB_LIST:
-      sBar.Panels[0].Text := _ON_AIR_;
+      sBar.Panels[0].Text := lang('_ON_AIR_');
     JOB_PICS:
     begin
 //      vGrid.BeginUpdate;
@@ -402,10 +473,15 @@ begin
       FPosColumn.Visible := true;
       FProgressColumn.Visible := true;
 //      vGrid.EndUpdate;
-      sBar.Panels[0].Text := _ON_AIR_;
+      sBar.Panels[0].Text := lang('_ON_AIR_');
     end;
     JOB_STOPLIST:
       if ResList.PicsFinished then
+        if not ResList.Canceled
+        and GlobalSettings.Downl.SDALF then
+          ResList.StartJob(JOB_PICS)
+        else
+      else
         sBar.Panels[0].Text := '';
     JOB_STOPPICS:
     begin
@@ -497,14 +573,14 @@ begin
   c.DataBinding.FieldName := 'RecId';
   c.DataBinding.Field.DisplayLabel := _RESID_;   }
 
-  FResColumn := AddField(_RESNAME_);
+  FResColumn := AddField(lang('_RESNAME_'));
   //c.Caption := ;
 //  FResColumn.GroupBy(0);
 
-  FLabelColumn := AddField( _PICTURELABEL_);
+  FLabelColumn := AddField(lang('_PICTURELABEL_'));
   //FLabelColumn.Caption :=;
 
-  FPosColumn := AddField(_DOWNLOADED_);
+  FPosColumn := AddField(lang('_DOWNLOADED_'));
   with FPosColumn.Options do
   begin
     HorzSizing := false;
@@ -516,7 +592,7 @@ begin
   FPosColumn.Visible := false;
   FPosColumn.VisibleForCustomization := false;
 
-  FSizeColumn := AddField(_SIZE_);
+  FSizeColumn := AddField(lang('_SIZE_'));
   with FSizeColumn.Options do
   begin
     HorzSizing := false;
@@ -528,11 +604,11 @@ begin
   FSizeColumn.Visible := false;
   FSizeColumn.VisibleForCustomization := false;
 
-  FProgressColumn := AddField(_PROGRESS_);
+  FProgressColumn := AddField(lang('_PROGRESS_'));
   with FProgressColumn.Options do
   begin
     HorzSizing := false;
-    Filtering := false;
+    //Filtering := false;
     Grouping := false;
     Moving := false;
     Sorting := false;
@@ -574,6 +650,62 @@ begin
   Grid.EndUpdate;
 end;
 
+procedure TfGrid.SelectAll(b: boolean);
+var
+  i: integer;
+begin
+  vGrid.BeginUpdate;
+  try
+    for i := 0 to vGrid.DataController.RecordCount-1 do
+    begin
+      vGrid.DataController.Values[i,FCheckColumn.Index] := b;
+      ResList.PictureList[i].Checked := b;
+    end;
+    vGrid.DataController.Post(true);
+  finally
+    vGrid.EndUpdate;
+  end;
+end;
+
+procedure TfGrid.SelectFiltered(b: boolean);
+var
+  i: integer;
+begin
+  vGrid.BeginUpdate;
+  try
+    for i := 0 to vGrid.ViewData.RowCount-1 do
+    begin
+      vGrid.DataController.Values
+        [vGrid.ViewData.Rows[i].RecordIndex,FCheckColumn.Index] := b;
+      ResList.PictureList
+        [vGrid.ViewData.Rows[i].RecordIndex].Checked := b;
+    end;
+    vGrid.DataController.Post(true);
+  finally
+    vGrid.EndUpdate;
+  end;
+end;
+
+procedure TfGrid.SelectSelected(b: boolean);
+var
+  i: integer;
+begin
+  vGrid.BeginUpdate;
+  try
+    for i := 0 to vGrid.ViewData.RowCount-1 do
+    if vGrid.ViewData.Rows[i].Selected then
+    begin
+      vGrid.DataController.Values
+        [vGrid.ViewData.Rows[i].RecordIndex,FCheckColumn.Index] := b;
+      ResList.PictureList
+        [vGrid.ViewData.Rows[i].RecordIndex].Checked := b;
+    end;
+    vGrid.DataController.Post(true);
+  finally
+    vGrid.EndUpdate;
+  end;
+end;
+
 procedure TfGrid.SetColWidths;
 begin
   FSizeColumn.Width := 60;
@@ -583,9 +715,32 @@ end;
 
 procedure TfGrid.SetLang;
 begin
-  bbColumns.Caption := _COLUMNS_;
-  bbFilter.Caption := _FILTER_;
-  //bbDoubles.Caption := _DOUBLES_;
+  bbColumns.Caption := lang('_COLUMNS_');
+  bbColumns.Hint := bbColumns.Caption;
+  bbFilter.Caption := lang('_FILTER_');
+  bbFilter.Hint := bbFilter.Caption;
+  siCheck.Caption := lang('_CHECK_');
+  siCheck.Hint := siCheck.Caption;
+  siUncheck.Caption := lang('_UNCHECK_');
+  siUncheck.Hint := siUncheck.Caption;
+  bbCheckAll.Caption := lang('_ALL_');
+  bbCheckAll.Hint := bbCheckAll.Caption;
+  bbUncheckAll.Caption := bbCheckAll.Caption;
+  bbUncheckAll.Hint := bbCheckAll.Caption;
+  bbCheckSelected.Caption := lang('_CH_SELECTED_');
+  bbCheckSelected.Hint := bbCheckSelected.Caption;
+  bbUncheckSelected.Caption := bbCheckSelected.Caption;
+  bbUncheckSelected.Hint := bbCheckSelected.Caption;
+  bbCheckFiltered.Caption := lang('_CH_FILTERED_');
+  bbCheckFiltered.Hint := bbCheckFiltered.Caption;
+  bbUncheckFiltered.Caption := bbCheckFiltered.Caption;
+  bbUncheckFiltered.Hint := bbCheckFiltered.Caption;
+  bbInverseChecked.Caption := lang('_INVERSE_');
+  bbInverseChecked.Hint := bbInverseChecked.Caption;
+  bbAdditional.Caption := lang('_ADDITIONAL_');
+  bbAdditional.Hint := bbAdditional.Caption;
+  bbDALF.Caption := lang('_SDALF_');
+  bbDALF.Hint := bbDALF.Caption;
 end;
 
 procedure TfGrid.SetSettings;
@@ -603,6 +758,8 @@ begin
   ResList.DWNLDHandler.ThreadCount := GlobalSettings.Downl.PicThreads;
   ResList.DWNLDHandler.Retries := GlobalSettings.Downl.Retries;
   ResList.PictureList.IgnoreList := IgnoreList;
+
+  bbDALF.Down := GlobalSettings.Downl.SDALF;
 end;
 
 procedure TfGrid.updatefocusedrecord;

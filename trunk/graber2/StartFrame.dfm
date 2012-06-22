@@ -2,7 +2,7 @@ object fStart: TfStart
   Left = 0
   Top = 0
   Width = 451
-  Height = 304
+  Height = 398
   Align = alClient
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -12,6 +12,7 @@ object fStart: TfStart
   ParentFont = False
   TabOrder = 0
   OnResize = FrameResize
+  ExplicitHeight = 304
   object iIcon: TImage
     Left = 32
     Top = 85
@@ -55,14 +56,5 @@ object fStart: TfStart
     Caption = 'bExit'
     TabOrder = 3
     OnClick = bExitClick
-  end
-  object bAbout: TcxButton
-    Left = 360
-    Top = 360
-    Width = 169
-    Height = 25
-    Caption = 'About'
-    TabOrder = 4
-    OnClick = bAboutClick
   end
 end
