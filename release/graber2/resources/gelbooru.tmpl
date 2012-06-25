@@ -40,7 +40,7 @@ $thread.referer = $picture%post_url;
 
 [firstpagexml]
 ^posts{
-	$thread.count=#count/100+1;
+	$thread.count=@min(1000,#count/100+1);
 	$thread.result=#count;
 	^post{
 		addpicture(
@@ -106,7 +106,7 @@ $thread.referer = $picture%post_url;
 }
 ^div#id='paginator'{
 	^a#alt='last page'{
-		$thread.count=@isempty(@urlvar("pid",#href),0)/$picsperpage + 1;
+		$thread.count=@min(1000,@isempty(@urlvar("pid",#href),0)/$picsperpage + 1);
 		$thread.result=($thread.count)*$picsperpage;
 	}
 }
