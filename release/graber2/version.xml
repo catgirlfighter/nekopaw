@@ -1,8 +1,8 @@
-<item file="Graber2.exe" archive="Graber2.zip" version=16 />
-<item file="versionlog.txt" version=0 />
+<item file="Graber2.exe" archive="Graber2.zip" version=17 />
+<item file="versionlog.txt" version=1 />
 
-<item file="resources\danbooru.tmpl" version=8 />
-<item file="resources\gelbooru.tmpl" version=6 />
+<item file="resources\danbooru.tmpl" version=9 />
+<item file="resources\gelbooru.tmpl" version=7 />
 
 <item file="resources\xbooru.com.cfg" version=1 />
 <item file="resources\wildcritters.ws.cfg" version=1 />
@@ -24,7 +24,7 @@
 <item file="resources\ponibooru.413chan.net.cfg" version=0 />
 <item file="resources\ii.booru.org.cfg" version=0 />
 <item file="resources\zerochan.net.cfg" version=0 />
-<item file="resources\rmart.org.cfg" version=0 />
+<item file="resources\rmart.org.cfg" version=1 />
 
 <item file="resources\icons\wildcritters.ws.bmp" version=0 />
 <item file="resources\icons\tbib.org.bmp" version=0 />
