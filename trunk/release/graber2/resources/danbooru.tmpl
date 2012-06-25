@@ -32,7 +32,7 @@ $thread.referer = $picture%post_url;
 
 [firstpagexml]
 ^posts{
-	$thread.count=#count/100+1;
+	$thread.count=@min(1000,#count/100+1);
 	$thread.result=#count;
 	^post{
 		addpicture(
