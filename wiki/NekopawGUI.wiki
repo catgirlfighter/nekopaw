@@ -153,17 +153,12 @@ md5=md5<br />
 || *ampm* || Как a/p но используя *TimeAMString*,*TimePMString* || || ||
 
 
-В дополнение к этому форматированию, различные из вышеупомянутых вариантов затрагиваются следующими переменными, с их значением по значением по умолчанию (определяется ОС):
+В дополнение к этому форматированию, различные из вышеупомянутых вариантов затрагиваются следующими переменными, с их значением по умолчанию (умолчания определяется ОС):
 
-DateSeparator = /<br />
-TimeSeparator = :<br />
-ShortDateFormat = dd/mm/yyyy<br />
-LongDateFormat = dd mmm yyyy<br />
-TimeAMString = AM<br />
-TimePMString = PM<br />
-LongTimeFormat = hh:mm:ss<br />
-ShortMonthNames = Янв Фев ...<br />
-LongMonthNames = Январь, Февраль ...<br />
-ShortDayNames = Воск, Пон ...<br />
-LongDayNames = Воскресенье, Понедельник ...<br />
-TwoDigitYearCenturyWindow = 50 <br />
+|| *Название* || *Пример* || *Название* || *Пример* ||
+|| *DateSeparator* || . || *TimeSeparator* || : ||
+|| *ShortDateFormat* || dd/mm/yyyy || *LongDateFormat* || dd mmm yyyy ||
+|| *TimeAMString* || AM || *TimePMString* || PM ||
+|| *ShortTimeFormat* || hh:nn || *LongTimeFormat* || hh:nn:ss ||
+|| *ShortMonthNames* || Янв Фев ... || *LongMonthNames* || Январь, Февраль ... ||
+|| *ShortDayNames* || Воск, Пон ... || *LongDayNames* || Воскресенье, Понедельник ... ||
