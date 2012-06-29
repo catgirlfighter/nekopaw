@@ -10,6 +10,7 @@ type
       function GetCookieValue(CookieName,CookieDomain: string): string;
       function GetCookieByValue(CookieName,CookieDomain: string): string;
       procedure DeleteCookie(CookieDomain: string);
+      procedure ChangeCookie(CookieDomain,CookieString: String);
   end;
 
   TMyIdHTTP = class(TIdCustomHTTP)
@@ -32,6 +33,7 @@ type
   function CreateHTTP{(AOwner: TComponent)}: TMyIdHTTP;
   function RemoveURLDomain(url: string) : string;
   function GetUrlVarValue(URL,Variable: String): String;
+  function GetURLDomain(url: string): string;
 
 implementation
 
@@ -151,6 +153,28 @@ begin
   Result := CopyFromTo(Cookie,'=',';');
 end;
 
+procedure TMyCookieList.ChangeCookie(CookieDomain,CookieString: String);
+
+  function DelleteIfExist(Cookie: string): boolean;
+    var i: integer;
+  begin
+    Result:=false;
+    for i := 0 to Count - 1 do
+    if (GetCookieDomain(Strings[i])=GetCookieDomain(Cookie))
+    and (GetCookieName(Strings[i])=GetCookieName(Cookie)) then
+    begin
+      Delete(i);
+      Exit;
+    end;
+  end;
+
+begin
+  if GetCookieDomain(CookieString)='' then
+    CookieString := CookieString + '; domain=' + CookieDomain;
+  DelleteIfExist(CookieString);
+  Add(CookieString);
+end;
+
 procedure TMyCookieList.DeleteCookie(CookieDomain: string);
 var i: integer;
 begin
@@ -216,27 +240,15 @@ procedure TMyIdHTTP.ReadCookies(url: string; AResponse: TIdHTTPResponse);
   var i: integer;
       Cookie: string;
 
-  function DelleteIfExist(Cookie: string): boolean;
-    var i: integer;
-  begin
-    Result:=false;
-    for i := 0 to FCookieList.Count - 1 do
-    if (GetCookieDomain(FCookieList[i])=GetCookieDomain(Cookie))
-    and (GetCookieName(FCookieList[i])=GetCookieName(Cookie)) then
-    begin
-      FCookieList.Delete(i);
-      Exit;
-    end;
-  end;
-
 begin
   for i := 0 to AResponse.RawHeaders.Count - 1 do
   if Pos('Set-Cookie: ',AResponse.RawHeaders[i])>0 then
   begin
     Cookie:=SysUtils.StringReplace(AResponse.RawHeaders[i],'Set-Cookie: ','',[]);
-    if GetCookieDomain(Cookie)='' then Cookie:=Cookie+'; domain='+GetURLDomain(url);
+    FCookieList.ChangeCookie(GetURLDomain(url),Cookie);
+{    if GetCookieDomain(Cookie)='' then Cookie:=Cookie+'; domain='+GetURLDomain(url);
     DelleteIfExist(Cookie);
-    FCookieList.Add(Cookie);
+    FCookieList.Add(Cookie);  }
   end;
 end;
 

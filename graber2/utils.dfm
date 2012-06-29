@@ -55,6 +55,7 @@ object dm: Tdm
     end
     object erCheckBox: TcxEditRepositoryCheckBoxItem
       Properties.Alignment = taLeftJustify
+      Properties.ValueChecked = 'True'
     end
     object erSpinEdit: TcxEditRepositorySpinItem
     end
@@ -80,7 +81,16 @@ object dm: Tdm
       Properties.PasswordChar = #9679
     end
     object erRDCheckBox: TcxEditRepositoryCheckBoxItem
+      Properties.Alignment = taLeftJustify
       Properties.ReadOnly = True
+    end
+    object erPathText: TcxEditRepositoryButtonItem
+      Properties.Buttons = <
+        item
+          Default = True
+          Kind = bkEllipsis
+        end>
+      Properties.OnButtonClick = erPathTextPropertiesButtonClick
     end
   end
 end

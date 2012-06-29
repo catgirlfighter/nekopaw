@@ -19,7 +19,6 @@ object fGrid: TfGrid
     Align = alClient
     TabOrder = 0
     LookAndFeel.NativeStyle = False
-    ExplicitTop = 20
     object vChilds: TcxGridDBTableView
       NavigatorButtons.ConfirmDelete = False
       DataController.Summary.DefaultGroupSummaryItems = <>

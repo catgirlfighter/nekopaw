@@ -13,10 +13,12 @@ type
     Panel1: TPanel;
     bClose: TcxButton;
     mText: TcxMemo;
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
   private
     { Private declarations }
-  public
+  protected
     procedure Execute;
+  public
     procedure SetLang;
     { Public declarations }
   end;
@@ -24,11 +26,19 @@ type
 var
   fWhatsNew: TfWhatsNew;
 
+procedure ShowWhatsNew;
+
 implementation
 
 uses LangString, OpBase;
 
 {$R *.dfm}
+
+procedure ShowWhatsNew;
+begin
+  Application.CreateForm(TfWhatsNew,fWhatsNew);
+  fWhatsNew.Execute;
+end;
 
 procedure TfWhatsNew.Execute;
 {var
@@ -56,6 +66,11 @@ begin
     //  INI.Free;
     //end;
   end;
+end;
+
+procedure TfWhatsNew.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  Action := caFree;
 end;
 
 procedure TfWhatsNew.SetLang;

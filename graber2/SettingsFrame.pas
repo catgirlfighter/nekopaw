@@ -105,7 +105,8 @@ uses UpdUnit, LangString, OpBase, utils, LoginForm;
 {$R *.dfm}
 
 var
-  FLoggedOn: boolean = false;
+  FLogedOn: boolean = false;
+//  FLoginCanceled: boolean = false;
 
 procedure TfSettings.ApplySettings;
 begin
@@ -362,7 +363,7 @@ begin
   begin
     c := dm.CreateCategory(vgSettings,'vgimain',lang('_MAINCONFIG_'));
     //dm.CreateField(vgSettings,'vgitag',_TAGSTRING_,'',ftString,c,FullResList[n].Fields['tag']);
-    dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftString,c,FullResList[n].NameFormat);
+    dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftPathText,c,FullResList[n].NameFormat);
     dm.CreateField(vgSettings,'vgisdalf',lang('_SDALF_'),'',ftCheck,c,GlobalSettings.Downl.SDALF);
   end
   else
@@ -379,7 +380,7 @@ begin
     s := NameFormat;
     if (s = '') or Inherit then
       s := FullResList[0].NameFormat;
-    dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftString,c,s);
+    dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftPathText,c,s);
 
 {    c := dm.CreateCategory(vgSettings,'vgiauth',lang('_AUTHORISATION_'),true);
     dm.CreateField(vgSettings,'vgilogin',lang('_LOGIN_'),'',ftString,c,
@@ -403,7 +404,7 @@ begin
             if not Assigned(c) then
               c := dm.CreateCategory(vgSettings,'vgieditional',lang('_EDITIONALCONFIG_'));
             with FullResList[n].Fields.Items[i]^ do
-              dm.CreateField(vgSettings,'evgi' + resname,resname,resitems,restype,c,resvalue);
+              dm.CreateField(vgSettings,'evgi' + resname,restitle,resitems,restype,c,resvalue);
 
                ///derp
           end;
@@ -459,18 +460,18 @@ procedure TfSettings.LoginCallBack(Sender: TObject; N: integer; Login,Password: 
 begin
   if Cancel then
   begin
-    FLoggedOn := false;
+    FLogedOn := false;
     if not FullResList.ListFinished then
       FullResList.StartJob(JOB_STOPLIST)
     else
-      fLogin.bOk.Enabled := true
+      fLogin.Close;
   end else
   begin
+    FullResList[n].Fields['login'] := Login;
+    FullResList[n].Fields['password'] := Password;
     if ResetRelogin(N) then
     begin
-      FLoggedOn := true;
-      FullResList[n].Fields['login'] := Login;
-      FullResList[n].Fields['password'] := Password;
+      FLogedOn := true;
       FullResLIst.StartJob(JOB_LOGIN);
     end else
       fLogin.Close;
@@ -496,8 +497,8 @@ end;
 
 procedure TfSettings.OnErrorEvent(Sender: TObject; Msg: String);
 begin
-  if FLoggedOn then
-    FLoggedOn := false;
+  if FLogedOn then
+    FLogedOn := false;
   if Assigned(FOnError) then
     FOnError(Sender,Msg);
 end;
@@ -506,7 +507,7 @@ procedure TfSettings.JobStatus(Sander: TObject; Action: integer);
 begin
   if Action = JOB_STOPLIST then
     if Assigned(fLogin) then
-      if FLoggedOn then
+      if FLogedOn or FullResList.Canceled then
         fLogin.Close
       else
         fLogin.bOk.Enabled := true;

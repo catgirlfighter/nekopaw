@@ -4,7 +4,8 @@ interface
 
 uses Classes, Messages, Windows, SysUtils, SyncObjs, Variants, VarUtils,
   IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP,
-  MyXMLParser, DateUtils, MyHTTP, StrUtils, md5, DB, IdStack, IdSSLOpenSSL;
+  MyXMLParser, DateUtils, MyHTTP, StrUtils, md5, DB, IdStack, IdSSLOpenSSL,
+  Math;
 
 const
   UNIQUE_ID = 'GRABER2LOCK';
@@ -301,12 +302,13 @@ type
   // TResource = class;
 
   TFieldType = (ftNone, ftString, ftPassword, ftNumber, ftFloatNumber,
-    ftCombo, ftCheck);
+    ftCombo, ftCheck, ftPathText);
 
   PResourceField = ^TResourceField;
 
   TResourceField = record
     resname: string;
+    restitle: string;
     restype: TFieldType;
     resvalue: Variant;
     resitems: string;
@@ -321,8 +323,8 @@ type
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
     procedure Assign(List: TResourceFields; AOperator: TListAssignOp = laCopy);
-    function AddField(resname: string; restype: TFieldType; resvalue: Variant;
-      resitems: String): integer;
+    function AddField(resname: string; restitle: string;
+      restype: TFieldType; resvalue: Variant; resitems: String): integer;
     function FindField(resname: String): integer;
     property Items[Index: integer]: PResourceField read Get { write Put };
     property Values[ItemName: String]: Variant read GetValue
@@ -782,6 +784,8 @@ type
   protected
     function Get(Index: integer): TResource;
   public
+    procedure GetAllResourceFields(List: TStrings);
+    procedure GetAllPictureFields(List: TStrings);
     property Items[Index: integer]: TResource read Get; default;
   end;
 
@@ -869,6 +873,11 @@ type
 implementation
 
 uses LangString, common;
+
+{$IFDEF NEKODEBUG}
+var
+  debugpath: string;
+{$ENDIF}
 
 function CalcValue(s: variant; VE: TValueEvent; Lnk: TObject;
   NoMath: Boolean = false): Variant;
@@ -970,7 +979,7 @@ begin
         if (tmp = varOleStr) or (tmp = varString) or (tmp = varUString) then
         begin
           vt := VarToWideStr(rstr);
-          VRESULT := VarR8FromStr(vt, VAR_LOCALE_USER_DEFAULT, 0, vt2);
+          VRESULT := VarR8FromStr(vt, 0{VAR_LOCALE_USER_DEFAULT}, 0, vt2);
           if VRESULT <> VAR_OK then
             rstr := '''' + doubles(rstr, '''') + ''''
           else
@@ -999,6 +1008,16 @@ begin
       raise Exception.Create('Error when calculating string ('
         + VarToStr(rsv) + '): ' + e.Message);
     end;
+end;
+
+function gVal(Value: string): string;
+begin
+  Result := CopyFromTo(Value, '(', ')',['""','()']);
+end;
+
+function nVal(var Value: string): string;
+begin
+  Result := CopyTo(Value,',',['""','()'],true);
 end;
 
 // TListValue
@@ -1677,7 +1696,7 @@ begin
                + 'Incorrect decloration near ' + Copy(s,i,15)) 
           else if v2[1] = '$' then
             v2[1] := '@'
-          else
+          else if v2[1] <> '@' then               
             v2 := '@' + v2;
 
           { tmpi1 := CharPos(v1,'(',['()']);
@@ -2030,9 +2049,9 @@ begin
   FLoginPrompt := false;
   FRelogin := false;
   FFields := TResourceFields.Create;
-  FFields.AddField('tag', ftString, null, '');
-  FFields.AddField('login',ftNone,null,'');
-  FFields.AddField('password',ftNone,null,'');
+  FFields.AddField('tag', '', ftString, null, '');
+  FFields.AddField('login', '',ftNone,null,'');
+  FFields.AddField('password', '',ftNone,null,'');
   FSectors := TValueList.Create;
   FPicFieldList := TStringList.Create;
   FInitialScript := nil;
@@ -2132,6 +2151,7 @@ begin
         FJobInitiated := FJobList.Count > 0;
         if not FJobInitiated then
         begin
+          FHTTPRec.Counter := 0;
           if not Assigned(FInitialScript) then
             FInitialScript := TScriptSection.Create;
 
@@ -2238,6 +2258,8 @@ procedure TResource.CreatePicJob(t: TDownloadThread);
 begin
   // t.JobId := ;
   t.Picture := FPictureList.NextJob(JOB_PICS);
+  {$IFDEF NEKODEBUG}SaveStrToFile('CreatePicJob'+Format('%p',[Pointer(t.Picture)]) + '>' + Format('%p',[Pointer(t)]),
+  debugpath+'res'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
   t.JobComplete := PicJobComplete;
   t.InitialScript := FPicScript;
   { if not JobInitiated then
@@ -2257,17 +2279,25 @@ begin
   t.Job := JOB_PICS;
   { inc(FHTTPRec.Counter);}
     inc(FPictureThreadCount);
+  {$IFDEF NEKODEBUG}SaveStrToFile('CreatedPicJob'+Format('%p',[Pointer(t.Picture)]) + '>' + Format('%p',[Pointer(t)]),
+  debugpath+'res'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
 end;
 
 procedure TResource.DeclorationEvent(ItemName: String; ItemValue: Variant; LinkedObj: TObject);
 // loading main settings of resoruce
+
+  function Clc(Value: variant): variant;
+  begin
+    Result := CalcValue(Value, nil, LinkedObj);
+  end;
+
   procedure ProcValue(ItemName: String; ItemValue: Variant);
   var
     s, v: String;
     FSct: TValueList;
     FSS: TScriptSection;
     i: integer;
-    // f: TResourceField;
+    f: PResourceField;
   begin
     if SameText(ItemName,'$main.url') then
       FHTTPRec.DefUrl := ItemValue
@@ -2283,7 +2313,7 @@ procedure TResource.DeclorationEvent(ItemName: String; ItemValue: Variant; Linke
       FHTTPRec.LoginStr := ItemValue
     else if SameText(ItemName,'$main.loginpost') then
       FHTTPRec.LoginPost := ItemValue
-    else if ItemName = '$main.template' then
+    else if SameText(ItemName,'$main.template') then
     begin
       s := StringFromFile(ExtractFilePath(paramstr(0)) + 'resources\' +
         ItemValue);
@@ -2306,7 +2336,7 @@ procedure TResource.DeclorationEvent(ItemName: String; ItemValue: Variant; Linke
         FSct.Free;
       end;
     end
-    else if ItemName = '@picture.fields' then
+    else if SameText(ItemName,'@picture.fields') then
     begin
       FPicFieldList.Clear;
       s := ItemValue;
@@ -2316,12 +2346,37 @@ procedure TResource.DeclorationEvent(ItemName: String; ItemValue: Variant; Linke
         FPicFieldList.Add(lowercase(v));
       end;
     end
+    else if SameText(ItemName,'@addfield') then
+    begin
+      {
+      TFieldType = (ftNone, ftString, ftPassword,
+      ftNumber, ftFloatNumber,ftCombo, ftCheck);
+      }
+      s := ItemValue;
+      f := Fields.Items[Fields.AddField(Clc(nVal(s)),'',ftNone,null,'')];
+      f.restitle := Clc(nVal(s));
+      f.resvalue := Clc(nVal(s));
+      v := Clc(nVal(s));
+      if sametext(v,'textedit') then
+        f.restype := ftString
+      else if sametext(v,'passwordedit') then
+        f.restype := ftPassword
+      else if sametext(v,'integeredit') then
+        f.restype := ftNumber
+      else if sametext(v,'floatedit') then
+        f.restype := ftFloatNumber
+      else if sametext(v,'listbox') then
+        f.restype := ftCombo
+      else if sametext(v,'checkbox') then
+        f.restype := ftCheck;
+      f.resitems := s;
+    end
     else if ItemName[1] = '$' then
     begin
       ItemName := DeleteEx(ItemName, 1, 1);
       i := Fields.FindField(ItemName);
       if i = -1 then
-        Fields.AddField(ItemName, ftNone, ItemValue, '')
+        Fields.AddField(ItemName, '', ftNone, ItemValue, '')
       else
         Fields.Items[i].resvalue := ItemValue;
     end
@@ -2348,7 +2403,9 @@ var
   //s: LongInt;
 begin
   try
-    if not t.InitialScript.Empty then
+    if (t.ReturnValue = THREAD_COMPLETE)
+    and (t.Job <> JOB_ERROR)
+    and not t.InitialScript.Empty then
     begin
       t.InitialScript := nil;
 
@@ -2399,16 +2456,26 @@ begin
           end;
         JOB_ERROR:
           begin
-            inc(FJobList.FErrCount);
-            FJobList[t.JobId].Status := JOB_ERROR;
+            if not t.InitialScript.Empty then
+              FJobList.Clear
+            else
+            begin
+              inc(FJobList.FErrCount);
+              FJobList[t.JobId].Status := JOB_ERROR;
+            end;
             if Assigned(FOnError) then
               FOnError(Self, t.Error);
           end;
       end
     else
     begin
-      inc(FJobList.FErrCount);
-      FJobList[t.JobId].Status := JOB_ERROR;
+      if not t.InitialScript.Empty then
+        FJobList.Clear
+      else
+      begin
+        inc(FJobList.FErrCount);
+        FJobList[t.JobId].Status := JOB_ERROR;
+      end;
     end;
 
     if Assigned(FOnPageComplete) then
@@ -2565,6 +2632,46 @@ end;
 function TResourceLinkList.Get(Index: integer): TResource;
 begin
   Result := inherited Get(Index);
+end;
+
+procedure TResourceLinkList.GetAllResourceFields(List: TStrings);
+var
+  n,i,j: integer;
+begin
+  if Count < 0 then
+    Exit;
+  if Items[0].FileName = '' then
+    n := Items[0].Fields.Count
+  else
+    n := 0;
+
+  for i := 0 to Count-1 do
+    for j := n to Items[i].Fields.Count-1 do
+    begin
+      if (Items[i].Fields.Items[j].restype <> ftNone)
+      and (List.IndexOf(Items[i].Fields.Items[j].resname) = -1) then
+        List.Add(Items[i].Fields.Items[j].resname);
+    end;
+
+end;
+
+procedure TResourceLinkList.GetAllPictureFields(List: TStrings);
+var
+  i,j: integer;
+  l: TStringList;
+  s: string;
+begin
+//  List.Assign(Items[0].PicFieldList);
+  for i := 0 to Count - 1 do
+  begin
+    l := Items[i].PicFieldList;
+    for j := 0 to l.Count - 1 do
+    begin
+      s := CopyTo(l[j],':');
+      if List.IndexOf(s) = -1 then
+        List.Add(s);
+    end;
+  end;
 end;
 
 // TResourceList
@@ -2727,6 +2834,8 @@ var
   i: integer;
 
 begin
+  {$IFDEF NEKODEBUG}SaveStrToFile('CreatePicJob' + '>' + Format('%p',[Pointer(t)]),
+    debugpath+'reslist'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
   if FQueueIndex > Count - 1 then
     if FLoginMode then
     begin
@@ -2752,6 +2861,8 @@ begin
         r.CreateLoginJob(t);
         Result := true;
         FQueueIndex := i + 1;
+        {$IFDEF NEKODEBUG}SaveStrToFile('CreatedPicJob'+Format('%p',[Pointer(R)]) + '>' + Format('%p',[Pointer(t)]),
+          debugpath+'reslist'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
         Exit;
       end else
     else
@@ -2762,6 +2873,8 @@ begin
         // R.NextPage := false;
         Result := true;
         inc(FQueueIndex);
+        {$IFDEF NEKODEBUG}SaveStrToFile('CreatedPicJob'+Format('%p',[Pointer(R)]) + '>' + Format('%p',[Pointer(t)]),
+          debugpath+'reslist'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
         Exit;
       end;
   end;
@@ -2778,6 +2891,8 @@ begin
         R.NextPage := false;
         Result := true;
         inc(FQueueIndex);
+        {$IFDEF NEKODEBUG}SaveStrToFile('CreatedPicJob'+Format('%p',[Pointer(R)]) + '>' + Format('%p',[Pointer(t)]),
+          debugpath+'reslist'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
         Exit;
       end;
     end;
@@ -2785,6 +2900,9 @@ begin
   // if no task then result = false
 
   Result := false;
+
+  {$IFDEF NEKODEBUG}SaveStrToFile('PicJobNotCreated>' + Format('%p',[Pointer(t)]),
+    debugpath+'reslist'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
 
   if FLoginMode then
     FThreadHandler.FinishQueue;
@@ -3099,13 +3217,6 @@ var
   R: TResource;
 
 begin
-  if not DirectoryExists(Dir) then
-  begin
-    if Assigned(FOnError) then
-      FOnError(Self, Format(lang('_NO_DIRECTORY_'), [Dir]));
-    Exit;
-  end;
-
   Clear;
 
   R := TResource.Create;
@@ -3121,6 +3232,12 @@ begin
 
   R := nil;
 
+  if not DirectoryExists(Dir) then
+  begin
+    if Assigned(FOnError) then
+      FOnError(Self, Format(lang('_NO_DIRECTORY_'), [Dir]));
+    Exit;
+  end;
   Dir := IncludeTrailingPathDelimiter(Dir);
 
   if FindFirst(Dir + '*.cfg', faAnyFile, a) = 0 then
@@ -3161,17 +3278,26 @@ begin
   begin
     // FErrorString := '';
     try
+      {$IFDEF NEKODEBUG}SaveStrToFile('NewIteration',
+        debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
       Synchronize(DoFinish);
       case ReturnValue of
         THREAD_STOP:
           begin
+            {$IFDEF NEKODEBUG}SaveStrToFile('ThreadStop',
+              debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
             ResetEvent(FEventHandle);
             WaitForSingleObject(FEventHandle, INFINITE);
             Continue;
           end;
         THREAD_FINISH:
+        begin
+          {$IFDEF NEKODEBUG}SaveStrToFile('ThreadFinish',
+            debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
           Break;
+        end;
       end;
+
       if not Assigned(FResource) then
         raise Exception.Create('thread.execute: resource not assigned');
 
@@ -3196,8 +3322,11 @@ begin
         else
         begin
           if not FInitialScript.Empty then
-            FInitialScript.Process(SE, DE, FE, VE, VE)
-          else
+          begin
+            {$IFDEF NEKODEBUG}SaveStrToFile('ParseInitialScript',
+              debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+            FInitialScript.Process(SE, DE, FE, VE, VE);
+          end else
           begin
             if (FHTTPRec.Count = 0) and (FHTTPRec.Counter = 0) then
               FHTTPRec.Counter := 1;
@@ -3212,7 +3341,11 @@ begin
         end;
 
         Self.ReturnValue := THREAD_COMPLETE;
+        {$IFDEF NEKODEBUG}SaveStrToFile('ThreadFinished',
+          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
       finally
+        {$IFDEF NEKODEBUG}SaveStrToFile('SynchronizeResult',
+          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
         Synchronize(DoJobComplete);
         FPicList.Clear;
         FPicture := nil;
@@ -3221,6 +3354,8 @@ begin
       on e: Exception do
       begin
         FErrorString := e.Message;
+        {$IFDEF NEKODEBUG}SaveStrToFile('ThreadError>'+FErrorString,
+          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
         if FSTOPERROR then
           Break
         else
@@ -3332,25 +3467,15 @@ end;
 procedure TDownloadThread.VE(const ValS: Char; const Value: String;
   var Result: Variant; var LinkedObj: TObject);
 
-  function gVal(Value: string): string;
-  begin
-    Result := CopyFromTo(Value, '(', ')',['""','()']);
-  end;
-
   function Clc(Value: variant): variant;
   begin
     Result := CalcValue(Value, VE, LinkedObj);
   end;
 
-  function nVal(var Value: string): string;
-  begin
-    Result := CopyTo(Value,',',['""','()'],true);
-  end;
-
 var
   t: TTag;
   s, tmp: string;
-  // i: integer;
+  n,n2,i: integer;
 
 begin
   // Value := lowrcase(Value);
@@ -3358,7 +3483,7 @@ begin
 
 {  if LinkedObj is TTagList then
     Exit;     }
-
+  try
   case ValS of
     '#':
       if Assigned(LinkedObj) and (LinkedObj is TTag) then
@@ -3402,9 +3527,25 @@ begin
         else if SameText(s,'unixtime') then
           Result := UnixToDateTime(Clc(gVal(Value)))
         else if SameText(s,'removevars') then
-          Result := DeleteIds(Clc(gVal(Value)))
-        else if SameText(s,'removedomain') then
+        begin
+          Result := CopyTo(CopyTo(Clc(gVal(Value)),'?',[]),'#',[]);
+        end else if SameText(s,'removedomain') then
           Result := RemoveURLDomain(Clc(gVal(Value)))
+        else if SameText(s,'boolstr') then
+          if Clc(gVal(Value)) then
+            Result := 'True'
+          else
+            Result := 'False'
+        else if SameText(s,'min') then
+        begin
+          s := gVal(Value);
+          Result := Min(Clc(nVal(s)),Clc(nVal(s)));
+        end
+        else if SameText(s,'max') then
+        begin
+          s := gVal(Value);
+          Result := Max(Clc(nVal(s)),Clc(nVal(s)));
+        end
         else if SameText(s,'changeext') then
         begin
           s := gVal(Value);
@@ -3419,15 +3560,24 @@ begin
         end else if SameText(s,'urlvar') then
         begin
           s := gVal(Value);
-          Result := StringDecode(GetURLVarValue(Clc(nVal(s)),Clc(nVal(s))));
+          Result := ClearHTML(StringDecode(
+            GetURLVarValue(Clc(nVal(s)),Clc(nVal(s)))));
         end else if SameText(s,'copyto') then
         begin
           s := gVal(Value);
           Result := CopyTo(Clc(nVal(s)),Clc(nVal(s)));
+        end else if SameText(s,'copytoex') then
+        begin
+          s := gVal(Value);
+          Result := CopyTo(Clc(nVal(s)),Clc(nVal(s)),false,true);
         end else if SameText(s,'copybackto') then
         begin
           s := gVal(Value);
           Result := CopyTo(Clc(nVal(s)),Clc(nVal(s)),true);
+        end else if SameText(s,'copybacktoex') then
+        begin
+          s := gVal(Value);
+          Result := CopyTo(Clc(nVal(s)),Clc(nVal(s)),true,true);
         end else if SameText(s,'copyfrom') then
         begin
           s := gVal(Value);
@@ -3469,8 +3619,41 @@ begin
               if Assigned(t) then
                 Result := UnixToDateTime(StrToInt(t.Attrs.Value('s')));
             end;
+        end
+        else if SameText(s,'queue') then
+        begin
+          //i := 0;
+          s := gVal(Value);
+          n := Clc(nVal(s));
+          while s <> '' do
+          begin
+            n2 := Clc(nVal(s));
+            if (n - n2 > 0) then
+              n := n - n2
+            else
+              Break;
+          end;
+          Result := n;
+        end
+        else if SameText(s,'queueindex') then
+        begin
+          Result := 1;
+          i := 0;
+          s := gVal(Value);
+          n := Clc(nVal(s));
+          while s <> '' do
+          begin
+            inc(i);
+            n2 := Clc(nVal(s));
+            if (n - n2 > 0) then
+            begin
+              n := n - n2;
+            end else
+              Break;
+            if n > 0 then
+              Result := i;
+          end;
         end;
-
       end;
     '%':
       begin
@@ -3478,12 +3661,20 @@ begin
       end;
   else
     begin
-      raise Exception.Create(Format(lang('_INCORRECT_DECLORATION_'), [Value]));
+      raise Exception.Create('unknown value');
     end;
+  end;
+  except on e:exception do
+    raise Exception.Create('Decloration error(' + Value + '): ' + e.Message);
   end;
 end;
 
 procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant; LinkedObj: TObject);
+
+  function Clc(Value: variant): variant;
+  begin
+    Result := CalcValue(Value, VE, LinkedObj);
+  end;
 
   procedure PicValue(p: TTPicture; const Name: String; Value: Variant);
   var
@@ -3553,6 +3744,11 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant; LinkedObj: TO
       FHTTPRec.Counter := Trunc(Value)
     else if SameText(Name,'@thread.execute') then
       ProcHTTP
+    else if SameText(Name,'@addtag') then
+      if Assigned(FPicture) then
+        FPicList.Tags.Add(Value,FPicture)
+      else
+        raise Exception.Create('Picture not assigned')
     else if SameText(Name,'$picture.displaylabel') then
       FPicture.DisplayLabel := Value
     else if SameText(Name,'$picture.filename') then
@@ -3565,6 +3761,12 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant; LinkedObj: TO
       FHTTPRec.CookieStr := Value
     else if SameText(Name,'$thread.login') then
       FHTTPRec.LoginStr := Value      }
+    else if SameText(Name,'@createcookie') then
+    begin
+      s := Value;
+      FHTTP.CookieList.ChangeCookie(GetURLDomain(HTTPRec.DefUrl),
+      Clc(nVal(s))+'='+Clc(nVal(s)) + ';');
+    end
     else if SameText(Name,'@addpicture') then
     begin
       { if FAddPic then
@@ -3592,12 +3794,19 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant; LinkedObj: TO
       // FAddPic := true;
       // Synchronize(AddPicture);
     end
+    else if Name[1] = '%' then
+      if Assigned(FPicture) then
+        if SameText(Name,'%tags') then
+        else
+          FPicture.Meta[trim(name,'%')] := CalcValue(Value, VE, LinkedObj)
+      else
+        raise Exception.Create('Picture not assigned')
     else if Name[1] = '$' then
     begin
       s := DeleteEx(Name, 1, 1);
       n := Fields.FindField(s);
       if n = -1 then
-        Fields.AddField(s, ftNone, Value, '')
+        Fields.AddField(s, '', ftNone, Value, '')
       else
         Fields.Items[n].resvalue := Value;
     end
@@ -3665,9 +3874,14 @@ begin
     and (FHTTPRec.Counter > 0) then
     Exit;
 
+  {$IFDEF NEKODEBUG}SaveStrToFile('StartListJob',
+    debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+
   FRetries := 0;
   while true do
     try
+      {$IFDEF NEKODEBUG}SaveStrToFile('ParseBeforeScript',
+        debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
       FBeforeScript.Process(SE, DE, FE, VE, VE);
       // FHTTP.ResponseCode := 0;
       try
@@ -3676,7 +3890,11 @@ begin
         except
         end;
         url := '';
+        {$IFDEF NEKODEBUG}SaveStrToFile('GetUrl',
+          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
         Url := CalcValue(FHTTPRec.Url, VE, nil);
+        {$IFDEF NEKODEBUG}SaveStrToFile(url,
+          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
         if SameText(Copy(URL,1,6),'https:') then
         begin
           FHTTP.IOHandler := FSSLHandler;
@@ -3684,12 +3902,23 @@ begin
           FHTTP.ReadTimeout := 0;
         end else
           FHTTP.IOHandler := nil;
+
         FHTTP.Request.Referer := FHTTPRec.Referer;
+
+        {$IFDEF NEKODEBUG}SaveStrToFile('HTTPGET',
+          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+
         s := FHTTP.Get(Url);
         //FHTTP.Disconnect;
         inc(FHTTPRec.Counter);
+
+        {$IFDEF NEKODEBUG}SaveStrToFile('HTTPOK',
+          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
       except
         on e: Exception do
+        begin
+          {$IFDEF NEKODEBUG}SaveStrToFile('HTTPERROR>'+e.Message,
+            debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
           if (FHTTP.ResponseCode = 404){ or (FHTTP.ResponseCode = -1) }then
           begin
             SetHTTPError(url + ': ' + e.Message);
@@ -3704,7 +3933,11 @@ begin
             SetHTTPError(url + ': ' + e.Message);
             Break;
           end;
+        end;
       end;
+
+      {$IFDEF NEKODEBUG}SaveStrToFile('PARSEXML>'+FHTTPRec.ParseMethod,
+        debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
 
       if SameText(FHTTPRec.ParseMethod,'xml') then
         FXML.Parse(s)
@@ -3712,8 +3945,11 @@ begin
         FXML.JSON(FHTTPREC.JSONItem,s)
       else raise Exception.Create(Format(lang('_UNKNOWNMETHOD_'),[FHTTPRec.ParseMethod]));
 
-      //FXML.TagList.ExportToFile(ExtractFilePath(paramstr(0))+'log\'+ValidFName(emptyname(url)));
-      //SaveStrToFile(s,ExtractFilePath(paramstr(0))+'log\'+ValidFName(emptyname(url)) + '.src');
+      FXML.TagList.ExportToFile(ExtractFilePath(paramstr(0))+'log\'+ValidFName(emptyname(url)));
+      SaveStrToFile(s,ExtractFilePath(paramstr(0))+'log\'+ValidFName(emptyname(url)) + '.src');
+
+      {$IFDEF NEKODEBUG}SaveStrToFile('ExecuteXMLScript',
+        debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
 
       FXMLScript.Process(SE, DE, FE, VE, VE, FXML.TagList);
       { if FAddPic then
@@ -3721,7 +3957,13 @@ begin
       { if FAddPic then
         AddPicture; }
       // Synchronize(UnlockList);
+      {$IFDEF NEKODEBUG}SaveStrToFile('AfterScript',
+        debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+
       FAfterScript.Process(SE, DE, FE, VE, VE);
+
+      {$IFDEF NEKODEBUG}SaveStrToFile('AddicturesList',
+        debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
 
       CSection.Enter;
       try
@@ -3730,10 +3972,15 @@ begin
         CSection.Leave;
       end;
 
+      {$IFDEF NEKODEBUG}SaveStrToFile('ProcListDone',
+        debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+
       Break;
     except
       on e: Exception do
       begin
+        {$IFDEF NEKODEBUG}SaveStrToFile('ProcListError>'+e.Message,
+          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
         SetHTTPError(e.Message);
         Break;
       end;
@@ -3744,8 +3991,11 @@ procedure TDownloadThread.ProcPic;
 var
   f: TFileStream;
   Dir: string;
-  
+
 begin
+
+  {$IFDEF NEKODEBUG}SaveStrToFile('ProcPicStart',
+    debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
 
   f := nil;
   FRetries := 0;
@@ -3754,23 +4004,45 @@ begin
     try
       Dir := ExtractFileDir(FPicture.FileName);
 
+      {$IFDEF NEKODEBUG}SaveStrToFile('EnterFileCheckQueue',
+        debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+
       FCS.Enter;
       try
+        {$IFDEF NEKODEBUG}SaveStrToFile('CheckFileExists>'+FPicture.FileName,
+          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+
         if FileExists(FPicture.FileName) then
         begin
           { FPicture.Size := 1;
             FPicture.Pos; }
           FPicture.Changes := [pcSize, pcProgress];
           Synchronize(PicChanged);
-          FCS.Leave;
+          {$IFDEF NEKODEBUG}SaveStrToFile('FileExistsExit',
+            debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+          //FCS.Leave;
           Exit;
         end;
 
+        {$IFDEF NEKODEBUG}SaveStrToFile('CheckDirectoryExists>'+Dir,
+          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+
         if not DirectoryExists(Dir) then
+        begin
           CreateDirExt(Dir);
+
+          {$IFDEF NEKODEBUG}SaveStrToFile('DirectoryCreated',
+            debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+        end;
+
+        {$IFDEF NEKODEBUG}SaveStrToFile('CreateFileStream',
+          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
 
         f := TFileStream.Create(FPicture.FileName, fmCreate);
       finally
+        {$IFDEF NEKODEBUG}SaveStrToFile('LeaveFileCheckQueue',
+          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+
         FCS.Leave;
       end;
 
@@ -3786,22 +4058,35 @@ begin
         end else
           FHTTP.IOHandler := nil;
 
+        {$IFDEF NEKODEBUG}SaveStrToFile('StartGettingPic>'+HTTPRec.Url,
+          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+
         HTTP.Get(HTTPRec.Url, f);
         //HTTP.Disconnect;
+
+        {$IFDEF NEKODEBUG}SaveStrToFile('GettingPicFinished',
+          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
 
         if ReturnValue = THREAD_FINISH then
         begin
           FJOB := JOB_CANCELED;
+          {$IFDEF NEKODEBUG}SaveStrToFile('GettingPicCanceled',
+            debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
         end;
 
         if FPicture.Size <> f.Size then
         begin
+          {$IFDEF NEKODEBUG}SaveStrToFile('Incorrectfilesize>'+IntToStr(FPicture.Size)
+            + '=' + IntToStr(f.Size),
+            debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
           f.Free;
           FPicture.Size := 0;
           FPicture.Pos := 0;
           DeleteFile(FPicture.FileName);
           if (FRetries < FMAXRetries) and (ReturnValue <> THREAD_FINISH) then
           begin
+            {$IFDEF NEKODEBUG}SaveStrToFile('IncountRetries>'+IntToStr(FRetries),
+              debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
             inc(FRetries);
             Continue;
           end else
@@ -3815,6 +4100,8 @@ begin
       except
         on e: EIdSocketError do
         begin
+          {$IFDEF NEKODEBUG}SaveStrToFile('SocketError>'+e.Message,
+            debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
           f.Free;
           DeleteFile(FPicture.FileName);
           FPicture.Size := 0;
@@ -3826,8 +4113,11 @@ begin
             end
           else
             if (FRetries < FMAXRetries) and (ReturnValue <> THREAD_FINISH) then
-              inc(FRetries)
-            else
+            begin
+              {$IFDEF NEKODEBUG}SaveStrToFile('IncountRetries>'+IntToStr(FRetries),
+                debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+              inc(FRetries);
+            end else
             begin
               SetHTTPError(HTTPRec.Url + ': ' + e.Message);
               Break;
@@ -3835,23 +4125,30 @@ begin
         end;
         on e: Exception do
         begin
+          {$IFDEF NEKODEBUG}SaveStrToFile('HTTPError>'+e.Message,
+            debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
           f.Free;
           DeleteFile(FPicture.FileName);
           FPicture.Size := 0;
           FPicture.Pos := 0;
-            if (HTTP.ResponseCode = 404)
-            or (FRetries < FMAXRetries) and (ReturnValue <> THREAD_FINISH) then
-              inc(FRetries)
-            else
-            begin
-              SetHTTPError(HTTPRec.Url + ': ' + e.Message);
-              Break;
-            end;
+          if (HTTP.ResponseCode <> 404)
+          and (FRetries < FMAXRetries) and (ReturnValue <> THREAD_FINISH) then
+          begin
+            {$IFDEF NEKODEBUG}SaveStrToFile('IncountRetries>'+IntToStr(FRetries),
+              debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+            inc(FRetries);
+          end else
+          begin
+            SetHTTPError(HTTPRec.Url + ': ' + e.Message);
+            Break;
+          end;
         end;
       end; //on http except
     except
       on e: Exception do
       begin
+        {$IFDEF NEKODEBUG}SaveStrToFile('ProcPicError>'+e.Message,
+          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
         if Assigned(f) then
         begin
           f.Free;
@@ -4744,7 +5041,7 @@ begin
         begin
           New(p);
           with List.Items[i]^ do
-            AddField(resname, restype, resvalue, resitems);
+            AddField(resname, restitle, restype, resvalue, resitems);
           Add(p);
         end;
       end;
@@ -4829,8 +5126,8 @@ begin
   raise Exception.Create(Format(lang('_NO_FIELD_'), [ItemName]));
 end;
 
-function TResourceFields.AddField(resname: string; restype: TFieldType;
-  resvalue: Variant; resitems: String): integer;
+function TResourceFields.AddField(resname: string; restitle: string;
+  restype: TFieldType; resvalue: Variant; resitems: String): integer;
 var
   p: PResourceField;
 begin
@@ -5006,5 +5303,12 @@ begin
   // FQueue.Free;
   // inherited;
 end;
+
+initialization
+
+{$IFDEF NEKODEBUG}
+debugpath := ExtractFilePath(paramstr(0)) + 'log\';
+CreateDirExt(debugpath);
+{$ENDIF}
 
 end.

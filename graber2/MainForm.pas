@@ -554,6 +554,7 @@ begin
           + ' (' + IntToStr(ResList[i].HTTPRec.Theor) + ')'
           + ifn(ResList[i].JobList.ErrorCount > 0,
           ' err ' + IntToStr(ResList[i].JobList.ErrorCount),''));
+
           c.Visible :=
             ifn(ResList.ListFinished,
             ifn(ResList.PicsFinished,false,
@@ -736,15 +737,15 @@ begin
           ' err ' + IntToStr(ResList[i].JobList.ErrorCount),''))
           ,true);
 
-          c.Visible :=
-            ifn(ResList.ListFinished,
-            ifn(ResList.PicsFinished,true,
-              not(ResList.PictureList.PicCounter.FSH
-                  +ResList[i].PictureList.PicCounter.SKP
-                  +ResList[i].PictureList.PicCounter.UNCH
-                  =ResList[i].PictureList.Count)),
-               not(ResList[i].JobList.OkCount
-                   = ResList[i].JobList.Count));
+        c.Visible :=
+          ifn(ResList.ListFinished,
+          ifn(ResList.PicsFinished,false,
+            not(ResList[i].PictureList.PicCounter.FSH
+                +ResList[i].PictureList.PicCounter.SKP
+                +ResList[i].PictureList.PicCounter.UNCH
+                =ResList[i].PictureList.Count)),
+             not(ResList[i].JobList.OkCount
+                 = ResList[i].JobList.Count));
       end;
   finally
     vgTagsMain.EndUpdate;
@@ -825,7 +826,7 @@ end;
 
 procedure Tmf.WHATSNEW(var Msg: TMessage);
 begin
-  fWhatsNew.Execute;
+  ShowWhatsNew;
 end;
 
 procedure Tmf.StartUpdate;
@@ -836,7 +837,7 @@ begin
   f := tfilestream.Create(IncludeTrailingPathDelimiter(rootdir)
     + 'NPUpdater.exe',fmCreate);
   try
-    r := tresourcestream.Create(hInstance,'ZUPDATER','UPDTER');
+    r := tresourcestream.Create(hInstance,'ZUPDATER','UPDATER');
     try
       r.SaveToStream(f);
     finally
@@ -933,7 +934,11 @@ end;
 
 procedure Tmf.Setlang;
 begin
+  {$IFDEF NEKODEBUG}
+  Caption := FoldCaption + ' ' + VINFO.FileVersion + 'α debug';
+  {$ELSE}
   Caption := FoldCaption + ' ' + VINFO.FileVersion + 'α';
+  {$ENDIF}
   bbNew.Caption := lang('_NEWLIST_');
   bbStartList.Caption := lang('_STARTLIST_');
   bbStartPics.Caption := lang('_STARTPICS_');
@@ -995,6 +1000,7 @@ begin
   f := TfSettings.Create(SttPanel);
   FullResList.OnError := f.OnErrorEvent;
   FulLResList.OnJobChanged := f.JobStatus;
+  f.OnError := OnError;
   f.SetLang;
   f.CreateResources;
   f.LoadSettings;
