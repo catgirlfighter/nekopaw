@@ -79,7 +79,8 @@ begin
         begin
            FullResList[i].Fields.Items[j].resvalue :=
               strnull(INI.ReadString(pref+FullResList[i].Name,
-              FullResList[i].Fields.Items[j].resname,''));
+              FullResList[i].Fields.Items[j].resname,
+              FullResList[i].Fields.Items[j].resvalue));
         end;
 
     end;

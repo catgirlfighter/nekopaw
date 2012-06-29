@@ -47,6 +47,7 @@ type
     //FText: String;
     FChilds: TTagList;
     FKind: TTagKind;
+    FClosed: boolean;
   protected
     procedure SetName(Value: String);
     procedure SetText(Value: String);
@@ -62,6 +63,7 @@ type
     property Childs: TTagList read FChilds;
     property Parent: TTag read FParent write FParent;
     property Kind: TTagKind read FKind write FKind;
+    property Closed: Boolean read FClosed write FClosed;
   end;
 
   TTagList = class(TList)
@@ -320,7 +322,7 @@ procedure TTagList.ExportToFile(fname: string);
         for j := 0 to List[i].Attrs.Count-1 do
             tmp := tmp + ' ' + List[i].Attrs[j].Name + '="'
             + List[i].Attrs[j].Value + '"';
-        if List[i].Childs.Count = 0 then
+        if not List[i].Closed and (List[i].Childs.Count = 0) then
           s := s + (tmp + ' />')
         else
         begin
@@ -393,7 +395,8 @@ begin
   FParent := nil;
   Name := AName;
   FKind := AKind;
-  //FAttrList := TAttrList.Create;
+  FClosed := false;
+  FAttrList := TAttrList.Create;
 end;
 
 destructor TTag.Destroy;
@@ -411,7 +414,7 @@ begin
   TagString := lowercase(TagString);
   if Name = TagString then
   begin
-    Result := Self.Parent;
+    Result := Self;
     Exit;
   end else
   begin
@@ -569,6 +572,7 @@ begin
   inherited;
 end;
 
+
 procedure TMyXMLParser.Parse(S: String);
 var
   FTag: TTag;
@@ -719,7 +723,12 @@ var
 
         if Assigned(FTag) then
           FTag := FTag.FindParent(copy(adata, li, length(adata) - li));
-
+        if Assigned(FTag) then
+        begin
+          FTag.Closed := true;
+          FTag := FTag.Parent;
+          //FTag := FTag.Parent;
+        end;
       end;
       0:
       begin
@@ -732,6 +741,7 @@ var
           //FOnEmptyTag(tagname, Attrs);
           FOnEmptyTag(FTag);
 
+        //FTag.Closed := true;
         FTag := FTag.Parent;
       end;
       1:
@@ -762,7 +772,7 @@ var
   end;
 
 var
-  i, li, l, state: Integer;
+  i, li, l, state,intag: Integer;
   txt: string;
   sr: string;
 
@@ -775,8 +785,10 @@ begin
   FTag := nil;
 
 //  try
+    S := DeleteFromTo(S,'<!--','-->',true,true);
     txt := '';
     state := 0;
+    intag := 0;
     l := length(S);
     i := 1;
     li := 1;
@@ -796,9 +808,11 @@ begin
       li := i;
       if i >= l then
         Break;
-      while (i <= l) and ((S[i] <> '>') or (state <> 0)) do
+      while (i <= l) and ((S[i] <> '>') or (state <> 0) or (intag > 0)) do
       begin
         case S[i] of
+          '<': inc(intag);
+          '>': dec(intag);
           '"':
             case state of
               0:
@@ -827,6 +841,85 @@ begin
     FTag.Free;
   end;   }
 end;
+
+(*
+procedure TMyXMLParser.Parse(S: String);
+var
+  part: string;
+  Parent: TTag;
+  Child: TTag;
+  state: integer;
+  val,attrname: string;
+
+  procedure AddChild(Child,Parent: TTag);
+  begin
+    if Assigned(Child) then
+      if Assigned(Parent) then
+        Parent.Childs.Add(Child)
+      else
+        TagList.Add(Child);
+  end;
+
+begin
+  Child := nil;
+  while s <> '' do
+  begin
+    Part := CopyTo(S,'<',[],true); //text
+    if (part <> '') then
+    begin
+      Child := TTag.Create(part,tkText);
+      AddChild(Child,Parent);
+    end;
+
+    Part := CopyTo(S,'>',['''''','""'],true);  //tag
+    if (Part <> '') then
+    begin
+      state := 0;
+      val := trim(CopyTo(part,' ',['''''','""'],true));
+      if (val <> '') then
+      if val[1] = '!' then
+      begin
+        if part <> '' then
+          Child := TTag.Create(val + ' ' + part,tkText)
+        else
+          Child := TTag.Create(val);
+        AddChild(Child,Parent);
+      end
+      else
+        begin
+          Child := ttag.Create(val);
+          AddChild(Child,Parent);
+          while part <> '' do
+          begin
+            val := CopyTo(part,' ',['''''','""'],true);
+            if val <> '' then
+              case state of
+                0:
+                  if val = '=' then
+                    state := 1
+                  else
+                  begin
+                    if attrname <> '' then
+                      Child.Attrs.Add(attrname,'');
+                    attrname := val;
+                  end;
+                1:
+                  begin
+                    if attrname <> '' then
+                      Child.Attrs.Add(attrname,val)
+                    else
+                      raise Exception.Create('XML parse error: unknown parameter for value '
+                        + val);
+                  end;
+              end;
+          end;
+        end;
+    end;
+
+  end;
+
+end;
+*)
 
 procedure TMyXMLParser.JSON(starttag: string; S: String);
 var

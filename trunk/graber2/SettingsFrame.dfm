@@ -1,7 +1,7 @@
 object fSettings: TfSettings
   Left = 0
   Top = 0
-  Width = 564
+  Width = 451
   Height = 304
   Align = alClient
   Font.Charset = DEFAULT_CHARSET
@@ -11,17 +11,15 @@ object fSettings: TfSettings
   Font.Style = []
   ParentFont = False
   TabOrder = 0
-  ExplicitWidth = 451
   object pButtons: TPanel
     AlignWithMargins = True
     Left = 3
     Top = 3
-    Width = 558
+    Width = 445
     Height = 25
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitWidth = 445
     object btnOk: TcxButton
       Left = 0
       Top = 0
@@ -98,20 +96,18 @@ object fSettings: TfSettings
   object pcMain: TcxPageControl
     Left = 172
     Top = 31
-    Width = 392
+    Width = 279
     Height = 273
     ActivePage = cxTabSheet1
     Align = alClient
     HideTabs = True
     TabOrder = 3
-    ExplicitWidth = 279
     ClientRectBottom = 273
-    ClientRectRight = 392
+    ClientRectRight = 279
     ClientRectTop = 0
     object cxTabSheet1: TcxTabSheet
       Caption = 'cxTabSheet1'
       ImageIndex = 0
-      ExplicitWidth = 279
       object lcLanguage: TcxLabel
         Left = 6
         Top = 4
@@ -158,7 +154,6 @@ object fSettings: TfSettings
     object cxTabSheet2: TcxTabSheet
       Caption = 'cxTabSheet2'
       ImageIndex = 1
-      ExplicitWidth = 279
       object eThreads: TcxSpinEdit
         Left = 206
         Top = 3
@@ -237,7 +232,6 @@ object fSettings: TfSettings
     object cxTabSheet3: TcxTabSheet
       Caption = 'cxTabSheet3'
       ImageIndex = 2
-      ExplicitWidth = 279
       object chbProxy: TcxCheckBox
         Left = 6
         Top = 3
@@ -323,25 +317,24 @@ object fSettings: TfSettings
     object cxTabSheet4: TcxTabSheet
       Caption = 'cxTabSheet4'
       ImageIndex = 3
-      ExplicitWidth = 279
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0
-        Width = 392
+        Width = 279
         Height = 273
         Align = alClient
         OptionsView.ShowEditButtons = ecsbAlways
         OptionsView.GridLineColor = clBtnShadow
         OptionsView.RowHeaderWidth = 148
         TabOrder = 0
-        ExplicitWidth = 279
         Version = 1
       end
     end
     object cxTabSheet5: TcxTabSheet
       Caption = 'cxTabSheet5'
       ImageIndex = 4
-      ExplicitWidth = 279
       object cxLabel1: TcxLabel
         Left = 6
         Top = 3

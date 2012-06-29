@@ -14,7 +14,7 @@ type
 {function Replace(src, AFrom, ATo: string;    use SysUtils.StringReplace
   rpall: boolean = false): string;     }
 function emptyname(s: string): string;
-function deleteids(s: string; slsh: boolean = false): string;
+//function deleteids(s: string; slsh: boolean = false): string;
 function addstr(s1, s2: string): string;
 function numstr(n: word; s1, s2, s3: string; engstyle: boolean = false): string;
 function CreateDirExt(Dir: string): boolean;
@@ -23,7 +23,8 @@ function RadioGroupDlg(ACaption, AHint: String;
   AItems: array of String): Integer;
 function DeleteTo(s: String; subs: string; casesens: boolean = true;
   re: boolean = false): string;
-function DeleteFromTo(s, sub1, sub2: String; casesens: boolean = true): String;
+function DeleteFromTo(s, sub1, sub2: String; casesens: boolean = true;
+  recursive: boolean = false): String;
 function GetBtString(n: Extended): string;
 function GetBtStringEx(n: Extended): string;
 
@@ -34,7 +35,8 @@ function STRINGENCODE(s: STRING): STRING;
 function STRINGDECODE(s: STRING): STRING;
 function Trim(s: String; ch: Char = ' '): String;
 function TrimEx(s: String; ch: TSetOfChar): String;
-function CopyTo(s, substr: string; back: boolean = false): string; overload;
+function CopyTo(s, substr: string; back: boolean = false; re: boolean = false): string; overload;
+function CopyTo(Source: String; ATo: Char; Isl: array of string): string; overload;
 function CopyTo(var Source: String; ATo: Char; Isl: array of string; cut: boolean = false): string; overload;
 function CopyFromTo(s, sub1, sub2: String; re: boolean = false): String; overload;
 function CopyFromTo(Source: String; AFrom,ATo: Char; Isl: array of string): String; overload;
@@ -70,7 +72,7 @@ function strnull(s: variant): variant;
 function nullstr(Value: Variant): Variant;
 function ifn(b: boolean; thn, els: variant): variant;
 function DeleteEx(S: String; Index,Count: integer): String;
-procedure SaveStrToFile(S, FileName: String);
+procedure SaveStrToFile(S, FileName: String; Add: boolean = false);
 
 implementation
 
@@ -352,7 +354,7 @@ begin
   Result := Result + src;
 end;    }
 
-function deleteids(s: string; slsh: boolean): string;
+{function deleteids(s: string; slsh: boolean): string;
 var
   p: Integer;
 begin
@@ -372,7 +374,7 @@ begin
     else
       Result := copy(s, 1, p - 1) + ExtractFileExt(s);
   end;
-end;
+end;      }
 
 function addstr(s1, s2: string): string;
 var
@@ -711,34 +713,37 @@ begin
   end;
 end;
 
-function CopyTo(s, substr: string; back: boolean): string;
+function CopyTo(s, substr: string; back: boolean; re: boolean): string;
 var
   i: Integer;
 begin
   if back then
-  begin
-    i := length(s)-length(substr) + 1;
-    while i > 0 do
-    begin
-      if PosEx(substr,S,i) > 0 then
-        break;
-      dec(i);
-    end;
+    s := ReverseString(s);
 
-    if i = 0 then
-        Result := copy(s, 1, length(s))
-    else
-      Result := copy(s, i + 1, length(s) - i + length(substr));
-  end
-  else
-  begin
     i := pos(substr, s);
 
     if i = 0 then
+      if re then
+        Result := ''
+      else
         Result := copy(s, 1, length(s))
     else
       Result := copy(s, 1, i - 1);
-  end;
+
+    if back then
+      Result := ReverseString(Result);
+  //end;
+end;
+
+function CopyTo(Source: String; ATo: Char; Isl: array of string): string;
+var
+  i: Integer;
+begin
+  i := CharPos(Source,ATo,Isl);
+  if i = 0 then
+    Result := copy(Source, 1, length(Source))
+  else
+    Result := copy(Source, 1, i - 1);
 end;
 
 function CopyTo(var Source: String; ATo: Char; Isl: array of string; cut: boolean = false): string;
@@ -811,22 +816,32 @@ begin
 
 end;
 
-function DeleteFromTo(s, sub1, sub2: String; casesens: boolean = true): String;
+function DeleteFromTo(s, sub1, sub2: String; casesens: boolean = true;
+  recursive: boolean = false): String;
 var
   l1, l2: Integer;
-  tmp: string;
 begin
-  tmp := s;
-  l1 := pos(LOWERCASE(sub1), LOWERCASE(tmp));
-  if l1 > 0 then
-    Delete(tmp, 1, l1 + length(sub1) - 1);
+//  Result := '';
 
-  l2 := pos(LOWERCASE(sub2), LOWERCASE(tmp));
-  if l2 > 0 then
-    l2 := l2 + length(s) - length(tmp);
+  sub1 := lowercase(sub1);
+  sub2 := lowercase(sub2);
 
-  if (l1 > 0) and (l2 > 0) then
-    Delete(s, l1, l2 - l1 + length(sub2));
+  l1 := pos(lowercase(sub1), lowercase(s));
+
+  while l1 > 0 do
+  begin
+    l2 := PosEx(sub2, lowercase(s), l1 + 1);
+    if (l1 > 0) and (l2 > 0) then
+    begin
+      Delete(s, l1, l2 - l1 + length(sub2));
+
+      if recursive then
+        l1 := PosEx(sub1, lowercase(s),l1)
+      else
+        l1 := 0;
+    end else
+      l1 := 0;
+  end;
 
   Result := s;
 end;
@@ -1864,13 +1879,15 @@ begin
   Result := S;
 end;
 
-procedure SaveStrToFile(S, FileName: String);
+procedure SaveStrToFile(S, FileName: String; add: boolean);
 var
   l: tstringlist;
 begin
   l := tstringlist.Create;
   try
-    l.Text := s;
+    if add and FileExists(FileName) then
+      l.LoadFromFile(FileName);
+    l.Add(s);
     l.SaveToFile(FileName);
   finally
     l.Free

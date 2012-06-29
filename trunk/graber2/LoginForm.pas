@@ -47,7 +47,7 @@ var
 procedure TfLogin.bCancelClick(Sender: TObject);
 begin
   FCallBack(Self,FN,eLogin.Text,ePassword.Text,true);
-  Close;
+//  Close;
 end;
 
 procedure TfLogin.bOkClick(Sender: TObject);

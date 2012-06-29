@@ -5,7 +5,10 @@ interface
 uses
   SysUtils, Classes, cxGridCustomTableView, cxGraphics, cxEdit, Windows,
   cxDataUtils, cxGridCommon, cxGridTableView, cxEditRepositoryItems,
-  cxExtEditRepositoryItems, cxVGrid, GraberU, common, Math;
+  cxExtEditRepositoryItems, cxVGrid, GraberU, common, Math, Variants,
+  Dialogs, cxButtonEdit,
+
+  OpBase;
 
 type
   Tdm = class(TDataModule)
@@ -22,6 +25,9 @@ type
     erRDTextEdit: TcxEditRepositoryTextItem;
     erRDPassword: TcxEditRepositoryTextItem;
     erRDCheckBox: TcxEditRepositoryCheckBoxItem;
+    erPathText: TcxEditRepositoryButtonItem;
+    procedure erPathTextPropertiesButtonClick(Sender: TObject;
+      AButtonIndex: Integer);
   private
     { Private declarations }
   public
@@ -41,6 +47,8 @@ procedure BestFitWidths(a: TcxGridTableView; FirstRec: integer = 0);
 
 implementation
 
+uses PathEditorForm;
+
 {$R *.dfm}
 type
   TcxCustomGridTableItemAccess = class(TcxCustomGridTableItem);
@@ -52,7 +60,7 @@ var
 begin
   while s <> '' do
   begin
-    tmp := GetNextS(s, ',');
+    tmp := TrimEx(CopyTo(s,',',['""'],true),[' ','"']);
     list.Add(tmp);
   end;
 end;
@@ -169,6 +177,7 @@ begin
   Result := vg.AddChild(Category, TcxEditorRow) as TcxEditorRow;
   Result.Name := AName;
   Result.Properties.Caption := ACaption;
+  Result.Properties.Value := DefaultValue;
   case FieldType of
     ftString:
       if ReadOnly then
@@ -197,12 +206,47 @@ begin
         Result.Properties.RepositoryItem := erCombo;
       end;
     ftCheck:
+    begin
       if ReadOnly then
         Result.Properties.RepositoryItem := erRDCheckBox
       else
         Result.Properties.RepositoryItem := erCheckBox;
+      Result.Properties.Value := VarAsType(Result.Properties.Value,varBoolean);
+    end;
+    ftPathText:
+    begin
+      if ReadOnly then
+        Result.Properties.RepositoryItem := erRDTextEdit
+      else
+        Result.Properties.RepositoryItem := erPathText;
+    end;
   end;
-  Result.Properties.Value := DefaultValue;
+end;
+
+procedure Tdm.erPathTextPropertiesButtonClick(Sender: TObject;
+  AButtonIndex: Integer);
+var
+  {vars,}fields: tstringlist;
+begin
+  case AButtonIndex of
+    0:begin
+      //vars := tstringlist.Create;
+      try
+        fields := tstringlist.Create;
+        try
+          //FullResList.GetAllResourceFields(vars);
+          FullResList.GetAllPictureFields(fields);
+          (Sender as tcxbuttonedit).Text :=
+            ExecutePathEditor((Sender as tcxbuttonedit).Text,nil,fields);
+          (Sender as tcxbuttonedit).PostEditValue;
+        finally
+          fields.Free;
+        end;
+      finally
+        //vars.Free;
+      end;
+    end;
+  end;
 end;
 
 end.

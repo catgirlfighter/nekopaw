@@ -477,12 +477,12 @@ begin
     end;
     JOB_STOPLIST:
       if ResList.PicsFinished then
+      begin
         if not ResList.Canceled
         and GlobalSettings.Downl.SDALF then
-          ResList.StartJob(JOB_PICS)
-        else
-      else
+          ResList.StartJob(JOB_PICS);
         sBar.Panels[0].Text := '';
+      end;
     JOB_STOPPICS:
     begin
       FSizeColumn.Visible := false;

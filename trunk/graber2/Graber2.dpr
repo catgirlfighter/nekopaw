@@ -1,5 +1,7 @@
 program Graber2;
 
+
+
 {$R *.dres}
 
 uses
@@ -23,7 +25,8 @@ uses
   UPDUnit in 'UPDUnit.pas',
   MyDataSet in 'MyDataSet.pas',
   LoginForm in 'LoginForm.pas' {fLogin},
-  Whatsnewform in 'Whatsnewform.pas' {fWhatsNew};
+  Whatsnewform in 'Whatsnewform.pas' {fWhatsNew},
+  PathEditorForm in 'PathEditorForm.pas' {fPathEditor};
 
 {$R *.res}
 
@@ -38,9 +41,10 @@ begin
   //FullResList[0].NameFormat := GlobalSettings.Formats.PicFormat;
   //FullResList.PicFileFormat := GlobalSettings.Formats.PicFormat;
 
-  Application.CreateForm(Tmf, mf);
   Application.CreateForm(Tdm, dm);
-  Application.CreateForm(TfWhatsNew, fWhatsNew);
+  Application.CreateForm(Tmf, mf);
+  //Application.CreateForm(TfWhatsNew, fWhatsNew);
+  //Application.CreateForm(TfPathEditor, fPathEditor);
   //Application.CreateForm(TfLogin, fLogin);
   Application.Run;
 

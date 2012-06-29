@@ -200,7 +200,7 @@ begin
   begin
     c := dm.CreateCategory(vgSettings,'vgimain',lang('_MAINCONFIG_'));
     dm.CreateField(vgSettings,'vgitag',lang('_TAGSTRING_'),'',ftString,c,FullResList[n].Fields['tag']);
-    dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftString,c,FullResList[n].NameFormat);
+    dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftPathText,c,FullResList[n].NameFormat);
     dm.CreateField(vgSettings,'vgisdalf',lang('_SDALF_'),'',ftCheck,c,GlobalSettings.Downl.SDALF);
   end
   else
@@ -218,7 +218,7 @@ begin
     s := NameFormat;
     if (s = '') or Inherit then
       s := FullResList[0].NameFormat;
-    dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftString,c,s);
+    dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftPathText,c,s);
 
     d := FullResList[0].Fields.Count;
 
@@ -233,7 +233,7 @@ begin
             if not Assigned(c) then
               c := dm.CreateCategory(vgSettings,'vgieditional',lang('_EDITIONALCONFIG_'));
             with FullResList[n].Fields.Items[i]^ do
-              dm.CreateField(vgSettings,'evgi' + resname,resname,resitems,restype,c,resvalue);
+              dm.CreateField(vgSettings,'evgi' + resname,restitle,resitems,restype,c,resvalue);
 
                ///derp
           end;
@@ -292,7 +292,7 @@ begin
   begin
     SetIntrfEnabled(true);
     if Assigned(fLogin) then
-      if FLoggedOn then
+      if FLoggedOn or FullResList.Canceled then
         fLogin.Close
       else
         fLogin.bOk.Enabled := true
@@ -441,7 +441,7 @@ begin
     if not FullResList.ListFinished then
       FullResList.StartJob(JOB_STOPLIST)
     else
-      fLogin.bOk.Enabled := true
+      fLogin.Close;
   end else
   begin
     FullResList[n].Fields['login'] := Login;
