@@ -14,6 +14,7 @@ $userstring = 'user[name]';
 $pwdstring = 'user[password]';
 $main.checkcookie = 'login';
 $main.login = '$main.url+"user/authenticate?"+$userstring+"="+$login+"&"+$pwdstring+"="+$password+"&commit=Login"';
+$page = '@min(1000,#count/100+1)';
 
 [listscript]
 $thread.url = "$main.url+'post/index.'+$fpxml+'?limit=100&tags='+@httpencode($tag)";
@@ -32,7 +33,7 @@ $thread.referer = $picture%post_url;
 
 [firstpagexml]
 ^posts{
-	$thread.count=@min(1000,#count/100+1);
+	$thread.count=@calc($page);
 	$thread.result=#count;
 	^post{
 		addpicture(
