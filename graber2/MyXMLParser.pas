@@ -17,7 +17,10 @@ type
   TAttrList = class(TObject)
   private
     FAttrs: TAttrs;
+    FTag: Integer;
+    FNoParam: boolean;
     function GetCount: Integer;
+    function GetNoParam: boolean;
   protected
     function GetAttr(AValue: Integer): TAttr;
   public
@@ -31,6 +34,8 @@ type
     function AsString: String;
     constructor Create;
     destructor Destroy; override;
+    property Tag: Integer read FTag write FTag;
+    property NoParameters: boolean read GetNoParam write FNoParam;
   end;
 
   TTagList = class;
@@ -48,6 +53,7 @@ type
     FChilds: TTagList;
     FKind: TTagKind;
     FClosed: boolean;
+    FTag: Integer;
   protected
     procedure SetName(Value: String);
     procedure SetText(Value: String);
@@ -64,6 +70,7 @@ type
     property Parent: TTag read FParent write FParent;
     property Kind: TTagKind read FKind write FKind;
     property Closed: Boolean read FClosed write FClosed;
+    property Tag: Integer read FTag write FTag;
   end;
 
   TTagList = class(TList)
@@ -71,21 +78,23 @@ type
       function Get(ItemIndex: Integer): TTag;
       procedure Notify(Ptr: Pointer; Action: TListNotification); override;
     public
-      procedure GetList(Tag: String; AAttrs: TAttrList; AList: TTagList);
+      procedure GetList(Tag: String; AAttrs: TAttrList; AList: TTagList); overload;
+      procedure GetList(Tags: array of string; AAttrs: array of TAttrList;
+        AList: TTagList); overload;
       procedure CopyList(AList: TTagList; Parent: TTag);
       procedure ExportToFile(fname: string);
       function FirstItemByName(tagname: string): ttag;
       property Items[ItemName: integer]: TTag read Get; default;
       function CreateChild(Parent: TTag; AName: String = '';
         TagKind: TTagKind = tkTag): TTag;
-      procedure CopyTag(ATag: TTag; Parent: TTag = nil);
+      function CopyTag(ATag: TTag; Parent: TTag = nil): TTag;
   end;
 
   TXMLOnTagEvent = procedure(ATag: TTag) of object;
   TXMLOnEndTagEvent = procedure(ATag: String) of object;
   TXMLOnContentEvent = procedure(ATag: TTag; AContent: String) of object;
 
-  TMyXMLParser = class(TObject)
+  TMyXMLParser = class(TObject)  //Used old and stupid realisation, yeah
   private
     FOnStartTag, FOnEmptyTag, FOnEndTag: TXMLOnTagEvent;
     FOnContent: TXMLOnContentEvent;
@@ -232,8 +241,6 @@ begin
   Result := inherited Get(ItemIndex);
 end;
 
-procedure TTagList.GetList(Tag: String; AAttrs: TAttrList; AList: TTagList);
-
 function CheckRule(v1,v2: string): boolean;
 var
   tmp: string;
@@ -261,6 +268,8 @@ begin
   Result := false;
 end;
 
+procedure TTagList.GetList(Tag: String; AAttrs: TAttrList; AList: TTagList);
+
 var
   i,j: integer;
   b: boolean;
@@ -270,14 +279,15 @@ begin
   //Tag := lowercase(Tag);
   for i := 0 to Count -1 do
     if (Items[i].Kind = tkTag) then
-      if SameText(Items[i].Name,Tag) then
+      if SameText(Items[i].Name,Tag)
+      and not (AAttrs.NoParameters and (Items[i].Attrs.Count > 0)) then
       begin
         b := true;
         if Assigned(AAttrs) then
           for j := 0 to AAttrs.Count -1 do
           begin
             s := Items[i].Attrs.Value(AAttrs[j].Name);
-            if not CheckRule(s,AAttrs[j].Value) and
+              if not CheckRule(s,AAttrs[j].Value) and
               not ((AAttrs[j].Value = '') and (s <> '')) then
             begin
               b := false;
@@ -285,13 +295,52 @@ begin
             end;
           end;
 
-
         if b then
           AList.CopyTag(Items[i])
         else
           Items[i].Childs.GetList(Tag,AAttrs,AList);
       end else
         Items[i].Childs.GetList(Tag,AAttrs,AList);
+end;
+
+procedure TTagList.GetList(Tags: array of string; AAttrs: array of TAttrList;
+  AList: TTagList);
+var
+  i,j,l: integer;
+  b: boolean;
+  s: string;
+
+begin
+  //Tag := lowercase(Tag);
+  if length(Tags) <> length(AAttrs) then
+    raise Exception.Create('Incorrect tags and parameters count');
+    for i := 0 to Count -1 do
+      if (Items[i].Kind = tkTag) then
+      begin
+        for l := 0 to Length(Tags)-1 do
+          if SameText(Items[i].Name,Tags[l])
+          and not(AAttrs[l].NoParameters and (Items[i].Attrs.Count > 0)) then
+          begin
+            b := true;
+            if Assigned(AAttrs[l]) then
+              for j := 0 to AAttrs[l].Count -1 do
+              begin
+                s := Items[i].Attrs.Value(AAttrs[l][j].Name);
+                  if not CheckRule(s,AAttrs[l][j].Value) and
+                  not ((AAttrs[l][j].Value = '') and (s <> '')) then
+                begin
+                  b := false;
+                  Break;
+                end;
+              end;
+
+            if b then
+              AList.CopyTag(Items[i]).Tag := AAttrs[l].Tag
+            else
+              Items[i].Childs.GetList(Tags,AAttrs,AList);
+          end else
+            Items[i].Childs.GetList(Tags,AAttrs,AList);
+      end;
 end;
 
 function TTagList.CreateChild(Parent: TTag; AName: String = '';
@@ -372,18 +421,18 @@ begin
     CopyTag(AList[i],Parent);
 end;
 
-procedure TTagList.CopyTag(ATag: TTag; Parent: TTag = nil);
-var
+function TTagList.CopyTag(ATag: TTag; Parent: TTag = nil): TTag;
+{var
   p: TTag;
-
+              }
 begin
-  p := CreateChild(Parent);
-  p.Name := ATag.Name;
-  p.Kind := ATag.Kind;
+  Result := CreateChild(Parent);
+  Result.Name := ATag.Name;
+  Result.Kind := ATag.Kind;
   //p.Text := ATag.Text;
   //p.Attrs := TAttrList.Create;
-  p.Attrs.Assign(ATag.Attrs);
-  p.Childs.CopyList(ATag.Childs,p);
+  Result.Attrs.Assign(ATag.Attrs);
+  Result.Childs.CopyList(ATag.Childs,Result);
   //Add(p);
 end;
 
@@ -397,6 +446,7 @@ begin
   FKind := AKind;
   FClosed := false;
   FAttrList := TAttrList.Create;
+  FTag := 0;
 end;
 
 destructor TTag.Destroy;
@@ -495,6 +545,11 @@ begin
   Result := length(FAttrs);
 end;
 
+function TAttrList.GetNoParam: boolean;
+begin
+  Result := FNoParam and not(Count > 0);
+end;
+
 procedure TAttrList.Add(AName: String; AValue: String);
 begin
   SetLength(FAttrs, length(FAttrs) + 1);
@@ -503,6 +558,7 @@ begin
     Name := AName;
     Value := AValue;
   end;
+//  FNoParam := false;
 end;
 
 procedure TAttrList.Assign(AAttrs: TAttrList);
@@ -564,6 +620,7 @@ constructor TAttrList.Create;
 begin
   inherited;
   FAttrs := nil;
+  FNoParam := true;
 end;
 
 destructor TAttrList.Destroy;

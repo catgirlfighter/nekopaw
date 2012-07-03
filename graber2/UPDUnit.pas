@@ -121,7 +121,8 @@ begin
         end
       else
         items.Delete(i)
-    else if StrToInt(items[i].Attrs.Value('version')) > v then
+    else if (StrToInt(items[i].Attrs.Value('version')) > v)
+    or (StrToInt(items[i].Attrs.Value('version')) = -1) then
       inc(i)
     else
       items.Delete(i);
@@ -173,7 +174,7 @@ begin
       else
         pname := fname;
 
-      if (v2 >= v1)and(FileExists(aroot + aname)) then
+      if (v1 > -1) and (v2 >= v1) and (FileExists(aroot + aname)) then
         Continue;
 
       PostMessage(FHWND,CM_UPDATEPROGRESS,UPD_FILENAME,LongInt(@fname));
@@ -193,7 +194,8 @@ begin
         f.Free;
       end;
 
-      INI.WriteInteger('update',fname,v1); //save "DOWNLOADED"
+      if v1 > -1 then
+        INI.WriteInteger('update',fname,v1); //save "DOWNLOADED"
     end;
 
     FreeAndNil(INI);

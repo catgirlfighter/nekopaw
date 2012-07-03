@@ -1398,6 +1398,12 @@ procedure FileToString(FileName: String; var AValue: AnsiString);
 var
   AStream: TFileStream;
 begin
+  if not fileexists(FileName) then
+  begin
+    AValue := '';
+    Exit;
+  end;
+
   AStream := TFileStream.Create(FileName, fmOpenRead);
   try
     AStream.Position := 0;
