@@ -236,28 +236,30 @@ type
   TScriptSection = class;
   TScriptItemList = class;
 
-  TScriptEvent = function(const Parent: String; const Parametres: TValueList;
+  TScriptItemKind = (sikProcedure,sikDecloration,sikSection,sikCondition,sikGroup);
+
+  TScriptEvent = function(const Item: TScriptSection; const Parametres: TValueList;
     var LinkedObj: TObject): boolean of object;
 
-  TValueEvent = procedure(const ValS: Char; const Value: String;
+  TValueEvent = procedure(ItemName: String;
     var Result: Variant; var LinkedObj: TObject) of object;
 
-  TDeclorationEvent = procedure(ItemName: String; ItemValue: Variant; LinkedObj: TObject)
+  TDeclorationEvent = procedure(ItemName: String;
+    ItemValue: Variant; LinkedObj: TObject)
     of object;
 
-  TFinishEvent = procedure(Parent: String; LinkedObj: TObject) of object;
+  TFinishEvent = procedure(const Item: TScriptSection; LinkedObj: TObject) of object;
 
-  TScriptItemKind = (sikDecloration,sikSection,sikCondition);
 
   TScriptItem = class(TObject)
   private
-    FParent: String;
+    FName: String;
     FValue: Variant;
     FKind: TScriptItemKind;
   public
     procedure Assign(s: TScriptItem); virtual;
     property Kind: TScriptItemKind read FKind write FKind;
-    property Parent: String read FParent write FParent;
+    property Name: String read FName write FName;
     property Value: Variant read FValue write FValue;
   end;
 
@@ -268,6 +270,7 @@ type
     //FDeclorations: TValueList;
     //FConditions: TScriptSectionList;
     FChildSections: TScriptItemList;
+    FNoParam: Boolean;
   public
     constructor Create;
     destructor Destroy; override;
@@ -278,10 +281,11 @@ type
     procedure Clear;
     procedure Assign(s: TScriptItem); override;
     function Empty: Boolean;
-    property Parametres: TValueList read FParametres;
+    property Parameters: TValueList read FParametres;
     //property Conditions: TScriptSectionList read FConditions;
     //property Declorations: TValueList read FDeclorations;
     property ChildSections: TScriptItemList read FChildSections;
+    property NoParameters: Boolean read FNoParam write FNoParam;
   end;
 
   TScriptItemList = class(TList)
@@ -377,12 +381,12 @@ type
     procedure SeFields(Value: TResourceFields);
     procedure DoJobComplete;
     procedure DoFinish;
-    function SE(const Parent: String; const Parametres: TValueList;
+    function SE(const Item: TScriptSection; const Parametres: TValueList;
       var LinkedObj: TObject): boolean;
-    procedure VE(const ValS: Char; const Value: String; var Result: Variant;
+    procedure VE(Value: String; var Result: Variant;
       var LinkedObj: TObject);
     procedure DE(ItemName: String; ItemValue: Variant; LinkedObj: TObject);
-    procedure FE(Parent: String; LinkedObj: TObject);
+    procedure FE(const Item: TScriptSection; LinkedObj: TObject);
     procedure IdHTTPWorkBegin(ASender: TObject; AWorkMode: TWorkMode;
       AWorkCountMax: Int64);
     procedure IdHTTPWork(ASender: TObject; AWorkMode: TWorkMode;
@@ -957,13 +961,13 @@ begin
         n2 := CharPosEx(s, op, [], n1 + 1);
 
       if n2 = 0 then
-        cstr := Copy(s, n1 + 1, length(s) - n1)
+        cstr := Copy(s, n1, length(s) - n1 + 1)
       else
-        cstr := Copy(s, n1 + 1, n2 - n1 - 1);
+        cstr := Copy(s, n1, n2 - n1);
 
       rstr := null;
       // end;
-      VE(VarToStr(s)[n1], cstr, rstr, Lnk);
+      VE(cstr, rstr, Lnk);
 
       tmp := VarType(rstr);
 
@@ -991,7 +995,7 @@ begin
           rstr := VarAsType(rstr, varDouble);
       end;
 
-      cstr := VarToStr(s)[n1] + cstr;
+      //cstr := VarToStr(s)[n1] + cstr;
       s := StringReplace(s, cstr, rstr, [rfReplaceAll]);
 
       //n2 := n1 + length(rstr) - 1;
@@ -1492,7 +1496,7 @@ end;
 
 procedure TScriptItem.Assign(s: TScriptItem);
 begin
-  FParent := s.Parent;
+  FName := s.Name;
   FValue := s.Value;
   Kind := s.Kind;
 end;
@@ -1502,13 +1506,14 @@ end;
 constructor TScriptSection.Create;
 begin
   inherited;
-  FParent := '';
+  FName := '';
   FParametres := TValueList.Create;
   FParametres.NoDouble := false;
   //FDeclorations := TValueList.Create;
   //FDeclorations.NoDouble := false;
   //FConditions := TScriptSectionList.Create;
   FChildSections := TScriptItemList.Create;
+  FNoParam := false;
 end;
 
 destructor TScriptSection.Destroy;
@@ -1582,11 +1587,21 @@ begin
             raise Exception.Create('Script read error: '
                + 'Can''t find { after ' + Copy(s,i,15));
 
-          tmp := TrimEx(Copy(s, i, n - i), EmptyS);
+          tmp := TrimEx(Copy(s, i + 1, n - i - 1), EmptyS);
 
           Child := TScriptSection.Create;
-          Child.Kind := sikSection;
-          Child.Parent := GetNextS(tmp, '#');
+          Child.Name := Trim(GetNextS(tmp, '#'),'^');
+          if Child.Name = '' then
+            Child.Kind := sikGroup
+          else
+          begin
+            Child.Kind := sikSection;
+            if Child.Name[length(Child.Name)] = '!' then
+            begin
+              Child.NoParameters := true;
+              Child.Name := Copy(Child.Name,1,length(Child.Name)-1);
+            end;
+          end;
           while tmp <> '' do
           begin
             v1 := GetNextS(tmp, '#');
@@ -1596,9 +1611,9 @@ begin
 
             if v2 <> '' then
               if p = 0 then
-                Child.Parametres[v2] := ''
+                Child.Parameters[v2] := ''
               else
-                Child.Parametres[v2] :=
+                Child.Parameters[v2] :=
                   TrimEx(Copy(v1, p + 1, length(v1) - p), EmptyS);
           end;
 
@@ -1633,8 +1648,8 @@ begin
           Child := TScriptSection.Create;
           //Child.Parent := Parent;
           Child.Kind := sikCondition;
-          Child.Parametres.Assign(Parametres);
-          Child.Parent := tmp;
+          Child.Parameters.Assign(Parameters);
+          Child.Name := tmp;
 
           i := n + 1;
 
@@ -1678,7 +1693,7 @@ begin
 {          raise Exception.Create(Format(lang('_SCRIPT_READ_ERROR_'),
             [lang('_INCORRECT_DECLORATION_') + IntToStr(i)]));  }
             raise Exception.Create('Script read error: '
-               + 'Incorrect decloration near ' + Copy(s,i,15)); 
+               + 'Incorrect decloration near ' + Copy(s,i,15));
 
         if n > 0 then
         begin
@@ -1693,10 +1708,10 @@ begin
 {            raise Exception.Create(Format(lang('_SCRIPT_READ_ERROR_'),
               [lang('_INCORRECT_DECLORATION_') + IntToStr(i)]))     }
             raise Exception.Create('Script read error: '
-               + 'Incorrect decloration near ' + Copy(s,i,15)) 
+               + 'Incorrect decloration near ' + Copy(s,i,15))
           else if v2[1] = '$' then
             v2[1] := '@'
-          else if v2[1] <> '@' then               
+          else if v2[1] <> '@' then
             v2 := '@' + v2;
 
           { tmpi1 := CharPos(v1,'(',['()']);
@@ -1706,9 +1721,12 @@ begin
         end;
 
         ChItem := TScriptItem.Create;
-        ChItem.Kind := sikDecloration;
+        if v2[1] = '@' then
+          ChItem.Kind := sikProcedure
+        else
+          ChItem.Kind := sikDecloration;
         //Declorations[v2] := trim(v1);
-        ChItem.Parent := v2;
+        ChItem.Name := v2;
         ChItem.Value := trim(v1);
         ChildSections.Add(ChItem);
         // i := n + 1;
@@ -1736,13 +1754,13 @@ begin
   begin
     Calced := TValueList.Create;
     try
-      Calced.Assign(Parametres);
+      Calced.Assign(Parameters);
 
       if Assigned(PVE) then
         for i := 0 to Calced.Count - 1 do
           Calced.Items[i].Value := CalcValue(Calced.Items[i].Value, PVE, Lnk);
 
-      cont := SE(Parent, Calced, Lnk);
+      cont := SE(Self, Calced, Lnk);
     finally
       FreeAndNil(Calced);
     end;
@@ -1762,17 +1780,16 @@ begin
     repeat
       for i := 0 to ChildSections.Count -1 do
         case ChildSections[i].Kind of
-          sikSection:
+          sikSection,sikGroup:
             (ChildSections[i] as TScriptSection).Process(SE, DE, FE, VE, PVE, obj);
           sikCondition:
-            if (length(ChildSections[i].Parent) > 0) then
-              if CalcValue(ChildSections[i].Parent, VE, obj) then
+            if (length(ChildSections[i].Name) > 0) then
+              if CalcValue(ChildSections[i].Name, VE, obj) then
                 (ChildSections[i] as TScriptSection).Process(SE, DE, FE, VE, PVE, obj);
+          sikProcedure:
+            DE(ChildSections[i].Name,ChildSections[i].Value,obj);
           sikDecloration:
-            if CharInSet(ChildSections[i].Parent[1], ['@']) then
-              DE(ChildSections[i].Parent,ChildSections[i].Value,obj)
-            else
-              DE(ChildSections[i].Parent,CalcValue(ChildSections[i].Value,VE,obj),obj);
+              DE(ChildSections[i].Name,CalcValue(ChildSections[i].Value,VE,obj),obj);
         end;
 
       if (lnk is tlist) and ((lnk as tlist).Count > j) then
@@ -1785,7 +1802,7 @@ begin
   end;
 
   if Assigned(FE) then
-    FE(Parent, Lnk);
+    FE(Self, Lnk);
 
 end;
 
@@ -1800,7 +1817,7 @@ begin
     begin
 
       //FParent := s.Parent;
-      FParametres.Assign((s as TScriptSection).Parametres);
+      FParametres.Assign((s as TScriptSection).Parameters);
       //FKind := s.Kind;
       //FDeclorations.Assign(s.Declorations);
       //FConditions.Assign(s.Conditions);
@@ -1811,7 +1828,7 @@ end;
 
 procedure TScriptSection.Clear;
 begin
-  FParent := '';
+  FName := '';
   //Conditions.Clear;
   //Declorations.Clear;
   ChildSections.Clear;
@@ -1842,6 +1859,7 @@ var
   p: TScriptItem;
 
 begin
+  p := nil;
   Clear;
   if Assigned(s) then
     for i := 0 to s.Count - 1 do
@@ -1862,6 +1880,7 @@ begin
         p := TScriptItem.Create
       else
         Continue;
+
       p.Assign(s[i]);
       Add(p);
     end;
@@ -2392,7 +2411,7 @@ begin
 {  for i := 0 to Values.Count - 1 do
   begin
     t := Values.Items[i];  }
-    ProcValue(lowercase(ItemName), ItemValue);
+    ProcValue(ItemName, ItemValue);
 //  end;
 end;
 
@@ -3274,6 +3293,8 @@ end;
 
 procedure TDownloadThread.Execute;
 begin
+//  ReturnValue := THREAD_STOP;
+
   while not terminated do
   begin
     // FErrorString := '';
@@ -3431,40 +3452,97 @@ begin
   ReturnValue := Finish(Self);
 end;
 
-function TDownloadThread.SE(const Parent: String; const Parametres: TValueList;
+function TDownloadThread.SE(const Item: TScriptSection; const Parametres: TValueList;
   var LinkedObj: TObject): boolean;
 var
   l, s: TTagList;
-  i: integer;
-  a: TAttrList;
-
+  i,j: integer;
+  a: array of TAttrList;
+  tags: array of string;
 begin
-  if (Parent <> '') and (Parent[1] = '^') and Assigned(LinkedObj) and
-    ((LinkedObj is TTagList) or (LinkedObj is TTag)) then
+  if Assigned(LinkedObj) and((LinkedObj is TTagList)
+  or (LinkedObj is TTag) and ((LinkedObj as TTag).Tag = 0)) then
   begin
     l := TTagList.Create;
-    if (LinkedObj is TTagList) then
-      s := LinkedObj as TTagList
-    else
-      s := (LinkedObj as TTag).Childs;
+    try
+      if (LinkedObj is TTagList) then
+        s := LinkedObj as TTagList
+      else
+        s := (LinkedObj as TTag).Childs;
 
-    a := TAttrList.Create;
+      case Item.Kind of
+        sikSection:
+        begin
+          setlength(a,1);
 
-    for i := 0 to Parametres.Count - 1 do
-      a.Add(Parametres.Items[i].Name, VarToStr(Parametres.Items[i].Value));
+          a[0] := TAttrList.Create;
+          try
+            for i := 0 to Parametres.Count - 1 do
+              a[0].Add(Parametres.Items[i].Name, VarToStr(Parametres.Items[i].Value));
 
-    s.GetList(Copy(Parent, 2, length(Parent) - 1), a, l);
+            a[0].NoParameters := Item.NoParameters;
+            s.GetList(Item.Name, a[0], l);
+          finally
+            a[0].Free;
+            SetLength(a,0);
+          end;
 
-    a.Free;
+          LinkedObj := l;
 
-    LinkedObj := l;
+          Result := l.Count > 0;
+        end;
+        sikGroup:
+        begin
+          SetLength(tags,Item.ChildSections.Count);
+          SetLength(a,Item.ChildSections.Count);
+          
+          for j := 0 to Item.ChildSections.Count -1 do
+            a[j] := nil;
+          
+          try
+            for j := 0 to Item.ChildSections.Count -1 do
+            with (Item.ChildSections[j] as TScriptSection) do
+            begin
+              tags[j] := Item.ChildSections[j].Name;
+              a[j] := TAttrList.Create;
+              
+              for i := 0 to Parameters.Count - 1 do
+              begin
+                a[j].Add(Parametres.Items[i].Name,
+                  VarToStr(CalcValue(Parametres.Items[i].Value,VE,LinkedObj)));
+                a[j].Tag := Integer(Item.ChildSections);
+              end;
 
-    Result := l.Count > 0;
-  end else
+              a[j].NoParameters := NoParameters;
+            end;
+
+            s.GetList(tags,a,l);
+            
+          finally
+            for j := 0 to Item.ChildSections.Count -1 do
+              if Assigned(a[j]) then
+                a[j].Free;
+                
+            SetLength(tags,0);
+            SetLength(a,0);
+          end;
+
+          LinkedObj := l;
+
+          Result := l.Count > 0;
+        end;
+        else Result := true;
+      end;
+    except on e: exception do begin
+      l.Free;
+      raise Exception.Create(e.Message);
+    end; end;
+  end
+  else
     Result := true;
 end;
 
-procedure TDownloadThread.VE(const ValS: Char; const Value: String;
+procedure TDownloadThread.VE(Value: String;
   var Result: Variant; var LinkedObj: TObject);
 
   function Clc(Value: variant): variant;
@@ -3476,15 +3554,16 @@ var
   t: TTag;
   s, tmp: string;
   n,n2,i: integer;
-
+  c: char;
 begin
   // Value := lowrcase(Value);
   Result := '';
-
+  c := Copy(Value,1,1)[1];
+  Delete(Value,1,1);
 {  if LinkedObj is TTagList then
     Exit;     }
   try
-  case ValS of
+  case c of
     '#':
       if Assigned(LinkedObj) and (LinkedObj is TTag) then
         Result := ClearHTML((LinkedObj as TTag).Attrs.Value(Value));
@@ -3508,7 +3587,7 @@ begin
         if Fields.FindField(Result)>-1 then
           Result := Fields[Value]
         else
-          raise Exception.Create('Unknown variable: ' + ValS + Value);
+          raise Exception.Create('Unknown variable: ' + c + Value);
     '@':
       begin
         s := TrimEx(CopyTo(Value, '('), [#13, #10, #9, ' ']);
@@ -3823,9 +3902,10 @@ begin
     end;
 end;
 
-procedure TDownloadThread.FE(Parent: String; LinkedObj: TObject);
+procedure TDownloadThread.FE(const Item: TScriptSection; LinkedObj: TObject);
 begin
-  if (Parent <> '') and (Parent[1] = '^') and Assigned(LinkedObj) then
+  if (Item.Kind = sikSection) and Assigned(LinkedObj)
+  and (LinkedObj is TTagList) then
     LinkedObj.Free;
 end;
 
