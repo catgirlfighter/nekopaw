@@ -104,7 +104,7 @@ type
     bbSettings: TdxBarButton;
     bbNew: TdxBarButton;
     il: TcxImageList;
-    cxLookAndFeelController1: TcxLookAndFeelController;
+    cxLAF: TcxLookAndFeelController;
     mLog: TcxMemo;
     mErrors: TcxMemo;
     ApplicationEvents1: TApplicationEvents;
@@ -156,7 +156,8 @@ type
     procedure UPDATECHECK(var Msg: TMessage); message CM_UPDATE;
     procedure LANGUAGECHANGED(var Msg: TMessage); message CM_LANGUAGECHANGED;
     procedure WHATSNEW(var Msg: TMessage); message CM_WHATSNEW;
-    procedure dxTabClose(Sender: TdxCustomDockControl);
+    procedure STYLECHANGED(var Msg: TMessage); message CM_STYLECHANGED;
+    //procedure dxTabClose(Sender: TdxCustomDockControl);
     // procedure APPLYEDITLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
   private
     TabList: TList;
@@ -396,7 +397,7 @@ begin
   begin
     if (TMycxtabSheet(pcTables.ActivePage).SecondFrame is TfNewList) then
     begin
-      pcTables.Options := pcTables.Options + [pcoCloseButton];
+      //pcTables.Options := pcTables.Options + [pcoCloseButton];
       bbStartList.Caption := lang('_STARTLIST_');
       bbStartList.ImageIndex := 3;
       bbStartPics.Caption := lang('_STARTPICS_');
@@ -436,7 +437,7 @@ begin
       end;
       //bbStartList.Enabled := true;
 
-      pcTables.Options := pcTables.Options + [pcoCloseButton];
+      //pcTables.Options := pcTables.Options + [pcoCloseButton];
 
       if not dsTags.AutoHide then
         dsTags.Show;
@@ -457,7 +458,7 @@ begin
       bbStartPics.Caption := lang('_STARTPICS_');
       bbStartList.Enabled := false;
       bbStartPics.Enabled := false;
-      pcTables.Options := pcTables.Options - [pcoCloseButton];
+      //pcTables.Options := pcTables.Options - [pcoCloseButton];
       dsTags.Hide;
     end;
   end;
@@ -847,6 +848,11 @@ begin
   ShowWhatsNew;
 end;
 
+procedure Tmf.STYLECHANGED(var Msg: TMessage);
+begin
+  cxLAF.NativeStyle := GlobalSettings.UseLookAndFeel;
+end;
+
 procedure Tmf.StartUpdate;
 var
   f: tfileStream;
@@ -945,10 +951,10 @@ begin
   ShowDs;
 end;
 
-procedure Tmf.dxTabClose(Sender: TdxCustomDockControl);
+{procedure Tmf.dxTabClose(Sender: TdxCustomDockControl);
 begin
   PostMessage(Application.MainForm.Handle, CM_CLOSETAB, integer(Sender), 0);
-end;
+end;   }
 
 procedure Tmf.Setlang;
 begin
@@ -1055,6 +1061,9 @@ end;
 procedure Tmf.FormCreate(Sender: TObject);
 begin
   FOldCaption := Caption;
+  if GlobalSettings.UseLookAndFeel then
+    cxLAF.NativeStyle := true;
+
   SetLang;
   //pcTables.OnPageClose := OnTabClose;
   FullResList.OnError := OnError;

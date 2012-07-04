@@ -1,8 +1,8 @@
 object fSettings: TfSettings
   Left = 0
   Top = 0
-  Width = 451
-  Height = 304
+  Width = 731
+  Height = 395
   Align = alClient
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -11,15 +11,18 @@ object fSettings: TfSettings
   Font.Style = []
   ParentFont = False
   TabOrder = 0
+  ExplicitWidth = 451
+  ExplicitHeight = 304
   object pButtons: TPanel
     AlignWithMargins = True
     Left = 3
     Top = 3
-    Width = 445
+    Width = 725
     Height = 25
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
+    ExplicitWidth = 445
     object btnOk: TcxButton
       Left = 0
       Top = 0
@@ -52,7 +55,7 @@ object fSettings: TfSettings
     Left = 0
     Top = 31
     Width = 169
-    Height = 273
+    Height = 364
     Align = alLeft
     Bands = <
       item
@@ -64,6 +67,7 @@ object fSettings: TfSettings
     OptionsView.Headers = False
     TabOrder = 1
     OnFocusedNodeChanged = tlListFocusedNodeChanged
+    ExplicitHeight = 273
     Data = {
       00000500470100000F00000044617461436F6E74726F6C6C6572310100000012
       000000546378537472696E6756616C75655479706505000000445855464D5400
@@ -89,30 +93,36 @@ object fSettings: TfSettings
     Left = 169
     Top = 31
     Width = 3
-    Height = 273
+    Height = 364
     ResizeUpdate = True
     Control = tlList
+    ExplicitHeight = 273
   end
   object pcMain: TcxPageControl
     Left = 172
     Top = 31
-    Width = 279
-    Height = 273
+    Width = 559
+    Height = 364
     Align = alClient
     TabOrder = 3
     Properties.ActivePage = cxTabSheet1
     Properties.HideTabs = True
-    ClientRectBottom = 273
-    ClientRectRight = 279
+    ExplicitWidth = 279
+    ExplicitHeight = 273
+    ClientRectBottom = 364
+    ClientRectRight = 559
     ClientRectTop = 0
     object cxTabSheet1: TcxTabSheet
       Caption = 'cxTabSheet1'
       ImageIndex = 0
+      ExplicitWidth = 279
+      ExplicitHeight = 273
       object lcLanguage: TcxLabel
         Left = 6
         Top = 4
         AutoSize = False
         Caption = 'lcLanguage'
+        Transparent = True
         Height = 17
         Width = 194
       end
@@ -139,6 +149,7 @@ object fSettings: TfSettings
         ParentColor = False
         Style.TextColor = clHotLight
         Style.TextStyle = [fsUnderline]
+        Transparent = True
         OnClick = lCheckNowClick
         Height = 17
         Width = 194
@@ -150,10 +161,19 @@ object fSettings: TfSettings
         TabOrder = 4
         Width = 339
       end
+      object chbUseLookAndFeel: TcxCheckBox
+        Left = 6
+        Top = 101
+        Caption = 'chbUseLookAndFeel'
+        TabOrder = 5
+        Width = 339
+      end
     end
     object cxTabSheet2: TcxTabSheet
       Caption = 'cxTabSheet2'
       ImageIndex = 1
+      ExplicitWidth = 279
+      ExplicitHeight = 273
       object eThreads: TcxSpinEdit
         Left = 206
         Top = 3
@@ -201,6 +221,7 @@ object fSettings: TfSettings
         Top = 4
         AutoSize = False
         Caption = 'lcThreads'
+        Transparent = True
         Height = 17
         Width = 194
       end
@@ -209,6 +230,7 @@ object fSettings: TfSettings
         Top = 58
         AutoSize = False
         Caption = 'lcThreadPerRes'
+        Transparent = True
         Height = 17
         Width = 194
       end
@@ -217,6 +239,7 @@ object fSettings: TfSettings
         Top = 85
         AutoSize = False
         Caption = 'lcPicThreads'
+        Transparent = True
         Height = 17
         Width = 194
       end
@@ -225,6 +248,7 @@ object fSettings: TfSettings
         Top = 112
         AutoSize = False
         Caption = 'lcRetries'
+        Transparent = True
         Height = 17
         Width = 194
       end
@@ -232,6 +256,8 @@ object fSettings: TfSettings
     object cxTabSheet3: TcxTabSheet
       Caption = 'cxTabSheet3'
       ImageIndex = 2
+      ExplicitWidth = 279
+      ExplicitHeight = 273
       object chbProxy: TcxCheckBox
         Left = 6
         Top = 3
@@ -286,6 +312,7 @@ object fSettings: TfSettings
         Top = 31
         AutoSize = False
         Caption = 'lcProxyHost'
+        Transparent = True
         Height = 17
         Width = 194
       end
@@ -294,6 +321,7 @@ object fSettings: TfSettings
         Top = 58
         AutoSize = False
         Caption = 'lcProxyPort'
+        Transparent = True
         Height = 17
         Width = 194
       end
@@ -302,6 +330,7 @@ object fSettings: TfSettings
         Top = 103
         AutoSize = False
         Caption = 'lcProxyLogin'
+        Transparent = True
         Height = 17
         Width = 194
       end
@@ -310,6 +339,7 @@ object fSettings: TfSettings
         Top = 130
         AutoSize = False
         Caption = 'lcProxyPassword'
+        Transparent = True
         Height = 17
         Width = 194
       end
@@ -317,28 +347,33 @@ object fSettings: TfSettings
     object cxTabSheet4: TcxTabSheet
       Caption = 'cxTabSheet4'
       ImageIndex = 3
-      ExplicitWidth = 0
-      ExplicitHeight = 0
+      ExplicitWidth = 279
+      ExplicitHeight = 273
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0
-        Width = 279
-        Height = 273
+        Width = 559
+        Height = 364
         Align = alClient
         OptionsView.ShowEditButtons = ecsbAlways
         OptionsView.GridLineColor = clBtnShadow
         OptionsView.RowHeaderWidth = 148
         TabOrder = 0
+        ExplicitWidth = 279
+        ExplicitHeight = 273
         Version = 1
       end
     end
     object cxTabSheet5: TcxTabSheet
       Caption = 'cxTabSheet5'
       ImageIndex = 4
+      ExplicitWidth = 279
+      ExplicitHeight = 273
       object cxLabel1: TcxLabel
         Left = 6
         Top = 3
         Caption = 'cxLabel1'
+        Transparent = True
       end
       object cxLabel2: TcxLabel
         Left = 7
@@ -346,6 +381,7 @@ object fSettings: TfSettings
         Caption = 
           'Thanks to all Anonymous and Steves Ballmers for new ideas and tr' +
           'oubleshooting '
+        Transparent = True
       end
       object cxLabel3: TcxLabel
         Left = 7
@@ -355,6 +391,7 @@ object fSettings: TfSettings
           'For new versions, question answers, suggestions and troubleshoot' +
           'ing'
         Properties.WordWrap = True
+        Transparent = True
         Height = 19
         Width = 392
       end
@@ -362,6 +399,7 @@ object fSettings: TfSettings
         Left = 40
         Top = 82
         Caption = 'check project homepage'
+        Transparent = True
       end
       object cxLabel5: TcxLabel
         Left = 24
@@ -373,6 +411,7 @@ object fSettings: TfSettings
         Style.TextColor = clBlue
         Style.TextStyle = [fsUnderline]
         Properties.LineOptions.Alignment = cxllaBottom
+        Transparent = True
         OnClick = cxLabel5Click
       end
     end

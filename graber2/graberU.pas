@@ -26,6 +26,7 @@ const
   //CM_UPDATEPROGRESS = WM_USER + 14;
   CM_LANGUAGECHANGED = WM_USER + 15;
   CM_WHATSNEW = WM_USER + 16;
+  CM_STYLECHANGED = WM_USER + 17;
 
   THREAD_STOP = 0;
   THREAD_START = 1;
@@ -95,6 +96,7 @@ type
     HideToTray: Boolean;
     SaveConfirm: Boolean;
     ShowWhatsNew: boolean;
+    UseLookAndFeel: Boolean;
     IsNew: boolean;
   end;
 

@@ -28,6 +28,7 @@ object fLogin: TfLogin
     Left = 8
     Top = 8
     Caption = 'lLogin'
+    Transparent = True
   end
   object ePassword: TcxTextEdit
     Left = 112
@@ -41,6 +42,7 @@ object fLogin: TfLogin
     Left = 8
     Top = 31
     Caption = 'lPassword'
+    Transparent = True
   end
   object bOk: TcxButton
     Left = 8

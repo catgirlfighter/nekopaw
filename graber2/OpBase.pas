@@ -184,6 +184,7 @@ begin
 
       AutoUPD := INI.ReadBool('settings','autoupd',true);
       ShowWhatsNew := INI.ReadBool('settings','showwhatsnew',true);
+      UseLookAndFeel := INI.ReadBool('settings','uselookandfeel',false);
       UPDServ := INI.ReadString('settings','updserver',
         'http://nekopaw.googlecode.com/svn/trunk/release/graber2/');
       langname := INI.ReadString('global','language',langname);
@@ -254,7 +255,8 @@ begin
 
       INI.WriteString('Global','Language',langname);
       INI.WriteBool('Settings','autoUPD',AutoUPD);
-      INI.WriteBool('settings','showwhatsnew',ShowWhatsNew);
+      INI.WriteBool('Settings','ShowWhatsNew',ShowWhatsNew);
+      INI.WriteBool('Settings','UseLookAndFeel',UseLookAndFeel);
 
       with Downl do
       begin

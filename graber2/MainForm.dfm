@@ -12,6 +12,8 @@ object mf: Tmf
   Font.Height = -11
   Font.Name = 'Tahoma'
   Font.Style = []
+  GlassFrame.Enabled = True
+  GlassFrame.SheetOfGlass = True
   OldCreateOrder = False
   Position = poScreenCenter
   OnCreate = FormCreate
@@ -75,8 +77,9 @@ object mf: Tmf
             Height = 243
             Align = alClient
             TabOrder = 0
+            Properties.CloseButtonMode = cbmEveryTab
             Properties.Images = il
-            Properties.Options = [pcoAlwaysShowGoDialogButton, pcoCloseButton, pcoGradient, pcoGradientClientArea, pcoRedrawOnResize]
+            Properties.Options = [pcoGoDialog]
             OnCanCloseEx = pcTablesCanCloseEx
             OnChange = pcTablesChange
             OnPageChanging = pcTablesPageChanging
@@ -738,9 +741,9 @@ object mf: Tmf
           0000000000000000000000000000000000000000000000000000}
       end>
   end
-  object cxLookAndFeelController1: TcxLookAndFeelController
-    Left = 136
-    Top = 72
+  object cxLAF: TcxLookAndFeelController
+    Left = 544
+    Top = 40
   end
   object ApplicationEvents1: TApplicationEvents
     OnException = ApplicationEvents1Exception
