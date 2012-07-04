@@ -64,6 +64,7 @@ type
     btnApply: TcxButton;
     ilIcons: TcxImageList;
     chbShowWhatsNew: TcxCheckBox;
+    chbUseLookAndFeel: TcxCheckBox;
     procedure btnOkClick(Sender: TObject);
     procedure chbProxyPropertiesEditValueChanged(Sender: TObject);
     procedure chbProxyAuthPropertiesEditValueChanged(Sender: TObject);
@@ -136,6 +137,13 @@ begin
     Downl.UsePerRes := chbUseThreadPerRes.Checked;
     Downl.PerResThreads := eThreadPerRes.EditValue;
     Downl.PicThreads := ePicThreads.EditValue;
+
+    if UseLookAndFeel <> chbUseLookAndFeel.Checked then
+    begin
+      UseLookAndFeel := chbUseLookAndFeel.Checked;
+      PostMessage(Application.MainForm.Handle,CM_STYLECHANGED,0,0);
+    end;
+
   end;
 
   if (cbLanguage.ItemIndex > -1)
@@ -145,6 +153,7 @@ begin
     PostMessage(Application.MainForm.Handle, CM_LANGUAGECHANGED,
       0, 0);
   end;
+
 end;
 
 procedure TfSettings.btnApplyClick(Sender: TObject);
@@ -255,6 +264,7 @@ begin
   begin
     chbAutoupdate.Checked := AutoUPD;
     chbShowWhatsNew.Checked := ShowWhatsNew;
+    chbUseLookAndFeel.Checked := UseLookAndFeel;
 
     chbProxy.Checked := Proxy.UseProxy;
     eHost.Text := Proxy.Host;
@@ -325,6 +335,7 @@ begin
   chbAutoupdate.Caption := lang('_AUTOUPDATE_');
   lCheckNow.Caption := lang('_UPDATENOW_');
   chbShowWhatsNew.Caption := lang('_SHOW_WHATSNEW_');
+  chbUseLookAndFeel.Caption := lang('_USELOOKANDFEEL_');
 end;
 
 procedure TfSettings.tlListFocusedNodeChanged(Sender: TcxCustomTreeList;

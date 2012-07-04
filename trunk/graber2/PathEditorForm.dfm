@@ -46,6 +46,7 @@ object fPathEditor: TfPathEditor
       Style.TextColor = clHighlight
       Style.TextStyle = [fsUnderline]
       StyleHot.TextColor = clHotLight
+      Transparent = True
       OnClick = lHelpClick
     end
   end
@@ -94,11 +95,13 @@ object fPathEditor: TfPathEditor
     Caption = 
       'ex. c:\$tag$\<%md5%> ; if filename is not specified then will be' +
       ' used $fname$ ;'
+    Transparent = True
   end
   object lex2: TcxLabel
     Left = 8
     Top = 93
     Caption = 'if file extension is not specified then will be used .$ext$ ;'
+    Transparent = True
   end
   object bFields: TcxButton
     Left = 127
@@ -114,11 +117,13 @@ object fPathEditor: TfPathEditor
     Left = 258
     Top = 114
     Caption = 'ex. %post_date:yyyy-mm-dd% ;'
+    Transparent = True
   end
   object lex4: TcxLabel
     Left = 258
     Top = 127
     Caption = 'ex. %score:.6x% ;'
+    Transparent = True
   end
   object lwiki1: TcxLabel
     Left = 437
@@ -128,6 +133,7 @@ object fPathEditor: TfPathEditor
     Style.TextColor = clHighlight
     Style.TextStyle = [fsUnderline]
     StyleHot.TextColor = clHotLight
+    Transparent = True
     OnClick = lwiki1Click
   end
   object lwiki2: TcxLabel
@@ -138,6 +144,7 @@ object fPathEditor: TfPathEditor
     Style.TextColor = clHighlight
     Style.TextStyle = [fsUnderline]
     StyleHot.TextColor = clHotLight
+    Transparent = True
     OnClick = lwiki2Click
   end
   object dPath: TcxShellBrowserDialog
