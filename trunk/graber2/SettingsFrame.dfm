@@ -98,10 +98,10 @@ object fSettings: TfSettings
     Top = 31
     Width = 279
     Height = 273
-    ActivePage = cxTabSheet1
     Align = alClient
-    HideTabs = True
     TabOrder = 3
+    Properties.ActivePage = cxTabSheet1
+    Properties.HideTabs = True
     ClientRectBottom = 273
     ClientRectRight = 279
     ClientRectTop = 0

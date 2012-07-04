@@ -7,13 +7,12 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, Menus, StdCtrls,
   {devexp}
-  cxGraphics, cxControls, cxLookAndFeels, cxLookAndFeelPainters,
-  cxCustomData, cxStyles, cxTL, cxTextEdit, cxCheckBox, cxTLdxBarBuiltInMenu,
-  dxSkinsCore, ExtCtrls, cxSplitter, cxInplaceContainer,
-  cxButtons, cxFilter, cxData, cxDataStorage, cxEdit,
-  cxGridCustomTableView, cxGridTableView, cxGridCustomView, cxClasses,
-  cxGridLevel, cxGrid, cxButtonEdit, cxExtEditRepositoryItems, cxPC, cxLabel,
-  cxImage, cxEditRepositoryItems, cxVGrid,
+  cxGraphics, cxControls, cxLookAndFeels,
+  cxLookAndFeelPainters, cxStyles, cxCustomData, cxFilter, cxData,
+  cxDataStorage, cxEdit, cxImage, cxLabel, cxButtonEdit, cxPCdxBarPopupMenu,
+  cxEditRepositoryItems, cxInplaceContainer, cxVGrid, cxPC, cxGridLevel,
+  cxGridCustomTableView, cxGridTableView, cxClasses, cxGridCustomView, cxGrid,
+  cxButtons, ExtCtrls, cxSplitter,
   {graber2}
   common, Graberu;
 

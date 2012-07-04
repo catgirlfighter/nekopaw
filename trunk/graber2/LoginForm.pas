@@ -3,9 +3,12 @@ unit LoginForm;
 interface
 
 uses
+  {std}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, cxGraphics, cxControls, cxLookAndFeels, cxLookAndFeelPainters,
-  cxContainer, cxEdit, Menus, StdCtrls, cxButtons, cxLabel, cxTextEdit;
+  Dialogs, Menus, StdCtrls,
+  {devex}
+  cxGraphics, cxControls, cxLookAndFeels, cxLookAndFeelPainters,
+  cxContainer, cxEdit, cxButtons, cxLabel, cxTextEdit;
 
 type
   TLoginCallBack=procedure(Sender: TObject; N: integer; Login,Password: String;
