@@ -5,17 +5,14 @@ interface
 uses
   {base}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, DB, ActnList, ExtCtrls, DateUtils, ImgList, Commctrl, rpVersionInfo,
+  Dialogs, DB, ActnList, ExtCtrls, ImgList, rpVersionInfo,
   AppEvnts, Types, ShellAPI,
   {devex}
-  dxDockControl, dxDockPanel, cxGraphics, cxControls, cxLookAndFeels,
-  cxLookAndFeelPainters, cxStyles, dxSkinsCore, dxSkinscxPCPainter,
-  cxCustomData, cxFilter, cxData, cxDataStorage, cxEdit, cxDBData,
-  cxGridLevel, cxClasses, cxGridCustomView, cxGridCustomTableView,
-  cxGridTableView, cxGridDBTableView, cxGrid, dxSkinsdxDockControlPainter,
-  cxCheckBox, cxTextEdit, cxPC, dxBar, dxBarExtItems, cxContainer,
-  cxMemo,dxsbar, cxListBox, dxNavBarCollns,dxNavBarBase, dxNavBar,
-  cxInplaceContainer, cxVGrid, cxCheckListBox, cxLabel,
+  cxPC, cxGraphics, cxControls,
+  cxLookAndFeels, cxLookAndFeelPainters, cxPCdxBarPopupMenu, cxStyles, cxEdit,
+  cxContainer, dxBar, cxClasses, dxDockControl, cxLabel, cxTextEdit, cxMemo,
+  cxCheckListBox, cxInplaceContainer, cxVGrid, dxNavBarCollns, dxNavBarBase,
+  dxNavBar, dxDockPanel,
   {graber2}
   common, OpBase, graberU, MyHTTP, UPDUnit;
 
@@ -38,10 +35,13 @@ type
       destructor Destroy; override;
   end;
 
+{
   TcxTabSheetEvent = procedure(ASender: TObject; ATabSheet: TcxTabSheet)
     of object;
+}
 
-  TcxPageControl = class(cxPC.TcxPageControl)
+  TcxPageControl = class(cxPC.TcxPageControl);
+{
   private
     FOnPageClose: TcxTabSheetEvent;
   protected
@@ -49,6 +49,7 @@ type
   public
     property OnPageClose: TcxTabSheetEvent read FOnPageClose write FOnPageClose;
   end;
+}
 
   { TmycxOnGetExpandable = procedure(MasterDataRow: TcxGridMasterDataRow;
     var Expandable: Boolean) of object;
@@ -125,8 +126,8 @@ type
     cxCheckListBox1: TcxCheckListBox;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure gLevel2GetGridView(Sender: TcxGridLevel;
-      AMasterRecord: TcxCustomGridRecord; var AGridView: TcxCustomGridView);
+{    procedure gLevel2GetGridView(Sender: TcxGridLevel;
+      AMasterRecord: TcxCustomGridRecord; var AGridView: TcxCustomGridView);   }
     procedure bbSettingsClick(Sender: TObject);
     procedure bbNewClick(Sender: TObject);
     procedure pcTablesChange(Sender: TObject);
@@ -136,6 +137,8 @@ type
     procedure pcTablesPageChanging(Sender: TObject; NewPage: TcxTabSheet;
       var AllowChange: Boolean);
     procedure testoClick(Sender: TObject);
+    procedure pcTablesCanCloseEx(Sender: TObject; ATabIndex: Integer;
+      var ACanClose: Boolean);
   private
     mFrame: TFrame;
     FOldCaption: String;
@@ -170,7 +173,7 @@ type
     procedure ShowDs;
     procedure HideDs;
     procedure CloseTab(t: TcxTabSheet);
-    procedure OnTabClose(ASender: TObject; ATabSheet: TcxTabSheet);
+//    procedure OnTabClose(ASender: TObject; ATabSheet: TcxTabSheet);
     procedure ShowPanels;
     procedure OnError(Sender: TObject; Msg: String);
     procedure Setlang;
@@ -190,7 +193,7 @@ var
 implementation
 
 uses StartFrame, NewListFrame, LangString, SettingsFrame, GridFrame, utils,
-  AboutForm, WaitForm, Whatsnewform;
+  AboutForm, Whatsnewform;
 {$R *.dfm}
 
 procedure TMycxTabSheet.OnTimer(Sender: TObject);
@@ -248,13 +251,13 @@ begin
   inherited;
 end;
 
-procedure TcxPageControl.DoClose;
+{procedure TcxPageControl.DoClose;
 begin
   if Assigned(FOnPageClose) then
     FOnPageClose(Self, ActivePage)
   else
     inherited;
-end;
+end;   }
 
 { TmycxGridTableView }
 
@@ -367,9 +370,24 @@ begin
   dsLogs.ActiveChild := dpErrors;
 end;
 
-procedure Tmf.OnTabClose(ASender: TObject; ATabSheet: TcxTabSheet);
+{procedure Tmf.OnTabClose(ASender: TObject; ATabSheet: TcxTabSheet);
 begin
   CloseTab(ATabSheet);
+end;  }
+
+procedure Tmf.pcTablesCanCloseEx(Sender: TObject; ATabIndex: Integer;
+  var ACanClose: Boolean);
+begin
+  ACanClose := false;
+  CloseTab(pcTables.Pages[ATabIndex]);
+{  if (pcTables.TabCount > 1) then
+    if (ATabIndex > 1) then
+      pcTables.TabIndex := ATabIndex - 1
+    else
+      pcTables.TabIndex := ATabIndex + 1
+  else
+    pcTables.TabIndex := -1;
+  pcTables.Change;   }
 end;
 
 procedure Tmf.pcTablesChange(Sender: TObject);
@@ -893,7 +911,7 @@ begin
   TabList.Remove(t);
   if SttPanel = t then
     SttPanel := nil;
-  if pcTables.TabCount = 0 then
+  if pcTables.PageCount = 0 then
     HideDs;
 end;
 
@@ -1038,7 +1056,7 @@ procedure Tmf.FormCreate(Sender: TObject);
 begin
   FOldCaption := Caption;
   SetLang;
-  pcTables.OnPageClose := OnTabClose;
+  //pcTables.OnPageClose := OnTabClose;
   FullResList.OnError := OnError;
   dsFirstShow := true;
   SttPanel := nil;
@@ -1076,12 +1094,12 @@ begin
   FCookie.Free;
 end;
 
-procedure Tmf.gLevel2GetGridView(Sender: TcxGridLevel;
+{procedure Tmf.gLevel2GetGridView(Sender: TcxGridLevel;
   AMasterRecord: TcxCustomGridRecord; var AGridView: TcxCustomGridView);
 
 begin
   PostMessage(Handle, CM_EXPROW, integer(AMasterRecord), integer(AGridView));
-end;
+end;            }
 
 procedure Tmf.HideDs;
 begin

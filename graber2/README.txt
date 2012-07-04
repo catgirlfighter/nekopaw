@@ -1,5 +1,6 @@
 ;developed in delphi XE
 ;using
+;rpVersionInfo
 ;DevExpress build 56 components
 ;Indy VCL 10.5.7
 

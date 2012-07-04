@@ -23,7 +23,7 @@ uses
   EncryptStrings in 'EncryptStrings.pas',
   utils in 'utils.pas' {dm: TDataModule},
   UPDUnit in 'UPDUnit.pas',
-  MyDataSet in 'MyDataSet.pas',
+  //MyDataSet in 'MyDataSet.pas',
   LoginForm in 'LoginForm.pas' {fLogin},
   Whatsnewform in 'Whatsnewform.pas' {fWhatsNew},
   PathEditorForm in 'PathEditorForm.pas' {fPathEditor};

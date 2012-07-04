@@ -60,7 +60,6 @@ object fNewList: TfNewList
     Align = alLeft
     TabOrder = 2
     object tvRes: TcxGridTableView
-      NavigatorButtons.ConfirmDelete = False
       OnFocusedRecordChanged = tvResFocusedRecordChanged
       DataController.Summary.DefaultGroupSummaryItems = <>
       DataController.Summary.FooterSummaryItems = <>
@@ -122,10 +121,10 @@ object fNewList: TfNewList
     Top = 31
     Width = 261
     Height = 273
-    ActivePage = tsList
     Align = alClient
-    HideTabs = True
     TabOrder = 3
+    Properties.ActivePage = tsList
+    Properties.HideTabs = True
     OnChange = pcMainChange
     ClientRectBottom = 273
     ClientRectRight = 261
@@ -142,7 +141,6 @@ object fNewList: TfNewList
         Align = alClient
         TabOrder = 0
         object tvFull: TcxGridTableView
-          NavigatorButtons.ConfirmDelete = False
           DataController.Summary.DefaultGroupSummaryItems = <>
           DataController.Summary.FooterSummaryItems = <>
           DataController.Summary.SummaryGroups = <>
@@ -203,6 +201,8 @@ object fNewList: TfNewList
       Caption = 'tsSettings'
       ImageIndex = 1
       OnShow = tsSettingsShow
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0

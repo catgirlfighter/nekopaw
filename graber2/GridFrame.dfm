@@ -20,13 +20,11 @@ object fGrid: TfGrid
     TabOrder = 0
     LookAndFeel.NativeStyle = False
     object vChilds: TcxGridDBTableView
-      NavigatorButtons.ConfirmDelete = False
       DataController.Summary.DefaultGroupSummaryItems = <>
       DataController.Summary.FooterSummaryItems = <>
       DataController.Summary.SummaryGroups = <>
     end
     object vGrid1: TcxGridDBTableView
-      NavigatorButtons.ConfirmDelete = False
       OnFocusedRecordChanged = vGrid1FocusedRecordChanged
       DataController.Summary.DefaultGroupSummaryItems = <
         item
@@ -42,7 +40,6 @@ object fGrid: TfGrid
       OptionsView.HeaderEndEllipsis = True
     end
     object vGrid: TcxGridTableView
-      NavigatorButtons.ConfirmDelete = False
       OnEditValueChanged = vGridEditValueChanged
       OnFocusedRecordChanged = vGrid1FocusedRecordChanged
       DataController.Summary.DefaultGroupSummaryItems = <
@@ -118,8 +115,8 @@ object fGrid: TfGrid
   object BarManager: TdxBarManager
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
-    Font.Height = -11
-    Font.Name = 'Tahoma'
+    Font.Height = -12
+    Font.Name = 'Segoe UI'
     Font.Style = []
     Categories.Strings = (
       'Default')
@@ -326,14 +323,12 @@ object fGrid: TfGrid
       Category = 0
       Hint = 'New Item'
       Visible = ivAlways
-      Width = 100
       PropertiesClassName = 'TcxCheckBoxProperties'
     end
     object cxBarEditItem2: TcxBarEditItem
       Category = 0
       Visible = ivAlways
       ShowCaption = True
-      Width = 100
       PropertiesClassName = 'TcxCheckBoxProperties'
     end
     object bbAdditional: TdxBarSubItem
@@ -351,7 +346,6 @@ object fGrid: TfGrid
       Category = 0
       Hint = 'New Item'
       Visible = ivAlways
-      Width = 100
       PropertiesClassName = 'TcxCheckBoxProperties'
     end
     object bbDALF: TdxBarButton

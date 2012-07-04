@@ -27,7 +27,7 @@ object mf: Tmf
     Width = 608
     Height = 397
     Align = alClient
-    DockType = 0
+    DockingType = 5
     OriginalWidth = 608
     OriginalHeight = 397
     object dxLayoutDockSite4: TdxLayoutDockSite
@@ -35,7 +35,7 @@ object mf: Tmf
       Top = 0
       Width = 608
       Height = 247
-      DockType = 1
+      DockingType = 0
       OriginalWidth = 300
       OriginalHeight = 200
       object dsTable: TdxLayoutDockSite
@@ -43,7 +43,7 @@ object mf: Tmf
         Top = 0
         Width = 423
         Height = 247
-        DockType = 1
+        DockingType = 0
         OriginalWidth = 300
         OriginalHeight = 200
         object dxLayoutDockSite2: TdxLayoutDockSite
@@ -51,7 +51,7 @@ object mf: Tmf
           Top = 0
           Width = 423
           Height = 247
-          DockType = 1
+          DockingType = 0
           OriginalWidth = 300
           OriginalHeight = 200
         end
@@ -65,7 +65,7 @@ object mf: Tmf
           Caption = 'dpTable'
           Dockable = False
           ShowCaption = False
-          DockType = 1
+          DockingType = 0
           OriginalWidth = 185
           OriginalHeight = 140
           object pcTables: TcxPageControl
@@ -74,9 +74,10 @@ object mf: Tmf
             Width = 419
             Height = 243
             Align = alClient
-            Images = il
-            Options = [pcoAlwaysShowGoDialogButton, pcoCloseButton, pcoGradient, pcoGradientClientArea, pcoRedrawOnResize]
             TabOrder = 0
+            Properties.Images = il
+            Properties.Options = [pcoAlwaysShowGoDialogButton, pcoCloseButton, pcoGradient, pcoGradientClientArea, pcoRedrawOnResize]
+            OnCanCloseEx = pcTablesCanCloseEx
             OnChange = pcTablesChange
             OnPageChanging = pcTablesPageChanging
             ClientRectBottom = 243
@@ -95,27 +96,27 @@ object mf: Tmf
         AutoHide = False
         Dockable = False
         ShowCaption = False
-        TabsPosition = tctpTop
-        DockType = 2
+        TabsProperties.TabPosition = tpTop
+        DockingType = 1
         OriginalWidth = 185
         OriginalHeight = 140
         object dpTags: TdxDockPanel
           Left = 0
           Top = 0
           Width = 181
-          Height = 219
+          Height = 218
           AllowFloating = False
           AutoHide = False
           Caption = 'dpTags'
           Dockable = False
-          DockType = 1
+          DockingType = 0
           OriginalWidth = 185
           OriginalHeight = 140
           object nvTags: TdxNavBar
             Left = 0
             Top = 0
             Width = 181
-            Height = 219
+            Height = 218
             Align = alClient
             ActiveGroupIndex = 0
             TabOrder = 0
@@ -140,7 +141,7 @@ object mf: Tmf
               Left = 0
               Top = 19
               Width = 181
-              Height = 181
+              Height = 180
               Caption = 'nbgCurMainControl'
               TabOrder = 1
               GroupIndex = 0
@@ -149,7 +150,7 @@ object mf: Tmf
                 Left = 0
                 Top = 0
                 Width = 181
-                Height = 181
+                Height = 180
                 Align = alClient
                 OptionsView.RowHeaderWidth = 84
                 TabOrder = 0
@@ -183,19 +184,19 @@ object mf: Tmf
           Left = 0
           Top = 0
           Width = 181
-          Height = 219
+          Height = 218
           AllowFloating = False
           AutoHide = False
           Caption = 'dpCurTags'
           Dockable = False
-          DockType = 1
+          DockingType = 0
           OriginalWidth = 185
           OriginalHeight = 140
           object nvCur: TdxNavBar
             Left = 0
             Top = 0
             Width = 181
-            Height = 219
+            Height = 218
             Align = alClient
             ActiveGroupIndex = 0
             TabOrder = 0
@@ -220,7 +221,7 @@ object mf: Tmf
               Left = 0
               Top = 19
               Width = 181
-              Height = 181
+              Height = 180
               Caption = 'nbgCurMainControl'
               TabOrder = 1
               GroupIndex = 0
@@ -229,7 +230,7 @@ object mf: Tmf
                 Left = 0
                 Top = 0
                 Width = 181
-                Height = 181
+                Height = 180
                 Align = alClient
                 OptionsView.RowHeaderWidth = 86
                 TabOrder = 0
@@ -271,19 +272,19 @@ object mf: Tmf
       AutoHide = False
       CaptionButtons = [cbMaximize, cbHide]
       Dockable = False
-      DockType = 5
+      DockingType = 4
       OriginalWidth = 185
       OriginalHeight = 150
       object dpLog: TdxDockPanel
         Left = 0
         Top = 0
         Width = 604
-        Height = 102
+        Height = 101
         AllowFloating = True
         AutoHide = False
         Caption = 'dpLog'
         Dockable = False
-        DockType = 1
+        DockingType = 0
         OriginalWidth = 185
         OriginalHeight = 150
         object mLog: TcxMemo
@@ -294,7 +295,7 @@ object mf: Tmf
           Properties.ScrollBars = ssVertical
           Style.Color = clInfoBk
           TabOrder = 0
-          Height = 102
+          Height = 101
           Width = 604
         end
       end
@@ -302,12 +303,12 @@ object mf: Tmf
         Left = 0
         Top = 0
         Width = 604
-        Height = 102
+        Height = 101
         AllowFloating = True
         AutoHide = False
         Caption = 'dpErrors'
         Dockable = False
-        DockType = 1
+        DockingType = 0
         OriginalWidth = 185
         OriginalHeight = 150
         object mErrors: TcxMemo
@@ -318,7 +319,7 @@ object mf: Tmf
           Properties.ScrollBars = ssVertical
           Style.Color = 14803455
           TabOrder = 0
-          Height = 102
+          Height = 101
           Width = 604
         end
       end
@@ -376,9 +377,9 @@ object mf: Tmf
     Font.Style = []
     Images = il
     Options = [doActivateAfterDocking, doDblClickDocking, doFloatingOnTop, doTabContainerHasCaption, doTabContainerCanAutoHide, doSideContainerCanClose, doSideContainerCanAutoHide, doTabContainerCanInSideContainer, doImmediatelyHideOnAutoHide, doHideAutoHideIfActive, doRedrawOnResize]
-    ViewStyle = vsUseLookAndFeel
     Left = 456
     Top = 40
+    PixelsPerInch = 96
   end
   object BarManager: TdxBarManager
     Font.Charset = DEFAULT_CHARSET

@@ -3,14 +3,18 @@ unit GridFrame;
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms, 
-  Dialogs, cxGraphics, cxControls, cxLookAndFeels, cxLookAndFeelPainters,
-  cxStyles, cxCustomData, cxFilter, cxData, cxDataStorage, cxEdit, DB, cxDBData,
-  DBClient, cxGridLevel, cxClasses, cxGridCustomView, cxGridCustomTableView,
-  cxGridTableView, cxGridDBTableView, cxGrid, graberU, dxmdaset,
-  cxEditRepositoryItems, common, ComCtrls, cxContainer, cxLabel, dxStatusBar,
-  dxBar, cxGridCustomPopupMenu, cxGridPopupMenu, cxExtEditRepositoryItems,
-  Delphi.Extensions.VirtualDataset, cxCheckBox, cxBarEditItem, cxCurrencyEdit;
+  {std}
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, ComCtrls, DB,
+  {devex}
+ cxGraphics, cxControls, cxLookAndFeels, cxLookAndFeelPainters,
+  cxStyles, cxCustomData, cxFilter, cxData, cxDataStorage, cxEdit, cxDBData,
+  cxCurrencyEdit, cxCheckBox, cxGridCustomPopupMenu, cxGridPopupMenu, dxBar,
+  cxBarEditItem, cxClasses, cxEditRepositoryItems, cxExtEditRepositoryItems,
+  dxStatusBar, cxGridLevel, cxGridCustomTableView, cxGridTableView,
+  cxGridCustomView, cxGridDBTableView, cxGrid,
+  {graber}
+  graberU, common;
 
 type
 
@@ -61,10 +65,10 @@ type
     procedure vGrid1FocusedRecordChanged(Sender: TcxCustomGridTableView;
       APrevFocusedRecord, AFocusedRecord: TcxCustomGridRecord;
       ANewItemRecordFocusingChanged: Boolean);
-    procedure vdGetRecordCount(Sender: TCustomVirtualDataset;
+    {procedure vdGetRecordCount(Sender: TCustomVirtualDataset;
       var Count: Integer);
     procedure vdGetFieldValue(Sender: TCustomVirtualDataset; Field: TField;
-      Index: Integer; var Value: Variant);
+      Index: Integer; var Value: Variant);    }
     procedure vdBeforeOpen(DataSet: TDataSet);
     procedure vGridEditValueChanged(Sender: TcxCustomGridTableView;
       AItem: TcxCustomGridTableItem);
@@ -786,7 +790,7 @@ begin
   vGrid.EndUpdate;
 end;
 
-procedure TfGrid.vdGetFieldValue(Sender: TCustomVirtualDataset; Field: TField;
+{procedure TfGrid.vdGetFieldValue(Sender: TCustomVirtualDataset; Field: TField;
   Index: Integer; var Value: Variant);
 var
   p: TTPicture;
@@ -831,7 +835,7 @@ procedure TfGrid.vdGetRecordCount(Sender: TCustomVirtualDataset;
   var Count: Integer);
 begin
   Count := ResList.PictureList.Count;
-end;
+end;    }
 
 procedure TfGrid.vGrid1FocusedRecordChanged(Sender: TcxCustomGridTableView;
   APrevFocusedRecord, AFocusedRecord: TcxCustomGridRecord;

@@ -280,7 +280,7 @@ begin
   for i := 0 to Count -1 do
     if (Items[i].Kind = tkTag) then
       if SameText(Items[i].Name,Tag)
-      and not (AAttrs.NoParameters and (Items[i].Attrs.Count > 0)) then
+      and not (Assigned(AAttrs) and AAttrs.NoParameters and (Items[i].Attrs.Count > 0)) then
       begin
         b := true;
         if Assigned(AAttrs) then

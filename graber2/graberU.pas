@@ -4025,8 +4025,8 @@ begin
         FXML.JSON(FHTTPREC.JSONItem,s)
       else raise Exception.Create(Format(lang('_UNKNOWNMETHOD_'),[FHTTPRec.ParseMethod]));
 
-      FXML.TagList.ExportToFile(ExtractFilePath(paramstr(0))+'log\'+ValidFName(emptyname(url)));
-      SaveStrToFile(s,ExtractFilePath(paramstr(0))+'log\'+ValidFName(emptyname(url)) + '.src');
+      //FXML.TagList.ExportToFile(ExtractFilePath(paramstr(0))+'log\'+ValidFName(emptyname(url)));
+      //SaveStrToFile(s,ExtractFilePath(paramstr(0))+'log\'+ValidFName(emptyname(url)) + '.src');
 
       {$IFDEF NEKODEBUG}SaveStrToFile('ExecuteXMLScript',
         debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}

@@ -3,14 +3,17 @@ unit SettingsFrame;
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms, 
-  Dialogs, cxDropDownEdit, cxCustomData, cxStyles, cxTL, cxTLdxBarBuiltInMenu,
-  cxInplaceContainer, cxMaskEdit, cxGraphics, cxLookAndFeels,
-  cxLookAndFeelPainters, Menus, cxControls, cxTextEdit, cxContainer, cxEdit,
-  cxVGrid, cxLabel, cxCheckBox, cxSpinEdit, cxPC, cxSplitter, StdCtrls,
-  cxButtons, ExtCtrls, INIFiles, cxEditRepositoryItems, ShellAPI,
+  {std}
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, Menus, INIFiles, ShellAPI, ImgList, ExtCtrls,
+  {devex}
+  cxPCdxBarPopupMenu, cxGraphics, cxLookAndFeels,
+  cxLookAndFeelPainters, cxControls, cxCustomData, cxStyles, cxTL, cxTextEdit,
+  cxTLdxBarBuiltInMenu, cxContainer, cxEdit, cxEditRepositoryItems, cxVGrid,
+  cxSpinEdit, cxCheckBox, cxMaskEdit, cxDropDownEdit, cxLabel, cxPC, cxSplitter,
+  cxInplaceContainer, StdCtrls, cxButtons,
   {Graber}
-  Common, GraberU, ImgList;
+  Common, GraberU;
 
 type
   TfSettings = class(TFrame)

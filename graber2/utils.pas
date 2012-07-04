@@ -3,12 +3,15 @@ unit utils;
 interface
 
 uses
-  SysUtils, Classes, cxGridCustomTableView, cxGraphics, cxEdit, Windows,
+  {std}
+  SysUtils, Classes, Math, Variants, Dialogs, Windows,
+  {devex}
+  cxGridCustomTableView, cxGraphics, cxEdit,
   cxDataUtils, cxGridCommon, cxGridTableView, cxEditRepositoryItems,
-  cxExtEditRepositoryItems, cxVGrid, GraberU, common, Math, Variants,
-  Dialogs, cxButtonEdit,
-
-  OpBase;
+  cxExtEditRepositoryItems, cxVGrid,
+  cxButtonEdit,
+  {graber}
+  GraberU, common, OpBase;
 
 type
   Tdm = class(TDataModule)

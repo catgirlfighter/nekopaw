@@ -3,10 +3,15 @@ unit PathEditorForm;
 interface
 
 uses
+  {std}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, cxGraphics, cxControls, cxLookAndFeels, cxLookAndFeelPainters,
-  cxContainer, cxEdit, cxLabel, cxTextEdit, Menus, StdCtrls, cxButtons,
-   cxShellBrowserDialog, common, StrUtils, ExtCtrls, ShellAPI;
+  Dialogs, StrUtils, ExtCtrls, ShellAPI, Menus, StdCtrls,
+  {devex}
+  cxGraphics, cxControls, cxLookAndFeels, cxLookAndFeelPainters,
+  cxContainer, cxEdit, cxLabel, cxTextEdit, cxButtons,
+  cxShellBrowserDialog,
+  {graber}
+  common;
 
 type
   TfPathEditor = class(TForm)
