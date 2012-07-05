@@ -224,14 +224,15 @@ end;
 
 procedure TTagList.Notify(Ptr: Pointer; Action: TListNotification);
 var
-  p: TTag;
+  p: TObject;
 
 begin
   case Action of
     lnDeleted:
       begin
-        p := Ptr;
-        p.Free;
+          p := Ptr;
+          if p is TTag then
+            p.Free;
       end;
   end;
 end;
@@ -317,6 +318,8 @@ begin
     for i := 0 to Count -1 do
       if (Items[i].Kind = tkTag) then
       begin
+        b := false;
+
         for l := 0 to Length(Tags)-1 do
           if SameText(Items[i].Name,Tags[l])
           and not(AAttrs[l].NoParameters and (Items[i].Attrs.Count > 0)) then
@@ -335,11 +338,16 @@ begin
               end;
 
             if b then
-              AList.CopyTag(Items[i]).Tag := AAttrs[l].Tag
-            else
-              Items[i].Childs.GetList(Tags,AAttrs,AList);
-          end else
-            Items[i].Childs.GetList(Tags,AAttrs,AList);
+            //begin
+              AList.CopyTag(Items[i]).Tag := AAttrs[l].Tag;
+              //b := true;
+            //end;
+            //else
+            //  Items[i].Childs.GetList(Tags,AAttrs,AList);
+          end;
+
+        if not b then
+          Items[i].Childs.GetList(Tags,AAttrs,AList);
       end;
 end;
 

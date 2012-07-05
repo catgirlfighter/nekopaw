@@ -51,10 +51,6 @@ object fGrid: TfGrid
       OptionsSelection.MultiSelect = True
       OptionsView.ColumnAutoWidth = True
       OptionsView.ExpandButtonsForEmptyDetails = False
-      object vGridColumn1: TcxGridColumn
-        DataBinding.ValueType = 'Float'
-        PropertiesClassName = 'TcxCurrencyEditProperties'
-      end
     end
     object GridLevel1: TcxGridLevel
       GridView = vGrid
@@ -93,10 +89,6 @@ object fGrid: TfGrid
   object cxEditRepository1: TcxEditRepository
     Left = 240
     Top = 104
-    object iTextEdit: TcxEditRepositoryTextItem
-      Properties.AutoSelect = False
-      Properties.ReadOnly = True
-    end
     object iPicChecker: TcxEditRepositoryCheckBoxItem
       Properties.ImmediatePost = True
     end
@@ -107,8 +99,12 @@ object fGrid: TfGrid
       Properties.AnimationPath = cxapPingPong
     end
     object iFloatEdit: TcxEditRepositoryCurrencyItem
-      Properties.AssignedValues.EditFormat = True
       Properties.DisplayFormat = '0.00'
+      Properties.EditFormat = '0.00'
+      Properties.ReadOnly = True
+      Properties.UseDisplayFormatWhenEditing = True
+    end
+    object iLabel: TcxEditRepositoryLabel
     end
   end
   object BarManager: TdxBarManager

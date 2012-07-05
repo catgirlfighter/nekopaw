@@ -24,7 +24,6 @@ type
     GridLevel2: TcxGridLevel;
     vChilds: TcxGridDBTableView;
     cxEditRepository1: TcxEditRepository;
-    iTextEdit: TcxEditRepositoryTextItem;
     vGrid1: TcxGridDBTableView;
     sBar: TdxStatusBar;
     BarManager: TdxBarManager;
@@ -58,8 +57,8 @@ type
     bbAdditional: TdxBarSubItem;
     cxBarEditItem3: TcxBarEditItem;
     bbDALF: TdxBarButton;
-    vGridColumn1: TcxGridColumn;
     iFloatEdit: TcxEditRepositoryCurrencyItem;
+    iLabel: TcxEditRepositoryLabel;
     procedure bbColumnsClick(Sender: TObject);
     procedure bbFilterClick(Sender: TObject);
     procedure vGrid1FocusedRecordChanged(Sender: TcxCustomGridTableView;
@@ -166,7 +165,7 @@ begin
   else if SameText(s,'p') then
     result.RepositoryItem := iPBar
   else
-    result.RepositoryItem := iTextEdit;
+    result.RepositoryItem := iLabel;
   //result.DataBinding.ValueType := 'String';
 end;
 
