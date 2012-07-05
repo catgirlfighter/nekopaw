@@ -1,5 +1,5 @@
-<item file="Graber2.exe" archive="Graber2.zip" version=18 />
-<item file="versionlog.txt" version=3 />
+<item file="Graber2.exe" archive="Graber2.zip" version=19 />
+<item file="versionlog.txt" version=5 />
 
 <item file="resources\danbooru.tmpl" version=10 />
 <item file="resources\gelbooru.tmpl" version=7 />
@@ -27,6 +27,7 @@
 <item file="resources\rule34.paheal.net.cfg" version=0 />
 <item file="resources\tentaclerape.net.cfg" version=0 />
 <item file="resources\derpiboo.ru.cfg" version=0 />
+<item file="resources\minitokyo.net.cfg" version=0 />
 
 <item file="resources\oreno.imouto.org.cfg" version=0 deleted=1 />
 <item file="resources\ponibooru.413chan.net.cfg" version=1 deleted=1 />
@@ -53,8 +54,9 @@
 <item file="resources\icons\tentaclerape.net.bmp" version=0 />
 <item file="resources\icons\derpiboo.ru.bmp" version=0 />
 <item file="resources\icons\imouto.org.bmp" version=0 />
+<item file="resources\icons\minitokyo.net.bmp" version=0 />
 
 <item file="resources\icons\ponibooru.413chan.net.bmp" version=0 deleted=1 />
 
-<item file="languages\Russian.ini" version=10 />
-<item file="languages\English.ini" version=10 />
+<item file="languages\Russian.ini" version=11 />
+<item file="languages\English.ini" version=11 />
