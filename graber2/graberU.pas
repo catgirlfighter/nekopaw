@@ -402,6 +402,7 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure AddPicture;
+    procedure ClonePicture;
     procedure SetSectors(Value: TValueList);
     procedure LockList;
     procedure UnlockList;
@@ -1018,12 +1019,12 @@ end;
 
 function gVal(Value: string): string;
 begin
-  Result := CopyFromTo(Value, '(', ')',['""','()']);
+  Result := TrimEx(CopyFromTo(Value, '(', ')',['""','()']),[#9, #10, #13, ' ']);
 end;
 
-function nVal(var Value: string): string;
+function nVal(var Value: string; sep: char = ','): string;
 begin
-  Result := CopyTo(Value,',',['""','()'],true);
+  Result := TrimEx(CopyTo(Value,sep,['""','()'],true),[#9, #10, #13, ' ']);
 end;
 
 // TListValue
@@ -3405,6 +3406,17 @@ begin
   // FAddPic := false;
 end;
 
+procedure TDownloadThread.ClonePicture;
+var
+  fpic: TTPicture;
+begin
+  fpic := TTPicture.Create;
+  fpic.Assign(FPicture,true);
+  Fpic.Checked := true;
+  FPicList.Add(fpic,FResource);
+  FPicture := fpic;
+end;
+
 constructor TDownloadThread.Create;
 begin
   FEventHandle := CreateEvent(nil, true, false, nil);
@@ -3457,7 +3469,7 @@ end;
 function TDownloadThread.SE(const Item: TScriptSection; const Parametres: TValueList;
   var LinkedObj: TObject): boolean;
 var
-  l, s: TTagList;
+  l,s: TTagList;
   i,j: integer;
   a: array of TAttrList;
   tags: array of string;
@@ -3519,6 +3531,13 @@ begin
             end;
 
             s.GetList(tags,a,l);
+            j := 0;
+            while j < l.Count-1 do
+            begin
+              l.Insert(j,Item);
+              inc(j,2);
+            end;
+
             
           finally
             for j := 0 to Item.ChildSections.Count -1 do
@@ -3667,6 +3686,10 @@ begin
         begin
           s := gVal(Value);
           Result := CopyFromTo(Clc(nVal(s)),Clc(nVal(s)),Clc(nVal(s)),true);
+        end else if SameText(s,'deletetoex') then
+        begin
+          s := gVal(Value);
+          Result := DeleteTo(Clc(nVal(s)),Clc(nVal(s)),false,true);
         end else if SameText(s,'replace') then
         begin
           s := gVal(Value);
@@ -3807,7 +3830,7 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant; LinkedObj: TO
   procedure ProcValue(const Name: String; Value: Variant);
   var
     // p: TTPicture;
-    s, v1, v2: string;
+    s,v1,v2,r1,r2,r3: string;
     n: integer;
 
   begin
@@ -3871,6 +3894,46 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant; LinkedObj: TO
           v2 := '@' + CopyTo(v2, '(');
         end;
         PicValue(FPicture, v2, v1);
+      end
+    end
+    else if SameText(Name,'@clonepic') then
+    begin
+      { if FAddPic then
+        Synchronize(AddPicture); }
+      s := Value;
+
+      r1 := nVal(s);
+      r2 := nVal(s);
+      //r3 := s;
+
+      while CalcValue(r1,VE,LinkedObj) do
+      begin
+        ClonePicture;
+        r3 := s;
+        while r3 <> '' do
+        begin
+          //n := CharPos(s, ',', ['""', '''''', '()']);
+          //if n = 0 then
+          //  n := length(s) + 1;
+          //v1 := TrimEx(Copy(s, 1, n - 1), [#9, #10, #13, ' ']);
+          //s := DeleteEx(s, 1, n);
+
+          v1 := nVal(r3);
+          v2 := nVal(v1,'=');
+          // v1 := GetNextS(s, ',', '"');
+          //v2 := TrimEx(GetNextS(v1, '='), [#9, #10, #13, ' ']);
+          if v1 = '' then
+          begin
+            v1 := gVal(v2);
+            v2 := CopyTo(v2, '(');
+          end;
+          PicValue(FPicture, v2, v1);
+        end;
+
+        v2 := r2;
+        v1 := nVal(v2,'=');
+
+        DE(v1,CalcValue(v2,VE,LinkedObj),LinkedObj);
       end;
       // FAddPic := true;
       // Synchronize(AddPicture);
