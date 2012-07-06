@@ -2,7 +2,7 @@ unit ZIP;
 
 interface
 
-uses ShellApi, Variants, OleAuto;
+uses ShellApi, Variants, ComObj;//OleAuto;
 
 const
   SHCONTCH_NOPROGRESSBOX = 4;
@@ -12,11 +12,11 @@ const
   SHCONTF_FOLDERS = 32;
   SHCONTF_NONFOLDERS = 64;
 
-function ShellUnzip(zipfile, targetfolder: string; filter: string = ''): boolean;
+procedure ShellUnzip(zipfile, targetfolder: string; filter: string = '');
 
 implementation
 
-function ShellUnzip(zipfile, targetfolder: string; filter: string = ''): boolean;
+procedure ShellUnzip(zipfile, targetfolder: string; filter: string = '');
 var
   shellobj: variant;
   srcfldr, destfldr: variant;

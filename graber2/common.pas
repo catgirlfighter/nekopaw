@@ -1451,6 +1451,8 @@ const
 
             Result := '';
 
+            n := 0;
+
             while true do
             begin
               n := CharPos(s, s[i], [], i + 1);

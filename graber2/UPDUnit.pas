@@ -82,10 +82,9 @@ var
   xml: TMyXMLParser;
 //  items: TTagList;
   INI: TINIFile;
-  i,v: integer;
+  i,j,v: integer;
   root,fname: string;
   deleted: boolean;
-
 begin
   root := ExtractFilePath(paramstr(0));
   xml := TMyXMLParser.Create;
@@ -99,7 +98,7 @@ begin
   //result := false;
 
   i := 0;
-
+  j := 0;
   while i < items.Count do
   begin
     fname := items[i].Attrs.Value('file');
@@ -122,13 +121,18 @@ begin
       else
         items.Delete(i)
     else if (StrToInt(items[i].Attrs.Value('version')) > v)
-    or (StrToInt(items[i].Attrs.Value('version')) = -1) then
+    {or (StrToInt(items[i].Attrs.Value('version')) = -1)} then
       inc(i)
+    else if (StrToInt(items[i].Attrs.Value('version')) = -1) then
+    begin
+      inc(i);
+      dec(j);
+    end
     else
       items.Delete(i);
   end;
 
-  result := i > 0;
+  result := i + j > 0;
 
   INI.Free;
   //items.Free;

@@ -265,6 +265,21 @@ type
     property Value: Variant read FValue write FValue;
   end;
 
+  PWorkItem = ^TWorkItem;
+  TWorkItem = record
+    Section: TScriptSection;
+    Obj: TObject;
+  end;
+
+  TWorkList = class(TList)
+  protected
+    function Get(Index: integer): PWorkItem;
+    procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+  public
+    function Add(Section: TScriptSection; Obj: TObject): integer;
+    property Items[Index: integer]: PWorkItem read Get;
+  end;
+
   TScriptSection = class(TScriptItem)
   private
     //FParent: String;
@@ -293,8 +308,9 @@ type
   TScriptItemList = class(TList)
   private
     function Get(Index: integer): TScriptItem;
-  public
+  protected
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+  public
     procedure Assign(s: TScriptItemList);
     property Items[Index: integer]: TScriptItem read Get; default;
   end;
@@ -917,7 +933,8 @@ var
   VRESULT: HRESULT;
   tmp: integer;
   rsv: variant;
-  
+  b: boolean;
+
 begin
   rsv := s;
   if Assigned(VE) then
@@ -983,11 +1000,12 @@ begin
         rstr := '""'
       else
       begin
-        if (tmp = varOleStr) or (tmp = varString) or (tmp = varUString) then
+        b := (pos('(',trim(rstr)) = 1);
+        if ((tmp = varOleStr) or (tmp = varString) or (tmp = varUString)) then
         begin
           vt := VarToWideStr(rstr);
-          VRESULT := VarR8FromStr(vt, 0{VAR_LOCALE_USER_DEFAULT}, 0, vt2);
-          if VRESULT <> VAR_OK then
+          VRESULT := VarR8FromStr(vt, VAR_LOCALE_USER_DEFAULT, 0, vt2);
+          if (VRESULT <> VAR_OK) or (b) then
             rstr := '''' + doubles(rstr, '''') + ''''
           else
             rstr := vt2;
@@ -1495,6 +1513,38 @@ end;
   p.State := Value;
   end; }
 
+//TWorkList
+
+function TWorkList.Get(Index: integer): PWorkItem;
+
+begin
+  Result := inherited Get(Index);
+end;
+
+procedure TWorkList.Notify(Ptr: Pointer; Action: TListNotification);
+var
+  p: PWorkItem;
+begin
+  case Action of
+    lnDeleted:
+    begin
+      p := Ptr;
+      Dispose(p);
+    end;
+  end;
+end;
+
+function TWorkList.Add(Section: TScriptSection; Obj: TObject): integer;
+var
+  p: PWorkItem;
+
+begin
+  New(p);
+  p.Section := Section;
+  p.Obj := Obj;
+  Result := inherited Add(p);
+end;
+
 // TScriptItem
 
 procedure TScriptItem.Assign(s: TScriptItem);
@@ -1773,35 +1823,46 @@ begin
   if cont then
   begin
     j := 0;
-    if assigned(lnk) and (lnk is tlist) and ((lnk as tlist).Count > 0) then
-    begin
-      obj := (lnk as tlist)[j];
-      inc(j);
-    end else
-      obj := lnk;
 
-    repeat
-      for i := 0 to ChildSections.Count -1 do
-        case ChildSections[i].Kind of
-          sikSection,sikGroup:
-            (ChildSections[i] as TScriptSection).Process(SE, DE, FE, VE, PVE, obj);
-          sikCondition:
-            if (length(ChildSections[i].Name) > 0) then
-              if CalcValue(ChildSections[i].Name, VE, obj) then
-                (ChildSections[i] as TScriptSection).Process(SE, DE, FE, VE, PVE, obj);
-          sikProcedure:
-            DE(ChildSections[i].Name,ChildSections[i].Value,obj);
-          sikDecloration:
-              DE(ChildSections[i].Name,CalcValue(ChildSections[i].Value,VE,obj),obj);
-        end;
-
-      if (lnk is tlist) and ((lnk as tlist).Count > j) then
+      if assigned(lnk) and (lnk is TWorkList) then
+      with (lnk as TWorkList) do
+        for i := 0 to Count -1 do
+          Items[i].Section.Process(SE,DE,FE,VE,PVE,Items[i].Obj)
+      else
       begin
-        obj := (lnk as tlist)[j];
-        inc(j);
-      end else
-        obj := nil;
-    until obj = nil;
+
+        if assigned(lnk) and (lnk is tlist) and ((lnk as tlist).Count > 0) then
+        begin
+          obj := (lnk as tlist)[j];
+          inc(j);
+        end else
+          obj := lnk;
+
+        repeat
+          for i := 0 to ChildSections.Count -1 do
+            case ChildSections[i].Kind of
+              sikSection,sikGroup:
+                (ChildSections[i] as TScriptSection).Process(SE, DE, FE, VE, PVE, obj);
+              sikCondition:
+                if (length(ChildSections[i].Name) > 0) then
+                  if CalcValue(ChildSections[i].Name, VE, obj) then
+                    (ChildSections[i] as TScriptSection).Process(SE, DE, FE, VE, PVE, obj);
+              sikProcedure:
+                DE(ChildSections[i].Name,ChildSections[i].Value,obj);
+              sikDecloration:
+                  DE(ChildSections[i].Name,CalcValue(ChildSections[i].Value,VE,obj),obj);
+            end;
+
+          if (lnk is tlist) and ((lnk as tlist).Count > j) then
+          begin
+            obj := (lnk as tlist)[j];
+            inc(j);
+          end else
+            obj := nil;
+        until obj = nil;
+
+      end;
+
   end;
 
   if Assigned(FE) then
@@ -1820,6 +1881,7 @@ begin
     begin
 
       //FParent := s.Parent;
+      FNoParam := (s as TScriptSection).NoParameters;
       FParametres.Assign((s as TScriptSection).Parameters);
       //FKind := s.Kind;
       //FDeclorations.Assign(s.Declorations);
@@ -3411,8 +3473,8 @@ var
   fpic: TTPicture;
 begin
   fpic := TTPicture.Create;
-  fpic.Assign(FPicture,true);
   Fpic.Checked := true;
+  fpic.Assign(FPicture,true);
   FPicList.Add(fpic,FResource);
   FPicture := fpic;
 end;
@@ -3468,22 +3530,50 @@ end;
 
 function TDownloadThread.SE(const Item: TScriptSection; const Parametres: TValueList;
   var LinkedObj: TObject): boolean;
+
+  function copytag(s: ttag): ttag;
+  begin
+    result := ttag.Create(s.Name,s.Kind);
+    result.Attrs.Assign(s.Attrs);
+    result.Childs.CopyList(s.Childs,Result);
+    result.Tag := s.Tag;
+  end;
+
 var
   l,s: TTagList;
+  p: TWorkList;
   i,j: integer;
   a: array of TAttrList;
   tags: array of string;
+//  tmp: string;
 begin
+{  if Assigned(LinkedObj) then
+    tmp := LinkedObj.ClassName;  }
   if Assigned(LinkedObj) and((LinkedObj is TTagList)
-  or (LinkedObj is TTag) and ((LinkedObj as TTag).Tag = 0)) then
+  or (LinkedObj is TTag)){ and ((LinkedObj as TTag).Tag = 0))} then
   begin
+    if (LinkedObj is TTag) then
+      if (LinkedObj as TTag).Tag = 0 then
+      begin
+        //tmp := (LinkedObj as TTag).Name;
+        s := (LinkedObj as TTag).Childs;
+      end else
+      begin
+        Result := true;
+        (LinkedObj as TTag).Tag := 0;
+        Exit;
+      end
+    else
+      s := LinkedObj as TTagList;
+
     l := TTagList.Create;
     try
+{
       if (LinkedObj is TTagList) then
         s := LinkedObj as TTagList
       else
         s := (LinkedObj as TTag).Childs;
-
+}
       case Item.Kind of
         sikSection:
         begin
@@ -3493,6 +3583,9 @@ begin
           try
             for i := 0 to Parametres.Count - 1 do
               a[0].Add(Parametres.Items[i].Name, VarToStr(Parametres.Items[i].Value));
+
+            if Item.NoParameters then
+              a[0].NoParameters := Item.NoParameters;
 
             a[0].NoParameters := Item.NoParameters;
             s.GetList(Item.Name, a[0], l);
@@ -3519,24 +3612,22 @@ begin
             begin
               tags[j] := Item.ChildSections[j].Name;
               a[j] := TAttrList.Create;
-              
+              a[j].Tag := Integer(Item.ChildSections[j]);
+
               for i := 0 to Parameters.Count - 1 do
-              begin
                 a[j].Add(Parametres.Items[i].Name,
                   VarToStr(CalcValue(Parametres.Items[i].Value,VE,LinkedObj)));
-                a[j].Tag := Integer(Item.ChildSections);
-              end;
 
               a[j].NoParameters := NoParameters;
             end;
 
             s.GetList(tags,a,l);
-            j := 0;
-            while j < l.Count-1 do
-            begin
-              l.Insert(j,Item);
-              inc(j,2);
-            end;
+            //j := 0;
+            //while j < l.Count-1 do
+            //begin
+            //  l.Insert(j,Item);
+            //  inc(j,2);
+            //end;
 
             
           finally
@@ -3548,14 +3639,24 @@ begin
             SetLength(a,0);
           end;
 
-          LinkedObj := l;
+          p := TWorkList.Create;
+          try
+            for j := 0 to l.Count-1 do
+              p.Add(TScriptSection(l[j].Tag),copytag(l[j]));
 
-          Result := l.Count > 0;
+            LinkedObj := p;
+            Result := p.Count > 0;
+            l.Free;
+          except on e: exception do begin
+            p.Free;
+            raise Exception.Create(e.Message);
+          end; end;
         end;
         else Result := true;
       end;
     except on e: exception do begin
-      l.Free;
+      if Assigned(l) then
+        l.Free;
       raise Exception.Create(e.Message);
     end; end;
   end
@@ -3602,6 +3703,8 @@ begin
         Result := HTTPRec.DefUrl
       else if SameText(Value,'thread.count') then
         Result := HTTPRec.Count
+      else if SameText(Value,'thread.result') then
+        Result := HTTPRec.Theor
       else if SameText(Value,'thread.counter') then
         Result := HTTPRec.Counter
       else
@@ -3645,6 +3748,13 @@ begin
         begin
           s := gVal(Value);
           Result := Max(Clc(nVal(s)),Clc(nVal(s)));
+        end
+        else if SameText(s,'changename') then
+        begin
+          s := gVal(Value);
+          tmp := Clc(nVal(s));
+          s := Clc(nVal(s));
+          Result := ChangeFileExt(tmp,s + ExtractFileExt(tmp));
         end
         else if SameText(s,'changeext') then
         begin
@@ -3708,12 +3818,14 @@ begin
           s := gVal(Value);
           tmp := nVal(s);
           if s = '' then
-            Result := trim(Clc(tmp))
+            Result := TrimEx(Clc(tmp),[#9,#10,#13,' '])
           else begin
             s := Clc(s);
             Result := trim(Clc(tmp),s[1]);
           end;
-        end else if SameText(s,'JSONTime') then
+        end else if SameText(s,'trimapp') then
+          Result := TrimEx(Clc(gVal(Value)),['(',')'])
+        else if SameText(s,'JSONTime') then
         begin
           if (LinkedObj is TTag) then
             with (LinkedObj as TTag) do
@@ -3723,8 +3835,7 @@ begin
               if Assigned(t) then
                 Result := UnixToDateTime(StrToInt(t.Attrs.Value('s')));
             end;
-        end
-        else if SameText(s,'queue') then
+        end else if SameText(s,'queue') then
         begin
           //i := 0;
           s := gVal(Value);
@@ -3738,8 +3849,7 @@ begin
               Break;
           end;
           Result := n;
-        end
-        else if SameText(s,'queueindex') then
+        end else if SameText(s,'queueindex') then
         begin
           Result := 1;
           i := 0;
@@ -3749,13 +3859,12 @@ begin
           begin
             inc(i);
             n2 := Clc(nVal(s));
-            if (n - n2 > 0) then
+            n := n - n2;
+            if n <= 0 then
             begin
-              n := n - n2;
-            end else
-              Break;
-            if n > 0 then
               Result := i;
+              Break;
+            end;
           end;
         end;
       end;
@@ -3763,14 +3872,15 @@ begin
       begin
         Result := FPicture.Meta[Value];
       end;
-  else
-    begin
-      raise Exception.Create('unknown value');
-    end;
+    else
+      begin
+        raise Exception.Create('unknown value');
+      end;
   end;
   except on e:exception do
-    raise Exception.Create('Decloration error(' + Value + '): ' + e.Message);
+    raise Exception.Create('Making value error (' + c + Value + '): ' + e.Message);
   end;
+  //tmp := VarToStr(Result); //for watching
 end;
 
 procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant; LinkedObj: TObject);
@@ -3787,8 +3897,13 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant; LinkedObj: TO
 
   begin
     case Name[1] of
+      '$':
+        if SameText(Name,'$label') then
+          FPicture.DisplayLabel := CalcValue(Value,VE,LinkedObj)
+        else if SameText(Name,'$filename') then
+          FPicture.PicName := CalcValue(Value,VE,LinkedObj);
       '%':
-        if Name = '%tags' then
+        if SameText(Name,'%tags') then
         begin
           s := lowercase(Value);
           v1 := CopyTo(s, '(',['()','""'],true);
@@ -3832,7 +3947,7 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant; LinkedObj: TO
     // p: TTPicture;
     s,v1,v2,r1,r2,r3: string;
     n: integer;
-
+    fcln: TTPicture;
   begin
     if SameText(Name,'$thread.url') then
       FHTTPRec.Url := Value
@@ -3905,6 +4020,7 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant; LinkedObj: TO
       r1 := nVal(s);
       r2 := nVal(s);
       //r3 := s;
+      fcln := FPicture;
 
       while CalcValue(r1,VE,LinkedObj) do
       begin
@@ -3934,6 +4050,7 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant; LinkedObj: TO
         v1 := nVal(v2,'=');
 
         DE(v1,CalcValue(v2,VE,LinkedObj),LinkedObj);
+        FPicture := fcln;
       end;
       // FAddPic := true;
       // Synchronize(AddPicture);
@@ -3942,7 +4059,7 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant; LinkedObj: TO
       if Assigned(FPicture) then
         if SameText(Name,'%tags') then
         else
-          FPicture.Meta[trim(name,'%')] := CalcValue(Value, VE, LinkedObj)
+          FPicture.Meta[trim(name,'%')] := Value
       else
         raise Exception.Create('Picture not assigned')
     else if Name[1] = '$' then
@@ -3969,8 +4086,8 @@ end;
 
 procedure TDownloadThread.FE(const Item: TScriptSection; LinkedObj: TObject);
 begin
-  if (Item.Kind = sikSection) and Assigned(LinkedObj)
-  and (LinkedObj is TTagList) then
+  if (Item.Kind in [sikSection,sikGroup]) and Assigned(LinkedObj)
+  and (LinkedObj is TTagList) or (LinkedObj is TWorkList) then
     LinkedObj.Free;
 end;
 
@@ -4090,8 +4207,10 @@ begin
         FXML.JSON(FHTTPREC.JSONItem,s)
       else raise Exception.Create(Format(lang('_UNKNOWNMETHOD_'),[FHTTPRec.ParseMethod]));
 
+      // ----  //
       //FXML.TagList.ExportToFile(ExtractFilePath(paramstr(0))+'log\'+ValidFName(emptyname(url)));
-      //SaveStrToFile(s,ExtractFilePath(paramstr(0))+'log\'+ValidFName(emptyname(url)) + '.src');
+      //SaveStrToFile(url+#13#10+s,ExtractFilePath(paramstr(0))+'log\'+ValidFName(emptyname(url)) + '.src');
+      // ---- //
 
       {$IFDEF NEKODEBUG}SaveStrToFile('ExecuteXMLScript',
         debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
@@ -4180,13 +4299,17 @@ begin
             debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
         end;
 
-        {$IFDEF NEKODEBUG}SaveStrToFile('CreateFileStream',
-          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+        {$IFDEF NEKODEBUG}
+        SaveStrToFile('CreateFileStream',
+        debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);
+        {$ENDIF}
 
         f := TFileStream.Create(FPicture.FileName, fmCreate);
       finally
-        {$IFDEF NEKODEBUG}SaveStrToFile('LeaveFileCheckQueue',
-          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+        {$IFDEF NEKODEBUG}
+        SaveStrToFile('LeaveFileCheckQueue',
+        debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);
+        {$ENDIF}
 
         FCS.Leave;
       end;
@@ -4205,6 +4328,9 @@ begin
 
         {$IFDEF NEKODEBUG}SaveStrToFile('StartGettingPic>'+HTTPRec.Url,
           debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+
+        FPicture.Changes := [pcSize, pcProgress];
+        Synchronize(PicChanged);
 
         HTTP.Get(HTTPRec.Url, f);
         //HTTP.Disconnect;
@@ -4542,6 +4668,7 @@ begin
   if Links then
   begin
     FLinked.Assign(Value.Linked);
+    FMeta.Assign(Value.Meta);
     FTags.Assign(Value.Tags);
   end;
 
