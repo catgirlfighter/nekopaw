@@ -18,6 +18,7 @@ object fGrid: TfGrid
     Height = 258
     Align = alClient
     TabOrder = 0
+    LookAndFeel.NativeStyle = False
     object vChilds: TcxGridDBTableView
       DataController.Summary.DefaultGroupSummaryItems = <>
       DataController.Summary.FooterSummaryItems = <>

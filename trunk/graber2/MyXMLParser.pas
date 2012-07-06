@@ -278,6 +278,9 @@ var
 
 begin
   //Tag := lowercase(Tag);
+  if Assigned(AAttrs) and AAttrs.NoParameters then
+    AAttrs.NoParameters := true;
+
   for i := 0 to Count -1 do
     if (Items[i].Kind = tkTag) then
       if SameText(Items[i].Name,Tag)
@@ -310,7 +313,7 @@ var
   i,j,l: integer;
   b: boolean;
   s: string;
-
+  t: ttag;
 begin
   //Tag := lowercase(Tag);
   if length(Tags) <> length(AAttrs) then
@@ -338,12 +341,10 @@ begin
               end;
 
             if b then
-            //begin
-              AList.CopyTag(Items[i]).Tag := AAttrs[l].Tag;
-              //b := true;
-            //end;
-            //else
-            //  Items[i].Childs.GetList(Tags,AAttrs,AList);
+            begin
+              t := AList.CopyTag(Items[i]);
+              t.Tag := AAttrs[l].Tag;
+            end;
           end;
 
         if not b then
@@ -441,6 +442,7 @@ begin
   //p.Attrs := TAttrList.Create;
   Result.Attrs.Assign(ATag.Attrs);
   Result.Childs.CopyList(ATag.Childs,Result);
+  Result.Tag := ATag.Tag;
   //Add(p);
 end;
 
