@@ -3,7 +3,22 @@
 ;template of danbooru engine
 
 [main]
-$picture.fields(url,preview,sample_url,post_url,width:i,height:i,rating,id:i,author,score:i,posted:d,post_date:d,md5,source,aspect_ratio:f);
+$picture.fields(
+	url:s:$$URL,
+	preview:s:$$PREVIEW,
+	sample_url:s:$$SAMPLE,
+	post_url:s:$$POSTURL,
+	width:i:$$WIDTH,
+	height:i:$$HEIGHT,
+	rating:s:$$RATING,
+	id:i:$$ID,
+	author:s:$$AUTHOR,
+	score:i:$$SCORE,
+	posted:d:$$POSTED,
+	post_date:d:$$POSTDATE,
+	md5:s:$$MD5,
+	source:s:$$SOURCE,
+	aspect_ratio:f:$$ASPECTRATIO);
 $pictime = '@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy")'; 
 $previewurl = '#preview_url';
 $picurl = '$picture%url';
