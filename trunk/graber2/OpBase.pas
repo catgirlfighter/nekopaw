@@ -7,7 +7,7 @@ uses Windows, SysUtils, Messages, GraberU, INIFiles, Classes, Common;
 var
   FullResList: TResourceList;
   GlobalSettings: TSettingsRec;
-  IgnoreList: TDSArray;
+  IgnoreList,AddFields: TDSArray;
   rootdir: string;
   profname: string = 'default.ini';
   langname: string = 'English';
@@ -41,8 +41,16 @@ var
     SaveConfirm: boolean;
   end;}
 
+type
+  tGUIValue = (gvSizes,gvResSet,gvGridFields);
+  tGUIValues = set of tGUIValue;
+
 procedure LoadProfileSettings;
 procedure SaveProfileSettings;
+procedure SaveGUISettings(values: tGUIValues);
+procedure FillDSArray(const a1: TDSArray; var a2: TDSArray);
+function CopyDSArray(const a: TDSArray): TDSArray;
+procedure DeleteDSArrayRec(var a: TDSArray; const index: integer);
 
 implementation
 
@@ -59,7 +67,7 @@ begin
     pref := 'resource-';
     n := FullResList[0].Fields.Count;
 
-    FullResList[0].NameFormat := INI.ReadString('defaultresource','NameFormat','$rootdir$\pics\$tag$\$fname$.$ext$');
+    FullResList[0].NameFormat := INI.ReadString('defaultresource','NameFormat','$rootdir$\pics\$tag$\');
 
     for i := 1 to FullResList.Count -1 do
     begin
@@ -149,9 +157,9 @@ end;
 procedure LoadProfileSettings;
 var
   INI: TINIFile;
-  i,j: integer;
+  i{,j}: integer;
   v: tstringlist;
-  s: string;
+  //s: string;
   dlu: integer;
 begin
 
@@ -185,18 +193,32 @@ begin
       AutoUPD := INI.ReadBool('settings','autoupd',true);
       ShowWhatsNew := INI.ReadBool('settings','showwhatsnew',true);
       UseLookAndFeel := INI.ReadBool('settings','uselookandfeel',false);
+      SkinName := INI.ReadString('settings','skinname','');
       UPDServ := INI.ReadString('settings','updserver',
         'http://nekopaw.googlecode.com/svn/trunk/release/graber2/');
-      langname := INI.ReadString('global','language',langname);
+      langname := INI.ReadString('settings','language',langname);
+
+      with GUI do
+      begin
+        FormWidth := INI.ReadInteger('gui','windowwidth',610);
+        FormHeight := INI.ReadInteger('gui','windowheight',420);
+        FormState := INI.ReadBool('gui','windowmaximized',false);
+        PanelPage := INI.ReadInteger('gui','panelpage',0);
+        PanelWidth := INI.ReadInteger('gui','panelwidth',185);
+        LastUsedSet := INI.ReadString('gui','lastusedresourceset','');
+        LastUsedFields := INI.ReadString('gui','lastusedgridfields','@resource,@label');
+        LastUsedGrouping := INI.ReadString('gui','lastusedgridgrouping','');
+      end;
 
       with Downl do
       begin
         ThreadCount := INI.ReadInteger('download','threadcount',1);
-        Retries := INI.ReadInteger('download','retires',5);
+        Retries := INI.ReadInteger('download','retries',5);
         UsePerRes := INI.ReadBool('download','useperresource',true);
         PerResThreads := INI.ReadInteger('download','perresourcethreadcount',2);
         PicThreads := INI.ReadInteger('download','picturethreadcount',1);
         SDALF := INI.ReadBool('download','SDALF',false);
+        AutoUncheckInvisible := INI.ReadBool('download','AutoUncheckInvisible',false);
         Debug := false;
       end;
 
@@ -221,18 +243,36 @@ begin
       v := tstringlist.Create;
       try
         INI.ReadSection('IgnoreList',v);
-        j := 0;
+        //j := 0;
+        SetLength(IgnoreList,v.Count);
         for i := 0 to v.Count-1 do
         begin
-          s := INI.ReadString('IgnoreList',v[i],'');
-          while s <> '' do
+          //s := INI.ReadString('IgnoreList',v[i],'');
+          IgnoreList[i][0] := v[i];
+          IgnoreList[i][1] := INI.ReadString('ignorelist',v[i],'');
+          {Checking old format}
+          if pos('=',CopyTo(IgnoreList[i][1],';',['""'],[],false)) = 0 then
           begin
-            inc(j);
-            SetLength(IgnoreList,j);
-            IgnoreList[j-1][0] := v[i];
-            IgnoreList[j-1][1] := CopyTo(s,',',[],true);
+            //INI.DeleteKey('ignorelist',IgnoreList[i][0]);
+            IgnoreList[i][1] := IgnoreList[i][0] + '=' +
+                                IgnoreList[i][1];
+            IgnoreList[i][0] := 'rule' + IntToStr(i + 1);
+            //INI.WriteString('ignorelist',IgnoreList[i][0],IgnoreList[i][1]);
           end;
+
         end;
+
+        //v.Clear;
+        INI.ReadSection('fields',v);
+
+        SetLength(AddFields,v.Count);
+
+        for i := 0 to v.Count-1 do
+        begin
+          AddFields[i][0] := v[i];
+          AddFields[i][1] := INI.ReadString('fields',v[i],'');
+        end;
+
       finally
         v.Free;
       end;
@@ -246,6 +286,7 @@ end;
 procedure SaveProfileSettings;
 var
   INI: TINIFile;
+  i: integer;
 
 begin
   INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
@@ -253,19 +294,21 @@ begin
     with GlobalSettings do
     begin
 
-      INI.WriteString('Global','Language',langname);
+      INI.WriteString('Settings','Language',langname);
       INI.WriteBool('Settings','autoUPD',AutoUPD);
       INI.WriteBool('Settings','ShowWhatsNew',ShowWhatsNew);
       INI.WriteBool('Settings','UseLookAndFeel',UseLookAndFeel);
+      INI.WriteString('Settings','SkinName',SkinName);
 
       with Downl do
       begin
         INI.WriteInteger('Download','ThreadCount',ThreadCount);
-        INI.WriteInteger('Download','Retires',Retries);
+        INI.WriteInteger('Download','Retries',Retries);
         INI.WriteBool('Download','UsePerResource',UsePerRes);
         INI.WriteInteger('Download','PerResourceThreadCount',PerResThreads);
         INI.WriteInteger('Download','PictureThreadCount',PicThreads);
         INI.WriteBool('download','SDALF',SDALF);
+        INI.WriteBool('download','AutoUncheckInvisible',AutoUncheckInvisible);
       end;
 
       with Proxy do
@@ -287,6 +330,11 @@ begin
         INI.WriteString('Formats','Picture',PicFormat);
       end;
   }
+      INI.EraseSection('ignorelist');
+
+      for i := 0 to length(ignorelist)-1 do
+        INI.WriteString('IgnoreList',IgnoreList[i][0],IgnoreList[i][1]);
+
       if Assigned(FullResList) then
         SaveResourceSettings(INI);
 
@@ -295,6 +343,74 @@ begin
     INI.Free;
   end;
 end;
+
+procedure SaveGUISettings(Values: tGUIValues);
+var
+  INI: TINIFile;
+
+begin
+  INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+  try
+    with GlobalSettings.GUI do
+    begin
+      if gvSizes in Values then
+      begin
+        INI.WriteInteger('GUI','WindowWidth',FormWidth);
+        INI.WriteInteger('GUI','WindowHeight',FormHeight);
+        INI.WriteBool('GUI','WindowMaximized',FormState);
+        INI.WriteInteger('GUI','PanelPage',PanelPage);
+        INI.WriteInteger('GUI','PanelWidth',PanelWidth);
+      end;
+      if gvResSet in Values then
+        INI.WriteString('GUI','LastUsedResourceSet',LastUsedSet);
+      if gvGridFields in Values then
+      begin
+        INI.WriteString('GUI','LastUsedGridFields',LastUsedFields);
+        INI.WriteString('GUI','LastUsedGridGrouping',LastUsedGrouping);
+      end;
+    end;
+  finally
+    INI.Free;
+  end;
+end;
+
+procedure FillDSArray(const a1: TDSArray; var a2: TDSArray);
+var
+  i: integer;
+begin
+  //result := nil;
+  SetLength(a2,length(a1));
+  for i := 0 to length(a1)-1 do
+  begin
+    a2[i][0] := a1[i][0];
+    a2[i][1] := a1[i][1];
+  end;
+end;
+
+function CopyDSArray(const a: TDSArray): TDSArray;
+var
+  i: integer;
+begin
+  result := nil;
+  SetLength(result,length(a));
+  for i := 0 to length(a)-1 do
+  begin
+    result[i][0] := a[i][0];
+    result[i][1] := a[i][1];
+  end;
+end;
+
+procedure DeleteDSArrayRec(var a: TDSArray; const index: integer);
+var
+  i: integer;
+begin
+  for i := index + 1 to length(a)-1 do
+    a[i-1] := a[i];
+
+  SetLength(a,length(a)-1);
+
+end;
+
 
 initialization
 rootdir := ExtractFileDir(paramstr(0));

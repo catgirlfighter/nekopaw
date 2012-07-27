@@ -87,7 +87,7 @@ begin
   j := PosEx('www.',Cookie,i + 1);
   if j > 0 then
     i := i + 4;
-  j:=CharPos(Cookie,';',[],i);
+  j:=CharPos(Cookie,';',[],[],i);
   if j=0 then j:=Length(Cookie)+1;
   Result:=Copy(Cookie,i+7,j-i-7);
   // Remove dot

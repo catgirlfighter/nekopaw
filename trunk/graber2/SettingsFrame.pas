@@ -5,15 +5,17 @@ interface
 uses
   {std}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, Menus, INIFiles, ShellAPI, ImgList, ExtCtrls,
+  Dialogs, Menus, INIFiles, ShellAPI, ImgList, ExtCtrls, StrUtils,
   {devex}
   cxPCdxBarPopupMenu, cxGraphics, cxLookAndFeels,
   cxLookAndFeelPainters, cxControls, cxCustomData, cxStyles, cxTL, cxTextEdit,
   cxTLdxBarBuiltInMenu, cxContainer, cxEdit, cxEditRepositoryItems, cxVGrid,
   cxSpinEdit, cxCheckBox, cxMaskEdit, cxDropDownEdit, cxLabel, cxPC, cxSplitter,
-  cxInplaceContainer, StdCtrls, cxButtons,
+  cxInplaceContainer, StdCtrls, cxButtons, dxSkinsCore, dxSkinsDefaultPainters,
+  dxSkinscxPCPainter, cxFilter, cxData, cxDataStorage, cxGridCustomView,
+  cxGridCustomTableView, cxGridTableView, cxClasses, cxGridLevel, cxGrid,
   {Graber}
-  Common, GraberU;
+  Common, GraberU, dxSkinsdxBarPainter, dxBar;
 
 type
   TfSettings = class(TFrame)
@@ -55,16 +57,31 @@ type
     lCheckNow: TcxLabel;
     cxEditRepository: TcxEditRepository;
     eAuthButton: TcxEditRepositoryButtonItem;
-    cxTabSheet5: TcxTabSheet;
+    cxTabSheet6: TcxTabSheet;
     cxLabel1: TcxLabel;
     cxLabel2: TcxLabel;
     cxLabel3: TcxLabel;
     cxLabel4: TcxLabel;
     cxLabel5: TcxLabel;
     btnApply: TcxButton;
-    ilIcons: TcxImageList;
     chbShowWhatsNew: TcxCheckBox;
+    lSkin: TcxLabel;
+    cbSkin: TcxComboBox;
     chbUseLookAndFeel: TcxCheckBox;
+    cxTabSheet5: TcxTabSheet;
+    gDoublesLevel1: TcxGridLevel;
+    gDoubles: TcxGrid;
+    tvDoubles: TcxGridTableView;
+    cDoublesRuleName: TcxGridColumn;
+    cDoublesRules: TcxGridColumn;
+    eMemo: TcxEditRepositoryMemoItem;
+    BarManager: TdxBarManager;
+    DoublesActions: TdxBar;
+    bcDoubles: TdxBarDockControl;
+    bbNewRule: TdxBarButton;
+    bbEditRule: TdxBarButton;
+    bbDeleteRule: TdxBarButton;
+    il: TcxImageList;
     procedure btnOkClick(Sender: TObject);
     procedure chbProxyPropertiesEditValueChanged(Sender: TObject);
     procedure chbProxyAuthPropertiesEditValueChanged(Sender: TObject);
@@ -76,7 +93,11 @@ type
     procedure cxLabel5Click(Sender: TObject);
     procedure btnApplyClick(Sender: TObject);
     procedure btnCancelClick(Sender: TObject);
+    procedure bbDeleteRuleClick(Sender: TObject);
+    procedure bbNewRuleClick(Sender: TObject);
+    procedure bbEditRuleClick(Sender: TObject);
   private
+    FIgnList: TDSArray;
     FLangList: TStringList;
     FOnError: TLogEvent;
     function ResetRelogin(idx: integer): boolean;
@@ -95,6 +116,8 @@ type
     procedure CreateResources;
     procedure OnErrorEvent(Sender: TObject; Msg: String);
     procedure JobStatus(Sander: TObject; Action: integer);
+    procedure LoadDoubles;
+    function CheckDoublesName(rulename: string): boolean;
     property OnError: TLogEvent read FOnError write FOnError;
     { Public declarations }
   end;
@@ -104,7 +127,7 @@ const
 
 implementation
 
-uses UpdUnit, LangString, OpBase, utils, LoginForm;
+uses UpdUnit, LangString, OpBase, utils, LoginForm, NewDoublesRuleForm;
 
 {$R *.dfm}
 
@@ -116,6 +139,8 @@ procedure TfSettings.ApplySettings;
 begin
   if pcMain.ActivePageIndex = 3 then
     SaveResFields;
+
+  FillDSArray(FIgnList,IgnoreList);
 
   with GlobalSettings do
   begin
@@ -138,9 +163,14 @@ begin
     Downl.PerResThreads := eThreadPerRes.EditValue;
     Downl.PicThreads := ePicThreads.EditValue;
 
-    if UseLookAndFeel <> chbUseLookAndFeel.Checked then
+    if (UseLookAndFeel <> chbUseLookAndFeel.Checked)
+    or (SkinName <> cbSkin.Text) then
     begin
       UseLookAndFeel := chbUseLookAndFeel.Checked;
+      if cbSkin.ItemIndex > 0 then
+        SkinName := cbSkin.Text
+      else
+        SkinName := '';
       PostMessage(Application.MainForm.Handle,CM_STYLECHANGED,0,0);
     end;
 
@@ -154,6 +184,83 @@ begin
       0, 0);
   end;
 
+end;
+
+procedure TfSettings.bbDeleteRuleClick(Sender: TObject);
+var
+  n: integer;
+begin
+  if tvDoubles.DataController.FocusedRecordIndex > -1 then
+    if MessageDlg(lang('_DELETE_CONFIRM_'),mtConfirmation,[mbYes,mbNo],0) = mrYes then
+    begin
+      n := tvDoubles.DataController.FocusedRecordIndex;
+      DeleteDSArrayRec(FIgnList,n);
+      tvDoubles.DataController.DeleteRecord(n);
+    end;
+end;
+
+procedure TfSettings.bbEditRuleClick(Sender: TObject);
+var
+  n: integer;
+  picfields: tstringlist;
+begin
+  picfields := tstringlist.Create;
+  try
+    FullResList.GetAllPictureFields(picfields);
+    n := tvDoubles.DataController.FocusedRecordIndex;
+    if (n > -1)
+    and fmDoublesNewRule.Execute(
+          FIgnList[n][0],FIgnList[n][1],picfields,CheckDoublesName) then
+    begin
+      //SetLength(FIgnlist,n);
+      FIgnList[n][0] := fmDoublesNewRule.RuleName;
+      FIgnList[n][1] := trim(fmDoublesNewRule.ValueString,';');
+      tvDoubles.BeginUpdate;
+      try
+        //tvDoubles.DataController.RecordCount := n;
+        tvDoubles.DataController.Values[n,cDoublesRuleName.index]
+           := FIgnList[n][0];
+        tvDoubles.DataController.Values[n,cDoublesRules.index]
+           := ReplaceStr(FIgnList[n][1],';',#13#10);
+      finally
+        tvDoubles.EndUpdate;
+      end;
+    end;
+  finally
+    picfields.Free;
+  end;
+end;
+
+procedure TfSettings.bbNewRuleClick(Sender: TObject);
+var
+  picfields: tstringlist;
+  n: integer;
+begin
+  n := tvDoubles.DataController.RecordCount+1;
+  picfields := tstringlist.Create;
+  try
+    FullResList.GetAllPictureFields(picfields);
+    if fmDoublesNewRule.Execute(
+      'rule'+IntToStr(n),'',picfields,CheckDoublesName) then
+    begin
+      SetLength(FIgnlist,n);
+      FIgnList[n-1][0] := fmDoublesNewRule.RuleName;
+      FIgnList[n-1][1] := trim(fmDoublesNewRule.ValueString,';');
+      tvDoubles.BeginUpdate;
+      try
+        tvDoubles.DataController.RecordCount := n;
+        tvDoubles.DataController.Values[n-1,cDoublesRuleName.index]
+           := FIgnList[n-1][0];
+        tvDoubles.DataController.Values[n-1,cDoublesRules.index]
+           := ReplaceStr(FIgnList[n-1][1],';',#13#10);
+      finally
+        tvDoubles.EndUpdate;
+      end;
+      tvDoubles.DataController.FocusedRecordIndex := n-1;
+    end;
+  finally
+    picfields.free;
+  end;
 end;
 
 procedure TfSettings.btnApplyClick(Sender: TObject);
@@ -205,7 +312,7 @@ begin
     item.Values[0] := FullResList[i].Name;
     if FullResList[i].IconFile <> '' then
       bmp.LoadFromFile(rootdir + '\resources\icons\' + FullResList[i].IconFile);
-    idx := ilIcons.Add(bmp,nil);
+    idx := il.Add(bmp,nil);
     item.ImageIndex := idx;
   end;
 end;
@@ -256,16 +363,53 @@ begin
     0, 0);
 end;
 
+procedure TfSettings.LoadDoubles;
+var
+  i: integer;
+begin
+  tvDoubles.BeginUpdate;
+  try
+    tvDoubles.DataController.RecordCount := length(FIgnList);
+    for i := 0 to length(FIgnList)-1 do
+    begin
+      tvDoubles.DataController.Values[i,cDoublesRuleName.Index] :=
+        FIgnList[i][0];
+      tvDoubles.DataController.Values[i,cDoublesRules.Index] :=
+        ReplaceStr(FIgnList[i][1],';',#13#10);
+    end;
+  finally
+    tvDoubles.EndUpdate;
+  end;
+  if tvDoubles.DataController.RecordCount > 0 then
+    tvDoubles.DataController.FocusedRowIndex := 0;
+  BestFitWidths(tvDoubles);
+end;
+
 procedure TfSettings.LoadSettings;
+{var
+  resnames,skinnames: tstringlist;}
 begin
   GetLanguages;
-
+  FillDSArray(IgnoreList,FIgnList);
+  LoadDoubles;
   with GlobalSettings do
   begin
     chbAutoupdate.Checked := AutoUPD;
     chbShowWhatsNew.Checked := ShowWhatsNew;
     chbUseLookAndFeel.Checked := UseLookAndFeel;
-
+    if SkinName = '' then
+      cbSkin.ItemIndex := 0
+    else
+      cbSkin.Text := SkinName;
+{    resnames := tstringlist.Create;
+    skinnames := tstringlist.Create;
+    try
+      dxSkinsPopulateSkinResources(hInstance,resnames,skinnames);
+      cbSkin.Properties.Items.Assign(skinnames);
+    finally
+      resnames.Free;
+      skinnames.Free;
+    end;  }
     chbProxy.Checked := Proxy.UseProxy;
     eHost.Text := Proxy.Host;
     ePort.Value := Proxy.Port;
@@ -326,7 +470,8 @@ begin
   tlList.Items[1].Texts[0] := lang('_THREADS_');
   tlList.Items[2].Texts[0] := lang('_PROXY_');
   tlList.Items[3].Texts[0] := lang('_RESOURCES_');
-  tlList.Items[4].Texts[0] := lang('_ABOUT_');
+  tlList.Items[4].Texts[0] := lang('_DOUBLES_');
+  tlList.Items[5].Texts[0] := lang('_ABOUT_');
   //chbDebug.Caption := _DEBUGMODE_;
 //  gpProxy.Caption := _PROXY_;
   chbProxy.Caption := lang('_USE_PROXY_');
@@ -336,6 +481,12 @@ begin
   lCheckNow.Caption := lang('_UPDATENOW_');
   chbShowWhatsNew.Caption := lang('_SHOW_WHATSNEW_');
   chbUseLookAndFeel.Caption := lang('_USELOOKANDFEEL_');
+  lSkin.Caption := lang('_SKIN_');
+  bbNewRule.Caption :=  lang('_CREATERULE_');
+  bbEditRule.Caption :=  lang('_EDITRULE_');
+  bbDeleteRule.Caption :=  lang('_DELETERULE_');
+  cDoublesRuleName.Caption := lang('_RULENAME_');
+  cDoublesRules.Caption := lang('_RULESTRING_');
 end;
 
 procedure TfSettings.tlListFocusedNodeChanged(Sender: TcxCustomTreeList;
@@ -356,6 +507,20 @@ begin
   else if (AFocusedNode.Parent = tlList.Items[3]) then
     CreateResFields(AFocusedNode.Index + 1);
 
+end;
+
+function TfSettings.CheckDoublesName(rulename: string): boolean;
+var
+  i: integer;
+begin
+  for i := 0 to length(FIgnList)-1 do
+    if (i<>tvDoubles.DataController.FocusedRecordIndex)
+    and SameText(rulename,FIgnList[i][0]) then
+    begin
+      Result := true;
+      Exit;
+    end;
+  Result := false;
 end;
 
 procedure TfSettings.CreateResFields(n: Integer);
@@ -379,6 +544,7 @@ begin
     //dm.CreateField(vgSettings,'vgitag',_TAGSTRING_,'',ftString,c,FullResList[n].Fields['tag']);
     dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftPathText,c,FullResList[n].NameFormat);
     dm.CreateField(vgSettings,'vgisdalf',lang('_SDALF_'),'',ftCheck,c,GlobalSettings.Downl.SDALF);
+    dm.CreateField(vgSettings,'vgiautounch',lang('_AUTOUNCHECKINVISIBLE_'),'',ftCheck,c,GlobalSettings.Downl.AutoUncheckInvisible);
   end
   else
   with FullResList[n] do begin
@@ -441,9 +607,12 @@ begin
       .Properties.Value;
 
     if vgSettings.Tag = 0 then
+    begin
       GlobalSettings.Downl.SDALF := (vgSettings.RowByName('vgisdalf') as TcxEditorRow)
-        .Properties.Value
-    else if vgSettings.Tag > 0 then
+        .Properties.Value;
+      GlobalSettings.Downl.AutoUncheckInvisible :=
+        (vgSettings.RowByName('vgiautounch') as TcxEditorRow).Properties.Value;
+    end else if vgSettings.Tag > 0 then
     begin
       Inherit := (vgSettings.RowByName('vgiinherit') as TcxEditorRow)
         .Properties.Value;

@@ -36,10 +36,10 @@ function STRINGDECODE(s: STRING): STRING;
 function Trim(s: String; ch: Char = ' '): String;
 function TrimEx(s: String; ch: TSetOfChar): String;
 function CopyTo(s, substr: string; back: boolean = false; re: boolean = false): string; overload;
-function CopyTo(Source: String; ATo: Char; Isl: array of string): string; overload;
-function CopyTo(var Source: String; ATo: Char; Isl: array of string; cut: boolean = false): string; overload;
+function CopyTo(Source: String; ATo: Char; Isl,Brk: array of string): string; overload;
+function CopyTo(var Source: String; ATo: Char; Isl,Brk: array of string; cut: boolean = false): string; overload;
 function CopyFromTo(s, sub1, sub2: String; re: boolean = false): String; overload;
-function CopyFromTo(Source: String; AFrom,ATo: Char; Isl: array of string): String; overload;
+function CopyFromTo(Source: String; AFrom,ATo: Char; Isl,Brk: array of string): String; overload;
 function ExtractFolder(s: string): string;
 function MoveDir(const fromDir, toDir: string): boolean;
 procedure MultWordArrays(var a1: TArrayOfWord; a2: TArrayOfWord);
@@ -57,9 +57,11 @@ function GetWinVersion: string;
 procedure ShutDown;
 function CheckStr(s: string; a: TSetOfChar; inv: boolean = false): boolean;
 function CheckStrPos(s: string; a: TSetOfChar; inv: boolean = false): Integer;
-function CharPos(str: string; ch: Char; Isolators: array of string;
-  From: Integer = 1): Integer;
-function CharPosEx(str: string; ch: TSetOfChar; Isolators: array of string;
+//function CharPos(str: string; ch: Char; Isolators: array of string;
+//  From: Integer = 1): Integer; overload;
+function CharPos(str: string; ch: Char; Isolators,Brackets: array of string;
+  From: Integer = 1): Integer; //overload;
+function CharPosEx(str: string; ch: TSetOfChar; Isolators,Brackets: array of string;
   From: Integer = 1): Integer;
 function GetNextS(var s: string; del: Char = ';'; ins: Char = #0): string;
 function GetNextSEx(var s: string; del: TSetOfChar = [';'];
@@ -73,6 +75,7 @@ function nullstr(Value: Variant): Variant;
 function ifn(b: boolean; thn, els: variant): variant;
 function DeleteEx(S: String; Index,Count: integer): String;
 procedure SaveStrToFile(S, FileName: String; Add: boolean = false);
+function GreatestCommonFactor(a,b: Word): Word;
 
 implementation
 
@@ -735,22 +738,22 @@ begin
   //end;
 end;
 
-function CopyTo(Source: String; ATo: Char; Isl: array of string): string;
+function CopyTo(Source: String; ATo: Char; Isl,Brk: array of string): string;
 var
   i: Integer;
 begin
-  i := CharPos(Source,ATo,Isl);
+  i := CharPos(Source,ATo,Isl,Brk);
   if i = 0 then
     Result := copy(Source, 1, length(Source))
   else
     Result := copy(Source, 1, i - 1);
 end;
 
-function CopyTo(var Source: String; ATo: Char; Isl: array of string; cut: boolean = false): string;
+function CopyTo(var Source: String; ATo: Char; Isl,Brk: array of string; cut: boolean = false): string;
 var
   i: Integer;
 begin
-  i := CharPos(Source,ATo,Isl);
+  i := CharPos(Source,ATo,Isl,Brk);
   if i = 0 then
     Result := copy(Source, 1, length(Source))
   else
@@ -791,12 +794,12 @@ begin
     Result := copy(s, 1, l2 - 1);
 end;
 
-function CopyFromTo(Source: String; AFrom,ATo: Char; Isl: array of string): String;
+function CopyFromTo(Source: String; AFrom,ATo: Char; Isl,Brk: array of string): String;
 var
   n1,n2: integer;
 begin
 
-  n1 := CharPos(Source,AFrom,Isl);
+  n1 := CharPos(Source,AFrom,Isl,Brk);
 
   if n1 = 0 then
   begin
@@ -804,7 +807,7 @@ begin
     Exit;
   end;
 
-  n2 := CharPos(Source,ATo,Isl,n1 + 1);
+  n2 := CharPos(Source,ATo,Isl,Brk,n1 + 1);
 
   if n2 = 0 then
   begin
@@ -904,7 +907,7 @@ var
   i: Integer;
 begin
   for i := 1 to length(FName) do
-    if CharInSet(FName[i], n) and (not bckslsh or (FName[i] <> '\')) then
+    if CharInSet(FName[i], n) and (not bckslsh or not CharInSet(FName[i],['\',':'])) then
       FName[i] := '_';
   Result := FName;
 end;
@@ -1310,29 +1313,54 @@ begin
   Result := 0;
 end;
 
-function CharPos(str: string; ch: Char; Isolators: array of string;
+function CharPos(str: string; ch: Char;
+  Isolators,Brackets: array of string;
   From: Integer = 1): Integer;
 var
   i, j: Integer;
-  n: integer;
-  s1,s2: Char;
-  st: TSetOfChar;
+  //n: integer;
+  {s1,}s2: Char;
+  {b1,}b2: array of Char;
+  st,br: TSetOfChar;
 begin
   st := [];
   for i := 0 to length(Isolators) - 1 do
     st := st + [Isolators[i][1]];
 
-  n := 0;
-  s1 := #0;
+  br := [];
+  for i := 0 to length(Brackets) - 1 do
+    br := br + [Brackets[i][1]];
+
+//  setlength(b1,0);
+  setlength(b2,0);
+
+  //n := 0;
+  //s1 := #0;
   s2 := #0;
 
   for i := From to length(str) do
-    if n > 0 then
+    if s2 <> #0 then
       if str[i] = s2 then
-        dec(n)
-      else if str[i] = s1 then
-        inc(n)
+        s2 := #0
+      //  dec(n)
+      //else if str[i] = s1 then
+      //  inc(n)
       else
+    else if (length(b2) > 0) then
+      if str[i] = b2[length(b2)-1] then
+        setlength(b2,length(b2)-1)
+      else if CharInSet(str[i],br) then
+      begin
+        for j := 0 to length(Brackets) - 1 do
+          if (str[i] = Brackets[j][1]) then
+          begin
+            //setlength(b1,length(b1)+1);
+            setlength(b2,length(b2)+1);
+            //b1[length(b1)-1] := Brackets[j][1];
+            b2[length(b2)-1] := Brackets[j][2];
+            break;
+          end;
+      end else
     else if (str[i] = ch) then
     begin
       Result := i;
@@ -1343,38 +1371,71 @@ begin
       for j := 0 to length(Isolators) - 1 do
         if (str[i] = Isolators[j][1]) then
         begin
-          s1 := Isolators[j][1];
+          //s1 := Isolators[j][1];
           s2 := Isolators[j][2];
           break;
         end;
-      inc(n);
+      //inc(n);
+    end else if CharInSet(str[i],br) then
+    begin
+      for j := 0 to length(Brackets) - 1 do
+        if (str[i] = Brackets[j][1]) then
+        begin
+          //setlength(b1,length(b1)+1);
+          setlength(b2,length(b2)+1);
+          //b1[length(b1)-1] := Brackets[j][1];
+          b2[length(b2)-1] := Brackets[j][2];
+          break;
+        end;
     end;
   Result := 0;
 end;
 
-function CharPosEx(str: string; ch: TSetOfChar; Isolators: array of string;
+function CharPosEx(str: string; ch: TSetOfChar;
+  Isolators,Brackets: array of string;
   From: Integer = 1): Integer;
 var
   i, j: Integer;
-  n: integer;
-  s1,s2: Char;
-  st: TSetOfChar;
+  //n: integer;
+  {s1,}s2: Char;
+  {b1,}b2: array of Char;
+  st,br: TSetOfChar;
 begin
   st := [];
   for i := 0 to length(Isolators) - 1 do
     st := st + [Isolators[i][1]];
 
-  n := 0;
-  s1 := #0;
+  br := [];
+  for i := 0 to length(Brackets) - 1 do
+    br := br + [Brackets[i][1]];
+
+  //n := 0;
+  //s1 := #0;
   s2 := #0;
 
   for i := From to length(str) do
-    if n > 0 then
+    if s2 <> #0 then
       if str[i] = s2 then
-        dec(n)
-      else if str[i] = s1 then
-        inc(n)
+        s2 := #0
+      //  dec(n)
+      //else if str[i] = s1 then
+      //  inc(n)
       else
+    else if (length(b2) > 0) then
+      if str[i] = b2[length(b2)-1] then
+        setlength(b2,length(b2)-1)
+      else if CharInSet(str[i],br) then
+      begin
+        for j := 0 to length(Brackets) - 1 do
+          if (str[i] = Brackets[j][1]) then
+          begin
+            //setlength(b1,length(b1)+1);
+            setlength(b2,length(b2)+1);
+            //b1[length(b1)-1] := Brackets[j][1];
+            b2[length(b2)-1] := Brackets[j][2];
+            break;
+          end;
+      end else
     else if CharInSet(str[i], ch) then
     begin
       Result := i;
@@ -1385,11 +1446,22 @@ begin
       for j := 0 to length(Isolators) - 1 do
         if (str[i] = Isolators[j][1]) then
         begin
-          s1 := Isolators[j][1];
+          //s1 := Isolators[j][1];
           s2 := Isolators[j][2];
           break;
         end;
-      inc(n);
+      //inc(n);
+    end else if CharInSet(str[i],br) then
+    begin
+      for j := 0 to length(Brackets) - 1 do
+        if (str[i] = Brackets[j][1]) then
+        begin
+          //setlength(b1,length(b1)+1);
+          setlength(b2,length(b2)+1);
+          //b1[length(b1)-1] := Brackets[j][1];
+          b2[length(b2)-1] := Brackets[j][2];
+          break;
+        end;
     end;
   Result := 0;
 end;
@@ -1455,7 +1527,7 @@ const
 
             while true do
             begin
-              n := CharPos(s, s[i], [], i + 1);
+              n := CharPos(s, s[i], [], [], i + 1);
 
               if n = 0 then
                 raise Exception.Create(Format(_SYMBOL_MISSED_, [s[i], i, s[i], s]));
@@ -1570,7 +1642,7 @@ const
             if op then
               raise Exception.Create(Format(_OPERATOR_MISSED_, [i,s[i],s]));
 
-            n := CharPos(s, ')', [], i + 1);
+            n := CharPos(s, ')', [], [], i + 1);
 
             if n = 0 then
               raise Exception.Create(Format(_SYMBOL_MISSED_, [')', i, s[i], s]));
@@ -1589,7 +1661,7 @@ const
           if op then
             raise Exception.Create(Format(_OPERATOR_MISSED_, [i,s[i],s]));
 
-          n := CharPosEx(s, ops + [' '], ['''''', '""', '()'], i + 1);
+          n := CharPosEx(s, ops + [' '], ['''''', '""'],['()'], i + 1);
 
           if (n = 0) or (n > l) then
             n := l + 1;
@@ -1900,6 +1972,28 @@ begin
   finally
     l.Free
   end;
+end;
+
+function GreatestCommonFactor(a,b: Word): Word;
+
+var
+  tmp: Word;
+
+begin
+  tmp := Max(a,b);
+  b := Min(a,b);
+  a := tmp;
+
+  tmp := a mod b;
+  while tmp > 0 do
+  begin
+    a := b;
+    b := tmp;
+    tmp := a mod b;
+  end;
+
+  Result := b;
+
 end;
 
 end.

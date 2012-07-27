@@ -250,7 +250,7 @@ begin
   FHTTP.ConnectTimeout := 10000;
   FHTTP.ReadTimeout := 10000;  
   items := TTagList.Create;
-  ReturnValue := 0;
+  ReturnValue := -1;
   try
     s := FHTTP.Get(FListURL + 'version.xml');
     case JOB of

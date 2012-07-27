@@ -155,17 +155,24 @@ object fPathEditor: TfPathEditor
   object pmVariables: TPopupMenu
     Left = 328
     Top = 12
+    object N3: TMenuItem
+      Caption = '$ext$ - file extension'
+      OnClick = N3Click
+    end
     object N1: TMenuItem
       Caption = '$fname$ - original file name'
       OnClick = N1Click
+    end
+    object N7: TMenuItem
+      Caption = '$nn$ - sequence number in the list'
     end
     object N2: TMenuItem
       Caption = '$rname$ - resource name'
       OnClick = N2Click
     end
-    object N3: TMenuItem
-      Caption = '$ext$ - file extension'
-      OnClick = N3Click
+    object N6: TMenuItem
+      Caption = '$rootdir$ - nekopaw grabber directory'
+      OnClick = N6Click
     end
     object N4: TMenuItem
       Caption = '$short$ - short name'
@@ -174,10 +181,6 @@ object fPathEditor: TfPathEditor
     object N5: TMenuItem
       Caption = '$tag$ - tag string used to search'
       OnClick = N5Click
-    end
-    object N6: TMenuItem
-      Caption = '$rootdir$ - nekopaw grabber directory'
-      OnClick = N6Click
     end
   end
   object pmFields: TPopupMenu

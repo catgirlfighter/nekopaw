@@ -11,7 +11,7 @@ uses
   cxContainer, cxEdit, cxLabel, cxTextEdit, cxButtons,
   cxShellBrowserDialog,
   {graber}
-  common;
+  common, dxSkinsCore, dxSkinsDefaultPainters;
 
 type
   TfPathEditor = class(TForm)
@@ -38,6 +38,7 @@ type
     N6: TMenuItem;
     pmFields: TPopupMenu;
     lHelp: TcxLabel;
+    N7: TMenuItem;
     procedure bBrowseClick(Sender: TObject);
     procedure N1Click(Sender: TObject);
     procedure N2Click(Sender: TObject);
@@ -77,6 +78,7 @@ function ExecutePathEditor(Value: string; Vars,Fields: TStringList): string;
 var
   item: TMenuItem;
   i: integer;
+  s,tmp: string;
 begin
   Application.CreateForm(TfPathEditor,fPathEditor);
   with fPathEditor do
@@ -107,7 +109,17 @@ begin
       begin
         item := TMenuItem.Create(pmFields);
         item.Tag := i;
-        item.Caption := '%' + fields[i] + '%';
+        s := fields[i];
+        tmp := GetNextS(s,':');
+        fields[i] := tmp;
+        item.Caption := '%' + tmp + '%';
+        tmp := GetNextS(s,':'); tmp := GetNextS(s,':');
+        if tmp <> '' then
+          if (tmp[1] = '$') then
+            item.Caption := item.Caption + ' - '
+              + lang('_' + Copy(tmp,2,length(tmp)-1) + '_')
+          else
+            item.Caption := item.Caption + ' - ' + tmp;
         item.OnClick := FieldClick;
         pmFields.Items.Add(item);
       end;
@@ -152,7 +164,7 @@ begin
   begin
     s := ePath.Text;
     s := ExcludeTrailingPathDelimiter(DeleteTo(s,'$rootdir$',false));
-    n := CharPosEx(s,['<','%','$'],[]);
+    n := CharPosEx(s,['<','%','$'],[],[]);
     if n = 0 then
       ePath.Text := IncludeTrailingPathDelimiter(dPath.Path)
     else
@@ -247,6 +259,7 @@ begin
   N4.Caption := '$short$ - ' + lang('_HINT_SHORT_');
   N5.Caption := '$tag$ - ' + lang('_HINT_TAG_');
   N6.Caption := '$rootdir$ - ' + lang('_HINT_ROOTDIR_');
+  N6.Caption := '$nn$ - ' + lang('_HINT_NN_');
 end;
 
 procedure TfPathEditor.SetValue(s: string);

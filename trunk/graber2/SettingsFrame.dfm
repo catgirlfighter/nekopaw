@@ -1,8 +1,8 @@
 object fSettings: TfSettings
   Left = 0
   Top = 0
-  Width = 731
-  Height = 395
+  Width = 451
+  Height = 304
   Align = alClient
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -11,18 +11,15 @@ object fSettings: TfSettings
   Font.Style = []
   ParentFont = False
   TabOrder = 0
-  ExplicitWidth = 451
-  ExplicitHeight = 304
   object pButtons: TPanel
     AlignWithMargins = True
     Left = 3
     Top = 3
-    Width = 725
+    Width = 445
     Height = 25
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitWidth = 445
     object btnOk: TcxButton
       Left = 0
       Top = 0
@@ -55,31 +52,31 @@ object fSettings: TfSettings
     Left = 0
     Top = 31
     Width = 169
-    Height = 364
+    Height = 273
     Align = alLeft
     Bands = <
       item
       end>
-    Images = ilIcons
+    Images = il
     OptionsData.Editing = False
     OptionsData.Deleting = False
     OptionsView.ColumnAutoWidth = True
     OptionsView.Headers = False
     TabOrder = 1
     OnFocusedNodeChanged = tlListFocusedNodeChanged
-    ExplicitHeight = 273
     Data = {
-      00000500470100000F00000044617461436F6E74726F6C6C6572310100000012
-      000000546378537472696E6756616C75655479706505000000445855464D5400
+      000005007B0100000F00000044617461436F6E74726F6C6C6572310100000012
+      000000546378537472696E6756616C75655479706506000000445855464D5400
       000900000049006E007400650072006600610063006500445855464D54000007
       0000005400680072006500610064007300445855464D54000005000000500072
       006F0078007900445855464D540000090000005200650073006F007500720063
-      0065007300445855464D54000005000000410062006F00750074000500000000
-      00000008020000000000000000FFFFFFFFFFFFFFFFFFFFFFFF01000000080001
-      00000001000000FFFFFFFFFFFFFFFFFFFFFFFF02000000080002000000020000
-      00FFFFFFFFFFFFFFFFFFFFFFFF0300000008000300000003000000FFFFFFFFFF
-      FFFFFFFFFFFFFF0400000008020400000004000000FFFFFFFFFFFFFFFFFFFFFF
-      FF1A0005000000}
+      0065007300445855464D5400000700000044006F00750062006C006500730044
+      5855464D54000005000000410062006F00750074000600000000000000080200
+      00000000000000FFFFFFFFFFFFFFFFFFFFFFFF01000000080001000000010000
+      00FFFFFFFFFFFFFFFFFFFFFFFF0200000008000200000002000000FFFFFFFFFF
+      FFFFFFFFFFFFFF0300000008000300000003000000FFFFFFFFFFFFFFFFFFFFFF
+      FF0400000008020400000004000000FFFFFFFFFFFFFFFFFFFFFFFF0500000008
+      020500000005000000FFFFFFFFFFFFFFFFFFFFFFFF1A0006000000}
     object tlcCaption: TcxTreeListColumn
       DataBinding.ValueType = 'String'
       Position.ColIndex = 0
@@ -93,30 +90,25 @@ object fSettings: TfSettings
     Left = 169
     Top = 31
     Width = 3
-    Height = 364
+    Height = 273
     ResizeUpdate = True
     Control = tlList
-    ExplicitHeight = 273
   end
   object pcMain: TcxPageControl
     Left = 172
     Top = 31
-    Width = 559
-    Height = 364
+    Width = 279
+    Height = 273
     Align = alClient
     TabOrder = 3
     Properties.ActivePage = cxTabSheet1
     Properties.HideTabs = True
-    ExplicitWidth = 279
-    ExplicitHeight = 273
-    ClientRectBottom = 364
-    ClientRectRight = 559
+    ClientRectBottom = 273
+    ClientRectRight = 279
     ClientRectTop = 0
     object cxTabSheet1: TcxTabSheet
       Caption = 'cxTabSheet1'
       ImageIndex = 0
-      ExplicitWidth = 279
-      ExplicitHeight = 273
       object lcLanguage: TcxLabel
         Left = 6
         Top = 4
@@ -161,19 +153,36 @@ object fSettings: TfSettings
         TabOrder = 4
         Width = 339
       end
+      object lSkin: TcxLabel
+        Left = 6
+        Top = 104
+        AutoSize = False
+        Caption = 'lSkin'
+        Transparent = True
+        Height = 17
+        Width = 194
+      end
+      object cbSkin: TcxComboBox
+        Left = 206
+        Top = 102
+        Properties.DropDownListStyle = lsFixedList
+        Properties.Items.Strings = (
+          '<None>'
+          'UserSkin')
+        TabOrder = 6
+        Width = 139
+      end
       object chbUseLookAndFeel: TcxCheckBox
         Left = 6
-        Top = 101
+        Top = 129
         Caption = 'chbUseLookAndFeel'
-        TabOrder = 5
+        TabOrder = 7
         Width = 339
       end
     end
     object cxTabSheet2: TcxTabSheet
       Caption = 'cxTabSheet2'
       ImageIndex = 1
-      ExplicitWidth = 279
-      ExplicitHeight = 273
       object eThreads: TcxSpinEdit
         Left = 206
         Top = 3
@@ -256,8 +265,6 @@ object fSettings: TfSettings
     object cxTabSheet3: TcxTabSheet
       Caption = 'cxTabSheet3'
       ImageIndex = 2
-      ExplicitWidth = 279
-      ExplicitHeight = 273
       object chbProxy: TcxCheckBox
         Left = 6
         Top = 3
@@ -347,28 +354,76 @@ object fSettings: TfSettings
     object cxTabSheet4: TcxTabSheet
       Caption = 'cxTabSheet4'
       ImageIndex = 3
-      ExplicitWidth = 279
-      ExplicitHeight = 273
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0
-        Width = 559
-        Height = 364
+        Width = 279
+        Height = 273
         Align = alClient
         OptionsView.ShowEditButtons = ecsbAlways
         OptionsView.GridLineColor = clBtnShadow
         OptionsView.RowHeaderWidth = 148
         TabOrder = 0
-        ExplicitWidth = 279
-        ExplicitHeight = 273
         Version = 1
       end
     end
     object cxTabSheet5: TcxTabSheet
       Caption = 'cxTabSheet5'
+      ImageIndex = 5
+      object gDoubles: TcxGrid
+        Left = 0
+        Top = 26
+        Width = 279
+        Height = 247
+        Align = alClient
+        TabOrder = 0
+        object tvDoubles: TcxGridTableView
+          DataController.Summary.DefaultGroupSummaryItems = <>
+          DataController.Summary.FooterSummaryItems = <>
+          DataController.Summary.SummaryGroups = <>
+          OptionsCustomize.ColumnFiltering = False
+          OptionsCustomize.ColumnGrouping = False
+          OptionsCustomize.ColumnHidingOnGrouping = False
+          OptionsCustomize.ColumnMoving = False
+          OptionsCustomize.ColumnSorting = False
+          OptionsData.CancelOnExit = False
+          OptionsData.Deleting = False
+          OptionsData.DeletingConfirmation = False
+          OptionsData.Editing = False
+          OptionsData.Inserting = False
+          OptionsSelection.CellSelect = False
+          OptionsView.CellAutoHeight = True
+          OptionsView.ColumnAutoWidth = True
+          OptionsView.ExpandButtonsForEmptyDetails = False
+          OptionsView.GroupByBox = False
+          object cDoublesRuleName: TcxGridColumn
+            Caption = 'Name'
+            Width = 92
+          end
+          object cDoublesRules: TcxGridColumn
+            Caption = 'Rules'
+            RepositoryItem = eMemo
+            Width = 283
+          end
+        end
+        object gDoublesLevel1: TcxGridLevel
+          GridView = tvDoubles
+        end
+      end
+      object bcDoubles: TdxBarDockControl
+        Left = 0
+        Top = 0
+        Width = 279
+        Height = 26
+        Align = dalTop
+        BarManager = BarManager
+      end
+    end
+    object cxTabSheet6: TcxTabSheet
+      Caption = 'cxTabSheet6'
       ImageIndex = 4
-      ExplicitWidth = 279
-      ExplicitHeight = 273
       object cxLabel1: TcxLabel
         Left = 6
         Top = 3
@@ -457,10 +512,95 @@ object fSettings: TfSettings
       Properties.ViewStyle = vsButtonsAutoWidth
       Properties.OnButtonClick = cxeAuthButtonPropertiesButtonClick
     end
+    object eMemo: TcxEditRepositoryMemoItem
+    end
   end
-  object ilIcons: TcxImageList
+  object BarManager: TdxBarManager
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -12
+    Font.Name = 'Segoe UI'
+    Font.Style = []
+    Categories.Strings = (
+      'Default')
+    Categories.ItemsVisibles = (
+      2)
+    Categories.Visibles = (
+      True)
+    ImageOptions.Images = dm.il
+    PopupMenuLinks = <>
+    Style = bmsUseLookAndFeel
+    UseSystemFont = True
+    Left = 208
+    Top = 192
+    DockControlHeights = (
+      0
+      0
+      0
+      0)
+    object DoublesActions: TdxBar
+      AllowClose = False
+      AllowCustomizing = False
+      AllowQuickCustomizing = False
+      Caption = 'Doubles'
+      CaptionButtons = <>
+      DockControl = bcDoubles
+      DockedDockControl = bcDoubles
+      DockedLeft = 0
+      DockedTop = 0
+      FloatLeft = 461
+      FloatTop = 0
+      FloatClientWidth = 51
+      FloatClientHeight = 88
+      ItemLinks = <
+        item
+          Visible = True
+          ItemName = 'bbNewRule'
+        end
+        item
+          Visible = True
+          ItemName = 'bbEditRule'
+        end
+        item
+          Visible = True
+          ItemName = 'bbDeleteRule'
+        end>
+      NotDocking = [dsNone, dsLeft, dsTop, dsRight, dsBottom]
+      OneOnRow = True
+      Row = 0
+      UseOwnFont = False
+      UseRestSpace = True
+      Visible = True
+      WholeRow = False
+    end
+    object bbNewRule: TdxBarButton
+      Caption = 'New rule'
+      Category = 0
+      Hint = 'New rule'
+      Visible = ivAlways
+      ImageIndex = 16
+      OnClick = bbNewRuleClick
+    end
+    object bbEditRule: TdxBarButton
+      Caption = 'Edit rule'
+      Category = 0
+      Hint = 'Edit rule'
+      Visible = ivAlways
+      ImageIndex = 17
+      OnClick = bbEditRuleClick
+    end
+    object bbDeleteRule: TdxBarButton
+      Caption = 'Delete rule'
+      Category = 0
+      Hint = 'Delete rule'
+      Visible = ivAlways
+      ImageIndex = 18
+      OnClick = bbDeleteRuleClick
+    end
+  end
+  object il: TcxImageList
     FormatVersion = 1
-    DesignInfo = 11010168
+    DesignInfo = 10485840
     ImageInfo = <
       item
         Image.Data = {
@@ -608,6 +748,43 @@ object fSettings: TfSettings
           328D9C6C50E89E6742F09E6037F09E6037F09E6037F09E6037F09E6037F09E5E
           37F09E5E37F09E5E37F09E5E37F09E653FF05E412D8F00000000000000000000
           0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000}
+      end
+      item
+        Image.Data = {
+          36040000424D3604000000000000360000002800000010000000100000000100
+          2000000000000004000000000000000000000000000000000000000000000000
+          000000000000000000000000000000000000878787FF878787FF878787FF8787
+          87FF878787FF878787FF878787FF878787FF878787FF878787FF000000000000
+          000000000000000000000000000000000000B5B5B5FFFFFFFFFFFFFFFFFFFFFF
+          FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF878787FF000000000000
+          000000000000000000000000000000000000B5B5B5FFFFFFFFFFFBFBFBFFFBFB
+          FBFFFBFBFBFFFBFBFBFFFBFBFBFFFCFCFCFFFFFFFFFF878787FF878787FF8787
+          87FF878787FF878787FF878787FF878787FFB6B6B6FFFFFFFFFFDBCDBFFFDBCD
+          BFFFDBCDBFFFDBCDBFFFDBCDBFFFDBCDBFFFFFFFFFFF878787FFB5B5B5FFFFFF
+          FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFB6B6B6FFFFFFFFFFFDFDFDFFFDFD
+          FDFFFDFDFDFFFDFDFDFFFDFDFDFFFDFDFDFFFFFFFFFF878787FFB5B5B5FFFFFF
+          FFFFFBFBFBFFFBFBFBFFFBFBFBFFFBFBFBFFB6B6B6FFFFFFFFFFC4B7ACFFB388
+          5CFFAB8057FFD2C9C1FFFEFEFEFFFEFEFEFFFFFFFFFF878787FFB6B6B6FFFFFF
+          FFFFDBCDBFFFDBCDBFFFDBCDBFFFDBCDBFFFB6B6B6FFFFFFFFFFB09B8BFFB191
+          72FFB18F6DFFB6A79CFFFFFFFFFFFFFFFFFFFFFFFFFF878787FFB6B6B6FFFFFF
+          FFFFFDFDFDFFFDFDFDFFFDFDFDFFFDFDFDFFB6B6B6FFFFFFFFFFF6F4F3FFA1BF
+          D4FFACC8DEFFF6F4F3FFFFFFFFFFFFFFFFFFFFFFFFFF878787FFB6B6B6FFFFFF
+          FFFFC4B7ACFFB3885CFFAB8057FFD2C9C1FFB6B6B6FFFFFFFFFFFFFFFFFF6DAA
+          D8FF5A97C4FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF878787FFB6B6B6FFFFFF
+          FFFFB09B8BFFB19172FFB18F6DFFB6A79CFFB6B6B6FFFFFFFFFFFFFFFFFFA8C5
+          E2FF507EAEFFFFFFFFFFC8C8C8FFDBDBDBFFD1D1D1FF949494FFB6B6B6FFFFFF
+          FFFFF6F4F3FFA1BFD4FFACC8DEFFF6F4F3FFB6B6B6FFFFFFFFFFFFFFFFFFFFFF
+          FFFFFFFFFFFFFFFFFFFFDBDBDBFFFAFAFAFFC4C4C4FF6B6B6B9FB6B6B6FFFFFF
+          FFFFFFFFFFFF6DAAD8FF5A97C4FFFFFFFFFFB6B6B6FFFFFFFFFFFFFFFFFFFFFF
+          FFFFFFFFFFFFFFFFFFFFD1D1D1FFC4C4C4FF7171719F00000000B6B6B6FFFFFF
+          FFFFFFFFFFFFA8C5E2FF507EAEFFFFFFFFFFB6B6B6FFB6B6B6FFB6B6B6FFB6B6
+          B6FFB6B6B6FFB6B6B6FFB6B6B6FF7171719F0000000000000000B6B6B6FFFFFF
+          FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFDBDBDBFFFAFAFAFFC4C4C4FF6B6B
+          6B9F000000000000000000000000000000000000000000000000B6B6B6FFFFFF
+          FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFD1D1D1FFC4C4C4FF7171719F0000
+          0000000000000000000000000000000000000000000000000000B6B6B6FFB6B6
+          B6FFB6B6B6FFB6B6B6FFB6B6B6FFB6B6B6FFB6B6B6FF7171719F000000000000
           0000000000000000000000000000000000000000000000000000}
       end
       item

@@ -109,7 +109,7 @@ var
   LangINI: TINIFile = nil;
 
 procedure CreateLangINI(filename: string);
-function lang(SName: String): String;
+function lang(SName: String;cat: string = 'lang'): String;
 
 implementation
 
@@ -120,9 +120,9 @@ begin
   LangINI := TINIFile.Create(filename);
 end;
 
-function lang(SName: String): String;
+function lang(SName: String;cat: string = 'lang'): String;
 begin
-  Result := LangINI.ReadString('lang',SName,SName);
+  Result := LangINI.ReadString(cat,SName,SName);
 end;
 
 {procedure LoadLang(FileName: String);

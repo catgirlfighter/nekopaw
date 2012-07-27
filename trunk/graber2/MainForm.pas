@@ -6,15 +6,30 @@ uses
   {base}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, DB, ActnList, ExtCtrls, ImgList, rpVersionInfo,
-  AppEvnts, Types, ShellAPI,
+  AppEvnts, Types, ShellAPI, Math,
   {devex}
   cxPC, cxGraphics, cxControls,
-  cxLookAndFeels, cxLookAndFeelPainters, cxPCdxBarPopupMenu, cxStyles, cxEdit,
+  cxLookAndFeels, cxLookAndFeelPainters, cxPCdxBarPopupMenu, cxEdit,
   cxContainer, dxBar, cxClasses, dxDockControl, cxLabel, cxTextEdit, cxMemo,
   cxCheckListBox, cxInplaceContainer, cxVGrid, dxNavBarCollns, dxNavBarBase,
-  dxNavBar, dxDockPanel,
+  dxNavBar, dxDockPanel, cxStyles, dxSkinsCore, dxSkinsDefaultPainters,
+  dxSkinscxPCPainter, dxSkinsdxNavBarPainter, dxSkinsdxDockControlPainter,
+  dxSkinsdxBarPainter, dxSkinsForm,
   {graber2}
-  common, OpBase, graberU, MyHTTP, UPDUnit;
+  common, OpBase, graberU, MyHTTP, UPDUnit, cxMaskEdit, cxSpinEdit
+  {skins}
+  {dxSkinsCore, dxSkinBlack, dxSkinBlue, dxSkinBlueprint, dxSkinCaramel,
+  dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide, dxSkinDevExpressDarkStyle,
+  dxSkinDevExpressStyle, dxSkinFoggy, dxSkinGlassOceans, dxSkinHighContrast,
+  dxSkiniMaginary, dxSkinLilian, dxSkinLiquidSky, dxSkinLondonLiquidSky,
+  dxSkinMcSkin, dxSkinMoneyTwins, dxSkinOffice2007Black, dxSkinOffice2007Blue,
+  dxSkinOffice2007Green, dxSkinOffice2007Pink, dxSkinOffice2007Silver,
+  dxSkinOffice2010Black, dxSkinOffice2010Blue, dxSkinOffice2010Silver,
+  dxSkinPumpkin, dxSkinSeven, dxSkinSevenClassic, dxSkinSharp, dxSkinSharpPlus,
+  dxSkinSilver, dxSkinSpringTime, dxSkinStardust, dxSkinSummer2008,
+  dxSkinTheAsphaltWorld, dxSkinsDefaultPainters, dxSkinValentine, dxSkinVS2010,
+  dxSkinWhiteprint, dxSkinXmas2008Blue, dxSkinsForm, dxSkinscxPCPainter,
+  dxSkinsdxNavBarPainter, dxSkinsdxDockControlPainter, dxSkinsdxBarPainter};
 
 type
 
@@ -77,13 +92,6 @@ type
   // TmfState = (msStart, msNewList, msGrid, msSettings);
 
   Tmf = class(TForm)
-    ActionList: TActionList;
-    aLLoad: TAction;
-    aSettings: TAction;
-    aIAdvanced: TAction;
-    aISimple: TAction;
-    aLApplyNew: TAction;
-    aLCancel: TAction;
     ds: TdxDockSite;
     DockManager: TdxDockingManager;
     BarManager: TdxBarManager;
@@ -103,8 +111,6 @@ type
     bbStartPics: TdxBarButton;
     bbSettings: TdxBarButton;
     bbNew: TdxBarButton;
-    il: TcxImageList;
-    cxLAF: TcxLookAndFeelController;
     mLog: TcxMemo;
     mErrors: TcxMemo;
     ApplicationEvents1: TApplicationEvents;
@@ -123,7 +129,9 @@ type
     dxNavBarGroupControl1: TdxNavBarGroupControl;
     vgTagsMain: TcxVerticalGrid;
     dxNavBarGroupControl2: TdxNavBarGroupControl;
-    cxCheckListBox1: TcxCheckListBox;
+    chlbFullTags: TcxCheckListBox;
+    MainBarControl: TdxBarDockControl;
+    dxSkinController: TdxSkinController;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
 {    procedure gLevel2GetGridView(Sender: TcxGridLevel;
@@ -134,11 +142,15 @@ type
     procedure bbStartListClick(Sender: TObject);
     procedure ApplicationEvents1Exception(Sender: TObject; E: Exception);
     procedure bbStartPicsClick(Sender: TObject);
-    procedure pcTablesPageChanging(Sender: TObject; NewPage: TcxTabSheet;
-      var AllowChange: Boolean);
     procedure testoClick(Sender: TObject);
     procedure pcTablesCanCloseEx(Sender: TObject; ATabIndex: Integer;
       var ACanClose: Boolean);
+    procedure FormResize(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure DockManagerActiveDockControlChanged(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure cxSpinEdit1PropertiesEditValueChanged(Sender: TObject);
   private
     mFrame: TFrame;
     FOldCaption: String;
@@ -183,6 +195,8 @@ type
     procedure StartUpdate;
     procedure ChangeResInfo;
     procedure RefreshResInfo(Sender: TObject);
+    function CloseAllTabs: boolean;
+    procedure RefreshTags(Sender: TObject; t: TPictureTagLinkList);
 
     { Public declarations }
   end;
@@ -381,14 +395,6 @@ procedure Tmf.pcTablesCanCloseEx(Sender: TObject; ATabIndex: Integer;
 begin
   ACanClose := false;
   CloseTab(pcTables.Pages[ATabIndex]);
-{  if (pcTables.TabCount > 1) then
-    if (ATabIndex > 1) then
-      pcTables.TabIndex := ATabIndex - 1
-    else
-      pcTables.TabIndex := ATabIndex + 1
-  else
-    pcTables.TabIndex := -1;
-  pcTables.Change;   }
 end;
 
 procedure Tmf.pcTablesChange(Sender: TObject);
@@ -464,21 +470,6 @@ begin
   end;
 end;
 
-procedure Tmf.pcTablesPageChanging(Sender: TObject; NewPage: TcxTabSheet;
-  var AllowChange: Boolean);
-begin
-{  if (pcTables.ActivePage <> nil) and (pcTables.ActivePage is TMycxtabSheet) then
-    if (TMycxtabSheet(pcTables.ActivePage).MainFrame is TfGrid) then
-    with (TMycxtabSheet(pcTables.ActivePage).MainFrame as TfGrid) do
-      vd.Close;   }
-
-{  if (NewPage <> nil) and (NewPage is TMycxtabSheet) then
-    if (TMycxtabSheet(NewPage).MainFrame is TfGrid) then
-    with (TMycxtabSheet(NewPage).MainFrame as TfGrid) do
-        vd.Open; }
-
-end;
-
 procedure Tmf.PicInfo(Sender: TObject; a: TTPicture);
 var
   i: integer;
@@ -518,7 +509,7 @@ begin
       a.Resource.Name,true);
     dm.CreateField(vgCurMain,'vgiName',lang('_FILENAME_'),'',ftString,nil,
       a.PicName + '.' + a.Ext,true);
-    dm.CreateField(vgCurMain,'vgiSavePath',lang('_SAVEPATH_'),'',ftString,nil,
+    dm.CreateField(vgCurMain,'vgiSavePath',lang('_SAVEPATH_'),'',ftPathText,nil,
       a.FileName,true);
     for i := 0 to a.Meta.Count -1 do
       with a.Meta.Items[i] do
@@ -545,48 +536,93 @@ var
   i: integer;
   c: TcxEditorRow;
 begin
-  vgTagsMain.BeginUpdate;
-  try
+
     //vgTagsMain.ClearRows;
     if (pcTables.ActivePage is TMycxTabSheet)
     and ((pcTables.ActivePage as TMycxTabSheet).MainFrame is tfGrid) then
     with ((pcTables.ActivePage as TMycxTabSheet).MainFrame as tfGrid) do
-      //for i := 0 to ResList.Count -1 do
+    begin
+    //for i := 0 to ResList.Count -1 do
       if (Sender is TResource) then
       begin
         i := ResList.IndexOf(Sender);
         if i = -1 then
           Exit;
-        c := (vgTagsMain.RowByName('vgT' + IntToStr(i)) as  TcxEditorRow);
-        c.Properties.Value :=
-          ifn(ResList.ListFinished,
-          ifn(ResList.PicsFinished,'',   //if pics
-          IntToStr(ResList[i].PictureList.PicCounter.FSH
-                   +ResList[i].PictureList.PicCounter.SKP
-                   +ResList[i].PictureList.PicCounter.UNCH)
-          + '/' + IntToStr(ResList[i].PictureList.Count)
-          + ifn(ResList[i].PictureList.PicCounter.ERR > 0,
-          ' err ' + IntToStr(ResList[i].PictureList.PicCounter.ERR),'')),
 
-          IntToStr(ResList[i].JobList.OkCount) + '/'    //if pages
-          + IntToStr(ResList[i].JobList.Count)
-          + ' (' + IntToStr(ResList[i].HTTPRec.Theor) + ')'
-          + ifn(ResList[i].JobList.ErrorCount > 0,
-          ' err ' + IntToStr(ResList[i].JobList.ErrorCount),''));
-
-          c.Visible :=
+        vgTagsMain.BeginUpdate;
+        try
+          c := (vgTagsMain.RowByName('vgT' + IntToStr(i)) as  TcxEditorRow);
+          c.Properties.Value :=
             ifn(ResList.ListFinished,
-            ifn(ResList.PicsFinished,false,
-              not(ResList[i].PictureList.PicCounter.FSH
-                  +ResList[i].PictureList.PicCounter.SKP
-                  +ResList[i].PictureList.PicCounter.UNCH
-                  =ResList[i].PictureList.Count)),
-               not(ResList[i].JobList.OkCount
-                   = ResList[i].JobList.Count));
+            ifn(ResList.PicsFinished,'',   //if pics
+            IntToStr(ResList[i].PictureList.PicCounter.FSH
+                     +ResList[i].PictureList.PicCounter.SKP
+                     +ResList[i].PictureList.PicCounter.UNCH)
+            + '/' + IntToStr(ResList[i].PictureList.Count)
+            + ifn(ResList[i].PictureList.PicCounter.ERR > 0,
+            ' err ' + IntToStr(ResList[i].PictureList.PicCounter.ERR),'')),
 
+            IntToStr(ResList[i].JobList.OkCount) + '/'    //if pages
+            + IntToStr(ResList[i].JobList.Count)
+            + ' (' + IntToStr(ResList[i].HTTPRec.Theor) + ')'
+            + ifn(ResList[i].JobList.ErrorCount > 0,
+            ' err ' + IntToStr(ResList[i].JobList.ErrorCount),''));
+
+            c.Visible :=
+              ifn(ResList.ListFinished,
+              ifn(ResList.PicsFinished,true,
+                not(ResList[i].PictureList.PicCounter.FSH
+                    +ResList[i].PictureList.PicCounter.SKP
+                    +ResList[i].PictureList.PicCounter.UNCH
+                    =ResList[i].PictureList.Count)),
+                 not(ResList[i].JobList.OkCount
+                     = ResList[i].JobList.Count));
+        finally
+          vgTagsMain.EndUpdate;
+        end;
       end;
-  finally
-    vgTagsMain.EndUpdate;
+
+    end;
+end;
+
+procedure Tmf.RefreshTags(Sender: TObject; t: TPictureTagLinkList);
+var
+  l,i: integer;
+  ACheckItem: TcxCheckListBoxItem;
+  //t: tpicturetaglinklist;
+begin
+  if (pcTables.ActivePage is TMycxTabSheet)
+  and ((pcTables.ActivePage as TMycxTabSheet).MainFrame = Sender) then
+  with ((pcTables.ActivePage as TMycxTabSheet).MainFrame as tfGrid) do
+  begin
+    chlbFullTags.Items.BeginUpdate;
+    try
+    //chlbFullTags.Clear;
+
+      //t := (sender as tpicturetaglist);
+      l := t.Count-1;
+      for i := 0 to l do
+        //if (n < chlbFullTags.Items.Count)and(chlbFullTags.Items[n].Tag = Integer(ResList.PictureList.Tags[i])) then
+        if (t[i].Tag > -1) then
+          //if (t[i].Tag < chlbFullTags.Items.Count)
+          //and(chlbFullTags.Items[t[i].Tag].Tag = Integer(
+          //ResList.PictureList.Tags[t[i].Tag])) then
+          if (ResList.PictureList.Tags[t[i].Tag].Tag <> 0) then
+          begin
+            ACheckItem := TcxCheckListBoxItem(ResList.PictureList.Tags[t[i].Tag].Tag);
+            ACheckItem.Text := ResList.PictureList.Tags[t[i].Tag].Name +
+              ' (' + IntToStr(ResList.PictureList.Tags[t[i].Tag].Linked.Count) + ')';
+          end else
+          begin
+            ACheckItem := chlbFullTags.Items.Insert(t[i].Tag) as TcxCheckListBoxItem;
+            ACheckItem.Text := ResList.PictureList.Tags[t[i].Tag].Name + ' (' + IntToStr(ResList.PictureList.Tags[t[i].Tag].Linked.Count) + ')';
+            ACheckItem.Tag := Integer(ResList.PictureList.Tags[t[i].Tag]);
+            ResList.PictureList.Tags[t[i].Tag].Tag := Integer(ACheckItem);
+          end;
+
+    finally
+      chlbFullTags.Items.EndUpdate;
+    end;
   end;
 end;
 
@@ -607,7 +643,6 @@ begin
 
   f := n.SecondFrame as tfNewList; //TfNewList(n.Tag);
   f2 := TfGrid.Create(n) as tfGrid;
-  f2.SetLang;
   f2.CreateList;
   f2.ResList.OnError := OnError;
 
@@ -617,6 +652,7 @@ begin
     n.Caption := FullResList[0].Fields['tag'];
 
   f2.ResList.OnPageComplete := RefreshResInfo;
+  //f2.OnTagUpdate := RefreshTags;
 
   with f.tvRes.DataController do
     for i := 0 to RecordCount - 1 do
@@ -634,6 +670,7 @@ begin
   f2.ResList.DWNLDHandler.Cookies := FCookie;
   f2.OnPicChanged := PicInfo;
   f2.SetSettings;
+  f2.SetLang;
 
   f2.ResList.StartJob(JOB_LIST);
   //f2.vd.Open;
@@ -694,7 +731,16 @@ begin
       if ResList.PicsFinished then
       begin
         SetSettings;
-        ResList.StartJob(JOB_PICS)
+        //vGrid.BeginUpdate;
+        //try
+        //  ResList.PictureList.CheckExists;
+          UpdateChecks;
+        //finally
+        //  vGrid.EndUpdate;
+        //end;
+        if GlobalSettings.Downl.AutoUncheckInvisible then
+          UncheckInvisible;
+        ResList.StartJob(JOB_PICS);
       end else
         ResList.StartJob(JOB_STOPPICS);
     end;
@@ -729,46 +775,66 @@ procedure Tmf.ChangeResInfo;
 var
   i: integer;
   c: TcxEditorRow;
+  ACheckItem: TcxCheckListBoxItem;
 begin
-  vgTagsMain.BeginUpdate;
-  try
     vgTagsMain.ClearRows;
     if (pcTables.ActivePage is TMycxTabSheet)
     and ((pcTables.ActivePage as TMycxTabSheet).MainFrame is tfGrid) then
     with ((pcTables.ActivePage as TMycxTabSheet).MainFrame as tfGrid) do
-      for i := 0 to ResList.Count -1 do
-      begin
-        c := dm.CreateField(vgTagsMain,'vgT' + IntToStr(i),ResList[i].Name,
-        '',ftString,nil,
-          ifn(ResList.ListFinished,
-          ifn(ResList.PicsFinished,'',   //if pics
-          IntToStr(ResList[i].PictureList.PicCounter.FSH
-                   +ResList[i].PictureList.PicCounter.SKP
-                   +ResList[i].PictureList.PicCounter.UNCH)
-          + '/' + IntToStr(ResList[i].PictureList.Count)
-          + ifn(ResList[i].PictureList.PicCounter.ERR > 0,
-          ' err ' + IntToStr(ResList[i].PictureList.PicCounter.ERR),'')),
+    begin
+      vgTagsMain.BeginUpdate;
+      try
+        for i := 0 to ResList.Count -1 do
+        begin
+          c := dm.CreateField(vgTagsMain,'vgT' + IntToStr(i),ResList[i].Name,
+          '',ftString,nil,
+            ifn(ResList.ListFinished,
+            ifn(ResList.PicsFinished,'',   //if pics
+            IntToStr(ResList[i].PictureList.PicCounter.FSH
+                     +ResList[i].PictureList.PicCounter.SKP
+                     +ResList[i].PictureList.PicCounter.UNCH)
+            + '/' + IntToStr(ResList[i].PictureList.Count)
+            + ifn(ResList[i].PictureList.PicCounter.ERR > 0,
+            ' err ' + IntToStr(ResList[i].PictureList.PicCounter.ERR),'')),
 
-          IntToStr(ResList[i].JobList.OkCount) + '/'    //if pages
-          + IntToStr(ResList[i].JobList.Count)
-          + ' (' + IntToStr(ResList[i].HTTPRec.Theor) + ')'
-          + ifn(ResList[i].JobList.ErrorCount > 0,
-          ' err ' + IntToStr(ResList[i].JobList.ErrorCount),''))
-          ,true);
+            IntToStr(ResList[i].JobList.OkCount) + '/'    //if pages
+            + IntToStr(ResList[i].JobList.Count)
+            + ' (' + IntToStr(ResList[i].HTTPRec.Theor) + ')'
+            + ifn(ResList[i].JobList.ErrorCount > 0,
+            ' err ' + IntToStr(ResList[i].JobList.ErrorCount),''))
+            ,true);
 
-        c.Visible :=
-          ifn(ResList.ListFinished,
-          ifn(ResList.PicsFinished,false,
-            not(ResList[i].PictureList.PicCounter.FSH
-                +ResList[i].PictureList.PicCounter.SKP
-                +ResList[i].PictureList.PicCounter.UNCH
-                =ResList[i].PictureList.Count)),
-             not(ResList[i].JobList.OkCount
-                 = ResList[i].JobList.Count));
+          c.Visible :=
+            ifn(ResList.ListFinished,
+            ifn(ResList.PicsFinished,true,
+              not(ResList[i].PictureList.PicCounter.FSH
+                  +ResList[i].PictureList.PicCounter.SKP
+                  +ResList[i].PictureList.PicCounter.UNCH
+                  =ResList[i].PictureList.Count)),
+               not(ResList[i].JobList.OkCount
+                   = ResList[i].JobList.Count));
+        end;
+      finally
+        vgTagsMain.EndUpdate;
       end;
-  finally
-    vgTagsMain.EndUpdate;
-  end;
+
+      chlbFullTags.Items.BeginUpdate;
+      try
+      chlbFullTags.Clear;
+
+      for i := 0 to ResList.PictureList.Tags.Count-1 do
+      begin
+        ACheckItem := chlbFullTags.Items.Add;
+        ACheckItem.Text := ResList.PictureList.Tags[i].Name + ' (' + IntToStr(ResList.PictureList.Tags[i].Linked.Count) + ')';
+        ACheckItem.Tag := Integer(ResList.PictureList.Tags[i]);
+        ResList.PictureList.Tags[i].Tag := Integer(ACheckItem);
+      end;
+
+      finally
+        chlbFullTags.Items.EndUpdate;
+      end;
+
+    end;
 end;
 
 procedure Tmf.CheckUpdates;
@@ -824,6 +890,8 @@ begin
   CreateLangINI(IncludeTrailingPathDelimiter(ExtractFilePath(paramstr(0))
   + 'languages') + langname+'.ini');
 
+  SetLang;
+
   for i := 0 to pcTables.PageCount-1 do
     if pcTables.Pages[i] is tMycxTabSheet then
       with (pcTables.Pages[i] as tMycxTabSheet) do
@@ -840,6 +908,9 @@ begin
             (SecondFrame as tfNewList).SetLang;
       end;
 
+  if Assigned(SttPanel) then
+    SttPanel.Caption := lang('_SETTINGS_');
+
 
 end;
 
@@ -850,7 +921,28 @@ end;
 
 procedure Tmf.STYLECHANGED(var Msg: TMessage);
 begin
-  cxLAF.NativeStyle := GlobalSettings.UseLookAndFeel;
+  dxSkinController.NativeStyle := GlobalSettings.UseLookAndFeel;
+  dxSkinController.SkinName := GlobalSettings.SkinName;
+  if dxSkinController.SkinName <> '' then
+  begin
+    nvTags.BeginUpdate;
+    nvCur.BeginUpdate;
+    try
+      nvTags.View := 15;
+      nvCur.View := 15;
+      dxSkinController.UseSkins := true;
+      //TdxNavBarSkinNavPanePainter(nvTags).SkinName := dxSkinController.SkinName;
+      //TdxNavBarSkinNavPanePainter(nvCur).SkinName := dxSkinController.SkinName;
+    finally
+      nvTags.EndUpdate;
+      nvCur.EndUpdate;
+    end;
+  end else
+  begin
+    dxSkinController.UseSkins := false;
+    nvTags.View:= 3;
+    nvCur.View := 3;
+  end;
 end;
 
 procedure Tmf.StartUpdate;
@@ -879,6 +971,24 @@ end;
 procedure Tmf.testoClick(Sender: TObject);
 begin
   fmAbout.Show;
+end;
+
+function Tmf.CloseAllTabs: boolean;
+var
+  i: integer;
+begin
+  i := pcTables.PageCount;
+  while i > 0 do
+  begin
+    CloseTab(pcTables.Pages[0]);
+    if pcTables.PageCount = i then
+    begin
+      Result := false;
+      exit;
+    end else
+      i := pcTables.PageCount;
+  end;
+  Result := true;
 end;
 
 procedure Tmf.CloseTab(t: TcxTabSheet);
@@ -949,6 +1059,17 @@ begin
   Result := n;
 
   ShowDs;
+end;
+
+procedure Tmf.cxSpinEdit1PropertiesEditValueChanged(Sender: TObject);
+begin
+  pcTables.ActivePage
+
+end;
+
+procedure Tmf.DockManagerActiveDockControlChanged(Sender: TObject);
+begin
+
 end;
 
 {procedure Tmf.dxTabClose(Sender: TdxCustomDockControl);
@@ -1027,6 +1148,8 @@ begin
   f.OnError := OnError;
   f.SetLang;
   f.CreateResources;
+{  dxSkinController.
+  f.cbSkin.Properties.Items.Assign();   }
   f.LoadSettings;
 {  f.GetLanguages;
 
@@ -1058,11 +1181,35 @@ begin
   ShowDs;
 end;
 
+procedure Tmf.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  GlobalSettings.GUI.FormState := WindowState <> wsNormal;
+  GlobalSettings.GUI.PanelPage := dsTags.ActiveChildIndex;
+  GlobalSettings.GUI.PanelWidth := dsTags.Width;
+  SaveGUISettings([gvSizes]);
+end;
+
+procedure Tmf.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+begin
+  CanClose := CloseAllTabs;
+end;
+
 procedure Tmf.FormCreate(Sender: TObject);
+var
+  tmp: tMessage;
 begin
   FOldCaption := Caption;
-  if GlobalSettings.UseLookAndFeel then
-    cxLAF.NativeStyle := true;
+{  if GlobalSettings.UseLookAndFeel then
+    dxSkinController.NativeStyle := true;  }
+  Self.SetBounds(Left,Top,Globalsettings.GUI.FormWidth,
+                          Globalsettings.GUI.FormHeight);
+  dsTags.ActiveChildIndex := GlobalSettings.GUI.PanelPage;
+  dsTags.Width := GlobalSettings.GUI.PanelWidth;
+  StyleChanged(tmp);
+  //ClientWidth := Globalsettings.GUI.FormWidth;
+  //ClientHeight := Globalsettings.GUI.FormHeight;
+  if Globalsettings.GUI.FormState then
+    WindowState := wsMaximized;
 
   SetLang;
   //pcTables.OnPageClose := OnTabClose;
@@ -1101,6 +1248,24 @@ begin
     SttPanel.Free;
   TabList.Free;
   FCookie.Free;
+end;
+
+procedure Tmf.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if (Shift = [ssCtrl])
+  and (key = $57 {W})
+  and (pcTables.ActivePageIndex <> -1)
+  and (SttPanel <> pcTables.ActivePage) then
+    CloseTab(pcTables.ActivePage);
+end;
+
+procedure Tmf.FormResize(Sender: TObject);
+begin
+  if WindowState = wsNormal then
+  begin
+    GlobalSettings.GUI.FormWidth := Width;
+    GlobalSettings.GUI.FormHeight := Height;
+  end;
 end;
 
 {procedure Tmf.gLevel2GetGridView(Sender: TcxGridLevel;
