@@ -123,8 +123,8 @@ implementation
 {*********** JSON ********************}
 
 const
-  JSONISL: array[0..2] of string = ('""','[]','{}');
-
+  JSONISL: array [0..0] of string = ('""');
+  JSONBRK: array [0..1] of string = ('[]','{}');
 //parse childs
 procedure JSONParseChilds(parent: TTag; TagList: TTagList; tagname,s: string);
 var
@@ -134,7 +134,7 @@ var
 begin
   while s <> '' do
   begin
-    n := Trim(CopyTo(s,',',JSONISL,true));
+    n := Trim(CopyTo(s,',',JSONISL,JSONBRK,true));
 
     tag := TagList.CreateChild(parent);
     tag.Name := tagname;
@@ -145,7 +145,7 @@ begin
       '[': JSONParseChilds(tag,TagList,'',Copy(n,2,Length(n)-2));
       '{': JSONParseTag(tag,TagList,Copy(n,2,Length(n)-2));
       else
-        if CharPos(n,':',JSONISL) = -1 then
+        if CharPos(n,':',JSONISL,JSONBRK) = -1 then
           tag.Childs.CreateChild(tag,n,tkText)
         else
           JSONParseValue(tag,TagList,n);
@@ -169,7 +169,7 @@ begin
   if s = '' then
     raise Exception.Create('JSON Parse: empty value');
 
-  tagname := TrimEx(CopyTo(s,':',JSONISL,true),[' ','"']);
+  tagname := TrimEx(CopyTo(s,':',JSONISL,JSONBRK,true),[' ','"']);
   s := TrimEx(s,[' ','"']);
 
   if s = '' then
@@ -182,8 +182,8 @@ begin
   case value[1] of
     '{':
     begin
-      child := TagList.CreateChild(tag);
-      child.Name := tagname;
+      child := TagList.CreateChild(tag,tagname);
+      //child.Name := tagname;
       //child.Attrs := TAttrList.Create;
 
       JSONParseTag(child,TagList,Copy(value,2,Length(value)-2));
@@ -214,7 +214,7 @@ var
 begin
   while s <> '' do
   begin
-    n := Trim(CopyTo(s,',',JSONISL,true));
+    n := Trim(CopyTo(s,',',JSONISL,JSONBRK,true));
 
     JSONParseValue(tag,TagList,n);
   end;

@@ -18,7 +18,6 @@ object fGrid: TfGrid
     Height = 258
     Align = alClient
     TabOrder = 0
-    LookAndFeel.NativeStyle = False
     object vChilds: TcxGridDBTableView
       DataController.Summary.DefaultGroupSummaryItems = <>
       DataController.Summary.FooterSummaryItems = <>
@@ -41,6 +40,7 @@ object fGrid: TfGrid
     end
     object vGrid: TcxGridTableView
       OnEditValueChanged = vGridEditValueChanged
+      OnFocusedItemChanged = vGridFocusedItemChanged
       OnFocusedRecordChanged = vGrid1FocusedRecordChanged
       DataController.Summary.DefaultGroupSummaryItems = <
         item
@@ -49,9 +49,16 @@ object fGrid: TfGrid
         end>
       DataController.Summary.FooterSummaryItems = <>
       DataController.Summary.SummaryGroups = <>
+      OptionsData.CancelOnExit = False
+      OptionsData.Deleting = False
+      OptionsData.DeletingConfirmation = False
+      OptionsData.Inserting = False
       OptionsSelection.MultiSelect = True
       OptionsView.ColumnAutoWidth = True
       OptionsView.ExpandButtonsForEmptyDetails = False
+      object vGridColumn1: TcxGridColumn
+        OnGetProperties = vGridColumn1GetProperties
+      end
     end
     object GridLevel1: TcxGridLevel
       GridView = vGrid
@@ -59,6 +66,14 @@ object fGrid: TfGrid
       object GridLevel2: TcxGridLevel
       end
     end
+  end
+  object BarControl: TdxBarDockControl
+    Left = 0
+    Top = 0
+    Width = 451
+    Height = 26
+    Align = dalTop
+    BarManager = BarManager
   end
   object sBar: TdxStatusBar
     Left = 0
@@ -68,24 +83,16 @@ object fGrid: TfGrid
     Panels = <
       item
         PanelStyleClassName = 'TdxStatusBarTextPanelStyle'
-        MinWidth = 50
       end
       item
         PanelStyleClassName = 'TdxStatusBarTextPanelStyle'
       end>
+    PaintStyle = stpsUseLookAndFeel
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -11
     Font.Name = 'Tahoma'
     Font.Style = []
-  end
-  object BarControl: TdxBarDockControl
-    Left = 0
-    Top = 0
-    Width = 451
-    Height = 26
-    Align = dalTop
-    BarManager = BarManager
   end
   object cxEditRepository1: TcxEditRepository
     Left = 240
@@ -107,6 +114,40 @@ object fGrid: TfGrid
     end
     object iLabel: TcxEditRepositoryLabel
     end
+    object iState: TcxEditRepositoryImageComboBoxItem
+      Properties.Images = dm.il
+      Properties.ImmediateDropDownWhenKeyPressed = False
+      Properties.Items = <
+        item
+          Description = 'START'
+          ImageIndex = 12
+          Value = 'START'
+        end
+        item
+          Description = 'OK'
+          ImageIndex = 13
+          Value = 'OK'
+        end
+        item
+          Description = 'SKIP'
+          ImageIndex = 14
+          Value = 'SKIP'
+        end
+        item
+          Description = 'ERROR'
+          ImageIndex = 15
+          Value = 'ERROR'
+        end
+        item
+          Description = 'ABORT'
+          ImageIndex = 19
+          Value = 'ABORT'
+        end
+        item
+        end>
+      Properties.ReadOnly = True
+      Properties.ShowDescriptions = False
+    end
   end
   object BarManager: TdxBarManager
     Font.Charset = DEFAULT_CHARSET
@@ -120,7 +161,9 @@ object fGrid: TfGrid
       2)
     Categories.Visibles = (
       True)
+    ImageOptions.Images = dm.il
     PopupMenuLinks = <>
+    Style = bmsUseLookAndFeel
     UseSystemFont = True
     Left = 208
     Top = 192
@@ -130,6 +173,7 @@ object fGrid: TfGrid
       0
       0)
     object TableActions: TdxBar
+      AllowClose = False
       Caption = 'Table'
       CaptionButtons = <>
       DockControl = BarControl
@@ -174,6 +218,7 @@ object fGrid: TfGrid
       Category = 0
       Hint = 'bbColumns'
       Visible = ivAlways
+      ImageIndex = 9
       OnClick = bbColumnsClick
     end
     object bbFilter: TdxBarButton
@@ -182,13 +227,8 @@ object fGrid: TfGrid
       Hint = 'bbFilter'
       Visible = ivAlways
       ButtonStyle = bsChecked
+      ImageIndex = 10
       OnClick = bbFilterClick
-    end
-    object dxBarButton1: TdxBarButton
-      Caption = 'New Button'
-      Category = 0
-      Hint = 'New Button'
-      Visible = ivAlways
     end
     object bbSelect: TdxBarButton
       Caption = 'bbSelect'
@@ -206,6 +246,8 @@ object fGrid: TfGrid
       Caption = 'siCheck'
       Category = 0
       Visible = ivAlways
+      ImageIndex = 7
+      ShowCaption = False
       ItemLinks = <
         item
           Visible = True
@@ -228,6 +270,8 @@ object fGrid: TfGrid
       Caption = 'siUncheck'
       Category = 0
       Visible = ivAlways
+      ImageIndex = 8
+      ShowCaption = False
       ItemLinks = <
         item
           Visible = True
@@ -241,18 +285,6 @@ object fGrid: TfGrid
           Visible = True
           ItemName = 'bbUncheckFiltered'
         end>
-    end
-    object dxBarSubItem3: TdxBarSubItem
-      Caption = 'New SubItem'
-      Category = 0
-      Visible = ivAlways
-      ItemLinks = <>
-    end
-    object dxBarSubItem4: TdxBarSubItem
-      Caption = 'New SubItem'
-      Category = 0
-      Visible = ivAlways
-      ItemLinks = <>
     end
     object bbCheckAll: TdxBarButton
       Caption = 'bbCheckAll'
@@ -274,12 +306,6 @@ object fGrid: TfGrid
       Hint = 'bbCheckFiltered'
       Visible = ivAlways
       OnClick = bbCheckFilteredClick
-    end
-    object dxBarButton2: TdxBarButton
-      Caption = 'New Button'
-      Category = 0
-      Hint = 'New Button'
-      Visible = ivAlways
     end
     object bbInverseChecked: TdxBarButton
       Caption = 'bbInverseChecked'
@@ -309,40 +335,21 @@ object fGrid: TfGrid
       Visible = ivAlways
       OnClick = bbUncheckFilteredClick
     end
-    object dxBarListItem1: TdxBarListItem
-      Caption = 'New Item'
-      Category = 0
-      Visible = ivAlways
-    end
-    object cxBarEditItem1: TcxBarEditItem
-      Caption = 'New Item'
-      Category = 0
-      Hint = 'New Item'
-      Visible = ivAlways
-      PropertiesClassName = 'TcxCheckBoxProperties'
-    end
-    object cxBarEditItem2: TcxBarEditItem
-      Category = 0
-      Visible = ivAlways
-      ShowCaption = True
-      PropertiesClassName = 'TcxCheckBoxProperties'
-    end
     object bbAdditional: TdxBarSubItem
       Caption = 'bbAdditional'
       Category = 0
       Visible = ivAlways
+      ImageIndex = 11
+      ShowCaption = False
       ItemLinks = <
         item
           Visible = True
           ItemName = 'bbDALF'
+        end
+        item
+          Visible = True
+          ItemName = 'bbAutoUnch'
         end>
-    end
-    object cxBarEditItem3: TcxBarEditItem
-      Caption = 'New Item'
-      Category = 0
-      Hint = 'New Item'
-      Visible = ivAlways
-      PropertiesClassName = 'TcxCheckBoxProperties'
     end
     object bbDALF: TdxBarButton
       Caption = 'bbDALF'
@@ -352,11 +359,25 @@ object fGrid: TfGrid
       ButtonStyle = bsChecked
       OnClick = bbDALFClick
     end
+    object bbAutoUnch: TdxBarButton
+      Caption = 'bbAutoUnch'
+      Category = 0
+      Hint = 'bbAutoUnch'
+      Visible = ivAlways
+      ButtonStyle = bsChecked
+      OnClick = bbAutoUnchClick
+    end
+  end
+  object updTimer: TTimer
+    Enabled = False
+    OnTimer = updTimerTimer
+    Left = 96
+    Top = 88
   end
   object GridPopup: TcxGridPopupMenu
     Grid = Grid
     PopupMenus = <>
     Left = 104
-    Top = 200
+    Top = 176
   end
 end

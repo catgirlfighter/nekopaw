@@ -1,3 +1,5 @@
+[README]
+
 ;developed in delphi XE
 ;using
 ;rpVersionInfo

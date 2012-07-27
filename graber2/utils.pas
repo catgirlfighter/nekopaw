@@ -4,14 +4,14 @@ interface
 
 uses
   {std}
-  SysUtils, Classes, Math, Variants, Dialogs, Windows,
+  SysUtils, Classes, Math, Variants, Dialogs, Windows, ShellAPI,
   {devex}
   cxGridCustomTableView, cxGraphics, cxEdit,
   cxDataUtils, cxGridCommon, cxGridTableView, cxEditRepositoryItems,
   cxExtEditRepositoryItems, cxVGrid,
   cxButtonEdit,
   {graber}
-  GraberU, common, OpBase;
+  GraberU, common, OpBase, ImgList, Controls;
 
 type
   Tdm = class(TDataModule)
@@ -29,7 +29,14 @@ type
     erRDPassword: TcxEditRepositoryTextItem;
     erRDCheckBox: TcxEditRepositoryCheckBoxItem;
     erPathText: TcxEditRepositoryButtonItem;
+    erPathBrowse: TcxEditRepositoryButtonItem;
+    erURLText: TcxEditRepositoryButtonItem;
+    il: TcxImageList;
     procedure erPathTextPropertiesButtonClick(Sender: TObject;
+      AButtonIndex: Integer);
+    procedure erPathBrowsePropertiesButtonClick(Sender: TObject;
+      AButtonIndex: Integer);
+    procedure erURLTextPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
   private
     { Private declarations }
@@ -50,7 +57,7 @@ procedure BestFitWidths(a: TcxGridTableView; FirstRec: integer = 0);
 
 implementation
 
-uses PathEditorForm;
+uses PathEditorForm, LangString;
 
 {$R *.dfm}
 type
@@ -63,7 +70,7 @@ var
 begin
   while s <> '' do
   begin
-    tmp := TrimEx(CopyTo(s,',',['""'],true),[' ','"']);
+    tmp := TrimEx(CopyTo(s,',',['""'],[],true),[' ','"']);
     list.Add(tmp);
   end;
 end;
@@ -150,8 +157,6 @@ var
   i: integer;
   n: integer;
 begin
-
-
   for i := FirstRec to a.ColumnCount -1 do
   begin
     if FirstRec <> 0 then
@@ -184,7 +189,10 @@ begin
   case FieldType of
     ftString:
       if ReadOnly then
-        Result.Properties.RepositoryItem := erRDTextEdit;
+        if pos('://',DefaultValue) > 0 then
+          Result.Properties.RepositoryItem := erURLText
+        else
+          Result.Properties.RepositoryItem := erRDTextEdit;
     ftPassword:
       if  ReadOnly then
         Result.Properties.RepositoryItem := erRDPassword
@@ -219,9 +227,41 @@ begin
     ftPathText:
     begin
       if ReadOnly then
-        Result.Properties.RepositoryItem := erRDTextEdit
+        Result.Properties.RepositoryItem := erPathBrowse
       else
         Result.Properties.RepositoryItem := erPathText;
+    end;
+  end;
+end;
+
+procedure Tdm.erPathBrowsePropertiesButtonClick(Sender: TObject;
+  AButtonIndex: Integer);
+var
+  s: string;
+  begin
+  case AButtonIndex of
+    1:
+    begin
+      s := (Sender as tcxbuttonedit).Text;
+      if FileExists(s) then
+        ShellExecute(0, nil, PCHAR(s){'EXPLORER'}, nil{PCHAR('/select, "' + s + '"')},
+        nil, SW_SHOWNORMAL)
+      else
+        MessageDlg(format(lang('_NO_FILE_'),[s]), mtInformation, [mbOk], 0);
+    end;
+    0:
+    begin
+        s := (Sender as tcxbuttonedit).Text;
+        if fileexists(s) then
+          ShellExecute(0, nil, 'EXPLORER',PChar('/select, "' + s + '"'),
+          nil, SW_SHOWNORMAL)
+        else
+          if ShellExecute(0, nil, PChar(ExtractFilePath(s)),
+          nil, nil, SW_SHOWNORMAL) < 33 then
+            if ShellExecute(0, nil,
+            PChar(ExtractFilePath(ExtractFileDir(s))), nil, nil,
+            SW_SHOWNORMAL) < 33 then
+              MessageDlg(format(lang('_NO_DIRECTORY_'),[s]), mtInformation, [mbOk], 0);
     end;
   end;
 end;
@@ -238,7 +278,7 @@ begin
         fields := tstringlist.Create;
         try
           //FullResList.GetAllResourceFields(vars);
-          FullResList.GetAllPictureFields(fields);
+          FullResList.GetAllPictureFields(fields,true);
           (Sender as tcxbuttonedit).Text :=
             ExecutePathEditor((Sender as tcxbuttonedit).Text,nil,fields);
           (Sender as tcxbuttonedit).PostEditValue;
@@ -250,6 +290,14 @@ begin
       end;
     end;
   end;
+end;
+
+procedure Tdm.erURLTextPropertiesButtonClick(Sender: TObject;
+  AButtonIndex: Integer);
+begin
+  ShellExecute(0,nil,
+    PCHAR((Sender as tcxbuttonedit).Text),
+    nil,nil,SW_SHOWNORMAL);
 end;
 
 end.

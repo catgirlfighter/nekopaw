@@ -44,8 +44,6 @@ type
     btnNext: TcxButton;
     EditRepository: TcxEditRepository;
     erAuthButton: TcxEditRepositoryButtonItem;
-    procedure gRescButtonGetProperties(Sender: TcxCustomGridTableItem;
-      ARecord: TcxCustomGridRecord; var AProperties: TcxCustomEditProperties);
     procedure pcMainChange(Sender: TObject);
     procedure gRescButtonPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
@@ -80,6 +78,9 @@ type
     procedure SetLang;
     procedure OnErrorEvent(Sender: TObject; Msg: String);
     procedure JobStatus(Sander: TObject; Action: integer);
+    procedure SendMsg;
+    procedure SaveSet;
+    //procedure LoadSet;
     property OnError: TLogEvent read FOnError write FOnError;
     { Public declarations }
   end;
@@ -157,12 +158,7 @@ begin
     if ResetRelogin then
       FullResList.StartJob(JOB_LOGIN)
     else
-      case State of
-        lfsNew:
-          PostMessage(Application.MainForm.Handle, CM_APPLYNEWLIST, Integer(Parent), 0);
-        lfsEdit:
-          PostMessage(Application.MainForm.Handle, CM_APPLYEDITLIST, Integer(Parent), 0);
-      end;
+      SendMsg;
   end
   else
   begin
@@ -256,13 +252,6 @@ begin
     );
 end;
 
-procedure TfNewList.gRescButtonGetProperties(Sender: TcxCustomGridTableItem;
-  ARecord: TcxCustomGridRecord; var AProperties: TcxCustomEditProperties);
-begin
-  if ARecord.Values[0] = 0 then
-    AProperties := dm.erLabel.Properties;
-end;
-
 procedure TfNewList.gRescButtonPropertiesButtonClick(Sender: TObject;
   AButtonIndex: Integer);
 begin
@@ -296,23 +285,43 @@ begin
       else
         fLogin.bOk.Enabled := true
     else if FLoggedOn then
-      case State of
-        lfsNew:
-          PostMessage(Application.MainForm.Handle, CM_APPLYNEWLIST, Integer(Parent), 0);
-        lfsEdit:
-          PostMessage(Application.MainForm.Handle, CM_APPLYEDITLIST, Integer(Parent), 0);
-      end;
+      SendMsg;
   end else
     SetIntrfEnabled(false);
 end;
 
 procedure TfNewList.LoadItems;
+
+  procedure fillRec(DataController:TcxGridDataController; RecordIndex,ItemOffset: integer);
+  var
+    s: ANSIString;
+    n: integer;
+  begin
+    with DataController do
+    begin
+      n := RecordCount;
+      RecordCount := RecordCount + 1;
+      Values[n,ItemOffset] := RecordIndex;
+      try
+        if FullResList[RecordIndex].IconFile <> '' then
+        begin
+          FileToString(rootdir + '\resources\icons\' + FullResList[RecordIndex]
+            .IconFile, s);
+          Values[n,ItemOffset+1] := s;
+        end;
+        Values[n,ItemOffset+2] := FullResList[RecordIndex].Name;
+      except
+      end;
+    end;
+  end;
+
 var
   i: Integer;
-  s: ANSIString;
+  s: tstringlist;
+
 begin
   gFull.BeginUpdate;
-
+  gRes.BeginUpdate;
   // pic := TPicture.Create;
 
   with tvRes.DataController do
@@ -322,32 +331,23 @@ begin
     Values[0, 2] := lang('_GENERAL_');
   end;
 
-  with tvFull.DataController do
-  begin
-    RecordCount := FullResList.Count - 1;
-    for i := 1 to FullResList.Count - 1 do
-    try
-      Values[i - 1, 1] := i;
-      if FullResList[i].IconFile <> '' then
-      begin
-        { pic.LoadFromFile(rootdir + '\resources\icons\' + FullResList[i]
-          .IconFile);
-          SavePicture(pic, S); }
-        FileToString(rootdir + '\resources\icons\' + FullResList[i]
-          .IconFile, s);
-        Values[i - 1, 2] := s;
-      end;
-      { FileToString(rootdir+'\resources\icons\'+FullResLIst[i].IconFile) };
-      Values[i - 1, 3] := FullResList[i].Name;
-      // tvFull.DataController.
-    except
+  s := TStringList.Create;
+  try
+    s.Text := StrToStrList(GlobalSettings.GUI.LastUsedSet,',');
 
-    end;
-
+    for i := 1 to FullResList.Count -1 do
+      if s.IndexOf(FullResList[i].Name) <> -1 then
+        fillRec(tvRes.DataController,i,0)
+      else
+        fillRec(tvFull.DataController,i,1);
+  finally
+    s.Free;
   end;
 
-  // pic.Free;
+  gRes.EndUpdate;
   gFull.EndUpdate;
+
+  btnNext.Enabled := tvRes.DataController.RowCount > 1;
 end;
 
 procedure TfNewList.pcMainChange(Sender: TObject);
@@ -364,22 +364,48 @@ begin
 end;
 
 procedure TfNewList.RemoveItem(index: Integer);
+
+  procedure rem(index: integer);
+  var
+    i: integer;
+  begin
+    i := tvFull.DataController.RecordCount;
+    tvFull.DataController.RecordCount := i + 1;
+    tvFull.DataController.Values[i, 1] := tvRes.DataController.Values[index, 0];
+    tvFull.DataController.Values[i, 2] := tvRes.DataController.Values[index, 1];
+    tvFull.DataController.Values[i, 3] := tvRes.DataController.Values[index, 2];
+    tvRes.DataController.DeleteRecord(index);
+  end;
+
 var
-  i: Integer;
+  i: integer;
+
 begin
+{  loop := index = 0;
+
+  if loop then
+    index := Min(1,tvRes.DataController.RecordCount -1);   }
+
   tvRes.BeginUpdate;
   tvFull.BeginUpdate;
-  i := tvFull.DataController.RecordCount;
-  tvFull.DataController.RecordCount := i + 1;
-  tvFull.DataController.Values[i, 1] := tvRes.DataController.Values[index, 0];
-  tvFull.DataController.Values[i, 2] := tvRes.DataController.Values[index, 1];
-  tvFull.DataController.Values[i, 3] := tvRes.DataController.Values[index, 2];
-  tvRes.DataController.DeleteRecord(index);
+{  while index > tvRes.DataController.RecordCount-2 do
+  begin
+
+
+    if not loop then
+      index := 0;
+  end;  }
+
+  if index = 0 then
+    for i := 1 to tvRes.DataController.RecordCount-1 do
+      rem(1)
+  else
+    rem(index);
+
   tvRes.DataController.FocusedRecordIndex :=
     Min(index, tvRes.DataController.RecordCount - 1);
   tvRes.EndUpdate;
   tvFull.EndUpdate;
-
   btnNext.Enabled := tvRes.DataController.RowCount > 1;
 end;
 
@@ -387,6 +413,22 @@ procedure TfNewList.ResetItems;
 begin
   if pcMain.ActivePage = tsSettings then
     SaveSettings;
+end;
+
+procedure TfNewList.SaveSet;
+var
+  i: integer;
+  s: string;
+begin
+  if tvRes.DataController.RecordCount > 1 then
+  begin
+    s := FullResList[tvRes.DataController.Values[1,0]].Name;
+    for i := 2 to tvRes.DataController.RecordCount-1 do
+      s := s + ',' + FullResList[tvRes.DataController.Values[i,0]].Name;
+  end else
+    s := '';
+  GlobalSettings.GUI.LastUsedSet := s;
+  SaveGUISettings([gvResSet]);
 end;
 
 procedure TfNewList.SaveSettings;
@@ -420,6 +462,17 @@ begin
               as TcxEditorRow).Properties.Value;
           end;
     end;
+  end;
+end;
+
+procedure TfNewList.SendMsg;
+begin
+  SaveSet;
+  case State of
+    lfsNew:
+      PostMessage(Application.MainForm.Handle, CM_APPLYNEWLIST, Integer(Parent), 0);
+    lfsEdit:
+      PostMessage(Application.MainForm.Handle, CM_APPLYEDITLIST, Integer(Parent), 0);
   end;
 end;
 

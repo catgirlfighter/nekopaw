@@ -5,16 +5,18 @@ interface
 uses
   {std}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, ComCtrls, DB,
+  Dialogs, ComCtrls, DB, ExtCtrls,
   {devex}
  cxGraphics, cxControls, cxLookAndFeels, cxLookAndFeelPainters,
   cxStyles, cxCustomData, cxFilter, cxData, cxDataStorage, cxEdit, cxDBData,
   cxCurrencyEdit, cxCheckBox, cxGridCustomPopupMenu, cxGridPopupMenu, dxBar,
   cxBarEditItem, cxClasses, cxEditRepositoryItems, cxExtEditRepositoryItems,
   dxStatusBar, cxGridLevel, cxGridCustomTableView, cxGridTableView,
-  cxGridCustomView, cxGridDBTableView, cxGrid,
+  cxGridCustomView, cxGridDBTableView, cxGrid, dxSkinsCore,
+  dxSkinsDefaultPainters, dxSkinscxPCPainter,dxSkinsdxStatusBarPainter,
+  dxSkinsdxBarPainter,
   {graber}
-  graberU, common;
+  graberU, common, Menus;
 
 type
 
@@ -25,40 +27,36 @@ type
     vChilds: TcxGridDBTableView;
     cxEditRepository1: TcxEditRepository;
     vGrid1: TcxGridDBTableView;
-    sBar: TdxStatusBar;
     BarManager: TdxBarManager;
     BarControl: TdxBarDockControl;
     TableActions: TdxBar;
     bbColumns: TdxBarButton;
-    GridPopup: TcxGridPopupMenu;
     bbFilter: TdxBarButton;
     iPicChecker: TcxEditRepositoryCheckBoxItem;
     iCheckBox: TcxEditRepositoryCheckBoxItem;
     iPBar: TcxEditRepositoryProgressBar;
     vGrid: TcxGridTableView;
-    dxBarButton1: TdxBarButton;
     bbSelect: TdxBarButton;
     bbUnselect: TdxBarButton;
     siCheck: TdxBarSubItem;
     siUncheck: TdxBarSubItem;
-    dxBarSubItem3: TdxBarSubItem;
-    dxBarSubItem4: TdxBarSubItem;
     bbCheckAll: TdxBarButton;
     bbCheckSelected: TdxBarButton;
     bbCheckFiltered: TdxBarButton;
-    dxBarButton2: TdxBarButton;
     bbInverseChecked: TdxBarButton;
     bbUncheckAll: TdxBarButton;
     bbUncheckSelected: TdxBarButton;
     bbUncheckFiltered: TdxBarButton;
-    dxBarListItem1: TdxBarListItem;
-    cxBarEditItem1: TcxBarEditItem;
-    cxBarEditItem2: TcxBarEditItem;
     bbAdditional: TdxBarSubItem;
-    cxBarEditItem3: TcxBarEditItem;
     bbDALF: TdxBarButton;
     iFloatEdit: TcxEditRepositoryCurrencyItem;
     iLabel: TcxEditRepositoryLabel;
+    updTimer: TTimer;
+    vGridColumn1: TcxGridColumn;
+    iState: TcxEditRepositoryImageComboBoxItem;
+    sBar: TdxStatusBar;
+    bbAutoUnch: TdxBarButton;
+    GridPopup: TcxGridPopupMenu;
     procedure bbColumnsClick(Sender: TObject);
     procedure bbFilterClick(Sender: TObject);
     procedure vGrid1FocusedRecordChanged(Sender: TcxCustomGridTableView;
@@ -79,9 +77,17 @@ type
     procedure bbUncheckFilteredClick(Sender: TObject);
     procedure bbInverseCheckedClick(Sender: TObject);
     procedure bbDALFClick(Sender: TObject);
+    procedure updTimerTimer(Sender: TObject);
+    procedure vGridColumn1GetProperties(Sender: TcxCustomGridTableItem;
+      ARecord: TcxCustomGridRecord; var AProperties: TcxCustomEditProperties);
+    procedure bbAutoUnchClick(Sender: TObject);
+    procedure vGridFocusedItemChanged(Sender: TcxCustomGridTableView;
+      APrevFocusedItem, AFocusedItem: TcxCustomGridTableItem);
   private
     //FList: TList;
 //    FFieldList: TStringList;
+    //FPageComplete: TNotifyEvent;
+    FTagUpdate: TTagUpdateEvent;
     FPicChanged: TPictureNotifyEvent;
     FCheckColumn: tcxGridColumn;
     FIdColumn: tcxGridColumn;
@@ -92,6 +98,7 @@ type
     FPosColumn: tcxGridColumn;
     FResColumn: tcxGridColumn;
     FFieldList: TStringList;
+    FChangesList: TList;
     //FStartSender: TObject;
 //    FN: Integer;
     //FFirstC: TcxDBGridColumn;
@@ -119,7 +126,14 @@ type
     procedure SelectSelected(b: boolean);
     procedure SelectFiltered(b: boolean);
     procedure InverseSelection;
+    procedure SaveFields;
+    procedure updatepic(pic: ttpicture);
+    procedure doUpdates;
+    procedure UncheckInvisible;
+    procedure updatechecks;
     property OnPicChanged: TPictureNotifyEvent read FPicChanged write FPicChanged;
+    //property OnPageComplete: TNotifyEvent read FPageComplete write FPageComplete;
+    property OnTagUpdate: TTagUpdateEvent read FTagUpdate write FTagUpdate;
     { Public declarations }
   end;
 
@@ -149,6 +163,7 @@ begin
       'b' : result.DataBinding.ValueType := 'Boolean';
       'f' : result.DataBinding.ValueType := 'Float';
       'p' : result.DataBinding.ValueType := 'Float';
+      'v' : result.DataBinding.ValueType := 'Variant';
     else
       result.DataBinding.ValueType := 'String';
     end
@@ -167,6 +182,11 @@ begin
   else
     result.RepositoryItem := iLabel;
   //result.DataBinding.ValueType := 'String';
+end;
+
+procedure TfGrid.bbAutoUnchClick(Sender: TObject);
+begin
+  GlobalSettings.Downl.AutoUncheckInvisible := bbAutoUnch.Down;
 end;
 
 procedure TfGrid.bbCheckAllClick(Sender: TObject);
@@ -238,6 +258,54 @@ begin
     ResList.Clear;
 end;
 
+procedure TfGrid.doUpdates;
+var
+  i: integer;
+  pic: TTPicture;
+  r: TResource;
+begin
+  vGrid.BeginUpdate;
+  i := 0;
+  r := nil;
+  while i < FChangesList.Count do
+  begin
+    pic := FChangesList[i];
+    updatepic(pic);
+    inc(i);
+    if Assigned(r) then
+      if (r <> pic.Resource) then
+      begin
+        if Assigned(ResList.OnPageComplete) then
+          ResList.OnPageComplete(r);
+        r := pic.Resource;
+      end else
+    else
+      r := pic.Resource;
+  end;
+
+  if Assigned(r) and Assigned(ResList.OnPageComplete) then
+    ResList.OnPageComplete(r);
+
+  if i > 0 then
+  begin
+    sBar.Panels[1].Text := 'TTL ' + IntToStr(ResList.PictureList.Count)
+    + ' OK ' + IntToStr(ResList.PictureList.PicCounter.OK)
+    + ' SKP ' + IntToStr(ResList.PictureList.PicCounter.SKP)
+    + ' EXS ' + IntToStr(ResList.PictureList.PicCounter.EXS)
+    + ' ERR ' + IntToStr(ResList.PictureList.PicCounter.ERR);
+
+  if (ResList.PictureList.Count - ResList.PictureList.PicCounter.SKP) > 0 then
+    sBar.Panels[0].Text := FormatFloat('0.00%',
+                                       ResList.PictureList.PicCounter.FSH
+                                    / (ResList.PictureList.Count
+                                    -  ResList.PictureList.PicCounter.SKP)
+                                    *  100);
+  end;
+
+  FChangesList.Clear;
+  vGrid.EndUpdate;
+end;
+
 procedure TfGrid.ForcePicsStop(Sender: TObject);
 begin
   ResList.DWNLDHandler.FinishThreads(true);
@@ -280,7 +348,7 @@ var
   t: integer;
   n: variant; }
   //FList: TPictureLinkList;
-  c,i,j: integer;
+  c,i,j,idx: integer;
   t1,t3: integer;
   n: TListValue;
   clm: TcxGridColumn;
@@ -304,7 +372,7 @@ begin
 
       //FList := Sender as TPictureLinkList;
 
-       vgrid.DataController.RecordCount := ResList.PictureList.Count;
+      vgrid.DataController.RecordCount := ResList.PictureList.Count;
 
       with vGrid.DataController,ResList do
         for i := c to RecordCount -1 do
@@ -314,16 +382,27 @@ begin
           Values[i,FParentColumn.Index] := Integer(PictureList[i].Parent);
           Values[i,FResColumn.Index] := PictureList[i].Resource.Name;
           Values[i,FLabelColumn.Index] := PictureList[i].DisplayLabel;
+          {if PictureList[i].Meta.Count <> FFieldLIst.Count then
+            raise Exception.Create('Picture Meta does not equal to grid fields'); }
           for j := 0 to PictureList[i].Meta.Count -1 do
           begin
             n := PictureList[i].Meta.Items[j];
-            clm := FFieldList.Objects[FFieldList.IndexOf(n.Name)] as tcxGridColumn;
-            case clm.DataBinding.ValueType[1] of
-              'S': Values[i,clm.Index] := VarToStr(n.Value);
-              'B': Values[i,clm.Index] := n.Value;
-              'I','L': Values[i,clm.Index] := n.Value;
-              'F': Values[i,clm.Index] := n.Value;
-              'D': Values[i,clm.Index] := VarToDateTime(n.Value);
+            idx := FFieldList.IndexOf(n.Name);
+            if idx <> -1 then
+            begin
+              clm := FFieldList.Objects[idx] as tcxGridColumn;
+              case clm.DataBinding.ValueType[1] of
+                'S': Values[i,clm.Index] := VarToStr(n.Value);
+                'B': Values[i,clm.Index] := n.Value;
+                'I','L': Values[i,clm.Index] := n.Value;
+                'F': Values[i,clm.Index] := n.Value;
+                'D': Values[i,clm.Index] := VarToDateTime(n.Value);
+              end;
+            end else
+            begin
+              IF Assigned(OnError) then
+                OnError(Self,PictureList[i].Resource.Name + ': field ' + n.Name +
+                ' does not declared in field list');
             end;
             {Values[i,( as TcxGridColumn).Index]
               := PictureList[i].Meta.Items[j].Value;}
@@ -336,13 +415,14 @@ begin
     if c = 0 then
       BestFitWidths(vGrid);
 
+    if Assigned(FTagUpdate) then
+      OnTagUpdate(Self,(Sender as TPictureList).Tags);
+
     t3 := GetTickCount;
     sBar.Panels[1].Text := 'TTL ' + IntToStr(vGrid.DataController.RecordCount)
       + ' IGN '  + IntToStr(ResList.PictureList.PicCounter.IGN)
       + ' TBL ' + IntToStr(t3 - t1) + 'ms'
       + ' DBL '  + IntToStr(ResList.PictureList.DoublestickCount) + 'ms';
-
-
 //  end;
 {  FList := Sender as TPictureLinkList;
 
@@ -393,71 +473,14 @@ begin
 end;
 
 procedure TfGrid.OnListPicChanged(Pic: TTPicture; Changes: TPicChanges);
-var
-  n{,c}: integer;
-
 begin
-    n := Pic.BookMark - 1;
-
-    with vGrid.DataController do
-    begin
-      if pcSize in Changes then
-        if Pic.Size = 0 then
-          Values[n,FSizeColumn.Index] := null
-        else
-          Values[n,FSizeColumn.Index] := GetBTString(Pic.Size);
-
-      if pcProgress in Changes then
-      begin
-        if (Pic.Pos = 0) or (Pic.Pos = Pic.Size) then
-          Values[n,FPosColumn.Index] := null
-        else
-          Values[n,FPosColumn.Index] := GetBTString(Pic.Pos);
-
-        case Pic.Status of
-          JOB_INPROGRESS:
-          if Pic.Size = 0 then
-            Values[n,FProgressColumn.Index] := 'START'
-          else
-            Values[n,FProgressColumn.Index] :=
-              FormatFloat('00.00%',Pic.Pos/Pic.Size * 100);
-          JOB_FINISHED:
-            if Pic.Size = 0 then
-            begin
-              Values[n,FProgressColumn.Index] := 'SKIP';
-              Application.ProcessMessages;
-            end else
-              Values[n,FProgressColumn.Index] := 'OK';
-          JOB_ERROR: Values[n,FProgressColumn.Index] := 'ERROR';
-          JOB_CANCELED: Values[n,FProgressColumn.Index] := 'ABORT';
-        end;
-      end;
-
-    if pcLabel in Changes then
-      Values[n,FLabelColumn.Index] := Pic.DisplayLabel;
-
-    if pcChecked in Changes then
-      Values[n,FCheckColumn.Index] := Pic.Checked;
-    end;
-
-    if (pcChecked in Changes) or (Changes = []) then
-    begin
-      sBar.Panels[1].Text := 'TTL ' + IntToStr(ResList.PictureList.Count)
-        + ' OK ' + IntToStr(ResList.PictureList.PicCounter.OK)
-        + ' SKP ' + IntToStr(ResList.PictureList.PicCounter.SKP)
-        + ' EXS ' + IntToStr(ResList.PictureList.PicCounter.EXS)
-        + ' ERR ' + IntToStr(ResList.PictureList.PicCounter.ERR);
-
-      if (ResList.PictureList.Count - ResList.PictureList.PicCounter.SKP) > 0 then
-        sBar.Panels[0].Text := FormatFloat('0.00%',
-                                           ResList.PictureList.PicCounter.FSH
-                                        / (ResList.PictureList.Count
-                                        -  ResList.PictureList.PicCounter.SKP)
-                                        *  100);
-
-      if Assigned(ResList.OnPageComplete) then
-        ResList.OnPageComplete(Pic.Resource);
-    end;
+  Pic.Changes := Pic.Changes + Changes;
+  if not ResList.PicsFinished then
+  begin
+    if FChangesList.IndexOf(Pic) = -1 then
+      FChangesList.Add(Pic);
+  end else
+    updatepic(pic);
 end;
 
 procedure TfGrid.OnStartJob(Sender: TObject; Action: integer);
@@ -469,7 +492,9 @@ begin
     JOB_PICS:
     begin
 //      vGrid.BeginUpdate;
-      FCheckColumn.Options.Editing := false;
+      updTimer.Enabled := true;
+      vGrid.OptionsData.Editing := false;
+      //FCheckColumn.Options.Editing := false;
 //      iPicChecker.Properties.ReadOnly := true;
       SetColWidths;
       FSizeColumn.Visible := true;
@@ -488,10 +513,14 @@ begin
       end;
     JOB_STOPPICS:
     begin
+      updTimer.Enabled := false;
+      if FChangesList.Count > 0 then
+        doUpdates;
       FSizeColumn.Visible := false;
       FPosColumn.Visible := false;
-      FProgressColumn.Visible := false;
-      FCheckColumn.Options.Editing := true;
+      //FProgressColumn.Visible := false;
+      vGrid.OptionsData.Editing := true;
+      //FCheckColumn.Options.Editing := true;
       if ResList.ListFinished then
         sBar.Panels[0].Text := '';
     end;
@@ -500,13 +529,16 @@ end;
 
 procedure TfGrid.Relise;
 begin
-  //vd.Close;
+  //vd.Close
   Screen.Cursor := crHourGlass;
   try
+    SaveFields;
     if Assigned(ResList) then
       FreeAndNil(ResList);
     if Assigned(FFieldList) then
       FreeAndNil(FFieldList);
+    if Assigned(FChangesList) then
+      FreeAndNil(FChangesList);
   finally
     Screen.Cursor := crDefault;
   end;
@@ -524,133 +556,218 @@ var
   i: integer;
   c: tcxGridColumn;
   p: TMetaList;
+  def,grp: tstringlist;
 //  b: boolean;
 begin
   Grid.BeginUpdate;
-  vGrid.ClearItems;
-  vChilds.ClearItems;
+  def := TStringList.Create;
+  grp := tStringList.Create;
+  try
+    def.Text := StrToStrList(GlobalSettings.GUI.LastUsedFields,',');
+    grp.Text := StrToStrList(GLobalSettings.GUI.LastUsedGrouping,',');
+    vGrid.ClearItems;
+    vChilds.ClearItems;
 
-{  if vd.Active then
-  begin
-    vd.Close;
-    b := true;
-  end else
-    b := false;
+  {  if vd.Active then
+    begin
+      vd.Close;
+      b := true;
+    end else
+      b := false;
 
-  vd.Fields.Clear;}
+    vd.Fields.Clear;}
 
-  ResList.CreatePicFields;
-//  md.DisableControls;
-//  FFieldList := ResList.FullPicFieldList;
-  //FFieldList.Insert(0,'resname');
-  //c := vGrid.CreateColumn;
-  //c.Visible := false;
+    ResList.CreatePicFields;
+  //  md.DisableControls;
+  //  FFieldList := ResList.FullPicFieldList;
+    //FFieldList.Insert(0,'resname');
+    //c := vGrid.CreateColumn;
+    //c.Visible := false;
 
-  FCHeckColumn := AddField('checked:b',true);
-  FCHeckColumn.Caption := '';
-  //c.Visible := false;
-  with FCHeckColumn.Options do
-  begin
-    HorzSizing := false;
-    Filtering := false;
-    Grouping := false;
-    Moving := false;
-    Sorting := false;
-  end;
-  FCHeckColumn.Width := 20;
-  FCHeckColumn.VisibleForCustomization := false;
-
-  FIdColumn := AddField('id:i');
-  FIdColumn.Visible := false;
-  FIdColumn.VisibleForCustomization := false;
-
-  FParentColumn := AddField('parent:i');
-  FParentColumn.Visible := false;
-  FParentColumn.VisibleForCustomization := false;
-{  c.SortOrder := soAscending;
-  c.Width := 20;    }
-
-{   vgrid.DataController.KeyFieldNames := 'RecId';
-
-  c := vGrid.CreateColumn;
-  c.DataBinding.FieldName := 'RecId';
-  c.DataBinding.Field.DisplayLabel := _RESID_;   }
-
-  FResColumn := AddField(lang('_RESNAME_'));
-  //c.Caption := ;
-//  FResColumn.GroupBy(0);
-
-  FLabelColumn := AddField(lang('_PICTURELABEL_'));
-  //FLabelColumn.Caption :=;
-
-  FPosColumn := AddField(lang('_DOWNLOADED_'));
-  with FPosColumn.Options do
-  begin
-    HorzSizing := false;
-    //Filtering := false;
-    Grouping := false;
-    Moving := false;
-    Sorting := false;
-  end;
-  FPosColumn.Visible := false;
-  FPosColumn.VisibleForCustomization := false;
-
-  FSizeColumn := AddField(lang('_SIZE_'));
-  with FSizeColumn.Options do
-  begin
-    HorzSizing := false;
-    Filtering := false;
-    Grouping := false;
-    Moving := false;
-    Sorting := false;
-  end;
-  FSizeColumn.Visible := false;
-  FSizeColumn.VisibleForCustomization := false;
-
-  FProgressColumn := AddField(lang('_PROGRESS_'));
-  with FProgressColumn.Options do
-  begin
-    HorzSizing := false;
-    //Filtering := false;
-    Grouping := false;
-    Moving := false;
-    Sorting := false;
-  end;
-  FProgressColumn.Visible := false;
-  FProgressColumn.VisibleForCustomization := false;
-
-  if not Assigned(FFieldList) then
-    FFieldList := TStringList.Create
-  else
-    FFieldList.Clear;
-
-  for i := 0 to ResList.PictureList.Meta.Count -1 do
-  begin
-    FFieldList.Insert(i,ResList.PictureList.Meta.Items[i].Name);
-    p := ResList.PictureList.Meta.Items[i].Value;
-    case p.ValueType of
-      DB.ftString: c := AddField(ResList.PictureList.Meta.Items[i].Name);
-      ftBoolean: c := AddField(ResList.PictureList.Meta.Items[i].Name + ':b');
-      ftInteger: c := AddField(ResList.PictureList.Meta.Items[i].Name + ':i');
-      ftFloat: c := AddField(ResList.PictureList.Meta.Items[i].Name + ':f');
-      ftDateTime: c := AddField(ResList.PictureList.Meta.Items[i].Name + ':d');
-      else c := AddField(ResList.PictureList.Meta.Items[i].Name);
+    FCHeckColumn := AddField('checked:b',true);
+    FCHeckColumn.Caption := '';
+    //c.Visible := false;
+    with FCHeckColumn.Options do
+    begin
+      HorzSizing := false;
+      Filtering := false;
+      Grouping := false;
+      Moving := false;
+      Sorting := false;
     end;
-    //c := AddField(FFieldList[i],'.');
-    FFieldList.Objects[i] := c;
-    c.Visible := false;
-    //FFieldList.Objects[i] := c;
+    FCHeckColumn.Width := 20;
+    FCHeckColumn.VisibleForCustomization := false;
+
+    FIdColumn := AddField('id:i');
+    FIdColumn.Visible := false;
+    FIdColumn.VisibleForCustomization := false;
+
+    FParentColumn := AddField('parent:i');
+    FParentColumn.Visible := false;
+    FParentColumn.VisibleForCustomization := false;
+  {  c.SortOrder := soAscending;
+    c.Width := 20;    }
+
+  {   vgrid.DataController.KeyFieldNames := 'RecId';
+
+    c := vGrid.CreateColumn;
+    c.DataBinding.FieldName := 'RecId';
+    c.DataBinding.Field.DisplayLabel := _RESID_;   }
+
+    FResColumn := AddField('');
+    FResColumn.Visible := def.IndexOf('@resource') > -1;
+    FResColumn.GroupIndex := grp.IndexOf('@resource');
+    //c.Caption := ;
+  //  FResColumn.GroupBy(0);
+
+    FLabelColumn := AddField('');
+    FLabelColumn.Visible := def.IndexOf('@label') > -1;
+    FLabelColumn.GroupIndex := grp.IndexOf('@label');
+    //FLabelColumn.GroupIndex := 1;
+    //FLabelColumn.Caption :=;
+
+    FPosColumn := AddField('');
+    with FPosColumn.Options do
+    begin
+      HorzSizing := false;
+      //Filtering := false;
+      Grouping := false;
+      Moving := false;
+      Sorting := false;
+    end;
+    FPosColumn.Visible := false;
+    FPosColumn.VisibleForCustomization := false;
+
+    FSizeColumn := AddField('');
+    with FSizeColumn.Options do
+    begin
+      HorzSizing := false;
+      Filtering := false;
+      Grouping := false;
+      Moving := false;
+      Sorting := false;
+    end;
+    FSizeColumn.Visible := false;
+    FSizeColumn.VisibleForCustomization := false;
+
+    FProgressColumn := AddField(':v');
+    fProgressColumn.OnGetProperties := vGridColumn1GetProperties;
+    with FProgressColumn.Options do
+    begin
+      HorzSizing := false;
+      //Filtering := false;
+      Grouping := false;
+      Moving := false;
+      Sorting := false;
+    end;
+    //FProgressColumn.Editable := false;
+    FProgressColumn.Editing := false;
+    FProgressColumn.Visible := false;
+    FProgressColumn.VisibleForCustomization := false;
+
+    if not Assigned(FFieldList) then
+      FFieldList := TStringList.Create
+    else
+      FFieldList.Clear;
+
+    for i := 0 to ResList.PictureList.Meta.Count -1 do
+    begin
+      FFieldList.Insert(i,ResList.PictureList.Meta.Items[i].Name);
+      p := ResList.PictureList.Meta.Items[i].Value;
+      case p.ValueType of
+        DB.ftString: c := AddField(ResList.PictureList.Meta.Items[i].Name);
+        ftBoolean: c := AddField(ResList.PictureList.Meta.Items[i].Name + ':b');
+        ftInteger: c := AddField(ResList.PictureList.Meta.Items[i].Name + ':i');
+        ftFloat: c := AddField(ResList.PictureList.Meta.Items[i].Name + ':f');
+        ftDateTime:
+        begin
+          c := AddField(ResList.PictureList.Meta.Items[i].Name + ':d');
+          c.DateTimeGrouping := dtgByDate;
+        end
+        else c := AddField(ResList.PictureList.Meta.Items[i].Name);
+      end;
+      //c := AddField(FFieldList[i],'.');
+      FFieldList.Objects[i] := c;
+      c.Visible := def.IndexOf(FFieldList[i]) > -1;
+      c.GroupIndex := grp.IndexOf(FFieldList[i]);
+      //FFieldList.Objects[i] := c;
+    end;
+    //l.Free;
+
+    FPosColumn.Index := vGrid.ItemCount;
+    FSizeColumn.Index := vGrid.ItemCount;
+    fProgressColumn.Index := vGrid.ItemCount;
+
+  {  if b then
+      vd.Open;  }
+  {  md.EnableControls;  }
+
+    if not assigned(FChangesList) then
+      FChangesList := TList.Create;
+
+  finally
+    grp.Free;
+    def.Free;
+    Grid.EndUpdate;
   end;
-  //l.Free;
+end;
 
-  FPosColumn.Index := vGrid.ItemCount;
-  FSizeColumn.Index := vGrid.ItemCount;
-  fProgressColumn.Index := vGrid.ItemCount;
+procedure TfGrid.SaveFields;
+var
+  i: integer;
+  s: string;
+  c: tcxGridColumn;
+begin
+  if FResColumn.Visible then      //fields
+    s := '@resource'
+  else
+    s := '';
 
-{  if b then
-    vd.Open;  }
-{  md.EnableControls;  }
-  Grid.EndUpdate;
+  if FLabelColumn.Visible then
+    if s = '' then
+      s := '@label'
+    else
+      s := s + ',@label';
+
+  if FFieldList.Count > 0 then
+  begin
+    for i := 0 to FFieldList.Count-1 do
+    begin
+      c := FFieldList.Objects[i] as tcxGridColumn;
+      if c.Visible then
+        if s = '' then
+          s := FFieldList[i]
+        else
+          s := s + ',' + FFieldList[i];
+    end;
+  end;
+  GlobalSettings.GUI.LastUsedFields := s;
+
+  s := '';                                    //grouping
+
+  for i := 0 to vGrid.GroupedColumnCount-1 do
+  begin
+    c := vGrid.GroupedColumns[i];
+    if c = FResColumn then
+      if s = '' then
+        s := '@resource'
+      else
+        s := s + ',@resource'
+    else if c = FLabelColumn then
+      if s = '' then
+        s := '@label'
+      else
+        s := s + ',@label'
+    else
+      if s = '' then
+        s := c.Caption
+      else
+        s := s + ',' + c.Caption;
+  end;
+
+  GlobalSettings.GUI.LastUsedGrouping := s;
+
+  SaveGUISettings([gvGridFields]);
 end;
 
 procedure TfGrid.SelectAll(b: boolean);
@@ -744,6 +861,15 @@ begin
   bbAdditional.Hint := bbAdditional.Caption;
   bbDALF.Caption := lang('_SDALF_');
   bbDALF.Hint := bbDALF.Caption;
+  bbAutoUnch.Caption := lang('_AUTOUNCHECKINVISIBLE_');
+  bbDALF.Hint := bbAutoUnch.Caption;
+
+  FResColumn.Caption := lang('_RESNAME_');
+  FLabelColumn.Caption := lang('_PICTURELABEL_');
+  FPosColumn.Caption := lang('_DOWNLOADED_');
+  FSizeColumn.Caption := lang('_SIZE_');
+
+  FProgressColumn.Caption := lang('_PROGRESS_');
 end;
 
 procedure TfGrid.SetSettings;
@@ -760,9 +886,48 @@ begin
   ResList.DWNLDHandler.Proxy := Globalsettings.Proxy;
   ResList.DWNLDHandler.ThreadCount := GlobalSettings.Downl.PicThreads;
   ResList.DWNLDHandler.Retries := GlobalSettings.Downl.Retries;
-  ResList.PictureList.IgnoreList := IgnoreList;
+  ResList.PictureList.IgnoreList := CopyDSArray(IgnoreList);
 
   bbDALF.Down := GlobalSettings.Downl.SDALF;
+  bbAutoUnch.Down := GlobalSettings.Downl.AutoUncheckInvisible;
+end;
+
+procedure TfGrid.UncheckInvisible;
+var
+  i: integer;
+begin
+  vGrid.BeginUpdate;
+  for i := 0 to VGrid.DataController.RecordCount-1 do
+    if VGrid.DataController.FilteredIndexByRecordIndex[i] = -1 then
+    begin
+      vGrid.DataController.Values[i,FCheckColumn.Index] := false;
+      ResList.PictureList[i].Checked := false;
+    end;
+
+  vGrid.DataController.Post(true);
+  vGrid.EndUpdate;
+end;
+
+procedure TfGrid.updatechecks;
+var
+  i: integer;
+begin
+  vGrid.BeginUpdate;
+  try
+  for i := 0 to vGrid.DataController.RecordCount-1 do
+  begin
+    vGrid.DataController.Values[i,FPosColumn.Index] := null;
+    vGrid.DataController.Values[i,FSizeColumn.Index] := null;
+    if not ResList.PictureList[i].Checked and vGrid.DataController.Values[i,0] then
+    begin
+      vGrid.DataController.Values[i,FProgressColumn.Index] := 'SKIP';
+      vGrid.DataController.Values[i,FCheckColumn.Index] := false;
+    end else
+      vGrid.DataController.Values[i,FProgressColumn.Index] := null;
+  end;
+  finally
+    vGrid.EndUpdate;
+  end;
 end;
 
 procedure TfGrid.updatefocusedrecord;
@@ -781,6 +946,70 @@ begin
     if n <> null then
       FPicChanged(Self,TTPicture(Integer(n)));
   end;
+end;
+
+procedure TfGrid.updatepic(pic: ttpicture);
+var
+  n: integer;
+  Changes: TPicChanges;
+
+begin
+    //Pic.Changes
+    Changes := Pic.Changes;
+
+    n := Pic.BookMark - 1;
+
+    with vGrid.DataController do
+    begin
+      if pcSize in Changes then
+        if Pic.Size = 0 then
+          Values[n,FSizeColumn.Index] := null
+        else
+          Values[n,FSizeColumn.Index] := GetBTString(Pic.Size);
+
+      if pcProgress in Changes then
+      begin
+        if (Pic.Pos = 0) or (Pic.Pos = Pic.Size) then
+          Values[n,FPosColumn.Index] := null
+        else
+          Values[n,FPosColumn.Index] := GetBTString(Pic.Pos);
+
+        case Pic.Status of
+          JOB_INPROGRESS:
+          if Pic.Size = 0 then
+            Values[n,FProgressColumn.Index] := 'START'
+          else
+            Values[n,FProgressColumn.Index] := Pic.Pos/Pic.Size * 100;
+              //FormatFloat('00.00%',);
+          JOB_FINISHED:
+            if Pic.Size = 0 then
+            begin
+              Values[n,FProgressColumn.Index] := 'SKIP';
+              //vGrid.EndUpdate;
+              //Application.ProcessMessages;
+              //vGrid.BeginUpdate;
+            end else
+              Values[n,FProgressColumn.Index] := 'OK';
+          JOB_ERROR: Values[n,FProgressColumn.Index] := 'ERROR';
+          JOB_CANCELED: Values[n,FProgressColumn.Index] := 'ABORT';
+        end;
+      end;
+
+    if pcLabel in Changes then
+      Values[n,FLabelColumn.Index] := Pic.DisplayLabel;
+
+    if pcChecked in Changes then
+      Values[n,FCheckColumn.Index] := Pic.Checked;
+    end;
+
+    pic.Changes := [];
+end;
+
+procedure TfGrid.updTimerTimer(Sender: TObject);
+begin
+  updTimer.Enabled := false;
+  doUpdates;
+  updTimer.Enabled := true;
 end;
 
 procedure TfGrid.vdBeforeOpen(DataSet: TDataSet);
@@ -844,6 +1073,19 @@ begin
   updatefocusedrecord;
 end;
 
+procedure TfGrid.vGridColumn1GetProperties(Sender: TcxCustomGridTableItem;
+  ARecord: TcxCustomGridRecord; var AProperties: TcxCustomEditProperties);
+var
+  n: variant;
+
+begin
+  n := ARecord.Values[Sender.Index];
+  if VarType(ARecord.Values[Sender.Index]) = varDouble then
+    AProperties := iPBar.Properties
+  else
+    AProperties := iState.Properties;
+end;
+
 procedure TfGrid.vGridEditValueChanged(Sender: TcxCustomGridTableView;
   AItem: TcxCustomGridTableItem);
 var
@@ -856,6 +1098,13 @@ begin
   begin
     ResList.PictureList[n].Checked := vGrid.DataController.Values[n,AItem.Index];
   end;
+end;
+
+procedure TfGrid.vGridFocusedItemChanged(Sender: TcxCustomGridTableView;
+  APrevFocusedItem, AFocusedItem: TcxCustomGridTableItem);
+begin
+  Sender.OptionsData.Editing := AFocusedItem <> FProgressColumn;
+
 end;
 
 end.

@@ -103,7 +103,6 @@ object fNewList: TfNewList
           end>
         Properties.ViewStyle = vsButtonsAutoWidth
         Properties.OnButtonClick = gRescButtonPropertiesButtonClick
-        OnGetProperties = gRescButtonGetProperties
         MinWidth = 23
         Options.ShowEditButtons = isebAlways
         Options.HorzSizing = False
@@ -201,8 +200,6 @@ object fNewList: TfNewList
       Caption = 'tsSettings'
       ImageIndex = 1
       OnShow = tsSettingsShow
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0

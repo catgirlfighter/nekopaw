@@ -23,10 +23,10 @@ uses
   EncryptStrings in 'EncryptStrings.pas',
   utils in 'utils.pas' {dm: TDataModule},
   UPDUnit in 'UPDUnit.pas',
-  //MyDataSet in 'MyDataSet.pas',
   LoginForm in 'LoginForm.pas' {fLogin},
   Whatsnewform in 'Whatsnewform.pas' {fWhatsNew},
-  PathEditorForm in 'PathEditorForm.pas' {fPathEditor};
+  PathEditorForm in 'PathEditorForm.pas' {fPathEditor},
+  NewDoublesRuleForm in 'NewDoublesRuleForm.pas' {fmDoublesNewRule};
 
 {$R *.res}
 
@@ -43,6 +43,7 @@ begin
 
   Application.CreateForm(Tdm, dm);
   Application.CreateForm(Tmf, mf);
+  Application.CreateForm(TfmDoublesNewRule, fmDoublesNewRule);
   //Application.CreateForm(TfWhatsNew, fWhatsNew);
   //Application.CreateForm(TfPathEditor, fPathEditor);
   //Application.CreateForm(TfLogin, fLogin);
