@@ -15,7 +15,6 @@ $picture.fields(
 	author:s:$$AUTHOR,
 	score:i:$$SCORE,
 	posted:d:$$POSTED,
-	post_date:d:$$POSTDATE,
 	md5:s:$$MD5,
 	source:s:$$SOURCE,
 	aspect_ratio:f:$$ASPECTRATIO);
@@ -63,7 +62,6 @@ $thread.referer = $picture%post_url;
 			%author=#author,
 			%score=#score,
 			%posted=@calc($pictime),
-			%post_date=@datepart(@calc($pictime)),
 			%md5=#md5,
 			%source=#source,
 			%aspect_ratio=#width/#height,
@@ -87,7 +85,6 @@ $thread.referer = $picture%post_url;
 		%author=#author,
 		%score=#score,
 		%posted=@calc($pictime),
-		%post_date=@datepart(@calc($pictime)),
 		%md5=#md5,
 		%source=#source,
 		%aspect_ratio=#width/#height,
