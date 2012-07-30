@@ -1,8 +1,8 @@
-<item file="Graber2.exe" archive="Graber2.zip" version=23 />
+<item file="Graber2.exe" archive="Graber2.zip" version=24 />
 <item file="versionlog.txt" version=-1 />
 
-<item file="resources\danbooru.tmpl" version=11 />
-<item file="resources\gelbooru.tmpl" version=7 />
+<item file="resources\danbooru.tmpl" version=12 />
+<item file="resources\gelbooru.tmpl" version=8 />
 
 <item file="resources\xbooru.com.cfg" version=1 />
 <item file="resources\wildcritters.ws.cfg" version=1 />
@@ -61,5 +61,5 @@
 
 <item file="resources\icons\ponibooru.413chan.net.bmp" version=0 deleted=1 />
 
-<item file="languages\Russian.ini" version=14 />
-<item file="languages\English.ini" version=14 />
+<item file="languages\Russian.ini" version=15 />
+<item file="languages\English.ini" version=15 />
