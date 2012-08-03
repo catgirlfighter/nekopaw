@@ -1,4 +1,4 @@
-<item file="Graber2.exe" archive="Graber2.zip" version=24 />
+<item file="Graber2.exe" archive="Graber2.zip" version=25 />
 <item file="versionlog.txt" version=-1 />
 
 <item file="resources\danbooru.tmpl" version=12 />
@@ -61,5 +61,5 @@
 
 <item file="resources\icons\ponibooru.413chan.net.bmp" version=0 deleted=1 />
 
-<item file="languages\Russian.ini" version=15 />
-<item file="languages\English.ini" version=15 />
+<item file="languages\Russian.ini" version=16 />
+<item file="languages\English.ini" version=16 />
