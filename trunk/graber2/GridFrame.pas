@@ -83,6 +83,8 @@ type
     procedure bbAutoUnchClick(Sender: TObject);
     procedure vGridFocusedItemChanged(Sender: TcxCustomGridTableView;
       APrevFocusedItem, AFocusedItem: TcxCustomGridTableItem);
+    procedure vGridColumn1GetFilterDisplayText(Sender: TcxCustomGridTableItem;
+      const AValue: Variant; var ADisplayText: string);
   private
     //FList: TList;
 //    FFieldList: TStringList;
@@ -107,12 +109,12 @@ type
     ResList: TResourceList;
     procedure Reset;
     procedure CreateList;
-    procedure OnPicAdd(APicture: TTPicture);
+    //procedure OnPicAdd(APicture: TTPicture);
 //    procedure CheckField(ch,s: string; value: variant);
     procedure OnStartJob(Sender: TObject; Action: Integer);
 //    procedure OnEndJob(Sender: TObject);
     function AddField(s: string; base: boolean = false): TcxGridColumn;
-    procedure OnBeginPicList(Sender: TObject);
+//    procedure OnBeginPicList(Sender: TObject);
     procedure OnEndPicList(Sender: TObject);
     procedure Relise;
     procedure SetLang;
@@ -335,10 +337,10 @@ begin
   end;
 end;
 
-procedure TfGrid.OnBeginPicList(Sender: TObject);
-begin
-
-end;
+//procedure TfGrid.OnBeginPicList(Sender: TObject);
+//begin
+//
+//end;
 
 procedure TfGrid.OnEndPicList(Sender: TObject);
 var
@@ -414,9 +416,10 @@ begin
 
     if c = 0 then
       BestFitWidths(vGrid);
-
+{
     if Assigned(FTagUpdate) then
       OnTagUpdate(Self,(Sender as TPictureList).Tags);
+}
 
     t3 := GetTickCount;
     sBar.Panels[1].Text := 'TTL ' + IntToStr(vGrid.DataController.RecordCount)
@@ -467,10 +470,10 @@ begin
   //BestFitWidths(vGrid);
 end;
 
-procedure TfGrid.OnPicAdd(APicture: TTPicture);
-begin
+//procedure TfGrid.OnPicAdd(APicture: TTPicture);
+//begin
   //FList.Add(APicture);
-end;
+//end;
 
 procedure TfGrid.OnListPicChanged(Pic: TTPicture; Changes: TPicChanges);
 begin
@@ -664,6 +667,7 @@ begin
     FProgressColumn.Editing := false;
     FProgressColumn.Visible := false;
     FProgressColumn.VisibleForCustomization := false;
+    //FProgressColumn.OnGetFilterDisplayText := vGridColumn1GetFilterDisplayText;
 
     if not Assigned(FFieldList) then
       FFieldList := TStringList.Create
@@ -1070,7 +1074,16 @@ procedure TfGrid.vGrid1FocusedRecordChanged(Sender: TcxCustomGridTableView;
   ANewItemRecordFocusingChanged: Boolean);
 
 begin
-  updatefocusedrecord;
+  if APrevFocusedRecord <> AFocusedRecord then
+    updatefocusedrecord;
+end;
+
+procedure TfGrid.vGridColumn1GetFilterDisplayText(
+  Sender: TcxCustomGridTableItem; const AValue: Variant;
+  var ADisplayText: string);
+begin
+  if VarType(AValue) = varDouble then
+    ADisplayText := 'PROGRESS';
 end;
 
 procedure TfGrid.vGridColumn1GetProperties(Sender: TcxCustomGridTableItem;
@@ -1103,7 +1116,8 @@ end;
 procedure TfGrid.vGridFocusedItemChanged(Sender: TcxCustomGridTableView;
   APrevFocusedItem, AFocusedItem: TcxCustomGridTableItem);
 begin
-  Sender.OptionsData.Editing := AFocusedItem <> FProgressColumn;
+  Sender.OptionsData.Editing := ResList.PicsFinished and
+    (AFocusedItem <> FProgressColumn);
 
 end;
 

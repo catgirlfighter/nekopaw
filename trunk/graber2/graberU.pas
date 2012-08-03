@@ -27,6 +27,8 @@ const
   CM_LANGUAGECHANGED = WM_USER + 15;
   CM_WHATSNEW = WM_USER + 16;
   CM_STYLECHANGED = WM_USER + 17;
+  CM_REFRESHRESINFO = WM_USER + 18;
+  CM_REFRESHPIC = WM_USER + 19;
 
   THREAD_STOP = 0;
   THREAD_START = 1;
@@ -390,10 +392,12 @@ type
     FLnkPic: TTPicture;
     FSTOPERROR: Boolean;
     FJobId: integer;
-    FCS: TCriticalSection;
+    FCSData: TCriticalSection;
+    FCSFiles: TCriticalSection;
     FResource: TResource;
     FMaxRetries: Integer;
     FRetries: integer;
+    FPicsAdded: boolean;
     // FPicLink: TTPicture;
     // FTagList: TStringList;
     // FPicList: TList;
@@ -455,9 +459,11 @@ type
     property JobId: integer read FJobId write FJobId;
     property Picture: TTPicture read FPicture write FPicture;
     property LnkPic: TTPicture read FLnkPic write FLnkPic;
-    property CSection: TCriticalSection read FCS write FCS;
+    property CSData: TCriticalSection read FCSData write FCSData;
+    property CSFiles: TCriticalSection read FCSFiles write FCSFiles;
     property Resource: TResource read FResource write FResource;
     property MaxRetries: integer read FMaxRetries write FMaxRetries;
+    property PicsAdded: boolean read FPicsAdded;
   end;
 
   TJobEvent = function(t: TDownloadThread): Boolean of object;
@@ -474,7 +480,8 @@ type
     FOnAllThreadsFinished: TNotifyEvent;
     FOnError: TLogEvent;
     FThreadCount: integer;
-    FCS: TCriticalSection;
+    FCSData: TCriticalSection;
+    FCSFiles: TCriticalSection;
     FRetries: Integer;
   protected
     function Finish(t: TDownloadThread): integer;
@@ -564,7 +571,7 @@ type
     FFileName: String;
     FExt: String;
     FMD5: TMD5Digest;
-    FOrig: TTPicture;
+    //FOrig: TTPicture;
     FSize: Int64;
     FPos: Int64;
     FPicChange: TPicChangeEvent;
@@ -598,7 +605,7 @@ type
     property md5: TMD5Digest read FMD5;
     property MD5String: String read GetMD5String;
     property PicName: String read FPicName write SetPicName;
-    property Orig: TTPicture read FOrig write FOrig;
+    //property Orig: TTPicture read FOrig write FOrig;
     property Resource: TResource read FResource write FResource;
     property Size: Int64 read FSize write FSize;
     property Pos: Int64 read FPos write FPos;
@@ -654,7 +661,7 @@ type
   TPictureList = class(TPictureLinkList)
   private
     FTags: TPictureTagList;
-    FOnAddPicture: TPictureEvent;
+    //FOnAddPicture: TPictureEvent;
     //FCheckDouble: TCheckFunction;
     FNameFormat: String;
     FPicChange: TPicChangeEvent;
@@ -680,7 +687,7 @@ type
     constructor Create;
     destructor Destroy; override;
     function Add(APicture: TTPicture; Resource: TResource): integer;
-    procedure AddPicList(APicList: TPictureList; Orig: Boolean);
+    procedure AddPicList(APicList: TPictureList);
     function CopyPicture(Pic: TTPicture; Child: boolean = false): TTPicture;
     function CheckDoubles(pic: TTPicture): boolean;
 //    function MakeFileName(index: integer): string;
@@ -690,7 +697,7 @@ type
     property Items;
     property Count;
     //property Resource;
-    property OnAddPicture: TPictureEvent read FOnAddPicture write FOnAddPicture;
+    //property OnAddPicture: TPictureEvent read FOnAddPicture write FOnAddPicture;
     //property CheckDouble: TCheckFunction read FCheckDouble write FCheckDouble;
     property NameFormat: String read FNameFormat write FNameFormat;
     procedure Clear; override;
@@ -930,6 +937,7 @@ uses LangString, common;
 {$IFDEF NEKODEBUG}
 var
   debugpath: string;
+  debugthreads: string;
 {$ENDIF}
 
 function CalcValue(s: variant; VE: TValueEvent; Lnk: TObject;
@@ -1448,6 +1456,8 @@ begin
     Exit;
   end;
   try
+    if (FVariantType <> varUString) and (VarToStr(Value) = '') then
+      Value := 0;
     Value := VarAsType(Value,FVariantType);
   except
     on e: exception do
@@ -1489,6 +1499,8 @@ var
 
 begin
   New(p);
+  if (FVariantType <> varUString) and (VarToStr(Value) = '') then
+    Value := 0;
   p^ := VarAsType(Value,FVariantType);
   Insert(Pos,p);
   Result := p;
@@ -2376,8 +2388,6 @@ procedure TResource.CreatePicJob(t: TDownloadThread);
 begin
   // t.JobId := ;
   t.Picture := FPictureList.NextJob(JOB_PICS);
-  {$IFDEF NEKODEBUG}SaveStrToFile('CreatePicJob'+Format('%p',[Pointer(t.Picture)]) + '>' + Format('%p',[Pointer(t)]),
-  debugpath+'res'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
   t.JobComplete := PicJobComplete;
   t.InitialScript := FPicScript;
   { if not JobInitiated then
@@ -2397,8 +2407,6 @@ begin
   t.Job := JOB_PICS;
   { inc(FHTTPRec.Counter);}
     inc(FPictureThreadCount);
-  {$IFDEF NEKODEBUG}SaveStrToFile('CreatedPicJob'+Format('%p',[Pointer(t.Picture)]) + '>' + Format('%p',[Pointer(t)]),
-  debugpath+'res'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
 end;
 
 procedure TResource.DeclorationEvent(ItemName: String; ItemValue: Variant; LinkedObj: TObject);
@@ -2556,21 +2564,34 @@ begin
       // FJobInitiated := true;
     end;
   finally
+
+    if (t.PicsAdded) and (t.PictureList.Count > 0)  then
+    begin
+      //for i := 0 to t.PictureList.Count -1 do
+      //  FPictureList.Add(t.PictureList[i].Orig);
+      if Assigned(Self) and t.PicsAdded then
+        PictureList.Link.OnEndAddList(Self);
+      //s := GetTickCount;
+      //FOnError(Self, IntToStr(GetTickCount - s) + ' ms');
+    end;
+
     if t.ReturnValue = THREAD_COMPLETE then
       case t.Job of
         JOB_LIST:
           begin
             inc(FJobList.FOkCount);
             FJobList[t.JobId].Status := JOB_FINISHED;
+{
             if t.PictureList.Count > 0 then
             begin
-              for i := 0 to t.PictureList.Count -1 do
-                FPictureList.Add(t.PictureList[i].Orig);
-              if Assigned(PictureList.Link.OnEndAddList) then
-                PictureList.Link.OnEndAddList(t.PictureList);
+              //for i := 0 to t.PictureList.Count -1 do
+              //  FPictureList.Add(t.PictureList[i].Orig);
+              if Assigned(Self) and t.PicsAdded then
+                PictureList.Link.OnEndAddList(Self);
               //s := GetTickCount;
               //FOnError(Self, IntToStr(GetTickCount - s) + ' ms');
             end;
+}
           end;
         JOB_ERROR:
           begin
@@ -2591,8 +2612,13 @@ begin
         FJobList.Clear
       else
       begin
-        inc(FJobList.FErrCount);
-        FJobList[t.JobId].Status := JOB_ERROR;
+        if t.ReturnValue = THREAD_FINISH then
+          FJobList[t.JobId].Status := JOB_CANCELED
+        else
+        begin
+          inc(FJobList.FErrCount);
+          FJobList[t.JobId].Status := JOB_ERROR;
+        end;
       end;
     end;
 
@@ -2985,8 +3011,6 @@ var
   i: integer;
 
 begin
-  {$IFDEF NEKODEBUG}SaveStrToFile('CreatePicJob' + '>' + Format('%p',[Pointer(t)]),
-    debugpath+'reslist'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
   if FQueueIndex > Count - 1 then
     if FLoginMode then
     begin
@@ -3012,8 +3036,6 @@ begin
         r.CreateLoginJob(t);
         Result := true;
         FQueueIndex := i + 1;
-        {$IFDEF NEKODEBUG}SaveStrToFile('CreatedPicJob'+Format('%p',[Pointer(R)]) + '>' + Format('%p',[Pointer(t)]),
-          debugpath+'reslist'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
         Exit;
       end else
     else
@@ -3024,8 +3046,6 @@ begin
         // R.NextPage := false;
         Result := true;
         inc(FQueueIndex);
-        {$IFDEF NEKODEBUG}SaveStrToFile('CreatedPicJob'+Format('%p',[Pointer(R)]) + '>' + Format('%p',[Pointer(t)]),
-          debugpath+'reslist'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
         Exit;
       end;
   end;
@@ -3042,8 +3062,6 @@ begin
         R.NextPage := false;
         Result := true;
         inc(FQueueIndex);
-        {$IFDEF NEKODEBUG}SaveStrToFile('CreatedPicJob'+Format('%p',[Pointer(R)]) + '>' + Format('%p',[Pointer(t)]),
-          debugpath+'reslist'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
         Exit;
       end;
     end;
@@ -3051,9 +3069,6 @@ begin
   // if no task then result = false
 
   Result := false;
-
-  {$IFDEF NEKODEBUG}SaveStrToFile('PicJobNotCreated>' + Format('%p',[Pointer(t)]),
-    debugpath+'reslist'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
 
   if FLoginMode then
     FThreadHandler.FinishQueue;
@@ -3430,23 +3445,18 @@ begin
   while not terminated do
   begin
     // FErrorString := '';
+    FPicsAdded := false;
     try
-      {$IFDEF NEKODEBUG}SaveStrToFile('NewIteration',
-        debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
       Synchronize(DoFinish);
       case ReturnValue of
         THREAD_STOP:
           begin
-            {$IFDEF NEKODEBUG}SaveStrToFile('ThreadStop',
-              debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
             ResetEvent(FEventHandle);
             WaitForSingleObject(FEventHandle, INFINITE);
             Continue;
           end;
         THREAD_FINISH:
         begin
-          {$IFDEF NEKODEBUG}SaveStrToFile('ThreadFinish',
-            debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
           Break;
         end;
       end;
@@ -3455,9 +3465,6 @@ begin
         raise Exception.Create('thread.execute: resource not assigned');
 
       try
-
-        // Self.ReturnValue := -1;
-
         if Job = JOB_PICS then
         begin
           FPicture.Changes := [];
@@ -3476,8 +3483,6 @@ begin
         begin
           if not FInitialScript.Empty then
           begin
-            {$IFDEF NEKODEBUG}SaveStrToFile('ParseInitialScript',
-              debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
             FInitialScript.Process(SE, DE, FE, VE, VE);
           end else
           begin
@@ -3494,13 +3499,14 @@ begin
         end;
 
         if Self.ReturnValue <> THREAD_FINISH then
-          Self.ReturnValue := THREAD_COMPLETE;
-        {$IFDEF NEKODEBUG}SaveStrToFile('ThreadFinished',
-          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+          Self.ReturnValue := THREAD_COMPLETE
+        {$IFDEF NEKODEBUG}else FCSFiles.Enter;SaveStrToFile('thread_'+Format('%p',[Pointer(Self)])+': threadaborted',debugthreads,true);FCSFiles.Leave;{$ENDIF}
       finally
-        {$IFDEF NEKODEBUG}SaveStrToFile('SynchronizeResult',
-          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+        {$IFDEF NEKODEBUG}FCSFiles.Enter;if FJOB = JOB_ERROR then
+        SaveStrToFile('thread_'+Format('%p',[Pointer(Self)])+': httperror ' + FERRORSTRING,debugthreads,true);FCSFiles.Leave;{$ENDIF}
+        {$IFDEF NEKODEBUG}FCSFiles.Enter;SaveStrToFile('thread_'+Format('%p',[Pointer(Self)])+': startjobsynch',debugthreads,true);FCSFiles.Leave;{$ENDIF}
         Synchronize(DoJobComplete);
+        {$IFDEF NEKODEBUG}FCSFiles.Enter;SaveStrToFile('thread_'+Format('%p',[Pointer(Self)])+': finishjobsynch',debugthreads,true);FCSFiles.Leave;{$ENDIF}
         FPicList.Clear;
         FPicture := nil;
       end;
@@ -3508,8 +3514,9 @@ begin
       on e: Exception do
       begin
         FErrorString := e.Message;
-        {$IFDEF NEKODEBUG}SaveStrToFile('ThreadError>'+FErrorString,
-          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
+
+        {$IFDEF NEKODEBUG}FCSFiles.Enter;SaveStrToFile('thread_'+Format('%p',[Pointer(Self)])+': threaderror ' + FErrorString,debugthreads,true);FCSFiles.Leave;{$ENDIF}
+
         if FSTOPERROR then
           Break
         else
@@ -4199,6 +4206,9 @@ var
   s: string;
   Url: string;
 begin
+
+  {$IFDEF NEKODEBUG}FCSFiles.Enter;SaveStrToFile('thread_'+Format('%p',[Pointer(Self)])+': starthttp',debugthreads,true);FCSFiles.Leave;{$ENDIF}
+
   if (FHTTPRec.Counter >= FHTTPRec.Count)
     and (FHTTPRec.Counter > 0) then
     Exit;
@@ -4272,12 +4282,22 @@ begin
 
       FAfterScript.Process(SE, DE, FE, VE, VE);
 
-      CSection.Enter;
+      {$IFDEF NEKODEBUG}FCSFiles.Enter;SaveStrToFile('thread_'+Format('%p',[Pointer(Self)])+': picstolist',debugthreads,true);FCSFiles.Leave;{$ENDIF}
+
+      if ReturnValue = THREAD_FINISH then
+        Break;
+
+      {$IFDEF NEKODEBUG}FCSFiles.Enter;SaveStrToFile('thread_'+Format('%p',[Pointer(Self)])+': picstolist',debugthreads,true);FCSFiles.Leave;{$ENDIF}
+
+      CSData.Enter;
       try
-        FLPicList.AddPicList(FPicList,true);
+        FLPicList.AddPicList(FPicList);
+        FPicsAdded := true;
       finally
-        CSection.Leave;
+        CSData.Leave;
       end;
+
+      {$IFDEF NEKODEBUG}FCSFiles.Enter;SaveStrToFile('thread_'+Format('%p',[Pointer(Self)])+': finishhttp',debugthreads,true);FCSFiles.Leave;{$ENDIF}
 
       Break;
     except
@@ -4295,10 +4315,6 @@ var
   Dir: string;
 
 begin
-
-  {$IFDEF NEKODEBUG}SaveStrToFile('ProcPicStart',
-    debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
-
   f := nil;
   FRetries := 0;
   while true do
@@ -4306,13 +4322,8 @@ begin
     try
       Dir := ExtractFileDir(FPicture.FileName);
 
-      {$IFDEF NEKODEBUG}SaveStrToFile('EnterFileCheckQueue',
-        debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
-
-      FCS.Enter;
+      FCSFiles.Enter;
       try
-        {$IFDEF NEKODEBUG}SaveStrToFile('CheckFileExists>'+FPicture.FileName,
-          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
 
         if FileExists(FPicture.FileName) then
         begin
@@ -4320,36 +4331,19 @@ begin
             FPicture.Pos; }
           FPicture.Changes := [pcSize, pcProgress];
           Synchronize(PicChanged);
-          {$IFDEF NEKODEBUG}SaveStrToFile('FileExistsExit',
-            debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
           //FCS.Leave;
           Exit;
         end;
 
-        {$IFDEF NEKODEBUG}SaveStrToFile('CheckDirectoryExists>'+Dir,
-          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
-
         if not DirectoryExists(Dir) then
         begin
           CreateDirExt(Dir);
-
-          {$IFDEF NEKODEBUG}SaveStrToFile('DirectoryCreated',
-            debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
         end;
-
-        {$IFDEF NEKODEBUG}
-        SaveStrToFile('CreateFileStream',
-        debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);
-        {$ENDIF}
 
         f := TFileStream.Create(FPicture.FileName, fmCreate);
       finally
-        {$IFDEF NEKODEBUG}
-        SaveStrToFile('LeaveFileCheckQueue',
-        debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);
-        {$ENDIF}
 
-        FCS.Leave;
+        FCSFiles.Leave;
       end;
 
       try
@@ -4364,24 +4358,16 @@ begin
         end else
           FHTTP.IOHandler := nil;
 
-        {$IFDEF NEKODEBUG}SaveStrToFile('StartGettingPic>'+HTTPRec.Url,
-          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
-
         FPicture.Changes := [pcSize, pcProgress];
         Synchronize(PicChanged);
 
         HTTP.Get(HTTPRec.Url, f);
         //HTTP.Disconnect;
 
-        {$IFDEF NEKODEBUG}SaveStrToFile('GettingPicFinished',
-          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
-
         if ReturnValue = THREAD_FINISH then
         begin
           FJOB := JOB_CANCELED;
 
-          {$IFDEF NEKODEBUG}SaveStrToFile('GettingPicCanceled',
-            debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
         end;
 
           //FPicture.Changes := [pcSize, pcProgress];
@@ -4389,9 +4375,6 @@ begin
 
         if FPicture.Size <> f.Size then
         begin
-          {$IFDEF NEKODEBUG}SaveStrToFile('Incorrectfilesize>'+IntToStr(FPicture.Size)
-            + '=' + IntToStr(f.Size),
-            debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
           f.Free;
           FPicture.Size := 0;
           FPicture.Pos := 0;
@@ -4404,8 +4387,6 @@ begin
           else
             if (FRetries < FMAXRetries) then
             begin
-              {$IFDEF NEKODEBUG}SaveStrToFile('IncountRetries>'+IntToStr(FRetries),
-                debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
               inc(FRetries);
               Continue;
             end else
@@ -4418,8 +4399,6 @@ begin
       except
         on e: EIdSocketError do
         begin
-          {$IFDEF NEKODEBUG}SaveStrToFile('SocketError>'+e.Message,
-            debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
           f.Free;
           DeleteFile(FPicture.FileName);
           FPicture.Size := 0;
@@ -4432,8 +4411,6 @@ begin
           else
             if (FRetries < FMAXRetries) and (ReturnValue <> THREAD_FINISH) then
             begin
-              {$IFDEF NEKODEBUG}SaveStrToFile('IncountRetries>'+IntToStr(FRetries),
-                debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
               inc(FRetries);
             end else
             begin
@@ -4443,8 +4420,6 @@ begin
         end;
         on e: Exception do
         begin
-          {$IFDEF NEKODEBUG}SaveStrToFile('HTTPError>'+e.Message,
-            debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
           f.Free;
           DeleteFile(FPicture.FileName);
           FPicture.Size := 0;
@@ -4452,8 +4427,6 @@ begin
           if (HTTP.ResponseCode <> 404)
           and (FRetries < FMAXRetries) and (ReturnValue <> THREAD_FINISH) then
           begin
-            {$IFDEF NEKODEBUG}SaveStrToFile('IncountRetries>'+IntToStr(FRetries),
-              debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
             inc(FRetries);
           end else
           begin
@@ -4465,8 +4438,6 @@ begin
     except
       on e: Exception do
       begin
-        {$IFDEF NEKODEBUG}SaveStrToFile('ProcPicError>'+e.Message,
-          debugpath+'thread'+Format('%p',[Pointer(Self)])+'.txt',true);{$ENDIF}
         if Assigned(f) then
         begin
           f.Free;
@@ -5138,9 +5109,9 @@ begin
   and (APicture.Resource.NameFormat <> '')
   and (APicture.FileName <> '') then
     APicture.MakeFileName(FNameFormat);}
-  MakePicFileName(Result, NameFormat);
-  if Assigned(FOnAddPicture) then
-    FOnAddPicture(APicture);
+  //MakePicFileName(Result, NameFormat);
+  //if Assigned(FOnAddPicture) then
+  //  FOnAddPicture(APicture);
 end;
 
 function TPictureList.DirNumber(Dir: String): word;
@@ -5235,9 +5206,9 @@ begin
   end;
 end;
 
-procedure TPictureList.AddPicList(APicList: TPictureList; Orig: Boolean);
+procedure TPictureList.AddPicList(APicList: TPictureList);
 var
-  i, j, v: integer;
+  i, j{, v}: integer;
   n: DWORD;
   t, ch: TTPicture;
 begin
@@ -5259,26 +5230,27 @@ begin
               ch := CopyPicture(APicList[i].Linked[j]);
               //Inc(FChildsCount);
               ch.BookMark := FChildsCount;
-              if Orig then
-                APicList[i].Linked[j].Orig := ch;
+              //if Orig then
+              //  APicList[i].Linked[j].Orig := ch;
               t.Linked.Add(ch);
               ch.Parent := t;
             end;
-          if Orig then
-            APicList[i].Orig := t;
+          //if Orig then
+          //  APicList[i].Orig := t;
 
         end;
         inc(i);
       end
       else
       begin
-         if Orig then
-          APicList.Delete(i)
-        else
+        //if Orig then
+        //  APicList.Delete(i)
+        //else
           inc(i);
         Inc(FPicCounter.IGN);
       end;
 
+{
     if Orig then
       for j := 0 to APicList.Tags.Count-1 do
       begin
@@ -5287,6 +5259,7 @@ begin
         else
           APicList.Tags[j].Tag := -1;
       end;
+}
 
   finally
     FDoublesTickCount := GetTickCount - n;
@@ -5353,12 +5326,14 @@ begin
   end;
 
   Result.Resource := Pic.Resource;
+  Result.Resource.PictureList.Add(Result);
   Result.OnPicChanged := OnPicChanged;
   Result.List := Self;
   //Result.MakeFileName(FNameFormat);
+
   MakePicFileName(i,NameFormat);
-  if Assigned(FOnAddPicture) then
-    FOnAddPicture(Result);
+  //if Assigned(FOnAddPicture) then
+  //  FOnAddPicture(Result);
 end;
 
 constructor TPictureList.Create;
@@ -5409,46 +5384,48 @@ var
 
 // check names
   function ParamCheck(pic: TTPicture; bfr,bfr2,s2,aft,aft2: String; level: byte;
-    main,b: Boolean): Variant;
+    main,b: Boolean; var Value: Variant): boolean;
 
-  function formatstr(value: variant; aformat: string; d: boolean): string;
-  var
-    t: integer;
-  begin
-    if (aformat = '') then
-      result := ValidFName(value,d)
-    else
-      if VarIsType(value,varDate) then
-          Result := ValidFName(FormatDateTime(aformat,value),d)
-        else
-        begin
-          t := CharPosEx(s2,['d','e','f','g','n','m','p','s','u','x',
-                             'D','E','F','G','N','M','P','S','U','X'],[],[]);
-          case lowercase(s2[t])[1] of
-            'd','u','x':
-              Result := ValidFName(SysUtils.Format('%'+s2,[Trunc(value)]),d);
-            'e','f','g','n','m':
-              Result := ValidFName(SysUtils.Format('%'+s2,[Double(value)]),d);
-            's':
-              Result := ValidFName(SysUtils.Format('%'+s2,[VarToStr(value)]),d);
-            'p':
-            begin
-              s2[t] := 'x';
-              Result := ValidFName(SysUtils.Format('%'+s2,[Trunc(value)]),d);
+    function formatstr(value: variant; aformat: string; d: boolean): string;
+    var
+      t: integer;
+    begin
+      if (aformat = '') then
+        result := ValidFName(value,d)
+      else
+        if VarIsType(value,varDate) then
+            Result := ValidFName(FormatDateTime(aformat,value),d)
+          else
+          begin
+            t := CharPosEx(s2,['d','e','f','g','n','m','p','s','u','x',
+                               'D','E','F','G','N','M','P','S','U','X'],[],[]);
+            case lowercase(s2[t])[1] of
+              'd','u','x':
+                Result := ValidFName(SysUtils.Format('%'+s2,[Trunc(value)]),d);
+              'e','f','g','n','m':
+                Result := ValidFName(SysUtils.Format('%'+s2,[Double(value)]),d);
+              's':
+                Result := ValidFName(SysUtils.Format('%'+s2,[VarToStr(value)]),d);
+              'p':
+              begin
+                s2[t] := 'x';
+                Result := ValidFName(SysUtils.Format('%'+s2,[Trunc(value)]),d);
+              end;
+                //s2[2] := 'x';
             end;
-              //s2[2] := 'x';
+            //Result := ValidFName(SysUtils.Format('%'+s2,[VarToStr(n.Value])));
           end;
-          //Result := ValidFName(SysUtils.Format('%'+s2,[VarToStr(n.Value])));
-        end;
-  end;
+    end;
 
   var
     n: TListValue;
-    s,p: string;
+    s,p,tmp: string;
     c: integer;
     d: boolean;
+
   begin
-    //tmp := s2;
+    Result := true;
+    tmp := s2;
     s := GetNextS(s2,':');
     p := CopyFromTo(s,'(',')',true);
     if p <> '' then
@@ -5456,47 +5433,48 @@ var
     d := false;
     if main then
       if SameText(s,'nn') then
-        Result := IndexOf(pic) + 1
+        Value := IndexOf(pic) + 1
       else if SameText(s,'fnn') then
       begin
         if p <> '' then
           c := Max(StrToInt(p),1)
         else
           c := 1;
-        Result := (DirNumber(ExtractFilePath(bfr+bfr2)) div c) + 1
+        Value := (DirNumber(ExtractFilePath(bfr+bfr2)) div c) + 1
       end else if SameText(s,'fn') then
         if level < 1 then
         begin
           inc(fncounter);
-          Result := null;
+          Value := null;
+          Result := false;
           Exit;
         end else
           if fncounter = 1 then
           begin
-            Result := 0;
+            Value := 0;
             repeat
 
-              if b and (result = 0) then
+              if b and (Value = 0) then
                 p := bfr + aft
               else
-                p := bfr + bfr2 + formatstr(Result,s2,false) + aft2 + aft;
+                p := bfr + bfr2 + formatstr(Value,s2,false) + aft2 + aft;
 
               if fnoext then
                 p := p + '.' + pic.Ext;
 
               c := FNameNumber(p);
-              if Result > 0 then
+              if Value > 0 then
               begin
-                Result := c + 1;
+                Value := c + 1;
                 c := 0;
               end else
                 if c > 0 then
-                  inc(Result);
+                  inc(Value);
             until (c = 0);
 
-            if (Result = 0) and b then
+            if (Value = 0) and b then
             begin
-              Result := null;
+              Value := null;
               Exit;
             end;
           end
@@ -5505,38 +5483,39 @@ var
             dec(fncounter);
             if b then
             begin
-              Result := null;
+              Value := null;
               Exit;
             end else
-              Result := 0;
+              Value := 0;
           end
       else if SameText(s,'rname') then
-        Result := pic.Resource.Name
+        Value := pic.Resource.Name
       else if SameText(s,'short') then
-        Result := pic.Resource.Short
+        Value := pic.Resource.Short
       else if SameText(s, 'fname') then
-        Result := ValidFName(pic.PicName)
+        Value := ValidFName(pic.PicName)
       else if SameText(s, 'ext') then
-        Result := pic.Ext
+        Value := pic.Ext
       else if SameText(s, 'rootdir') then
       begin
-        Result := ExtractFileDir(paramstr(0));
+        Value := ExtractFileDir(paramstr(0));
         d := true;
       end
       else if SameText(s,'tag') then
-        Result := VarToStr(pic.Resource.Fields['tag'])
+        Value := VarToStr(pic.Resource.Fields['tag'])
       else if SameText(s,'tags') then
       begin
         if p = '' then
           c := 0
         else
           c := StrToInt(p);
-        Result := Copy(pic.Tags.AsString(c),1,200);
+        Value := Copy(pic.Tags.AsString(c),1,200);
       end
 
       else
       begin
-        Result := null;
+        Value := null;
+        Result := false;
         Exit;
       end
     else
@@ -5545,14 +5524,14 @@ var
 
       if n = nil then
       begin
-        Result := null;
+        Value := null;
+        Result := false;
         Exit;
       end else
-        Result := n.Value;
+        Value := n.Value;
     end;
 
-    Result := formatstr(Result,s2,d);
-
+    Value := formatstr(Value,s2,d);
   end;
 // check keywords: $main$, %editional%, if b then result = '' if key = ''
   function ParseValues(pic: TTPicture; bfr,s,aft: String; level: byte; b: Boolean = true): String;
@@ -5587,19 +5566,18 @@ var
         Continue;
 
       key := Copy(s, i + 1, n - i - 1);
-      rsl := ParamCheck(pic,bfr,Copy(s,1,i-1),
+      if ParamCheck(pic,bfr,Copy(s,1,i-1),
               key,
-              aft,Copy(s,n + 1, length(s) - n - 1), level, s[i] = '$', b);
-
-      if rsl <> null then
+              aft,Copy(s,n + 1, length(s) - n - 1), level, s[i] = '$', b,rsl)
+      then
       begin
-        if not c and (rsl <> '') then
+        if not c and (VarToStr(rsl) <> '') then
           c := true;
-        s := StringReplace(s, s[i] + key + s[n], rsl,[]);
+        s := StringReplace(s, s[i] + key + s[n], VarToStr(rsl),[]);
       end
       else
       begin
-        if b and (level < 1) then
+        if b and (level < 1) and (s[i] = '$') then
           hghlvl := true;
         Continue;
       end;
@@ -6042,7 +6020,8 @@ begin
   begin
     inc(FCount);
     d := TDownloadThread.Create;
-    d.CSection := FCS;
+    d.CSData := FCSData;
+    d.CSFiles := FCSFiles;
     d.FreeOnTerminate := true;
     d.Finish := Finish;
     d.OnTerminate := ThreadTerminate;
@@ -6177,12 +6156,14 @@ begin
   // FQueue := TResourceLinkList.Create;
   FFinishThreads := true;
   FOnError := nil;
-  FCS := TCriticalSection.Create;
+  FCSData := TCriticalSection.Create;
+  FCSFiles := TCriticalSection.Create;
 end;
 
 destructor TThreadHandler.Destroy;
 begin
-  FCS.Free;
+  FCSData.Free;
+  FCSFiles.Free;
   inherited;
   // FQueue.Free;
   // inherited;
@@ -6237,8 +6218,11 @@ end;
 initialization
 
 {$IFDEF NEKODEBUG}
-debugpath := ExtractFilePath(paramstr(0)) + 'log\';
-CreateDirExt(debugpath);
+  debugpath := ExtractFilePath(paramstr(0)) + 'log\';
+  CreateDirExt(debugpath);
+  debugthreads := debugpath + 'threads.txt';
+  if fileexists(debugthreads) then
+    DeleteFile(debugthreads);
 {$ENDIF}
 
 end.

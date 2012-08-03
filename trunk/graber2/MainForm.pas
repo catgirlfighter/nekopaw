@@ -147,7 +147,6 @@ type
       var ACanClose: Boolean);
     procedure FormResize(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
-    procedure DockManagerActiveDockControlChanged(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure cxSpinEdit1PropertiesEditValueChanged(Sender: TObject);
@@ -169,6 +168,8 @@ type
     procedure LANGUAGECHANGED(var Msg: TMessage); message CM_LANGUAGECHANGED;
     procedure WHATSNEW(var Msg: TMessage); message CM_WHATSNEW;
     procedure STYLECHANGED(var Msg: TMessage); message CM_STYLECHANGED;
+    procedure WREFRESHPIC(var Msg: TMessage); message CM_REFRESHPIC;
+    procedure WREFRESHRESINFO(var Msg: TMessage); message CM_REFRESHRESINFO;
     //procedure dxTabClose(Sender: TdxCustomDockControl);
     // procedure APPLYEDITLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
   private
@@ -176,7 +177,7 @@ type
     dsFirstShow: Boolean;
     SttPanel: TMycxTabSheet;
     FCookie: TMyCookieList;
-    CurPic: TTPicture;
+    FCurPic: TTPicture;
     { Private declarations }
   public
     // OldState: TmfState;
@@ -197,6 +198,8 @@ type
     procedure RefreshResInfo(Sender: TObject);
     function CloseAllTabs: boolean;
     procedure RefreshTags(Sender: TObject; t: TPictureTagLinkList);
+    procedure DoPicInfo(Sender: TObject; a: TTPicture);
+   procedure DoRefreshResInfo(Sender: TObject);
 
     { Public declarations }
   end;
@@ -488,14 +491,14 @@ end;
 
 begin
   if Sender = nil then
-    CurPic := nil
+    FCurPic := nil
   else if ((pcTables.ActivePage as tMycxTabSheet).MainFrame <> Sender)
-     or (CurPic = a) then
+     or (FCurPic = a) then
     Exit
   else
-    CurPic := a;
+    FCurPic := a;
 
-  if CurPic = nil then
+  if FCurPic = nil then
   begin
     vgCurMain.ClearRows;
     chlbTags.Clear;
@@ -536,7 +539,6 @@ var
   i: integer;
   c: TcxEditorRow;
 begin
-
     //vgTagsMain.ClearRows;
     if (pcTables.ActivePage is TMycxTabSheet)
     and ((pcTables.ActivePage as TMycxTabSheet).MainFrame is tfGrid) then
@@ -651,7 +653,7 @@ begin
   if VarToStr(FullResList[0].Fields['tag']) <> '' then
     n.Caption := FullResList[0].Fields['tag'];
 
-  f2.ResList.OnPageComplete := RefreshResInfo;
+  f2.ResList.OnPageComplete := DoRefreshResInfo;
   //f2.OnTagUpdate := RefreshTags;
 
   with f.tvRes.DataController do
@@ -668,7 +670,7 @@ begin
   f2.Parent := n;
   f2.ResList.ThreadHandler.Cookies := FCookie;
   f2.ResList.DWNLDHandler.Cookies := FCookie;
-  f2.OnPicChanged := PicInfo;
+  f2.OnPicChanged := DoPicInfo;
   f2.SetSettings;
   f2.SetLang;
 
@@ -945,6 +947,16 @@ begin
   end;
 end;
 
+procedure Tmf.WREFRESHRESINFO(var Msg: TMessage);
+begin
+  RefreshResInfo(TObject(Msg.LParam));
+end;
+
+procedure Tmf.WREFRESHPIC(var Msg: TMessage);
+begin
+  PicInfo(TObject(Msg.WParam),TTPicture(Msg.LParam));
+end;
+
 procedure Tmf.StartUpdate;
 var
   f: tfileStream;
@@ -1067,9 +1079,14 @@ begin
 
 end;
 
-procedure Tmf.DockManagerActiveDockControlChanged(Sender: TObject);
+procedure Tmf.DoPicInfo(Sender: TObject; a: TTPicture);
 begin
+  PostMessage(Handle,CM_REFRESHPIC,Integer(Sender),Integer(a));
+end;
 
+procedure Tmf.DoRefreshResInfo(Sender: TObject);
+begin
+  PostMessage(Handle,CM_REFRESHRESINFO,0,Integer(Sender));
 end;
 
 {procedure Tmf.dxTabClose(Sender: TdxCustomDockControl);
@@ -1232,8 +1249,10 @@ begin
   dsLogs.AutoHide := true;
   dsLogs.Hide;
   dsTags.Hide;
-  CurPic := nil;
-  if GlobalSettings.AutoUPD then
+  FCurPic := nil;
+  if opbase.ShowSettings then
+    PostMessage(Handle,CM_SHOWSETTINGS,0,0)
+  else if GlobalSettings.AutoUPD then
     PostMessage(Handle,CM_UPDATE,0,0);
   if GlobalSettings.ShowWhatsNew and GlobalSettings.IsNew then
     PostMessage(Handle,CM_WHATSNEW,0,0);

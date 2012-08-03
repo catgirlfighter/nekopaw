@@ -10,7 +10,8 @@ var
   IgnoreList,AddFields: TDSArray;
   rootdir: string;
   profname: string = 'default.ini';
-  langname: string = 'English';
+  langname: string = '';
+  ShowSettings: boolean;
 
 {  TProxyRec = record
     UseProxy: boolean;
@@ -196,7 +197,11 @@ begin
       SkinName := INI.ReadString('settings','skinname','');
       UPDServ := INI.ReadString('settings','updserver',
         'http://nekopaw.googlecode.com/svn/trunk/release/graber2/');
-      langname := INI.ReadString('settings','language',langname);
+      langname := INI.ReadString('settings','language','');
+      ShowSettings := langname = '';
+
+      if ShowSettings then
+        langname := 'English';
 
       with GUI do
       begin
@@ -233,44 +238,49 @@ begin
         if Password <> '' then
           Password := DecryptString(Password,KeyString);
       end;
-  {
-      with Formats do
-      begin
-        ListFormat := INI.ReadString('formats','list','$rootdir$\lists\$tag$.ngl');
-        PicFormat := INI.ReadString('formats','picture','$rootdir$\pics\$rname$\$fname$.$ext$');
-      end;
-  }
+
       v := tstringlist.Create;
       try
         INI.ReadSection('IgnoreList',v);
-        //j := 0;
-        SetLength(IgnoreList,v.Count);
-        for i := 0 to v.Count-1 do
-        begin
-          //s := INI.ReadString('IgnoreList',v[i],'');
-          IgnoreList[i][0] := v[i];
-          IgnoreList[i][1] := INI.ReadString('ignorelist',v[i],'');
-          {Checking old format}
-          if pos('=',CopyTo(IgnoreList[i][1],';',['""'],[],false)) = 0 then
-          begin
-            //INI.DeleteKey('ignorelist',IgnoreList[i][0]);
-            IgnoreList[i][1] := IgnoreList[i][0] + '=' +
-                                IgnoreList[i][1];
-            IgnoreList[i][0] := 'rule' + IntToStr(i + 1);
-            //INI.WriteString('ignorelist',IgnoreList[i][0],IgnoreList[i][1]);
-          end;
 
+        if (v.Count = 0) and ShowSettings then
+        begin
+          SetLength(IgnoreList,1);
+          IgnoreList[0][0] := 'md5Check';
+          IgnoreList[0][1] := 'md5=md5';
+        end else
+        begin
+          SetLength(IgnoreList,v.Count);
+          for i := 0 to v.Count-1 do
+          begin
+            IgnoreList[i][0] := v[i];
+            IgnoreList[i][1] := INI.ReadString('ignorelist',v[i],'');
+            {Checking old format}
+            if pos('=',CopyTo(IgnoreList[i][1],';',['""'],[],false)) = 0 then
+            begin
+              IgnoreList[i][1] := IgnoreList[i][0] + '=' +
+                                  IgnoreList[i][1];
+              IgnoreList[i][0] := 'rule' + IntToStr(i + 1);
+            end;
+
+          end;
         end;
 
         //v.Clear;
         INI.ReadSection('fields',v);
 
-        SetLength(AddFields,v.Count);
-
-        for i := 0 to v.Count-1 do
+        if v.Count = 0 then
         begin
-          AddFields[i][0] := v[i];
-          AddFields[i][1] := INI.ReadString('fields',v[i],'');
+
+        end else
+        begin
+          SetLength(AddFields,v.Count);
+
+          for i := 0 to v.Count-1 do
+          begin
+            AddFields[i][0] := v[i];
+            AddFields[i][1] := INI.ReadString('fields',v[i],'');
+          end;
         end;
 
       finally

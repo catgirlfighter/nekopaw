@@ -39,6 +39,9 @@ type
     pmFields: TPopupMenu;
     lHelp: TcxLabel;
     N7: TMenuItem;
+    N8: TMenuItem;
+    N9: TMenuItem;
+    N10: TMenuItem;
     procedure bBrowseClick(Sender: TObject);
     procedure N1Click(Sender: TObject);
     procedure N2Click(Sender: TObject);
@@ -49,6 +52,10 @@ type
     procedure lHelpClick(Sender: TObject);
     procedure lwiki1Click(Sender: TObject);
     procedure lwiki2Click(Sender: TObject);
+    procedure N9Click(Sender: TObject);
+    procedure N8Click(Sender: TObject);
+    procedure N7Click(Sender: TObject);
+    procedure N10Click(Sender: TObject);
 
   private
     procedure VarClick(Sender: TObject);
@@ -241,6 +248,21 @@ begin
   ePath.SetFocus;
 end;
 
+procedure TfPathEditor.N7Click(Sender: TObject);
+begin
+  SetValue('$nn$');
+end;
+
+procedure TfPathEditor.N8Click(Sender: TObject);
+begin
+  SetValue('$fn$');
+end;
+
+procedure TfPathEditor.N9Click(Sender: TObject);
+begin
+  SetValue('$fnn$');
+end;
+
 procedure TfPathEditor.SetLang;
 begin
   Caption := lang('_NAMEFORMAT_EDITOR_');
@@ -259,13 +281,21 @@ begin
   N4.Caption := '$short$ - ' + lang('_HINT_SHORT_');
   N5.Caption := '$tag$ - ' + lang('_HINT_TAG_');
   N6.Caption := '$rootdir$ - ' + lang('_HINT_ROOTDIR_');
-  N6.Caption := '$nn$ - ' + lang('_HINT_NN_');
+  N7.Caption := '$nn$ - ' + lang('_HINT_NN_');
+  N8.Caption := '$fn$ - ' + lang('_HINT_FN_');
+  N9.Caption := '$fnn$ - ' + lang('_HINT_FNN_');
+  N10.Caption := '$tags$ - ' + lang('_HINT_TAGS_');
 end;
 
 procedure TfPathEditor.SetValue(s: string);
 begin
   ePath.SelText := s;
   ePath.SetFocus;
+end;
+
+procedure TfPathEditor.N10Click(Sender: TObject);
+begin
+  SetValue('$tags$');
 end;
 
 procedure TfPathEditor.N4Click(Sender: TObject);

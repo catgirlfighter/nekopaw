@@ -85,8 +85,6 @@ object mf: Tmf
             Properties.Options = [pcoGoDialog]
             OnCanCloseEx = pcTablesCanCloseEx
             OnChange = pcTablesChange
-            ExplicitLeft = 2
-            ExplicitTop = -4
             ClientRectBottom = 243
             ClientRectRight = 419
             ClientRectTop = 0
@@ -184,8 +182,6 @@ object mf: Tmf
                 EditValueFormat = cvfCaptions
                 Items = <>
                 TabOrder = 0
-                ExplicitWidth = 155
-                ExplicitHeight = 41
               end
             end
           end
@@ -369,7 +365,6 @@ object mf: Tmf
     Font.Style = []
     Images = dm.il
     Options = [doActivateAfterDocking, doDblClickDocking, doFloatingOnTop, doTabContainerHasCaption, doTabContainerCanAutoHide, doSideContainerCanClose, doSideContainerCanAutoHide, doTabContainerCanInSideContainer, doImmediatelyHideOnAutoHide, doHideAutoHideIfActive, doRedrawOnResize]
-    OnActiveDockControlChanged = DockManagerActiveDockControlChanged
     Left = 480
     Top = 40
     PixelsPerInch = 96
