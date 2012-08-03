@@ -3,7 +3,7 @@ unit MyXMLParser;
 interface
 
 uses
-  Classes, SysUtils, common;
+  Classes, SysUtils, StrUtils, common;
 
 type
 
@@ -168,6 +168,8 @@ begin
 
   if s = '' then
     raise Exception.Create('JSON Parse: empty value');
+  //s := StringReplace(s,'\\','&#92;',[rfReplaceAll]);
+  s := StringReplace(s,'\"','&quot;',[rfReplaceAll]);
 
   tagname := TrimEx(CopyTo(s,':',JSONISL,JSONBRK,true),[' ','"']);
   s := TrimEx(s,[' ','"']);

@@ -163,8 +163,19 @@ object fPathEditor: TfPathEditor
       Caption = '$fname$ - original file name'
       OnClick = N1Click
     end
+    object N8: TMenuItem
+      Caption = '$fn$ - sequence number if name already exists'
+      OnClick = N8Click
+    end
+    object N9: TMenuItem
+      Caption = 
+        '$fnn[(N)]$ - sequence number inside derectory (count every N tim' +
+        'es)'
+      OnClick = N9Click
+    end
     object N7: TMenuItem
       Caption = '$nn$ - sequence number in the list'
+      OnClick = N7Click
     end
     object N2: TMenuItem
       Caption = '$rname$ - resource name'
@@ -181,6 +192,10 @@ object fPathEditor: TfPathEditor
     object N5: TMenuItem
       Caption = '$tag$ - tag string used to search'
       OnClick = N5Click
+    end
+    object N10: TMenuItem
+      Caption = '$tags[(N)]$ - tags of picture (N - count)'
+      OnClick = N10Click
     end
   end
   object pmFields: TPopupMenu
