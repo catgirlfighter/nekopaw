@@ -251,7 +251,6 @@ begin
   if not Assigned(ResList) then
   begin
     ResList := TResourceList.Create;
-    //PDS.Open;
     ResList.PictureList.OnPicChanged := OnListPicChanged;
     ResList.OnJobChanged := OnStartJob;
     ResList.PictureList.OnEndAddList := OnEndPicList;
@@ -337,42 +336,19 @@ begin
   end;
 end;
 
-//procedure TfGrid.OnBeginPicList(Sender: TObject);
-//begin
-//
-//end;
-
 procedure TfGrid.OnEndPicList(Sender: TObject);
 var
-{  i,j: integer;
-  APicture: TTPicture;
-  //r,c: integer;
-  t: integer;
-  n: variant; }
-  //FList: TPictureLinkList;
   c,i,j,idx: integer;
   t1,t3: integer;
   n: TListValue;
   clm: TcxGridColumn;
 begin
-//  if vd.Active then
-//  begin
     t1 := GetTickCount;
-    //ResList.OnError(Self,''
     vGrid.BeginUpdate;
 
     c := vgrid.DataController.RecordCount;
 
     try
-{    vd.DisableControls;
-    c := vd.RecNo;
-    vd.RecNo := vGrid.DataController.RecordCount;
-    vd.Resync([]);
-    vd.RecNo := c;
-    vd.EnableControls;
-    vGrid.EndUpdate; }
-
-      //FList := Sender as TPictureLinkList;
 
       vgrid.DataController.RecordCount := ResList.PictureList.Count;
 
@@ -406,8 +382,6 @@ begin
                 OnError(Self,PictureList[i].Resource.Name + ': field ' + n.Name +
                 ' does not declared in field list');
             end;
-            {Values[i,( as TcxGridColumn).Index]
-              := PictureList[i].Meta.Items[j].Value;}
           end;
         end;
     finally
@@ -416,64 +390,13 @@ begin
 
     if c = 0 then
       BestFitWidths(vGrid);
-{
-    if Assigned(FTagUpdate) then
-      OnTagUpdate(Self,(Sender as TPictureList).Tags);
-}
 
     t3 := GetTickCount;
     sBar.Panels[1].Text := 'TTL ' + IntToStr(vGrid.DataController.RecordCount)
       + ' IGN '  + IntToStr(ResList.PictureList.PicCounter.IGN)
       + ' TBL ' + IntToStr(t3 - t1) + 'ms'
       + ' DBL '  + IntToStr(ResList.PictureList.DoublestickCount) + 'ms';
-//  end;
-{  FList := Sender as TPictureLinkList;
-
-  vGrid.BeginUpdate;
-  n := vd.CurRec;
-  t := vgrid.Controller.FocusedRecordIndex - vgrid.Controller.TopRecordIndex;
-  md.DisableControls;
-  for j := 0 to FList.Count -1 do
-  begin
-    APicture := FList[j];
-    md.Insert;
-    try
-      //r := vGrid.DataController.InsertRecord(r);
-      md.FieldValues['checked'] := APicture.Checked;
-      md.FieldValues['resname'] := APicture.Resource.Name;
-      md.FieldValues['label'] := APicture.DisplayLabel;
-      md.FieldValues['id'] := Integer(APicture.Orig);
-      md.FieldValues['parent'] := Integer(Apicture.Orig.Parent);
-      for i := 0 to APicture.Meta.Count-1 do
-      begin
-          md.FieldValues['.' + APicture.Meta.Items[i].Name] := APicture.Meta.Items[i].Value;
-      end;
-      md.Post;
-      APicture.Orig.BookMark := md.RecNo;
-    except
-      md.Cancel;
-    end;
-  end;
-  md.EnableControls;
-  if n > -1 then
-    BestFitWidths(vGrid);
-  vGrid.EndUpdate;
-
-  if n < 0 then
-  begin
-    BestFitWidths(vGrid);
-    n := 0;
-  end;
-
-    vgrid.DataController.FocusedRecordIndex := n;
-    vgrid.Controller.TopRecordIndex := vgrid.Controller.FocusedRecordIndex - t;}
-  //BestFitWidths(vGrid);
 end;
-
-//procedure TfGrid.OnPicAdd(APicture: TTPicture);
-//begin
-  //FList.Add(APicture);
-//end;
 
 procedure TfGrid.OnListPicChanged(Pic: TTPicture; Changes: TPicChanges);
 begin
@@ -577,6 +500,8 @@ var
   def,grp: tstringlist;
 //  b: boolean;
 begin
+  //EXIT;
+
   Grid.BeginUpdate;
   def := TStringList.Create;
   grp := tStringList.Create;
@@ -1113,13 +1038,13 @@ var
   n: variant;
 
 begin
-{
+
   n := ARecord.Values[Sender.Index];
   if VarType(ARecord.Values[Sender.Index]) = varDouble then
     AProperties := iPBar.Properties
   else
     AProperties := iState.Properties;
-}
+
 end;
 
 procedure TfGrid.vGridEditValueChanged(Sender: TcxCustomGridTableView;

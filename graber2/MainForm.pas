@@ -474,6 +474,7 @@ var
   i: integer;
   c: TcxEditorRow;
 begin
+    //EXIT;
     //vgTagsMain.ClearRows;
     if (pcTables.ActivePage is TMycxTabSheet)
     and ((pcTables.ActivePage as TMycxTabSheet).MainFrame is tfGrid) then
@@ -528,6 +529,8 @@ var
   ACheckItem: TcxCheckListBoxItem;
   //t: tpicturetaglinklist;
 begin
+  //EXIT;
+
   if (pcTables.ActivePage is TMycxTabSheet)
   and ((pcTables.ActivePage as TMycxTabSheet).MainFrame = Sender) then
   with ((pcTables.ActivePage as TMycxTabSheet).MainFrame as tfGrid) do
@@ -581,7 +584,7 @@ begin
   f := n.SecondFrame as tfNewList; //TfNewList(n.Tag);
   f2 := TfGrid.Create(n) as tfGrid;
   f2.CreateList;
-  f2.ResList.OnError := OnError;
+  //f2.ResList.OnError := OnError;
 
   f.ResetItems;
 
@@ -610,7 +613,6 @@ begin
   f2.SetLang;
 
   f2.ResList.StartJob(JOB_LIST);
-  //f2.vd.Open;
   ShowPanels;
 end;
 
@@ -714,6 +716,8 @@ var
   c: TcxEditorRow;
 //  ACheckItem: TcxCheckListBoxItem;
 begin
+    //EXIT;
+
     vgTagsMain.ClearRows;
     if (pcTables.ActivePage is TMycxTabSheet)
     and ((pcTables.ActivePage as TMycxTabSheet).MainFrame is tfGrid) then
@@ -754,32 +758,15 @@ begin
       finally
         vgTagsMain.EndUpdate;
       end;
-{
-      chlbFullTags.Items.BeginUpdate;
-      try
-      chlbFullTags.Clear;
-
-      for i := 0 to ResList.PictureList.Tags.Count-1 do
-      begin
-        ACheckItem := chlbFullTags.Items.Add;
-        ACheckItem.Text := ResList.PictureList.Tags[i].Name + ' (' + IntToStr(ResList.PictureList.Tags[i].Linked.Count) + ')';
-        ACheckItem.Tag := Integer(ResList.PictureList.Tags[i]);
-        ResList.PictureList.Tags[i].Tag := Integer(ACheckItem);
-      end;
-
-      finally
-        chlbFullTags.Items.EndUpdate;
-      end;
-}
     end;
 end;
 
 procedure Tmf.ChangeTags;
-//var
-//  i: integer;
+var
+  i: integer;
   //ACheckItem: TcxCheckListBoxItem;
 begin
-{
+
     if (pcTables.ActivePage is TMycxTabSheet)
     and ((pcTables.ActivePage as TMycxTabSheet).MainFrame is tfGrid) then
     with ((pcTables.ActivePage as TMycxTabSheet).MainFrame as tfGrid) do
@@ -803,7 +790,7 @@ begin
       end;
 
     end;
-}
+
 end;
 
 procedure Tmf.CheckUpdates;
@@ -845,6 +832,8 @@ end;
 
 procedure Tmf.updateTab;
 begin
+  //EXIT;
+
   if (pcTables.ActivePage <> nil) and (pcTables.ActivePage is TMycxtabSheet) then
   begin
     if (TMycxtabSheet(pcTables.ActivePage).SecondFrame is TfNewList) then
