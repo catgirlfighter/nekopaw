@@ -3801,7 +3801,9 @@ begin
         else if SameText(s,'calc') then
           Result := Clc(trim(Clc(gVal(Value)),''''))
         else if SameText(s,'httpencode') then
-          Result := STRINGENCODE(StringDecode(Clc(gVal(Value))))
+          Result := STRINGENCODE(Clc(gVal(Value)))
+        else if SameText(s,'htmlencode') then
+          Result := STRINGENCODE(Clc(gVal(Value)),TRUE)
         else if SameText(s,'emptyname') then
           Result := emptyname(StringDecode(Clc(gVal(Value))))
         else if SameText(s,'unixtime') then
@@ -4678,6 +4680,9 @@ var
   n: integer;
   t: tPictureTag;
 begin
+  // **** ///
+  EXIT;
+
   if not FindPosition(TagName,n) then
   begin
     t := TPictureTag.Create;
