@@ -31,8 +31,8 @@ function GetBtStringEx(n: Extended): string;
 function diff(n1, n2: Extended): Extended;
 function batchreplace(src: string; substr1: array of string;
   substr2: string): string;
-function STRINGENCODE(s: STRING): STRING;
-function STRINGDECODE(s: STRING): STRING;
+function STRINGENCODE(s: STRING;HTML: BOOLEAN = FALSE): STRING;
+function STRINGDECODE(s: STRING;HTML: BOOLEAN = FALSE): STRING;
 function Trim(s: String; ch: Char = ' '): String;
 function TrimEx(s: String; ch: TSetOfChar): String;
 function CopyTo(s, substr: string; back: boolean = false; re: boolean = false): string; overload;
@@ -621,15 +621,21 @@ begin
     Result := n1 / n2;
 end;
 
-function STRINGENCODE(s: STRING): STRING;
+FUNCTION STRINGENCODE(S: STRING; HTML: BOOLEAN = FALSE): STRING;
 begin
-  Result := String(HTTPENCODE(UTF8ENCODE(s)));
-end;
+  IF HTML THEN
+    RESULT := HTMLENCODE(STRING(UTF8ENCODE(S)))
+  ELSE
+    RESULT := STRING(HTTPENCODE(UTF8ENCODE(S)));
+END;
 
-function STRINGDECODE(s: STRING): STRING;
-begin
-  Result := UTF8ToString(HTTPDECODE(AnsiString(s)));
-end;
+FUNCTION STRINGDECODE(S: STRING; HTML: BOOLEAN = FALSE): STRING;
+BEGIN
+  IF HTML THEN
+    RESULT := UTF8TOSTRING(RAWBYTESTRING(HTMLDECODE(S)))
+  ELSE
+    RESULT := UTF8TOSTRING(HTTPDECODE(ANSISTRING(S)));
+END;
 
 function GetNextS(var s: string; del: Char = ';'; ins: Char = #0): string;
 var

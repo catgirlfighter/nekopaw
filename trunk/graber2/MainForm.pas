@@ -200,6 +200,8 @@ type
     procedure RefreshTags(Sender: TObject; t: TPictureTagLinkList);
     procedure DoPicInfo(Sender: TObject; a: TTPicture);
    procedure DoRefreshResInfo(Sender: TObject);
+    procedure ChangeTags;
+    procedure updateTab;
 
     { Public declarations }
   end;
@@ -402,75 +404,8 @@ end;
 
 procedure Tmf.pcTablesChange(Sender: TObject);
 begin
-  if (pcTables.ActivePage <> nil) and (pcTables.ActivePage is TMycxtabSheet) then
-  begin
-    if (TMycxtabSheet(pcTables.ActivePage).SecondFrame is TfNewList) then
-    begin
-      //pcTables.Options := pcTables.Options + [pcoCloseButton];
-      bbStartList.Caption := lang('_STARTLIST_');
-      bbStartList.ImageIndex := 3;
-      bbStartPics.Caption := lang('_STARTPICS_');
-      bbStartPics.ImageIndex := 5;
-      bbStartList.Enabled := false;
-      bbStartPics.Enabled := false;
-      dsTags.Hide;
-    end
-    else if (TMycxtabSheet(pcTables.ActivePage).MainFrame is TfGrid) then
-    with (TMycxtabSheet(pcTables.ActivePage).MainFrame as TfGrid) do
-    begin
-      //dsTags.Show;
-      if ResList.ListFinished then
-      begin
-        bbStartList.Caption := lang('_STARTLIST_');
-        bbStartList.ImageIndex := 3;
-        bbStartPics.Enabled := true;
-      end else
-      begin
-        bbStartList.Caption := lang('_STOPLIST_');
-        bbStartList.ImageIndex := 4;
-        bbStartPics.Enabled := false;
-      end;
-      bbStartList.Enabled := true;
-      //bbStartPics.Enabled := true;
-
-      if ResList.PicsFinished then
-      begin
-        bbStartPics.Caption := lang('_STARTPICS_');
-        bbStartPics.ImageIndex := 5;
-        bbStartList.Enabled := true;
-      end else
-      begin
-        bbStartPics.Caption := lang('_STOPPICS_');
-        bbStartPics.ImageIndex := 6;
-        bbStartList.Enabled := false;
-      end;
-      //bbStartList.Enabled := true;
-
-      //pcTables.Options := pcTables.Options + [pcoCloseButton];
-
-      if not dsTags.AutoHide then
-        dsTags.Show;
-
-{      Screen.Cursor := crHourGlass;
-      try
-        vd.Open;
-      finally
-        Screen.Cursor := crDefault;
-      end;  }
-      UpdateFocusedRecord;
-      ChangeResInfo;
-      //sBar.Panels[1].Text := 'TTL ' + IntToStr(vGrid.DataController.RecordCount);
-    end else
-    begin
-      //dsTags.Hide;
-      bbStartList.Caption := lang('_STARTLIST_');
-      bbStartPics.Caption := lang('_STARTPICS_');
-      bbStartList.Enabled := false;
-      bbStartPics.Enabled := false;
-      //pcTables.Options := pcTables.Options - [pcoCloseButton];
-      dsTags.Hide;
-    end;
-  end;
+  updateTab;
+  changeTags;
 end;
 
 procedure Tmf.PicInfo(Sender: TObject; a: TTPicture);
@@ -777,7 +712,7 @@ procedure Tmf.ChangeResInfo;
 var
   i: integer;
   c: TcxEditorRow;
-  ACheckItem: TcxCheckListBoxItem;
+//  ACheckItem: TcxCheckListBoxItem;
 begin
     vgTagsMain.ClearRows;
     if (pcTables.ActivePage is TMycxTabSheet)
@@ -819,7 +754,7 @@ begin
       finally
         vgTagsMain.EndUpdate;
       end;
-
+{
       chlbFullTags.Items.BeginUpdate;
       try
       chlbFullTags.Clear;
@@ -835,8 +770,40 @@ begin
       finally
         chlbFullTags.Items.EndUpdate;
       end;
+}
+    end;
+end;
+
+procedure Tmf.ChangeTags;
+//var
+//  i: integer;
+  //ACheckItem: TcxCheckListBoxItem;
+begin
+{
+    if (pcTables.ActivePage is TMycxTabSheet)
+    and ((pcTables.ActivePage as TMycxTabSheet).MainFrame is tfGrid) then
+    with ((pcTables.ActivePage as TMycxTabSheet).MainFrame as tfGrid) do
+    begin
+      chlbFullTags.Items.BeginUpdate;
+      try
+      chlbFullTags.Clear;
+
+      if ResList.ListFinished and ResList.PicsFinished then
+        for i := 0 to ResList.PictureList.Tags.Count-1 do
+        begin
+          chlbFullTags.AddItem(ResList.PictureList.Tags[i].Name + ' (' + IntToStr(ResList.PictureList.Tags[i].Linked.Count) + ')');
+          //ACheckItem := chlbFullTags.Items.Add;
+          //ACheckItem.Text := ResList.PictureList.Tags[i].Name + ' (' + IntToStr(ResList.PictureList.Tags[i].Linked.Count) + ')';
+          //ACheckItem.Tag := Integer(ResList.PictureList.Tags[i]);
+          //ResList.PictureList.Tags[i].Tag := Integer(ACheckItem);
+        end;
+
+      finally
+        chlbFullTags.Items.EndUpdate;
+      end;
 
     end;
+}
 end;
 
 procedure Tmf.CheckUpdates;
@@ -857,7 +824,9 @@ procedure Tmf.ENDJOB(var Msg: TMessage);
 {var
   t: TMycxTabSheet; }
 begin
-  pcTables.Change;
+  updateTab;
+  if Msg.LParam = 0 then
+    changeTags;
 {  t := TMycxTabSheet(Msg.WParam);
   t.SetIcon(0); }
 end;
@@ -874,11 +843,85 @@ begin
   ;
 end;
 
+procedure Tmf.updateTab;
+begin
+  if (pcTables.ActivePage <> nil) and (pcTables.ActivePage is TMycxtabSheet) then
+  begin
+    if (TMycxtabSheet(pcTables.ActivePage).SecondFrame is TfNewList) then
+    begin
+      //pcTables.Options := pcTables.Options + [pcoCloseButton];
+      bbStartList.Caption := lang('_STARTLIST_');
+      bbStartList.ImageIndex := 3;
+      bbStartPics.Caption := lang('_STARTPICS_');
+      bbStartPics.ImageIndex := 5;
+      bbStartList.Enabled := false;
+      bbStartPics.Enabled := false;
+      dsTags.Hide;
+    end
+    else if (TMycxtabSheet(pcTables.ActivePage).MainFrame is TfGrid) then
+    with (TMycxtabSheet(pcTables.ActivePage).MainFrame as TfGrid) do
+    begin
+      //dsTags.Show;
+      if ResList.ListFinished then
+      begin
+        bbStartList.Caption := lang('_STARTLIST_');
+        bbStartList.ImageIndex := 3;
+        bbStartPics.Enabled := true;
+      end else
+      begin
+        bbStartList.Caption := lang('_STOPLIST_');
+        bbStartList.ImageIndex := 4;
+        bbStartPics.Enabled := false;
+      end;
+      bbStartList.Enabled := true;
+      //bbStartPics.Enabled := true;
+
+      if ResList.PicsFinished then
+      begin
+        bbStartPics.Caption := lang('_STARTPICS_');
+        bbStartPics.ImageIndex := 5;
+        bbStartList.Enabled := true;
+      end else
+      begin
+        bbStartPics.Caption := lang('_STOPPICS_');
+        bbStartPics.ImageIndex := 6;
+        bbStartList.Enabled := false;
+      end;
+      //bbStartList.Enabled := true;
+
+      //pcTables.Options := pcTables.Options + [pcoCloseButton];
+
+      if not dsTags.AutoHide then
+        dsTags.Show;
+
+{      Screen.Cursor := crHourGlass;
+      try
+        vd.Open;
+      finally
+        Screen.Cursor := crDefault;
+      end;  }
+      UpdateFocusedRecord;
+      ChangeResInfo;
+      //ChangeTags;
+      //sBar.Panels[1].Text := 'TTL ' + IntToStr(vGrid.DataController.RecordCount);
+    end else
+    begin
+      //dsTags.Hide;
+      bbStartList.Caption := lang('_STARTLIST_');
+      bbStartPics.Caption := lang('_STARTPICS_');
+      bbStartList.Enabled := false;
+      bbStartPics.Enabled := false;
+      //pcTables.Options := pcTables.Options - [pcoCloseButton];
+      dsTags.Hide;
+    end;
+  end;
+end;
+
 procedure Tmf.STARTJOB(var Msg: TMessage);
 {var
   t: TMycxTabSheet;  }
 begin
-  pcTables.Change;
+  updateTab;
 {  t := TMycxTabSheet(Msg.WParam);
   t.SetIcon(0,15,true); }
 end;

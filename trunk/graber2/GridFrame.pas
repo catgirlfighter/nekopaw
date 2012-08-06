@@ -83,8 +83,8 @@ type
     procedure bbAutoUnchClick(Sender: TObject);
     procedure vGridFocusedItemChanged(Sender: TcxCustomGridTableView;
       APrevFocusedItem, AFocusedItem: TcxCustomGridTableItem);
-    procedure vGridColumn1GetFilterDisplayText(Sender: TcxCustomGridTableItem;
-      const AValue: Variant; var ADisplayText: string);
+    procedure vGridColumn1GetFilterValues(Sender: TcxCustomGridTableItem;
+      AValueList: TcxDataFilterValueList);
   private
     //FList: TList;
 //    FFieldList: TStringList;
@@ -488,10 +488,20 @@ end;
 
 procedure TfGrid.OnStartJob(Sender: TObject; Action: integer);
 begin
-  PostMessage(Application.MainForm.Handle,CM_STARTJOB,Integer(Self.Parent),0);
+{
+  if (Action = JOB_LIST) and (ResList.PicsFinished)
+  or (Action = JOB_PICS) and (ResList.ListFinished) then
+    PostMessage(Application.MainForm.Handle,CM_STARTJOB,Integer(Self.Parent),0)
+  else if (Action = JOB_STOPLIST) and (ResList.PicsFinished)
+  or (Action = JOB_STOPPICS) and (ResList.ListFinished) then
+    PostMessage(Application.MainForm.Handle,CM_ENDJOB,Integer(Self.Parent),0);
+}
   case Action of
     JOB_LIST:
+    begin
       sBar.Panels[0].Text := lang('_ON_AIR_');
+      PostMessage(Application.MainForm.Handle,CM_STARTJOB,Integer(Self.Parent),0);
+    end;
     JOB_PICS:
     begin
 //      vGrid.BeginUpdate;
@@ -505,8 +515,10 @@ begin
       FProgressColumn.Visible := true;
 //      vGrid.EndUpdate;
       sBar.Panels[0].Text := lang('_ON_AIR_');
+      PostMessage(Application.MainForm.Handle,CM_STARTJOB,Integer(Self.Parent),1);
     end;
     JOB_STOPLIST:
+    begin
       if ResList.PicsFinished then
       begin
         if not ResList.Canceled
@@ -514,6 +526,8 @@ begin
           ResList.StartJob(JOB_PICS);
         sBar.Panels[0].Text := '';
       end;
+      PostMessage(Application.MainForm.Handle,CM_ENDJOB,Integer(Self.Parent),0);
+    end;
     JOB_STOPPICS:
     begin
       updTimer.Enabled := false;
@@ -526,6 +540,7 @@ begin
       //FCheckColumn.Options.Editing := true;
       if ResList.ListFinished then
         sBar.Panels[0].Text := '';
+      PostMessage(Application.MainForm.Handle,CM_ENDJOB,Integer(Self.Parent),1);
     end;
   end;
 end;
@@ -667,7 +682,7 @@ begin
     FProgressColumn.Editing := false;
     FProgressColumn.Visible := false;
     FProgressColumn.VisibleForCustomization := false;
-    //FProgressColumn.OnGetFilterDisplayText := vGridColumn1GetFilterDisplayText;
+    FProgressColumn.OnGetFilterValues := vGridColumn1GetFilterValues;
 
     if not Assigned(FFieldList) then
       FFieldList := TStringList.Create
@@ -1078,12 +1093,18 @@ begin
     updatefocusedrecord;
 end;
 
-procedure TfGrid.vGridColumn1GetFilterDisplayText(
-  Sender: TcxCustomGridTableItem; const AValue: Variant;
-  var ADisplayText: string);
+procedure TfGrid.vGridColumn1GetFilterValues(Sender: TcxCustomGridTableItem;
+  AValueList: TcxDataFilterValueList);
 begin
-  if VarType(AValue) = varDouble then
-    ADisplayText := 'PROGRESS';
+  AValueList.Clear;
+  AValueList.Add(fviAll,0,'ALL',true);
+  AValueList.Add(fviBlanks,0,'BLANK',true);
+  AValueList.Add(fviNonBlanks,0,'NONBLANK',true);
+  AValueList.Add(fviValue,'OK','OK',true);
+  AValueList.Add(fviValue,'SKIP','SKIP',true);
+  AValueList.Add(fviValue,'ERROR','ERROR',true);
+  AValueList.Add(fviValue,'START','START',true);
+  AValueList.Add(fviValue,'ABORT','ABORT',true);
 end;
 
 procedure TfGrid.vGridColumn1GetProperties(Sender: TcxCustomGridTableItem;
@@ -1092,11 +1113,13 @@ var
   n: variant;
 
 begin
+{
   n := ARecord.Values[Sender.Index];
   if VarType(ARecord.Values[Sender.Index]) = varDouble then
     AProperties := iPBar.Properties
   else
     AProperties := iState.Properties;
+}
 end;
 
 procedure TfGrid.vGridEditValueChanged(Sender: TcxCustomGridTableView;
