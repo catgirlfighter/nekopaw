@@ -14,7 +14,7 @@ uses
   cxGridCustomTableView, cxGridTableView, cxClasses, cxGridCustomView, cxGrid,
   cxButtons, ExtCtrls, cxSplitter,
   {graber2}
-  common, Graberu;
+  common, Graberu, dxSkinsCore, dxSkinsDefaultPainters, dxSkinscxPCPainter;
 
 type
   TListFrameState = (lfsNew, lfsEdit);

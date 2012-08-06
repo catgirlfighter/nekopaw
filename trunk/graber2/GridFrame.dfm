@@ -57,8 +57,6 @@ object fGrid: TfGrid
       OptionsView.ColumnAutoWidth = True
       OptionsView.ExpandButtonsForEmptyDetails = False
       object vGridColumn1: TcxGridColumn
-        OnGetFilterValues = vGridColumn1GetFilterValues
-        OnGetProperties = vGridColumn1GetProperties
       end
     end
     object GridLevel1: TcxGridLevel

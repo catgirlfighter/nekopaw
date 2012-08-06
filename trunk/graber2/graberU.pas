@@ -4,7 +4,7 @@ interface
 
 uses Classes, Messages, Windows, SysUtils, SyncObjs, Variants, VarUtils,
   IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP,
-  MyXMLParser, DateUtils, MyHTTP, StrUtils, md5, DB, IdStack, IdSSLOpenSSL,
+  MyXMLParser, DateUtils, MyHTTP, StrUtils, DB, IdStack, IdSSLOpenSSL,
   Math;
 
 const
@@ -570,14 +570,14 @@ type
     FPicName: String;
     FFileName: String;
     FExt: String;
-    FMD5: TMD5Digest;
+    //FMD5: TMD5Digest;
     //FOrig: TTPicture;
     FSize: Int64;
     FPos: Int64;
     FPicChange: TPicChangeEvent;
     FChanges: TPicChanges;
     FBookMark: integer;
-    function GetMD5String: string;
+    //function GetMD5String: string;
 //    FStatus: Integer;
     // FObj: TObject;
   protected
@@ -602,8 +602,8 @@ type
     property DisplayLabel: String read FDisplayLabel write FDisplayLabel;
     property FileName: String read FFileName write FFileName;
     property Ext: String read FExt;
-    property md5: TMD5Digest read FMD5;
-    property MD5String: String read GetMD5String;
+    //property md5: TMD5Digest read FMD5;
+    //property MD5String: String read GetMD5String;
     property PicName: String read FPicName write SetPicName;
     //property Orig: TTPicture read FOrig write FOrig;
     property Resource: TResource read FResource write FResource;
@@ -782,6 +782,7 @@ type
     FPictureThreadCount: integer;
     FJobList: TJobList;
     FOnPageComplete: TNotifyEvent;
+    FTemplateFile: String;
     { FPerPageMode: Boolean; }
   protected
     procedure DeclorationEvent(ItemName: String; ItemValue: Variant; LinkedObj: TObject);
@@ -901,6 +902,7 @@ type
     function AllFinished: Boolean;
     function AllPicsFinished: Boolean;
     procedure UncheckDoubles;
+    function ItemByName(AName: String): TResource;
     property ThreadHandler: TThreadHandler read FThreadHandler;
     property DWNLDHandler: TThreadHandler read FDwnldHandler;
     procedure LoadList(Dir: String);
@@ -932,7 +934,7 @@ function strFind(Value: string; list: TStringList; var index: integer): boolean;
 
 implementation
 
-uses LangString, common;
+uses {LangString, }common;
 
 {$IFDEF NEKODEBUG}
 var
@@ -982,8 +984,8 @@ begin
     begin
       n2 := CharPos(s, #13, [], [], n1 + 1);
       if n2 = 0 then
-        raise Exception.Create(Format(lang('_SCRIPT_READ_ERROR_'),
-          [lang('_INCORRECT_DECLORATION_') + '''' + s + '''']));
+        raise Exception.Create('scpirt read error: ' +
+        'incorrect decloartion near "' + s + '"');
       s := DeleteEx(s, n1, n2 - n1);
       n1 := CharPos(s, ';', isl, []);
     end;
@@ -2149,13 +2151,13 @@ begin
   // FURL := R.Url;
   FShort := R.Short;
   FHTTPRec.DefUrl := R.HTTPRec.DefUrl;
-  FHTTPRec.Url := '';
-  FHTTPRec.Referer := '';
-  FHTTPRec.CookieStr := '';
-  FHTTPRec.LoginStr := '';
-  FHTTPRec.LoginPost := '';
+  FHTTPRec.Url := R.HTTPRec.DefUrl;
+  FHTTPRec.Referer := R.HTTPRec.Referer;
+  FHTTPRec.CookieStr := R.HTTPRec.CookieStr;
+  FHTTPRec.LoginStr := R.HTTPRec.LoginStr;
+  FHTTPRec.LoginPost := R.HTTPRec.LoginPost;
   FHTTPRec.Method := hmGet;
-  FHTTPRec.ParseMethod := 'xml';
+  FHTTPRec.ParseMethod := R.HTTPRec.ParseMethod;
   FHTTPRec.Counter := 0;
   FHTTPRec.Count := 0;
 end;
@@ -2189,6 +2191,7 @@ begin
   FAfterScript := nil;
   FXMLScript := nil;
   FPicScript := nil;
+  FHTTPRec.ParseMethod := 'xml';
   // FAddToQueue := nil;
   // FJobFinished := false;
   // FPerpageMode := false;
@@ -2255,8 +2258,7 @@ begin
     pr := Copy(s, n1 + 1, n2 - n1 - 1);
 
     if CheckStr(pr, ['A' .. 'Z', 'a' .. 'z']) then
-      raise Exception.Create(Format(lang('_SCRIPT_READ_ERROR_'),
-        [lang('_SYMBOLS_IN_SECTOR_NAME_')]));
+      raise Exception.Create('script read error: incorrect symbols in section name');
 
     // Delete(s, 1, n2);
   end;
@@ -2441,7 +2443,7 @@ procedure TResource.DeclorationEvent(ItemName: String; ItemValue: Variant; Linke
       FHTTPRec.LoginPost := ItemValue
     else if SameText(ItemName,'$main.template') then
     begin
-      s := StringFromFile(ExtractFilePath(paramstr(0)) + 'resources\' +
+      s := StringFromFile(ExtractFilePath(FTemplateFile) +
         ItemValue);
       FSct := TValueList.Create;
       try
@@ -2507,7 +2509,7 @@ procedure TResource.DeclorationEvent(ItemName: String; ItemValue: Variant; Linke
         Fields.Items[i].resvalue := ItemValue;
     end
     else
-      raise Exception.Create(Format(lang('_INCORRECT_DECLORATION_'), [ItemName]));
+      raise Exception.Create('incorrect decloration: ' + ItemName);
 
   end;
 
@@ -2569,7 +2571,7 @@ begin
     begin
       //for i := 0 to t.PictureList.Count -1 do
       //  FPictureList.Add(t.PictureList[i].Orig);
-      if Assigned(Self) and t.PicsAdded then
+      if Assigned(PictureList.Link.OnEndAddList) and t.PicsAdded then
         PictureList.Link.OnEndAddList(Self);
       //s := GetTickCount;
       //FOnError(Self, IntToStr(GetTickCount - s) + ' ms');
@@ -2661,9 +2663,10 @@ var
   // f: textfile;
 begin
   if not fileexists(fname) then
-    raise Exception.Create(Format(lang('_NO_FILE_'), [fname]));
+    raise Exception.Create('file does not exist: ' + fname);
 
   // Assignfile(f, FName);
+  FTemplateFile := fname;
   s := StringFromFile(fname);
   { try
     Reset(f);
@@ -2874,6 +2877,9 @@ procedure TResourceList.CopyResource(R: TResource);
 var
   NR: TResource;
 begin
+  if not assigned(R) then
+    raise Exception.Create('copied resource is not assigned');
+
   NR := TResource.Create;
   // NR.AddToQueue := AddToQueue;
   NR.Assign(R);
@@ -3106,6 +3112,19 @@ begin
   Result := FDwnldHandler.Count = 0;
 end;
 
+function TResourceList.ItemByName(AName: String): TResource;
+var
+  i: integer;
+begin
+  for i := 0 to count-1 do
+    if SameText(Items[i].Name,AName) then
+    begin
+      result := Items[i];
+      Exit;
+    end;
+  result := nil;
+end;
+
 destructor TResourceList.Destroy;
 begin
   FThreadHandler.Free;
@@ -3171,7 +3190,7 @@ begin
       trim(DeleteTo(DeleteTo(lowercase(r.HTTPRec.DefUrl), ':/'),'www.'), '/'))
       = '' then
       if Assigned(FOnError) then
-        FOnError(Self,Format(lang('_ERROR_LOGIN_'),[r.Name]));
+        FOnError(Self,'login error: ' + r.Name);
 
     for i := 0 to Count - 1 do
       if Items[i].Relogin then
@@ -3387,7 +3406,7 @@ begin
 
   R := TResource.Create;
   R.Inherit := false;
-  R.Name := lang('_GENERAL_');
+  R.Name := 'general';
   R.PictureList.Link := PictureList;
   R.CheckIdle := ThreadHandler.CheckIdle;
   R.OnJobFinished := JobFinished;
@@ -3401,7 +3420,7 @@ begin
   if not DirectoryExists(Dir) then
   begin
     if Assigned(FOnError) then
-      FOnError(Self, Format(lang('_NO_DIRECTORY_'), [Dir]));
+      FOnError(Self, 'directory does not exist: ' + Dir);
     Exit;
   end;
   Dir := IncludeTrailingPathDelimiter(Dir);
@@ -3573,6 +3592,7 @@ begin
   FPicture := nil;
   FSectors := TValueList.Create;
   FSTOPERROR := false;
+  FJobComplete := nil;
   // FTagList := TStringList.Create;
   // FPicList := TList.Create;
 end;
@@ -3596,7 +3616,8 @@ end;
 
 procedure TDownloadThread.DoJobComplete;
 begin
-  FJobComplete(Self);
+  if Assigned(FJobComplete) then
+    FJobComplete(Self);
 end;
 
 procedure TDownloadThread.DoFinish;
@@ -4148,7 +4169,7 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant; LinkedObj: TO
         Fields.Items[n].resvalue := Value;
     end
     else
-      raise Exception.Create(Format(lang('_INCORRECT_DECLORATION_'), [Name]));
+      raise Exception.Create('incorrect decloration: ' + Name);
   end;
 
 begin
@@ -4268,7 +4289,7 @@ begin
         FXML.Parse(s)
       else if SameText(FHTTPRec.ParseMethod,'json') then
         FXML.JSON(FHTTPREC.JSONItem,s)
-      else raise Exception.Create(Format(lang('_UNKNOWNMETHOD_'),[FHTTPRec.ParseMethod]));
+      else raise Exception.Create('unknown method: ' + FHTTPRec.ParseMethod);
 
       // ----  //
       //FXML.TagList.ExportToFile(ExtractFilePath(paramstr(0))+'log\'+ValidFName(emptyname(url)));
@@ -4392,7 +4413,7 @@ begin
               inc(FRetries);
               Continue;
             end else
-              SetHTTPError(HTTPRec.Url + ': ' +lang('_INCORRECT_FILESIZE_'));
+              SetHTTPError(HTTPRec.Url + ': incorrect filesize');
         end else
           f.Free;
 
@@ -4681,7 +4702,7 @@ var
   t: tPictureTag;
 begin
   // **** ///
-  EXIT;
+  //EXIT;
 
   if not FindPosition(TagName,n) then
   begin
@@ -4798,10 +4819,10 @@ begin
   inherited;
 end;
 
-function TTPicture.GetMD5String: string;
-begin
-  Result := MD5DigestToStr(FMD5);
-end;
+//function TTPicture.GetMD5String: string;
+//begin
+//  Result := MD5DigestToStr(FMD5);
+//end;
 
 // make file name
 (*
@@ -5990,7 +6011,7 @@ begin
       Items[i].resvalue := Value;
       Exit;
     end;
-  raise Exception.Create(Format(lang('_NO_FIELD_'), [ItemName]));
+  raise Exception.Create('field does not exist'+ ItemName);
 end;
 
 function TResourceFields.AddField(resname: string; restitle: string;
