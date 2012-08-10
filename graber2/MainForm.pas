@@ -584,7 +584,7 @@ begin
   f := n.SecondFrame as tfNewList; //TfNewList(n.Tag);
   f2 := TfGrid.Create(n) as tfGrid;
   f2.CreateList;
-  //f2.ResList.OnError := OnError;
+  f2.ResList.OnError := OnError;
 
   f.ResetItems;
 
