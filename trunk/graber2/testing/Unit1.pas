@@ -74,11 +74,13 @@ begin
   bbAutoUnch.Down := GlobalSettings.Downl.AutoUncheckInvisible;
 }
 
-    reslist.CopyResource(fl.ItemByName('donmai.us'));
+    reslist.CopyResource(fl.ItemByName('gelbooru.com'));
 
     reslist.CopyResource(fl.ItemByName('safebooru.org'));
+    reslist.CopyResource(fl.ItemByName('tbib.org'));
+
     //reslist.CopyResource(fl.ItemByName('gelbooru.com'));
-    Memo1.Lines.Add('2 items copied to working list');
+    Memo1.Lines.Add('3 items copied to working list');
 
     reslist.ThreadHandler.ThreadCount := 8;
     reslist.MaxThreadCount := 4;
@@ -88,26 +90,28 @@ end;
 
 
 procedure TForm1.Button2Click(Sender: TObject);
-var
-  res: tresource;
+//var
+//  res: tresource;
 begin
-  if not reslist.ListFinished then
-  begin
-    ShowMessage('still working');
-    Exit;
-  end;
+  //if not reslist.ListFinished then
+  //begin
+  //  ShowMessage('still working');
+  //  Exit;
+  //end;
 
-  res := reslist.ItemByName('donmai.us');
-  res.Fields['login'] := 'avil';
-  res.Fields['password'] := '1ashnazg';
-  res.Relogin := true;
-  reslist.StartJob(JOB_LOGIN);
+  //res := reslist.ItemByName('donmai.us');
+  //res.Fields['login'] := 'avil';
+  //res.Fields['password'] := '1ashnazg';
+  //res.Relogin := true;
+  //reslist.StartJob(JOB_LOGIN);
+  //memo1.Lines.Add('loging in');
 end;
 
 procedure TForm1.Button3Click(Sender: TObject);
 begin
   if not reslist.ListFinished then
   begin
+    reslist.StartJob(JOB_STOPLIST);
     ShowMessage('still working');
     Exit;
   end;

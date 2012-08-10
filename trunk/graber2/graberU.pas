@@ -684,7 +684,7 @@ type
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
     property Link;
   public
-    constructor Create;
+    constructor Create(makenames: boolean);
     destructor Destroy; override;
     function Add(APicture: TTPicture; Resource: TResource): integer;
     procedure AddPicList(APicList: TPictureList);
@@ -708,7 +708,7 @@ type
     property ParensCount: integer read FParentsCount;
     property ChildsCount: integer read FChildsCount;
     property DoublestickCount: integer read FDoublesTickCount;
-    property MakeNames: Boolean read FMakeNames write FMakeNames;
+    property MakeNames: Boolean read FMakeNames;
   end;
 
   TResourceEvent = procedure(R: TResource) of object;
@@ -940,6 +940,7 @@ uses {LangString, }common;
 var
   debugpath: string;
   debugthreads: string;
+  debuggui: string;
 {$ENDIF}
 
 function CalcValue(s: variant; VE: TValueEvent; Lnk: TObject;
@@ -2280,6 +2281,9 @@ begin
         FCurrThreadCount := 0;
         // FJobFinished := false;
 
+        FHTTPRec.Count := FJobList.Count;
+        FHTTPRec.Counter := FJobList.FinishCursor;
+
         FJobInitiated := FJobList.Count > 0;
         if not FJobInitiated then
         begin
@@ -2903,7 +2907,7 @@ begin
   FDwnldHandler := TThreadHandler.Create;
   FDwnldHandler.OnAllThreadsFinished := OnHandlerFinished;
   FDwnldHandler.CreateJob := CreateDWNLDJob;
-  FPictureList := TPictureList.Create;
+  FPictureList := TPictureList.Create(true);
 {  FPictureList.OnAddPicture := FOnAddPicture;
   FPictureList.OnBeginAddList := FOnBeginPicList;
   FPictureList.OnEndAddList := FOnEndPicList;
@@ -3464,14 +3468,20 @@ begin
   while not terminated do
   begin
     // FErrorString := '';
+    FResource := nil;
     FPicsAdded := false;
     try
       Synchronize(DoFinish);
       case ReturnValue of
+        THREAD_PROCESS: continue;
         THREAD_STOP:
           begin
             ResetEvent(FEventHandle);
             WaitForSingleObject(FEventHandle, INFINITE);
+            //if ReturnValue = 3 then
+            //begin
+            //  ReturnValue := 3;
+            //end;
             Continue;
           end;
         THREAD_FINISH:
@@ -3481,7 +3491,8 @@ begin
       end;
 
       if not Assigned(FResource) then
-        raise Exception.Create('thread.execute: resource not assigned');
+        raise Exception.Create('thread.execute: resource not assigned, ' +
+        ' job = ' + IntToStr(FJob) + ', return = ' + IntToStr(ReturnValue));
 
       try
         if Job = JOB_PICS then
@@ -3528,6 +3539,7 @@ begin
         {$IFDEF NEKODEBUG}FCSFiles.Enter;SaveStrToFile('thread_'+Format('%p',[Pointer(Self)])+': finishjobsynch',debugthreads,true);FCSFiles.Leave;{$ENDIF}
         FPicList.Clear;
         FPicture := nil;
+        {$IFDEF NEKODEBUG}FCSFiles.Enter;SaveStrToFile('thread_'+Format('%p',[Pointer(Self)])+': threaddone',debugthreads,true);FCSFiles.Leave;{$ENDIF}
       end;
     except
       on e: Exception do
@@ -3546,20 +3558,10 @@ begin
 end;
 
 procedure TDownloadThread.AddPicture;
-{ var
-  i: integer; }
 begin
-  // FPicLink := TTPicture.Create;
-  // FPicLink.Assign(FPicture);
-  // FPictureList.Add(FPicLink);
-  { for i := 0 to FTagList.Count -1 do
-    FPictureList.Tags.Add(FTagList[i],FPicLink); }
   FPicture := TTPicture.Create;
   FPicture.Checked := true;
-  // FPicture.Obj := TStringList.Create;
   FPicList.Add(FPicture,FResource);
-  // FTagList.Clear;
-  // FAddPic := false;
 end;
 
 procedure TDownloadThread.ClonePicture;
@@ -3575,6 +3577,7 @@ end;
 
 constructor TDownloadThread.Create;
 begin
+  ReturnValue := THREAD_STOP;
   FEventHandle := CreateEvent(nil, true, false, nil);
   FFinish := nil;
   inherited Create(false);
@@ -3586,15 +3589,11 @@ begin
   FXMLScript := TScriptSection.Create;
   FFields := TResourceFields.Create;
   FXML := TMyXMLParser.Create;
-  // FPictureList := nil;
-  FPicList := TPictureList.Create;
-  FPicList.MakeNames := false;
+  FPicList := TPictureList.Create(false);
   FPicture := nil;
   FSectors := TValueList.Create;
   FSTOPERROR := false;
   FJobComplete := nil;
-  // FTagList := TStringList.Create;
-  // FPicList := TList.Create;
 end;
 
 destructor TDownloadThread.Destroy;
@@ -3608,8 +3607,6 @@ begin
   FXML.Free;
   FSSLHandler.Free;
   FHTTP.Free;
-  //FPicture.Free;
-  // FTagList.Free;
   FPicList.Free;
   inherited;
 end;
@@ -5362,14 +5359,17 @@ begin
   //  FOnAddPicture(Result);
 end;
 
-constructor TPictureList.Create;
+constructor TPictureList.Create(makenames: boolean);
 begin
-  inherited;
+  inherited Create;
   FTags := TPictureTagList.Create;
   FMetaContainer := TTagedList.Create;
-  FDirList := TStringList.Create;
-  FFileNames := TStringList.Create;
-  FMakeNames := true;
+  if makenames then
+  begin
+    FDirList := TStringList.Create;
+    FFileNames := TStringList.Create;
+  end;
+  FMakeNames := makenames;
   FIgnoreList := nil;
   FParentsCount := 0;
   FChildsCount := 0;
@@ -5381,9 +5381,12 @@ begin
   FTags.Free;
   DeallocateMeta;
   FMetaContainer.Free;
-  disposeDirList;
-  FDirList.Free;
-  FFileNames.Free;
+  if makenames then
+  begin
+    disposeDirList;
+    FDirList.Free;
+    FFileNames.Free;
+  end;
   inherited;
 end;
 
@@ -6083,6 +6086,8 @@ begin
     { FQueue[0].CreateJob(t);
       FQueue.Delete(0); }
     Result := THREAD_START;
+    if not Assigned(t.Resource) and Assigned(FOnError) then
+      OnError(Self,'threadhandler: thread.resource = nil');
   end
   else if FFinishQueue then
     Result := THREAD_FINISH
@@ -6247,8 +6252,11 @@ initialization
   debugpath := ExtractFilePath(paramstr(0)) + 'log\';
   CreateDirExt(debugpath);
   debugthreads := debugpath + 'threads.txt';
+  debuggui := debugpath + 'gui.txt';
   if fileexists(debugthreads) then
     DeleteFile(debugthreads);
+  if fileexists(debuggui) then
+    DeleteFile(debuggui);
 {$ENDIF}
 
 end.

@@ -6,11 +6,19 @@ uses IdHTTP, Classes, SysUtils, SyncObjs, Strutils, Common;
 
 type
   TMyCookieList = class(TStringList)
+    private
+      FCS: TCriticalSection;
+    protected
+      property CS: TCriticalSection read FCS write FCS;
     public
+      constructor Create;
+      destructor Destroy; override;
       function GetCookieValue(CookieName,CookieDomain: string): string;
       function GetCookieByValue(CookieName,CookieDomain: string): string;
       procedure DeleteCookie(CookieDomain: string);
       procedure ChangeCookie(CookieDomain,CookieString: String);
+      function GetCookiesByDomain(domain: string): string;
+      //property Lines[index:integer]: String read Get;
   end;
 
   TMyIdHTTP = class(TIdCustomHTTP)
@@ -48,8 +56,8 @@ begin
   result.ConnectTimeout := 10000;    }
 end;
 
-var
-  cs: TCriticalSection;
+{var
+  cs: TCriticalSection;    }
 
 function GetUrlVarValue(URL,Variable: String): String;
 var
@@ -111,39 +119,9 @@ begin
 end;
 
 function GetURLDomain(url: string): string;
-//  var i,j,l: integer;
 begin
   Result:=DeleteTo(url,'://');
   Result := CopyFromTo(Result,'www.','/');
-  //  Result:=SysUtils.StringReplace(Result,'www.','.',[]);
-  {if StrLIComp(PWideChar(url),PWideChar('www.'),4) = 0 then
-  CompareText(
-  if Pos('www.',Result) = 1 then
-    i:=CharPos(Result,'.',[],4)
-  else
-    i := Pos('.',Result);
-  if i=0 then Exit;
-  j:=CharPos(Result,'/',[],i);
-  if j=0 then j:=CharPos(Result,'\',[],i);
-  if j>0 then Result:=Copy(Result,1,j-1);
-  j:=0;
-  l:=Length(Result);
-  for i:=1 to l do
-    if Result[i]='.' then inc(j);
-  if j>1 then
-  begin
-    j:=0;
-    for i:=l downto 1 do
-    if Result[i]='.' then
-    begin
-      inc(j);
-      if j=2 then
-      begin
-        Result:=Copy(Result,i+1,l-1);
-        Exit;
-      end;
-    end;
-  end; }
 end;
 
 function GetCookieValue(Cookie: String): string;
@@ -165,6 +143,18 @@ begin
     Result := false;
 end;
 
+constructor TMyCookieList.Create;
+begin
+  inherited;
+  FCS := TCriticalSection.Create;
+end;
+
+destructor TMyCookieList.Destroy;
+begin
+  FCS.Free;
+  inherited;
+end;
+
 procedure TMyCookieList.ChangeCookie(CookieDomain,CookieString: String);
 
   function DelleteIfExist(Cookie: string): boolean;
@@ -181,23 +171,57 @@ procedure TMyCookieList.ChangeCookie(CookieDomain,CookieString: String);
   end;
 
 begin
-  if GetCookieDomain(CookieString)='' then
-    CookieString := CookieString + '; domain=' + CookieDomain;
-  DelleteIfExist(CookieString);
-  Add(CookieString);
+  FCS.Enter;
+  try
+    if GetCookieDomain(CookieString)='' then
+      CookieString := CookieString + '; domain=' + CookieDomain;
+    DelleteIfExist(CookieString);
+    Add(CookieString);
+  finally
+    FCS.Leave;
+  end;
+end;
+
+function TMyCookieList.GetCookiesByDomain(domain: string): string;
+var
+  i,j: integer;
+  s: string;
+begin
+  result := '';
+  //if (length(domain) > 0) and ((pos('www.',lowercase(domain)) = 1)){ or (url[1] = '.'))} then
+  //  domain:= DeleteTo(domain,'.');
+  FCS.Enter;
+  try
+    for i := 0 to Count - 1 do
+    begin
+      s := GetCookieDomain(Strings[i]);
+      if SameDomain(s,domain) then
+      begin
+        j:=Pos(';',Strings[i]);
+        Result := Result + Copy(Strings[i],1,j)+' ';
+      end;
+    end;
+  finally
+    FCS.Leave;
+  end;
 end;
 
 procedure TMyCookieList.DeleteCookie(CookieDomain: string);
 var i: integer;
 begin
   //Result := '';
-  for i := 0 to Self.Count - 1 do
-  if SameDomain(GetCookieDomain(Self[i]),CookieDomain)
-  {and (GetCookieName(Self[i])=CookieName)} then
-  begin
-    //Result := MyHTTP.GetCookieValue(Self[i]);
-    //Exit;
-    Self.Delete(i);
+  FCS.Enter;
+  try
+    for i := 0 to Self.Count - 1 do
+    if SameDomain(GetCookieDomain(Self[i]),CookieDomain)
+    {and (GetCookieName(Self[i])=CookieName)} then
+    begin
+      //Result := MyHTTP.GetCookieValue(Self[i]);
+      //Exit;
+      Self.Delete(i);
+    end;
+  finally
+    FCS.Leave;
   end;
 end;
 
@@ -206,12 +230,17 @@ var i: integer;
 
 begin
   Result := '';
-  for i := 0 to Self.Count - 1 do
-  if SameDomain(GetCookieDomain(Self[i]),CookieDomain)
-  and (GetCookieName(Self[i])=CookieName) then
-  begin
-    Result := MyHTTP.GetCookieValue(Self[i]);
-    Exit;
+  FCS.Enter;
+  try
+    for i := 0 to Self.Count - 1 do
+    if SameDomain(GetCookieDomain(Self[i]),CookieDomain)
+    and (GetCookieName(Self[i])=CookieName) then
+    begin
+      Result := MyHTTP.GetCookieValue(Self[i]);
+      Exit;
+    end;
+  finally
+    FCS.Leave;
   end;
 end;
 
@@ -219,34 +248,31 @@ function TMyCookieList.GetCookieByValue(CookieName,CookieDomain: string): string
 var i: integer;
 begin
   Result := '';
-  for i := 0 to Self.Count - 1 do
-  if SameDomain(GetCookieDomain(Self[i]),CookieDomain)
-  and (GetCookieName(Self[i])=CookieName) then
-  begin
-    Result := Self[i];
-    Exit
+  FCS.Enter;
+  try
+    for i := 0 to Self.Count - 1 do
+    if SameDomain(GetCookieDomain(Self[i]),CookieDomain)
+    and (GetCookieName(Self[i])=CookieName) then
+    begin
+      Result := Self[i];
+      Exit
+    end;
+  finally
+    FCS.Leave;
   end;
 end;
 
 function TMyIdHTTP.Get(AURL: string; AResponse: TStream): string;
 begin
-{  if Assigned(FCookieList) then
-    WriteCookies(AURL); }
   if AResponse = nil then
     Result := inherited Get(AURL)
   else
     inherited Get(AURL,AResponse);
-{  if Assigned(FCookieList) then
-    ReadCookies(AURL);  }
 end;
 
 function TMyIdHTTP.Post(AURL: string; ASource: TStrings): string;
 begin
-{  if Assigned(FCookieList) then
-    WriteCookies(AURL);  }
   Result := inherited Post(AURL,ASource);
-{  if Assigned(FCookieList) then
-    ReadCookies(AURL);      }
 end;
 
 procedure TMyIdHTTP.ReadCookies(url: string; AResponse: TIdHTTPResponse);
@@ -259,33 +285,17 @@ begin
   begin
     Cookie := SysUtils.StringReplace(AResponse.RawHeaders[i],'Set-Cookie: ','',[]);
     FCookieList.ChangeCookie(GetURLDomain(url),Cookie);
-{    if GetCookieDomain(Cookie)='' then Cookie:=Cookie+'; domain='+GetURLDomain(url);
-    DelleteIfExist(Cookie);
-    FCookieList.Add(Cookie);  }
   end;
 end;
 
 procedure TMyIdHTTP.WriteCookies(url: string;  ARequest: TIdHTTPRequest);
-  var i,j: integer;
-      Cookies: string;
-      s: string;
+  var Cookies: string;
 begin
   URL := GetURLDomain(URL);
-  if (length(url) > 0) and ((pos('www.',lowercase(url)) = 1)){ or (url[1] = '.'))} then
-    URL := DeleteTo(url,'.');
 
-  for i := 0 to FCookieList.Count - 1 do
-  begin
-    s := GetCookieDomain(FCookieList[i]);
-    if (length(s) > 0) and ((pos('www.',lowercase(s)) = 1){ or (s[1] = '.')}) then
-      s := DeleteTo(s,'.');
-    if SameDomain(s,url) then
-    begin
-      j:=Pos(';',FCookieList[i]);
-      Cookies:=Cookies+Copy(FCookieList[i],1,j)+' ';
-    end;
-  end;
-  if Cookies<>'' then
+  Cookies := CookieList.GetCookiesByDomain(url);
+
+  if Cookies <> '' then
   begin
     Cookies:='Cookie: '+Copy(Cookies,1,Length(Cookies)-2);
 //    ARequest.RawHeaders.Clear;
@@ -295,22 +305,22 @@ end;
 
 procedure TMyIdHTTP.DoSetCookies(AURL: String; ARequest: TIdHTTPRequest);
 begin
-  cs.Acquire;
-  try
+  //cs.Acquire;
+  //try
     WriteCookies(AURL,ARequest);
-  finally
-    cs.Release;
-  end;
+  //finally
+  //  cs.Release;
+  //end;
 end;
 
 procedure TMyIdHTTP.DoProcessCookies(ARequest: TIdHTTPRequest; AResponse: TIdHTTPResponse);
 begin
-  cs.Acquire;
-  try
+  //cs.Acquire;
+  //try
     ReadCookies(ARequest.Host,AResponse);
-  finally
-    cs.Release;
-  end;
+  //finally
+  //  cs.Release;
+  //end;
 //  WriteCookies(ARequest.Host,ARequest);
 end;
 
@@ -330,9 +340,9 @@ end;
 
 initialization
 
-  cs := TCriticalSection.Create;
+  //cs := TCriticalSection.Create;
 
 finalization
-  cs.Free;
+  //cs.Free;
 
 end.
