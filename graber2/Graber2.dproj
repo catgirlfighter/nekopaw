@@ -123,7 +123,7 @@
 						<VersionInfo Name="MajorVer">2</VersionInfo>
 						<VersionInfo Name="MinorVer">0</VersionInfo>
 						<VersionInfo Name="Release">1</VersionInfo>
-						<VersionInfo Name="Build">10</VersionInfo>
+						<VersionInfo Name="Build">11</VersionInfo>
 						<VersionInfo Name="Debug">False</VersionInfo>
 						<VersionInfo Name="PreRelease">False</VersionInfo>
 						<VersionInfo Name="Special">False</VersionInfo>
@@ -135,7 +135,7 @@
 					<VersionInfoKeys>
 						<VersionInfoKeys Name="CompanyName">catgirl group</VersionInfoKeys>
 						<VersionInfoKeys Name="FileDescription">Nekopaw Grabber</VersionInfoKeys>
-						<VersionInfoKeys Name="FileVersion">2.0.1.10</VersionInfoKeys>
+						<VersionInfoKeys Name="FileVersion">2.0.1.11</VersionInfoKeys>
 						<VersionInfoKeys Name="InternalName"/>
 						<VersionInfoKeys Name="LegalCopyright">nekopaw.googlecode.com</VersionInfoKeys>
 						<VersionInfoKeys Name="LegalTrademarks"/>
@@ -145,52 +145,11 @@
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
 					<Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinBlackD15.bpl">ExpressSkins - Black Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinDarkRoomD15.bpl">ExpressSkins - Darkroom Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinDarkSideD15.bpl">ExpressSkins - DarkSide Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinFoggyD15.bpl">ExpressSkins - Foggy Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinGlassOceansD15.bpl">ExpressSkins - GlassOceans Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinDevExpressDarkStyleD15.bpl">ExpressSkins - DevExpressDarkStyle Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinDevExpressStyleD15.bpl">ExpressSkins - DevExpressStyle Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinBlueD15.bpl">ExpressSkins - Blue Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinCaramelD15.bpl">ExpressSkins - Caramel Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinCoffeeD15.bpl">ExpressSkins - Coffee Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkiniMaginaryD15.bpl">ExpressSkins - iMaginary Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinLilianD15.bpl">ExpressSkins - Lilian Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinLiquidSkyD15.bpl">ExpressSkins - LiquidSky Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinLondonLiquidSkyD15.bpl">ExpressSkins - LondonLiquidSky Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinMcSkinD15.bpl">ExpressSkins - McSkin Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinMoneyTwinsD15.bpl">ExpressSkins - MoneyTwins Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinOffice2007BlackD15.bpl">ExpressSkins - Office2007Black Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinOffice2007BlueD15.bpl">ExpressSkins - Office2007Blue Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinOffice2007GreenD15.bpl">ExpressSkins - Office2007Green Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinOffice2007PinkD15.bpl">ExpressSkins - Office2007Pink Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinOffice2007SilverD15.bpl">ExpressSkins - Office2007Silver Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinOffice2010BlackD15.bpl">ExpressSkins - Office2010Black Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinOffice2010BlueD15.bpl">ExpressSkins - Office2010Blue Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinOffice2010SilverD15.bpl">ExpressSkins - Office2010Silver Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinPumpkinD15.bpl">ExpressSkins - Pumpkin Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinSevenD15.bpl">ExpressSkins - Seven Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinSharpD15.bpl">ExpressSkins - Sharp Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinSilverD15.bpl">ExpressSkins - Silver Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinSpringTimeD15.bpl">ExpressSkins - Springtime Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinStardustD15.bpl">ExpressSkins - Stardust Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinSummer2008D15.bpl">ExpressSkins - Summer2008 Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinValentineD15.bpl">ExpressSkins - Valentine Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinXmas2008BlueD15.bpl">ExpressSkins - Xmas2008Blue Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinBlueprintD15.bpl">ExpressSkins - Blueprint Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinHighContrastD15.bpl">ExpressSkins - HighContrast Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinSevenClassicD15.bpl">ExpressSkins - SevenClassic Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinSharpPlusD15.bpl">ExpressSkins - SharpPlus Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinTheAsphaltWorldD15.bpl">ExpressSkins - TheAsphaltWorld Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinVS2010D15.bpl">ExpressSkins - VS2010 Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Sources\DevExVLC\Library\Delphi15\dxSkinWhiteprintD15.bpl">ExpressSkins - Whiteprint Skin by Developer Express Inc.</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Bpl\dxSkinscxScheduler3PainterD15.bpl">File C:\Users\Public\Documents\RAD Studio\8.0\Bpl\dxSkinscxScheduler3PainterD15.bpl not found</Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Bpl\dxSkinsdxNavBar2PainterD15.bpl">File C:\Users\Public\Documents\RAD Studio\8.0\Bpl\dxSkinsdxNavBar2PainterD15.bpl not found</Excluded_Packages>
 						<Excluded_Packages Name="$(BDSBIN)\dclwebsnap150.bpl">Embarcadero WebSnap Components</Excluded_Packages>
-						<Excluded_Packages Name="$(BDSBIN)\dclwbm150.bpl">Embarcadero InternetExpress Components</Excluded_Packages>
-						<Excluded_Packages Name="$(BDSBIN)\dclDBXDriversEnt150.bpl">Embarcadero Enterprise Driver Components</Excluded_Packages>
 						<Excluded_Packages Name="$(BDSBIN)\dclDataSnapIndy10ServerTransport150.bpl">Embarcadero DBExpress DataSnap Server Transport Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclDBXDriversEnt150.bpl">Embarcadero Enterprise Driver Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dcloffice2k150.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclofficexp150.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
 					</Excluded_Packages>
 				</Delphi.Personality>
 				<Platforms>

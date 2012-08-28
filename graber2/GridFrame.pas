@@ -16,7 +16,17 @@ uses
   dxSkinsDefaultPainters, dxSkinscxPCPainter,dxSkinsdxStatusBarPainter,
   dxSkinsdxBarPainter,
   {graber}
-  graberU, common, Menus;
+  graberU, common, Menus, dxSkinBlack, dxSkinBlue, dxSkinBlueprint,
+  dxSkinCaramel, dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide,
+  dxSkinDevExpressDarkStyle, dxSkinDevExpressStyle, dxSkinFoggy,
+  dxSkinGlassOceans, dxSkinHighContrast, dxSkiniMaginary, dxSkinLilian,
+  dxSkinLiquidSky, dxSkinLondonLiquidSky, dxSkinMcSkin, dxSkinMoneyTwins,
+  dxSkinOffice2007Black, dxSkinOffice2007Blue, dxSkinOffice2007Green,
+  dxSkinOffice2007Pink, dxSkinOffice2007Silver, dxSkinOffice2010Black,
+  dxSkinOffice2010Blue, dxSkinOffice2010Silver, dxSkinPumpkin, dxSkinSeven,
+  dxSkinSevenClassic, dxSkinSharp, dxSkinSharpPlus, dxSkinSilver,
+  dxSkinSpringTime, dxSkinStardust, dxSkinSummer2008, dxSkinTheAsphaltWorld,
+  dxSkinValentine, dxSkinVS2010, dxSkinWhiteprint, dxSkinXmas2008Blue;
 
 type
 
@@ -133,6 +143,7 @@ type
     procedure doUpdates;
     procedure UncheckInvisible;
     procedure updatechecks;
+    procedure SetMenus;
     property OnPicChanged: TPictureNotifyEvent read FPicChanged write FPicChanged;
     //property OnPageComplete: TNotifyEvent read FPageComplete write FPageComplete;
     property OnTagUpdate: TTagUpdateEvent read FTagUpdate write FTagUpdate;
@@ -814,6 +825,25 @@ begin
   FSizeColumn.Caption := lang('_SIZE_');
 
   FProgressColumn.Caption := lang('_PROGRESS_');
+end;
+
+procedure TfGrid.SetMenus;
+var
+  i: integer;
+begin
+  if GlobalSettings.MenuCaptions then
+    for i := 0 to BarManager.ItemCount-1 do
+      if BarManager.Items[i] is tdxBarButton then
+        (BarManager.Items[i] as tdxBarButton).PaintStyle := psCaptionGlyph
+      else if BarManager.Items[i] is tdxBarSubItem  then
+        (BarManager.Items[i] as tdxBarSubItem).ShowCaption := true
+      else
+  else
+    for i := 0 to BarManager.ItemCount-1 do
+      if BarManager.Items[i] is tdxBarButton then
+        (BarManager.Items[i] as tdxBarButton).PaintStyle := psStandard
+      else if BarManager.Items[i] is tdxBarSubItem  then
+        (BarManager.Items[i] as tdxBarSubItem).ShowCaption := false;
 end;
 
 procedure TfGrid.SetSettings;

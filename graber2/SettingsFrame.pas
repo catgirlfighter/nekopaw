@@ -15,7 +15,17 @@ uses
   dxSkinscxPCPainter, cxFilter, cxData, cxDataStorage, cxGridCustomView,
   cxGridCustomTableView, cxGridTableView, cxClasses, cxGridLevel, cxGrid,
   {Graber}
-  Common, GraberU, dxSkinsdxBarPainter, dxBar;
+  Common, GraberU, dxSkinsdxBarPainter, dxBar, dxSkinBlack, dxSkinBlue,
+  dxSkinBlueprint, dxSkinCaramel, dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide,
+  dxSkinDevExpressDarkStyle, dxSkinDevExpressStyle, dxSkinFoggy,
+  dxSkinGlassOceans, dxSkinHighContrast, dxSkiniMaginary, dxSkinLilian,
+  dxSkinLiquidSky, dxSkinLondonLiquidSky, dxSkinMcSkin, dxSkinMoneyTwins,
+  dxSkinOffice2007Black, dxSkinOffice2007Blue, dxSkinOffice2007Green,
+  dxSkinOffice2007Pink, dxSkinOffice2007Silver, dxSkinOffice2010Black,
+  dxSkinOffice2010Blue, dxSkinOffice2010Silver, dxSkinPumpkin, dxSkinSeven,
+  dxSkinSevenClassic, dxSkinSharp, dxSkinSharpPlus, dxSkinSilver,
+  dxSkinSpringTime, dxSkinStardust, dxSkinSummer2008, dxSkinTheAsphaltWorld,
+  dxSkinValentine, dxSkinVS2010, dxSkinWhiteprint, dxSkinXmas2008Blue;
 
 type
   TfSettings = class(TFrame)
@@ -82,6 +92,8 @@ type
     bbEditRule: TdxBarButton;
     bbDeleteRule: TdxBarButton;
     il: TcxImageList;
+    chbMenuCaptions: TcxCheckBox;
+    lHelp: TcxLabel;
     procedure btnOkClick(Sender: TObject);
     procedure chbProxyPropertiesEditValueChanged(Sender: TObject);
     procedure chbProxyAuthPropertiesEditValueChanged(Sender: TObject);
@@ -96,6 +108,7 @@ type
     procedure bbDeleteRuleClick(Sender: TObject);
     procedure bbNewRuleClick(Sender: TObject);
     procedure bbEditRuleClick(Sender: TObject);
+    procedure lHelpClick(Sender: TObject);
   private
     FIgnList: TDSArray;
     FLangList: TStringList;
@@ -172,6 +185,12 @@ begin
       else
         SkinName := '';
       PostMessage(Application.MainForm.Handle,CM_STYLECHANGED,0,0);
+    end;
+
+    if MenuCaptions <> chbMenuCaptions.Checked then
+    begin
+      MenuCaptions := chbMenuCaptions.Checked;
+      PostMessage(Application.MainForm.Handle,CM_MENUSTYLECHANGED,0,0);
     end;
 
   end;
@@ -363,6 +382,12 @@ begin
     0, 0);
 end;
 
+procedure TfSettings.lHelpClick(Sender: TObject);
+begin
+  ShellExecute(Handle,nil,'http://code.google.com/p/nekopaw/wiki/NekopawGUI',
+    nil,nil,SW_SHOWNORMAL);
+end;
+
 procedure TfSettings.LoadDoubles;
 var
   i: integer;
@@ -401,6 +426,7 @@ begin
       cbSkin.ItemIndex := 0
     else
       cbSkin.Text := SkinName;
+    chbMenuCaptions.Checked := MenuCaptions;
 {    resnames := tstringlist.Create;
     skinnames := tstringlist.Create;
     try
@@ -487,6 +513,8 @@ begin
   bbDeleteRule.Caption :=  lang('_DELETERULE_');
   cDoublesRuleName.Caption := lang('_RULENAME_');
   cDoublesRules.Caption := lang('_RULESTRING_');
+  chbmenucaptions.Caption := lang('_MENUCAPTIONS_');
+  lHELP.Caption := lang('_HELP_');
 end;
 
 procedure TfSettings.tlListFocusedNodeChanged(Sender: TcxCustomTreeList;

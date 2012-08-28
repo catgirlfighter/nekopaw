@@ -29,6 +29,7 @@ const
   CM_STYLECHANGED = WM_USER + 17;
   CM_REFRESHRESINFO = WM_USER + 18;
   CM_REFRESHPIC = WM_USER + 19;
+  CM_MENUSTYLECHANGED = WM_USER + 20;
 
   THREAD_STOP = 0;
   THREAD_START = 1;
@@ -108,6 +109,7 @@ type
     UseLookAndFeel: Boolean;
     SkinName: String;
     IsNew: boolean;
+    MenuCaptions: Boolean;
   end;
 
   THTTPMethod = (hmGet, hmPost);
