@@ -16,7 +16,17 @@ uses
   dxSkinscxPCPainter, dxSkinsdxNavBarPainter, dxSkinsdxDockControlPainter,
   dxSkinsdxBarPainter, dxSkinsForm,
   {graber2}
-  common, OpBase, graberU, MyHTTP, UPDUnit, cxMaskEdit, cxSpinEdit
+  common, OpBase, graberU, MyHTTP, UPDUnit, cxMaskEdit, cxSpinEdit, dxSkinBlack,
+  dxSkinBlue, dxSkinBlueprint, dxSkinCaramel, dxSkinCoffee, dxSkinDarkRoom,
+  dxSkinDarkSide, dxSkinDevExpressDarkStyle, dxSkinDevExpressStyle, dxSkinFoggy,
+  dxSkinGlassOceans, dxSkinHighContrast, dxSkiniMaginary, dxSkinLilian,
+  dxSkinLiquidSky, dxSkinLondonLiquidSky, dxSkinMcSkin, dxSkinMoneyTwins,
+  dxSkinOffice2007Black, dxSkinOffice2007Blue, dxSkinOffice2007Green,
+  dxSkinOffice2007Pink, dxSkinOffice2007Silver, dxSkinOffice2010Black,
+  dxSkinOffice2010Blue, dxSkinOffice2010Silver, dxSkinPumpkin, dxSkinSeven,
+  dxSkinSevenClassic, dxSkinSharp, dxSkinSharpPlus, dxSkinSilver,
+  dxSkinSpringTime, dxSkinStardust, dxSkinSummer2008, dxSkinTheAsphaltWorld,
+  dxSkinValentine, dxSkinVS2010, dxSkinWhiteprint, dxSkinXmas2008Blue
   {skins}
   {dxSkinsCore, dxSkinBlack, dxSkinBlue, dxSkinBlueprint, dxSkinCaramel,
   dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide, dxSkinDevExpressDarkStyle,
@@ -170,6 +180,7 @@ type
     procedure STYLECHANGED(var Msg: TMessage); message CM_STYLECHANGED;
     procedure WREFRESHPIC(var Msg: TMessage); message CM_REFRESHPIC;
     procedure WREFRESHRESINFO(var Msg: TMessage); message CM_REFRESHRESINFO;
+    procedure MENUSTYLECHANGED(var Msg: TMessage); message CM_MENUSTYLECHANGED;
     //procedure dxTabClose(Sender: TdxCustomDockControl);
     // procedure APPLYEDITLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
   private
@@ -611,6 +622,7 @@ begin
   f2.OnPicChanged := DoPicInfo;
   f2.SetSettings;
   f2.SetLang;
+  f2.SetMenus;
 
   f2.ResList.StartJob(JOB_LIST);
   ShowPanels;
@@ -989,6 +1001,56 @@ begin
   PicInfo(TObject(Msg.WParam),TTPicture(Msg.LParam));
 end;
 
+procedure Tmf.MENUSTYLECHANGED(var Msg: TMessage);
+var
+  i,j: integer;
+begin
+  if GlobalSettings.MenuCaptions then
+  begin
+    for i := 0 to BarManager.ItemCount-1 do
+      if BarManager.Items[i] is tdxBarButton then
+        (BarManager.Items[i] as tdxBarButton).PaintStyle := psCaptionGlyph
+      else if BarManager.Items[i] is tdxBarSubItem  then
+        (BarManager.Items[i] as tdxBarSubItem).ShowCaption := true;
+
+    for j := 0 to pcTables.PageCount-1 do
+    if pcTables.Pages[j] is tMycxTabSheet then
+      with (pcTables.Pages[j] as tMycxTabSheet) do
+      begin
+        if Assigned(MainFrame) then
+          if MainFrame is tfGrid then
+            (MainFrame as tfGrid).SetMenus;
+{            for i := 0 to (MainFrame as tfGrid).BarManager.ItemCount -1 do
+              if (MainFrame as tfGrid).BarManager.Items[i] is tdxBarButton then
+                ((MainFrame as tfGrid).BarManager.Items[i] as tdxBarButton).PaintStyle := psCaptionGlyph
+              else if (MainFrame as tfGrid).BarManager.Items[i] is tdxBarSubItem  then
+                ((MainFrame as tfGrid).BarManager.Items[i] as tdxBarSubItem).ShowCaption := true;                      }
+      end;
+
+  end else
+  begin
+    for i := 0 to BarManager.ItemCount-1 do
+      if BarManager.Items[i] is tdxBarButton then
+        (BarManager.Items[i] as tdxBarButton).PaintStyle := psStandard
+      else if BarManager.Items[i] is tdxBarSubItem  then
+        (BarManager.Items[i] as tdxBarSubItem).ShowCaption := false;
+
+    for j := 0 to pcTables.PageCount-1 do
+    if pcTables.Pages[j] is tMycxTabSheet then
+      with (pcTables.Pages[j] as tMycxTabSheet) do
+      begin
+        if Assigned(MainFrame) then
+          if MainFrame is tfGrid then
+            (MainFrame as tfGrid).SetMenus;
+{            for i := 0 to (MainFrame as tfGrid).BarManager.ItemCount -1 do
+              if (MainFrame as tfGrid).BarManager.Items[i] is tdxBarButton then
+                ((MainFrame as tfGrid).BarManager.Items[i] as tdxBarButton).PaintStyle := psStandard
+              else if (MainFrame as tfGrid).BarManager.Items[i] is tdxBarSubItem  then
+                ((MainFrame as tfGrid).BarManager.Items[i] as tdxBarSubItem).ShowCaption := false;  }
+      end;
+  end;
+end;
+
 procedure Tmf.StartUpdate;
 var
   f: tfileStream;
@@ -1282,6 +1344,7 @@ begin
   dsLogs.Hide;
   dsTags.Hide;
   FCurPic := nil;
+  SendMessage(Handle,CM_MENUSTYLECHANGED,0,0);
   if opbase.ShowSettings then
     PostMessage(Handle,CM_SHOWSETTINGS,0,0)
   else if GlobalSettings.AutoUPD then

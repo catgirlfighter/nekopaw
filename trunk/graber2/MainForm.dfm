@@ -405,6 +405,7 @@ object mf: Tmf
       FloatTop = 192
       FloatClientWidth = 51
       FloatClientHeight = 22
+      IsMainMenu = True
       ItemLinks = <
         item
           Visible = True
@@ -422,6 +423,7 @@ object mf: Tmf
           Visible = True
           ItemName = 'bbSettings'
         end>
+      MultiLine = True
       NotDocking = [dsNone, dsLeft, dsTop, dsRight, dsBottom]
       OneOnRow = True
       Row = 0

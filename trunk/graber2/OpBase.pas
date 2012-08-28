@@ -198,6 +198,8 @@ begin
       UPDServ := INI.ReadString('settings','updserver',
         'http://nekopaw.googlecode.com/svn/trunk/release/graber2/');
       langname := INI.ReadString('settings','language','');
+      MenuCaptions := INI.ReadBool('settings','menucaptions',false);
+
       ShowSettings := langname = '';
 
       if ShowSettings then
@@ -309,6 +311,7 @@ begin
       INI.WriteBool('Settings','ShowWhatsNew',ShowWhatsNew);
       INI.WriteBool('Settings','UseLookAndFeel',UseLookAndFeel);
       INI.WriteString('Settings','SkinName',SkinName);
+      INI.WriteBool('settings','menucaptions',MenuCaptions);
 
       with Downl do
       begin
