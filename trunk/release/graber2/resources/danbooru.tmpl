@@ -23,7 +23,6 @@ $previewurl = '#preview_url';
 $picurl = '$picture%url';
 $fpxml = 'xml';
 $lxml = 'xml';
-$fcounter = 1;
 $userstring = 'user[name]';
 $pwdstring = 'user[password]';
 $main.checkcookie = 'login';
@@ -36,7 +35,6 @@ $thread.jsonitem = 'post';
 $thread.xml = 'firstpagexml';
 $thread.xmlcontent = $fpxml;
 $thread.execute();
-$thread.counter = $fcounter;
 $thread.xml = 'listxml';
 $thread.xmlcontent = $lxml;
 $thread.url = "$main.url+'post/index.'+$lxml+'?limit=100&tags='+@httpencode($tag)+'&page='+$thread.counter+1";
@@ -64,7 +62,7 @@ $thread.referer = $picture%post_url;
 			%posted=@calc($pictime),
 			%md5=#md5,
 			%source=#source,
-			%aspect_ratio=#width/#height,
+			%aspect_ratio=@isempty(#width,0)/@isempty(#height,1),
 			%tags=csv(#tags," ")
 		);
 		$picture.filename = @emptyname(#file_url);
@@ -87,7 +85,7 @@ $thread.referer = $picture%post_url;
 		%posted=@calc($pictime),
 		%md5=#md5,
 		%source=#source,
-		%aspect_ratio=#width/#height,
+		%aspect_ratio=@isempty(#width,0)/@isempty(#height,1),
 		%tags=csv(#tags," ")
 	);
 	$picture.filename = @emptyname(#file_url);
