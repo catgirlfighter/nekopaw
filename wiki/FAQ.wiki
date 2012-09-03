@@ -1,0 +1,6 @@
+#summary часто задаваемые вопросы
+#labels Featured,Phase-Support
+
+= Could not load SSL library =
+
+Для доступа на сайт нужны библиотеки OpenSSL для подключения по HTTPS протоколу. Скачать их можно [https://code.google.com/p/nekopaw/downloads/detail?name=OpenSSL_Lib.zip тут]
