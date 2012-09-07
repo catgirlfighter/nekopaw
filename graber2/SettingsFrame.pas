@@ -14,8 +14,11 @@ uses
   cxInplaceContainer, StdCtrls, cxButtons, dxSkinsCore, dxSkinsDefaultPainters,
   dxSkinscxPCPainter, cxFilter, cxData, cxDataStorage, cxGridCustomView,
   cxGridCustomTableView, cxGridTableView, cxClasses, cxGridLevel, cxGrid,
+  dxSkinsdxBarPainter, dxBar,
   {Graber}
-  Common, GraberU, dxSkinsdxBarPainter, dxBar, dxSkinBlack, dxSkinBlue,
+  Common, GraberU;
+{
+  dxSkinsdxBarPainter, dxBar, dxSkinBlack, dxSkinBlue,
   dxSkinBlueprint, dxSkinCaramel, dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide,
   dxSkinDevExpressDarkStyle, dxSkinDevExpressStyle, dxSkinFoggy,
   dxSkinGlassOceans, dxSkinHighContrast, dxSkiniMaginary, dxSkinLilian,
@@ -26,6 +29,7 @@ uses
   dxSkinSevenClassic, dxSkinSharp, dxSkinSharpPlus, dxSkinSilver,
   dxSkinSpringTime, dxSkinStardust, dxSkinSummer2008, dxSkinTheAsphaltWorld,
   dxSkinValentine, dxSkinVS2010, dxSkinWhiteprint, dxSkinXmas2008Blue;
+}
 
 type
   TfSettings = class(TFrame)
@@ -624,6 +628,7 @@ end;
 procedure TfSettings.SaveResFields;
 var
   i, n, d: Integer;
+
 begin
   n := vgSettings.Tag;
   with FullResList[n] do
@@ -657,10 +662,13 @@ begin
         with Fields do
           for i := d to Count - 1 do
           if Items[i].restype <> ftNone then
-
           begin
-            Items[i].resvalue := (vgSettings.RowByName('evgi' + Items[i].resname)
-              as TcxEditorRow).Properties.Value;
+            if Items[i].restype = ftIndexCombo then
+              Items[i].resvalue := IndexOfStr(Items[i].resitems,(vgSettings.RowByName('evgi' + Items[i].resname)
+                as TcxEditorRow).Properties.Value)
+            else
+              Items[i].resvalue := (vgSettings.RowByName('evgi' + Items[i].resname)
+                as TcxEditorRow).Properties.Value;
           end;
     end;
   end;

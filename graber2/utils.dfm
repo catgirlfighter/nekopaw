@@ -1,5 +1,6 @@
 object dm: Tdm
   OldCreateOrder = False
+  OnCreate = DataModuleCreate
   Height = 401
   Width = 516
   object EditRepository: TcxEditRepository
@@ -83,14 +84,6 @@ object dm: Tdm
     object erRDCheckBox: TcxEditRepositoryCheckBoxItem
       Properties.Alignment = taLeftJustify
       Properties.ReadOnly = True
-    end
-    object erPathText: TcxEditRepositoryButtonItem
-      Properties.Buttons = <
-        item
-          Default = True
-          Kind = bkEllipsis
-        end>
-      Properties.OnButtonClick = erPathTextPropertiesButtonClick
     end
     object erPathBrowse: TcxEditRepositoryButtonItem
       Properties.Buttons = <
@@ -191,6 +184,10 @@ object dm: Tdm
           Kind = bkGlyph
         end>
       Properties.OnButtonClick = erURLTextPropertiesButtonClick
+    end
+    object erPathText: TcxEditRepositoryMRUItem
+      Properties.AutoSelect = False
+      Properties.OnButtonClick = EditRepositoryMRUItem1PropertiesButtonClick
     end
   end
   object il: TcxImageList

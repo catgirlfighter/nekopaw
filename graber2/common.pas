@@ -47,6 +47,8 @@ procedure _Delay(dwMilliseconds: Longint);
 function ValidFName(FName: String; bckslsh: boolean = false): String;
 function strlisttostr(s: tstringlist; del: Char = ';'; ins: Char = '"'): string;
 function strtostrlist(s: string; del: Char = ';'; ins: Char = '"'): string;
+function IndexOfStr(strlist,value: string): integer; overload;
+function IndexOfStr(list: tstrings; value: string): integer; overload;
 procedure DrawImage(AImage: TImage; AStream: TStream; Ext: String);
 procedure DrawImageFromRes(AImage: TImage; ResName, Ext: String);
 procedure WriteLWToPChar(n: LongWord; p: PChar);
@@ -81,8 +83,8 @@ implementation
 
 const
   _SYMBOL_MISSED_ = 'Cant found symbol "%s" for #%d "%s" in "%s"';
-  _OPERATOR_MISSED_ = 'Must be an operator instead of #%d "%s" in "%s"';
-  _OPERAND_MISSED_ = 'Must be an oparand instead of #%d "%s" in "%s"';
+  _OPERATOR_MISSED_ = 'Must be an operator instead of "%s" in "%s"';
+  _OPERAND_MISSED_ = 'Must be an oparand instead of "%s" in "%s"';
   _INVALID_TYPECAST_ = 'Invalid typecast for "%s" %s "%s" near #%d in "%s"';
   _INCORRECT_SYMBOL_ = 'Incorrect value "%s" near #%d in "%s"';
 
@@ -961,6 +963,34 @@ begin
   end;
 end;
 
+function IndexOfStr(strlist,value: string): integer;
+var
+  val: string;
+begin
+  result := 0;
+  while strlist <> '' do
+  begin
+    val := TrimEx(CopyTo(strlist,',',['""'],[],true),[' ','"']);
+    if value = val then
+      Exit;
+    inc(result);
+  end;
+  result := -1;
+end;
+
+function IndexOfStr(list: tstrings; value: string): integer;
+var
+  i: integer;
+begin
+  for i := 0 to list.Count-1 do
+    if SameText(list[i],value) then
+    begin
+      result := i;
+      Exit;
+    end;
+  result := -1;
+end;
+
 procedure DrawImage(AImage: TImage; AStream: TStream; Ext: String);
 var
   Graphic: TGraphic;
@@ -1525,7 +1555,7 @@ const
         '"', '''':
           begin
             if op then
-              raise Exception.Create(Format(_OPERATOR_MISSED_, [i,s[i],s]));
+              raise Exception.Create(Format(_OPERATOR_MISSED_, [s[i],s]));
 
             Result := '';
 
@@ -1561,7 +1591,7 @@ const
               if s[i] = '-' then
                 goto cc
               else
-                raise Exception.Create(Format(_OPERAND_MISSED_, [i,s[i],s]));
+                raise Exception.Create(Format(_OPERAND_MISSED_, [s[i],s]));
 
             lvl := 0;
             case s[i] of
@@ -1615,12 +1645,18 @@ const
                 '>':
                   Result := Result > d;
                 '=':
-                  Result := Result = d;
+                  if VarIsStr(Result) or VarIsStr(d) then
+                    Result := VarToStr(Result) = VarToStr(d)
+                  else
+                    Result := Result = d;
                 '~':
                   Result := pos(d,Result) > 0;
                 '!':
                   if op then
-                    Result := Result <> d
+                    if VarIsStr(Result) or VarIsStr(d) then
+                      Result := VarToStr(Result) <> VarToStr(d)
+                    else
+                      Result := Result <> d
                   else
                     Result := not Result;
               end;
@@ -1646,12 +1682,12 @@ const
         '(':
           begin
             if op then
-              raise Exception.Create(Format(_OPERATOR_MISSED_, [i,s[i],s]));
+              raise Exception.Create(Format(_OPERATOR_MISSED_, [s[i], copy(s,i-10,20)]));
 
-            n := CharPos(s, ')', [], [], i + 1);
+            n := CharPos(s, ')', ['''' + '''','""'], [], i + 1);
 
             if n = 0 then
-              raise Exception.Create(Format(_SYMBOL_MISSED_, [')', i, s[i], s]));
+              raise Exception.Create(Format(_SYMBOL_MISSED_, [')', i, s[i], copy(s,i-10,20)]));
 
             inc(i);
             tmpls := null;
@@ -1665,9 +1701,9 @@ const
         begin
         cc:
           if op then
-            raise Exception.Create(Format(_OPERATOR_MISSED_, [i,s[i],s]));
+            raise Exception.Create(Format(_OPERATOR_MISSED_, [s[i],copy(s,i-10,20)]));
 
-          n := CharPosEx(s, ops + [' '], ['''''', '""'],['()'], i + 1);
+          n := CharPosEx(s, ops + [' '], ['''' + '''', '""'],['()'], i + 1);
 
           if (n = 0) or (n > l) then
             n := l + 1;
@@ -1686,8 +1722,8 @@ const
                 if TryStrToFloat(vt, vt2) then
                   Result := vt2
                 else
-                   raise Exception.Create(Format(_INCORRECT_SYMBOL_,[result,i,s]));
-              else raise Exception.Create(Format(_INCORRECT_SYMBOL_,[result,i,s]));
+                   raise Exception.Create(Format(_INCORRECT_SYMBOL_,[result,i,copy(s,i-10,20)]));
+              else raise Exception.Create(Format(_INCORRECT_SYMBOL_,[result,i,copy(s,i-10,20)]));
             end;
           end else
             Result := VarAsType(Result,varDouble);

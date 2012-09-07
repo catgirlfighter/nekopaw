@@ -16,17 +16,7 @@ uses
   dxSkinscxPCPainter, dxSkinsdxNavBarPainter, dxSkinsdxDockControlPainter,
   dxSkinsdxBarPainter, dxSkinsForm,
   {graber2}
-  common, OpBase, graberU, MyHTTP, UPDUnit, cxMaskEdit, cxSpinEdit, dxSkinBlack,
-  dxSkinBlue, dxSkinBlueprint, dxSkinCaramel, dxSkinCoffee, dxSkinDarkRoom,
-  dxSkinDarkSide, dxSkinDevExpressDarkStyle, dxSkinDevExpressStyle, dxSkinFoggy,
-  dxSkinGlassOceans, dxSkinHighContrast, dxSkiniMaginary, dxSkinLilian,
-  dxSkinLiquidSky, dxSkinLondonLiquidSky, dxSkinMcSkin, dxSkinMoneyTwins,
-  dxSkinOffice2007Black, dxSkinOffice2007Blue, dxSkinOffice2007Green,
-  dxSkinOffice2007Pink, dxSkinOffice2007Silver, dxSkinOffice2010Black,
-  dxSkinOffice2010Blue, dxSkinOffice2010Silver, dxSkinPumpkin, dxSkinSeven,
-  dxSkinSevenClassic, dxSkinSharp, dxSkinSharpPlus, dxSkinSilver,
-  dxSkinSpringTime, dxSkinStardust, dxSkinSummer2008, dxSkinTheAsphaltWorld,
-  dxSkinValentine, dxSkinVS2010, dxSkinWhiteprint, dxSkinXmas2008Blue
+  common, OpBase, graberU, MyHTTP, UPDUnit;
   {skins}
   {dxSkinsCore, dxSkinBlack, dxSkinBlue, dxSkinBlueprint, dxSkinCaramel,
   dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide, dxSkinDevExpressDarkStyle,
@@ -39,7 +29,7 @@ uses
   dxSkinSilver, dxSkinSpringTime, dxSkinStardust, dxSkinSummer2008,
   dxSkinTheAsphaltWorld, dxSkinsDefaultPainters, dxSkinValentine, dxSkinVS2010,
   dxSkinWhiteprint, dxSkinXmas2008Blue, dxSkinsForm, dxSkinscxPCPainter,
-  dxSkinsdxNavBarPainter, dxSkinsdxDockControlPainter, dxSkinsdxBarPainter};
+  dxSkinsdxNavBarPainter, dxSkinsdxDockControlPainter, dxSkinsdxBarPainter}
 
 type
 
@@ -599,6 +589,8 @@ begin
 
   f.ResetItems;
 
+  SaveResourceSettings;
+
   if VarToStr(FullResList[0].Fields['tag']) <> '' then
     n.Caption := FullResList[0].Fields['tag'];
 
@@ -613,6 +605,7 @@ begin
   FullResList.OnError := OnError;
   FullResList.OnJobChanged := nil;
 
+  f.Release;
   FreeAndNil(n.SecondFrame);
   f2.Reset;
   n.MainFrame := f2;
@@ -825,7 +818,10 @@ procedure Tmf.ENDJOB(var Msg: TMessage);
 begin
   updateTab;
   if Msg.LParam = 0 then
+  begin
     changeTags;
+    //bHint.
+  end;
 {  t := TMycxTabSheet(Msg.WParam);
   t.SetIcon(0); }
 end;

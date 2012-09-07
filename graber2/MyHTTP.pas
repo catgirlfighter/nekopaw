@@ -2,7 +2,7 @@ unit MyHTTP;
 
 interface
 
-uses IdHTTP, Classes, SysUtils, SyncObjs, Strutils, Common;
+uses IdHTTP, Classes, SysUtils, SyncObjs, Strutils, Variants, Common;
 
 type
   TMyCookieList = class(TStringList)
@@ -41,6 +41,7 @@ type
   function CreateHTTP{(AOwner: TComponent)}: TMyIdHTTP;
   function RemoveURLDomain(url: string) : string;
   function GetUrlVarValue(URL,Variable: String): String;
+  function AddURLVar(URL,Variable: String; Value: Variant): String;
   function GetURLDomain(url: string): string;
 
 implementation
@@ -75,6 +76,14 @@ begin
     end;
   end;
   Result := '';
+end;
+
+function AddURLVar(URL,Variable: String; Value: Variant): String;
+begin
+  if pos('?',URL) > 0 then
+    Result := URL + '&' + Variable + '=' + VarToStr(Value)
+  else
+    Result := URL + '?' + Variable + '=' + VarToStr(Value);
 end;
 
 function GetCookieName(Cookie: string): string;
