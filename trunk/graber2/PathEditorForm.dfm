@@ -13,9 +13,6 @@ object fPathEditor: TfPathEditor
   Font.Style = []
   OldCreateOrder = False
   Position = poScreenCenter
-  DesignSize = (
-    476
-    158)
   PixelsPerInch = 96
   TextHeight = 13
   object Panel1: TPanel
@@ -25,7 +22,6 @@ object fPathEditor: TfPathEditor
     Height = 33
     Align = alTop
     BevelOuter = bvNone
-    Caption = 'Panel1'
     ShowCaption = False
     TabOrder = 0
     object bOk: TcxButton
@@ -60,25 +56,6 @@ object fPathEditor: TfPathEditor
     ModalResult = 2
     TabOrder = 1
   end
-  object ePath: TcxTextEdit
-    Left = 8
-    Top = 48
-    Anchors = [akLeft, akTop, akRight]
-    Properties.AutoSelect = False
-    TabOrder = 2
-    Text = 'ePath'
-    Width = 427
-  end
-  object bBrowse: TcxButton
-    Left = 441
-    Top = 48
-    Width = 27
-    Height = 21
-    Anchors = [akTop, akRight]
-    Caption = '...'
-    TabOrder = 3
-    OnClick = bBrowseClick
-  end
   object bVariables: TcxButton
     Left = 8
     Top = 116
@@ -87,7 +64,7 @@ object fPathEditor: TfPathEditor
     Caption = '$variable$'
     DropDownMenu = pmVariables
     Kind = cxbkDropDown
-    TabOrder = 4
+    TabOrder = 2
   end
   object lex1: TcxLabel
     Left = 8
@@ -111,7 +88,7 @@ object fPathEditor: TfPathEditor
     Caption = '%field[:format]%'
     DropDownMenu = pmFields
     Kind = cxbkDropDown
-    TabOrder = 7
+    TabOrder = 5
   end
   object lex3: TcxLabel
     Left = 258
@@ -147,9 +124,17 @@ object fPathEditor: TfPathEditor
     Transparent = True
     OnClick = lwiki2Click
   end
+  object cbPath: TcxMRUEdit
+    Left = 8
+    Top = 48
+    Properties.OnButtonClick = bBrowseClick
+    TabOrder = 10
+    Text = 'cbPath'
+    Width = 460
+  end
   object dPath: TcxShellBrowserDialog
     Root.BrowseFolder = bfDrives
-    Left = 256
+    Left = 248
     Top = 16
   end
   object pmVariables: TPopupMenu
@@ -201,5 +186,9 @@ object fPathEditor: TfPathEditor
   object pmFields: TPopupMenu
     Left = 288
     Top = 12
+  end
+  object PopupMenu1: TPopupMenu
+    Left = 448
+    Top = 96
   end
 end

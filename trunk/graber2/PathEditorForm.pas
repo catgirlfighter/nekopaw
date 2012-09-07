@@ -11,15 +11,14 @@ uses
   cxContainer, cxEdit, cxLabel, cxTextEdit, cxButtons,
   cxShellBrowserDialog,
   {graber}
-  common, dxSkinsCore, dxSkinsDefaultPainters;
+  common, dxSkinsCore, dxSkinsDefaultPainters, cxMaskEdit, cxButtonEdit,
+  cxListBox, cxDropDownEdit, cxMRUEdit;
 
 type
   TfPathEditor = class(TForm)
     Panel1: TPanel;
     bOk: TcxButton;
     bCancel: TcxButton;
-    ePath: TcxTextEdit;
-    bBrowse: TcxButton;
     dPath: TcxShellBrowserDialog;
     bVariables: TcxButton;
     pmVariables: TPopupMenu;
@@ -42,6 +41,8 @@ type
     N8: TMenuItem;
     N9: TMenuItem;
     N10: TMenuItem;
+    PopupMenu1: TPopupMenu;
+    cbPath: TcxMRUEdit;
     procedure bBrowseClick(Sender: TObject);
     procedure N1Click(Sender: TObject);
     procedure N2Click(Sender: TObject);
@@ -56,6 +57,8 @@ type
     procedure N8Click(Sender: TObject);
     procedure N7Click(Sender: TObject);
     procedure N10Click(Sender: TObject);
+    procedure ePathPropertiesButtonClick(Sender: TObject;
+      AButtonIndex: Integer);
 
   private
     procedure VarClick(Sender: TObject);
@@ -70,18 +73,18 @@ type
 var
   fPathEditor: TfPathEditor;
 
-function ExecutePathEditor(Value: string; Vars,Fields: TStringList): string;
+function ExecutePathEditor(Value: string; Paths,Vars,Fields: TStrings): string;
 
 implementation
 
 uses LangString;
 
 var
-  fvars,ffields: tstringlist;
+  fvars,ffields: tstrings;
 
 {$R *.dfm}
 
-function ExecutePathEditor(Value: string; Vars,Fields: TStringList): string;
+function ExecutePathEditor(Value: string; Paths,Vars,Fields: TStrings): string;
 var
   item: TMenuItem;
   i: integer;
@@ -91,7 +94,8 @@ begin
   with fPathEditor do
   begin
     SetLang;
-    ePath.Text := Value;
+    cbPath.Text := Value;
+    cbPath.Properties.Items.Assign(Paths);
 
     fvars := vars;
     if Assigned(vars) then
@@ -132,12 +136,12 @@ begin
       end;
     end;
 
-    fPathEditor.SetFocusedControl(ePath);
-    ePath.SelStart := Length(ePath.Text);
+    fPathEditor.SetFocusedControl(cbPath);
+    cbPath.SelStart := Length(cbPath.Text);
 
     ShowModal;
     if ModalResult = mrOk then
-      Result := ePath.Text
+      Result := cbPath.Text
     else
       Result := Value;
     Free;
@@ -166,14 +170,14 @@ var
   s: string;
 
 begin
-  dPath.Path := GetAcceptablePath(ePath.Text);
+  dPath.Path := GetAcceptablePath(cbPath.Text);
   if dPath.Execute then
   begin
-    s := ePath.Text;
+    s := cbPath.Text;
     s := ExcludeTrailingPathDelimiter(DeleteTo(s,'$rootdir$',false));
     n := CharPosEx(s,['<','%','$'],[],[]);
     if n = 0 then
-      ePath.Text := IncludeTrailingPathDelimiter(dPath.Path)
+      cbPath.Text := IncludeTrailingPathDelimiter(dPath.Path)
     else
     begin
       s := ReverseString(s);
@@ -181,11 +185,11 @@ begin
       if n > 0 then
         s := Copy(s,1,n);
 
-      ePath.Text := IncludeTrailingPathDelimiter(dPath.Path)
+      cbPath.Text := IncludeTrailingPathDelimiter(dPath.Path)
         + ReverseString(ExcludeTrailingPathDelimiter(s));
     end;
-    ePath.SelStart := Length(ePath.Text);
-    ePath.SetFocus;
+    cbPath.SelStart := Length(cbPath.Text);
+    cbPath.SetFocus;
   end;
 end;
 
@@ -198,6 +202,15 @@ procedure TfPathEditor.VarClick(Sender: TObject);
 begin
   if assigned(fvars) then
     SetValue('$' + fvars[(sender as TComponent).Tag] + '$');
+end;
+
+procedure TfPathEditor.ePathPropertiesButtonClick(Sender: TObject;
+  AButtonIndex: Integer);
+begin
+  case AButtonIndex of
+    //0: ePath.Properties.p\
+    3: bBrowseClick(nil);
+  end;
 end;
 
 procedure TfPathEditor.FieldClick(Sender: TObject);
@@ -241,11 +254,11 @@ procedure TfPathEditor.N6Click(Sender: TObject);
 var
   s: string;
 begin
-  s := DeleteTo(DeleteTo(ePath.Text,':\'),'$rootdir$',false);
+  s := DeleteTo(DeleteTo(cbPath.Text,':\'),'$rootdir$',false);
   while (length(s) > 0) and (s[1] = PathDelim) do
     delete(s,1,1);
-  ePath.Text := IncludeTrailingPathDelimiter('$rootdir$') + s;
-  ePath.SetFocus;
+  cbPath.Text := IncludeTrailingPathDelimiter('$rootdir$') + s;
+  cbPath.SetFocus;
 end;
 
 procedure TfPathEditor.N7Click(Sender: TObject);
@@ -283,14 +296,14 @@ begin
   N6.Caption := '$rootdir$ - ' + lang('_HINT_ROOTDIR_');
   N7.Caption := '$nn$ - ' + lang('_HINT_NN_');
   N8.Caption := '$fn$ - ' + lang('_HINT_FN_');
-  N9.Caption := '$fnn$ - ' + lang('_HINT_FNN_');
-  N10.Caption := '$tags$ - ' + lang('_HINT_TAGS_');
+  N9.Caption := '$fnn[(N)]$ - ' + lang('_HINT_FNN_');
+  N10.Caption := '$tags[(N)]$ - ' + lang('_HINT_TAGS_');
 end;
 
 procedure TfPathEditor.SetValue(s: string);
 begin
-  ePath.SelText := s;
-  ePath.SetFocus;
+  cbPath.SelText := s;
+  cbPath.SetFocus;
 end;
 
 procedure TfPathEditor.N10Click(Sender: TObject);

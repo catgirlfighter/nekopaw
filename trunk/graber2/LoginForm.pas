@@ -8,7 +8,8 @@ uses
   Dialogs, Menus, StdCtrls,
   {devex}
   cxGraphics, cxControls, cxLookAndFeels, cxLookAndFeelPainters,
-  cxContainer, cxEdit, cxButtons, cxLabel, cxTextEdit;
+  cxContainer, cxEdit, cxButtons, cxLabel, cxTextEdit, dxSkinsCore,
+  dxSkinsDefaultPainters;
 
 type
   TLoginCallBack=procedure(Sender: TObject; N: integer; Login,Password: String;

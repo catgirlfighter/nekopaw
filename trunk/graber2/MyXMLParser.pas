@@ -44,6 +44,8 @@ type
 
   TTextKind = (txkFullWithTags,txkFull,txkCurrent);
 
+  TTagState = (tsNormal,tsOnlyText,tsClosable);
+
   TTag = class(TObject)
   private
     FParent: TTag;
@@ -54,6 +56,7 @@ type
     FKind: TTagKind;
     FClosed: boolean;
     FTag: Integer;
+    fState: TTagState;
   protected
     procedure SetName(Value: String);
     procedure SetText(Value: String);
@@ -61,7 +64,7 @@ type
   public
     constructor Create(AName: String = ''; AKind: TTagKind = tkTag);
     destructor Destroy; override;
-    function FindParent(TagString: String): TTag;
+    function FindParent(TagString: String; ignoreState: boolean = false): TTag;
     function GetText(TextKind: TTextKind; AddOwnTag: boolean): string;  overload;
     property Name: String read FName write SetName;
     property Attrs: TAttrList read FAttrList{ write FAttrList};
@@ -71,6 +74,7 @@ type
     property Kind: TTagKind read FKind write FKind;
     property Closed: Boolean read FClosed write FClosed;
     property Tag: Integer read FTag write FTag;
+    property State: TTagState read fState write fState;
   end;
 
   TTagList = class(TList)
@@ -102,6 +106,8 @@ type
 //    : TXMLOnContentEvent;
     FTagList: TTagList;
   protected
+    procedure CheckHTMLTag(tag: ttag);
+    function CheckHTMLStat(tag: string): boolean;
   public
     procedure JSON(starttag: string; const S: TStrings); overload;
     procedure JSON(starttag: string; S: String); overload;
@@ -109,8 +115,8 @@ type
     property OnEmptyTag: TXMLOnTagEvent read FOnEmptyTag write FOnEmptyTag;
     property OnEndTag: TXMLOnTagEvent read FOnEndTag write FOnEndTag;
     property OnContent: TXMLOnContentEvent read FOnContent write FOnContent;
-    procedure Parse(S: String); overload;
-    procedure Parse(S: TStrings); overload;
+    procedure Parse(S: String; html: boolean = false); overload;
+    procedure Parse(S: TStrings; html: boolean = false); overload;
     property TagList: TTagList read FTagList;
   end;
 
@@ -459,6 +465,7 @@ begin
   FClosed := false;
   FAttrList := TAttrList.Create;
   FTag := 0;
+  fState := tsnormal;
 end;
 
 destructor TTag.Destroy;
@@ -468,33 +475,33 @@ begin
   inherited;
 end;
 
-function TTag.FindParent(TagString: String): TTag;
+function TTag.FindParent(TagString: String; ignoreState: boolean = false): TTag;
 var
   P: TTag;
 
 begin
-  TagString := lowercase(TagString);
-  if Name = TagString then
+//  TagString := lowercase(TagString);
+  if SameText(Name,TagString) then
   begin
     Result := Self;
     Exit;
   end else
   begin
     p := Parent;
-    while p <> nil do
-      if p.Name = TagString then
+    while Assigned(p) and (ignoreState or (p.State = tsClosable)) do
+      if SameText(p.Name,TagString) then
       begin
         Result := p;
         Exit;
       end else
-        p := p.Parent;
+        p := p.Parent
   end;
-  Result := Self;
+  Result := nil;
 end;
 
 procedure TTag.SetName(Value: String);
 begin
-  FName := lowercase(Value);
+  FName := Value;
 end;
 
 function TTag.GetText(TextKind: TTextKind; AddOwnTag: boolean): string;
@@ -610,7 +617,7 @@ var
 begin
   Result := -1;
   for i := 0 to length(FAttrs) - 1 do
-    if UPPERCASE(FAttrs[i].Name) = UPPERCASE(AName) then
+    if SameText(FAttrs[i].Name,AName) then
     begin
       Result := i;
       Break;
@@ -642,11 +649,11 @@ begin
 end;
 
 
-procedure TMyXMLParser.Parse(S: String);
+procedure TMyXMLParser.Parse(S: String; html: boolean = false);
 var
   FTag: TTag;
 
-  procedure parsetag(adata: string);
+  function parsetag(adata: string): boolean;
 
     function trimquotes(S: string): string;
     begin
@@ -664,6 +671,7 @@ var
     Attrs: TAttrList;
     i, li, l, state: Integer;
     stat: Integer;
+    tmptag: ttag;
   begin
     Attrs := TAttrList.Create;
     lastattr := '';
@@ -673,7 +681,7 @@ var
 //    adata := StringReplace(adata, #10, ' ', [rfReplaceAll]);
 //    adata := StringReplace(adata, #9, ' ', [rfReplaceAll]);
     // adata := REPLACE(adata,'  ',' ',false,true);
-    adata := trim(adata) + ' ';
+    adata := adata + ' ';
     li := 1;
     l := length(adata);
     state := 0;
@@ -686,11 +694,16 @@ var
           case state of
             0:
               if tagname = '' then
-              begin
-                li := i + 1;
-                stat := -1;
-                Break;
-              end
+                if i = l - 1 then
+                begin
+                  tagname := copy(adata, li, i - li);
+                  stat := 0;
+                end else
+                begin
+                  li := i + 1;
+                  stat := -1;
+                  Break;
+                end
               else
               begin
                 if (lastattr <> '') then
@@ -720,10 +733,11 @@ var
                 if (tagname = '') then
                 begin
                   tagname := copy(adata, li, i - li);
-                  if (length(tagname) > 0) and CharInSet(tagname[1], ['!']) then
+                  if (length(tagname) = 0)
+                  or (length(tagname) > 0) and CharInSet(tagname[1], ['!']) then
                   begin
-                    Attrs.Free;
-                    Exit;
+                    stat := 2;
+                    Break;
                   end;
                 end
                 else
@@ -783,47 +797,71 @@ var
             end;
       end;
     end;
+
+    if (stat = 1) and CheckHTMLStat(tagname) then
+      stat := 0;
+
     case stat of
       - 1:
       begin
-        if Assigned(FOnEndTag) then
-          //FOnEndTag(copy(adata, li, length(adata) - li));
-          FOnEndTag(FTag);
-
-        if Assigned(FTag) then
-          FTag := FTag.FindParent(copy(adata, li, length(adata) - li));
-        if Assigned(FTag) then
+        result := not(Assigned(ftag) and (FTag.State = tsOnlyText))
+                  or SameText(copy(adata, li, length(adata) - li),Ftag.Name);
+        if result then
         begin
-          FTag.Closed := true;
-          FTag := FTag.Parent;
-          //FTag := FTag.Parent;
+          if Assigned(FOnEndTag) then
+            //FOnEndTag(copy(adata, li, length(adata) - li));
+            FOnEndTag(FTag);
+
+          if Assigned(FTag) then
+          begin
+            tmptag := FTag.FindParent(copy(adata, li, length(adata) - li),true);
+            if Assigned(tmptag) then
+            begin
+              tmptag.Closed := true;
+              FTag := tmptag.Parent;
+              //FTag := FTag.Parent;
+            end;
+          end;
         end;
       end;
       0:
       begin
-        FTag := TagList.CreateChild(FTag);
-        FTag.Name := tagname;
-        FTag.Attrs.Assign(Attrs);
-        //Attrs.Free;
+        result := not (Assigned(ftag) and (FTag.State = tsOnlyText));
+        if result then
+        begin
+          FTag := TagList.CreateChild(FTag);
+          FTag.Name := tagname;
+          FTag.Attrs.Assign(Attrs);
+          //Attrs.Free;
 
-        if Assigned(FOnEmptyTag) then
-          //FOnEmptyTag(tagname, Attrs);
-          FOnEmptyTag(FTag);
+          if Assigned(FOnEmptyTag) then
+            //FOnEmptyTag(tagname, Attrs);
+            FOnEmptyTag(FTag);
 
-        //FTag.Closed := true;
-        FTag := FTag.Parent;
+          //FTag.Closed := true;
+          FTag := FTag.Parent;
+        end;
       end;
       1:
       begin
-        FTag := TagList.CreateChild(FTag);
-        FTag.Name := tagname;
-        FTag.Attrs.Assign(Attrs);
-        //Attrs.Free;
+        result := not (Assigned(ftag) and (FTag.State = tsOnlyText));
+        if result then
+        begin
+          FTag := TagList.CreateChild(FTag);
+          FTag.Name := tagname;
+          FTag.Attrs.Assign(Attrs);
 
-        if Assigned(FOnStartTag) then
-          //FOnStartTag(tagname, Attrs);
-          FOnStartTag(FTag);
+          if html then
+            CheckHTMLTag(FTag);
+
+          //Attrs.Free;
+
+          if Assigned(FOnStartTag) then
+            //FOnStartTag(tagname, Attrs);
+            FOnStartTag(FTag);
+        end;
       end;
+      else result := false;
     end;
     Attrs.Free;
   end;
@@ -863,7 +901,8 @@ begin
     li := 1;
     while true do
     begin
-      while (i <= l) and (S[i] <> '<') do
+      while (i <= l) and (S[i] <> '<')
+      or ((i < l) and CharInSet(s[i+1],[' ',#13,#10,#9])) do
         inc(i);
       txt := copy(S, li, i - li);
       if trim(txt) <> '' then
@@ -880,7 +919,10 @@ begin
       while (i <= l) and ((S[i] <> '>') or (state <> 0) or (intag > 0)) do
       begin
         case S[i] of
-          '<': inc(intag);
+          '<': if Assigned(ftag) and (ftag.State = tsOnlyText) then
+                Break
+               else
+                inc(intag);
           '>': dec(intag);
           '"':
             case state of
@@ -899,12 +941,22 @@ begin
         end;
         inc(i)
       end;
+
       if i > l then
-        Break;
+        Break
+      else if Assigned(ftag) and (ftag.State = tsOnlyText) and (s[i] = '<') then
+        Continue;
+
       sr := copy(S, li, i - li);
-      parsetag(sr);
-      inc(i);
-      li := i;
+      if parsetag(sr) then
+      begin
+        inc(i);
+        li := i;
+      end else
+      begin
+        i := li;
+        li := li - 1;
+      end;
     end;
 {  finally
     FTag.Free;
@@ -990,6 +1042,30 @@ begin
 end;
 *)
 
+procedure TMyXMLParser.CheckHTMLTag(tag: ttag);
+begin
+  if SameText(tag.Name,'script') then
+    tag.State := tsOnlyText
+  {else
+  if SameText(tag.Name,'td')
+  or SameText(tag.Name,'tr') then
+    tag.State := tsClosable;   }
+end;
+
+function TMyXMLParser.CheckHTMLStat(tag: string): boolean;
+begin
+  if SameText(tag,'link')
+  or SameText(tag,'br')
+  or SameText(tag,'hr')
+  or SameText(tag,'meta')
+  or SameText(tag,'img')
+  or SameText(tag,'input')
+  then
+    result := true
+  else
+    result := false;
+end;
+
 procedure TMyXMLParser.JSON(starttag: string; S: String);
 var
   i: integer;
@@ -1011,9 +1087,9 @@ begin
   JSON(starttag,s.Text);
 end;
 
-procedure TMyXMLParser.Parse(S: TStrings);
+procedure TMyXMLParser.Parse(S: TStrings; html: boolean = false);
 begin
-  Parse(S.Text);
+  Parse(S.Text,html);
 end;
 
 end.

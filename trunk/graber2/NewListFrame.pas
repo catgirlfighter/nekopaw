@@ -5,16 +5,17 @@ interface
 uses
   {base}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, Menus, StdCtrls,
+  Dialogs, Menus, StdCtrls, INIFiles,
   {devexp}
   cxGraphics, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxStyles, cxCustomData, cxFilter, cxData,
   cxDataStorage, cxEdit, cxImage, cxLabel, cxButtonEdit, cxPCdxBarPopupMenu,
   cxEditRepositoryItems, cxInplaceContainer, cxVGrid, cxPC, cxGridLevel,
   cxGridCustomTableView, cxGridTableView, cxClasses, cxGridCustomView, cxGrid,
-  cxButtons, ExtCtrls, cxSplitter,
+  cxButtons, ExtCtrls, cxSplitter,dxSkinsCore, dxSkinsDefaultPainters,
+  dxSkinscxPCPainter,cxDropDownEdit,
   {graber2}
-  common, Graberu, dxSkinsCore, dxSkinsDefaultPainters, dxSkinscxPCPainter;
+  common, Graberu;
 
 type
   TListFrameState = (lfsNew, lfsEdit);
@@ -62,6 +63,7 @@ type
   private
     { Private declarations }
     FOnError: TLogEvent;
+//    fPathList: TStringList;
   protected
     function ResetRelogin(idx: integer = -1): boolean;
     procedure SetIntrfEnabled(b: boolean);
@@ -80,6 +82,8 @@ type
     procedure JobStatus(Sander: TObject; Action: integer);
     procedure SendMsg;
     procedure SaveSet;
+//    procedure LoadLists;
+    procedure Release;
     //procedure LoadSet;
     property OnError: TLogEvent read FOnError write FOnError;
     { Public declarations }
@@ -194,7 +198,7 @@ begin
   if n = 0 then
   begin
     c := dm.CreateCategory(vgSettings,'vgimain',lang('_MAINCONFIG_'));
-    dm.CreateField(vgSettings,'vgitag',lang('_TAGSTRING_'),'',ftString,c,FullResList[n].Fields['tag']);
+    dm.CreateField(vgSettings,'vgitag',lang('_TAGSTRING_'),'',ftTagText,c,FullResList[n].Fields['tag']);
     dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftPathText,c,FullResList[n].NameFormat);
     dm.CreateField(vgSettings,'vgisdalf',lang('_SDALF_'),'',ftCheck,c,GlobalSettings.Downl.SDALF);
   end
@@ -204,7 +208,7 @@ begin
       FullResList[n].Name);
 
     s := VarToStr(Fields['tag']);
-    if (s = '') or Inherit then
+    if (s = ''){ or Inherit} then
       s := VarToStr(FullResList[0].Fields['tag']);
     dm.CreateField(vgSettings,'vgitag',lang('_TAGSTRING_'),'',ftString,c,s);
 
@@ -320,6 +324,8 @@ var
   s: tstringlist;
 
 begin
+//  fPathList := TStringList.Create;
+
   gFull.BeginUpdate;
   gRes.BeginUpdate;
   // pic := TPicture.Create;
@@ -361,6 +367,11 @@ begin
     else
       btnNext.Caption := lang('_NEXTSTEP_');
   end;
+end;
+
+procedure TfNewList.Release;
+begin
+//  fPathList.Free;
 end;
 
 procedure TfNewList.RemoveItem(index: Integer);
@@ -411,8 +422,7 @@ end;
 
 procedure TfNewList.ResetItems;
 begin
-  if pcMain.ActivePage = tsSettings then
-    SaveSettings;
+  SaveSettings;
 end;
 
 procedure TfNewList.SaveSet;
@@ -458,8 +468,12 @@ begin
           if Items[i].restype <> ftNone then
 
           begin
-            Items[i].resvalue := (vgSettings.RowByName('evgi' + Items[i].resname)
-              as TcxEditorRow).Properties.Value;
+            if Items[i].restype = ftIndexCombo then
+              Items[i].resvalue := IndexOfStr(Items[i].resitems,(vgSettings.RowByName('evgi' + Items[i].resname)
+                as TcxEditorRow).Properties.Value)
+            else
+              Items[i].resvalue := (vgSettings.RowByName('evgi' + Items[i].resname)
+                as TcxEditorRow).Properties.Value;
           end;
     end;
   end;

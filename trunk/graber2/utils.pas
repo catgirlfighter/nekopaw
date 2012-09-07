@@ -9,7 +9,7 @@ uses
   cxGridCustomTableView, cxGraphics, cxEdit,
   cxDataUtils, cxGridCommon, cxGridTableView, cxEditRepositoryItems,
   cxExtEditRepositoryItems, cxVGrid,
-  cxButtonEdit,
+  cxButtonEdit, cxDropDownEdit, cxMRUEdit, cxmycombobox,
   {graber}
   GraberU, common, OpBase, ImgList, Controls;
 
@@ -28,18 +28,22 @@ type
     erRDTextEdit: TcxEditRepositoryTextItem;
     erRDPassword: TcxEditRepositoryTextItem;
     erRDCheckBox: TcxEditRepositoryCheckBoxItem;
-    erPathText: TcxEditRepositoryButtonItem;
     erPathBrowse: TcxEditRepositoryButtonItem;
     erURLText: TcxEditRepositoryButtonItem;
     il: TcxImageList;
-    procedure erPathTextPropertiesButtonClick(Sender: TObject;
-      AButtonIndex: Integer);
+    erPathText: TcxEditRepositoryMRUItem;
     procedure erPathBrowsePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure erURLTextPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
+    procedure EditRepositoryMRUItem1PropertiesButtonClick(Sender: TObject);
+    procedure DataModuleCreate(Sender: TObject);
   private
+    ertagedit: TcxMyEditRepositoryComboBoxItem;
     { Private declarations }
+  protected
+    procedure OnGetTagItems(Sender: TObject; SearchWord: string;
+      Items: TStrings);
   public
     function CreateCategory(vg: TcxVerticalGrid; AName, ACaption: String;
       Collapsed: boolean = false): TcxCategoryRow;
@@ -178,14 +182,24 @@ begin
   Result.Properties.Caption := ACaption;
 end;
 
+procedure tdm.OnGetTagItems(Sender: TObject; SearchWord: string; Items: TStrings);
+begin
+  Items.Text := tagdump.ContinueSearch(SearchWord);
+end;
+
 function Tdm.CreateField(vg: TcxVerticalGrid; AName,ACaption,ComboItems: string;
   FieldType: TFieldType; Category: TcxCategoryRow; DefaultValue: Variant;
   ReadOnly: boolean = false): TcxEditorRow;
+var
+  cb: TcxEditRepositoryComboBoxItem;
 begin
   Result := vg.AddChild(Category, TcxEditorRow) as TcxEditorRow;
   Result.Name := AName;
   Result.Properties.Caption := ACaption;
-  Result.Properties.Value := DefaultValue;
+  if FieldType <> ftIndexCombo then
+    Result.Properties.Value := DefaultValue;
+  //else
+  //  Result.Properties.ItemIndex := DefaultValue;
   case FieldType of
     ftString:
       if ReadOnly then
@@ -210,11 +224,16 @@ begin
         Result.Properties.RepositoryItem := erRDFloatEdit
       else
         Result.Properties.RepositoryItem := erFloatEdit;
-    ftCombo:
+    ftCombo,ftIndexCombo:
       begin
-        erCombo.Properties.Items.Clear;
-        StringToList(comboitems, erCombo.Properties.Items);
-        Result.Properties.RepositoryItem := erCombo;
+        //erCombo.Properties.Items.Clear;
+        cb := TcxEditRepositoryComboBoxItem.Create(result);
+        cb.Properties.DropDownListStyle := lsFixedList;
+        //cb.Assign(erCombo);
+        StringToList(comboitems, cb.Properties.Items);
+        Result.Properties.RepositoryItem := cb;
+        if FieldType = ftIndexCombo then
+          Result.Properties.Value := cb.Properties.Items[DefaultValue];
       end;
     ftCheck:
     begin
@@ -231,6 +250,57 @@ begin
       else
         Result.Properties.RepositoryItem := erPathText;
     end;
+    ftTagText:
+      Result.Properties.RepositoryItem := ertagedit;
+  end;
+end;
+
+procedure Tdm.DataModuleCreate(Sender: TObject);
+begin
+  erPathText.Properties.Items.Text := LoadPathList;
+  erPathText.Properties.IncrementalSearch := false;
+  ertagedit := TcxMyEditRepositoryComboBoxItem.Create(erpathtext.Owner);
+  ertagedit.Properties.WordMode := true;
+  ertagedit.Properties.Spacer := ' ';
+  ertagedit.Properties.OnBeforeGetItems := OnGetTagItems;
+  ertagedit.Properties.IncrementalSearch := false;
+  //erPathText.Properties.LookupItems.Text := '';
+end;
+
+procedure Tdm.EditRepositoryMRUItem1PropertiesButtonClick(Sender: TObject);
+var
+  fields: tstringlist;
+  items: tstrings;
+  n: integer;
+  s: string;
+begin
+//  Pos
+//  SameText
+  fields := tstringlist.Create;
+  try
+    FullResList.GetAllPictureFields(fields,true);
+    s := (Sender as tcxMRUEdit).Text;
+    (Sender as tcxMRUEdit).Text :=
+      ExecutePathEditor((Sender as tcxMRUEdit).Text,(Sender as tcxMRUEdit).Properties.Items,nil,fields);
+    (Sender as tcxMRUEdit).PostEditValue;
+
+    if s <> (Sender as tcxMRUEdit).Text then
+    begin
+      items := (Sender as tcxMRUEdit).Properties.Items;
+      n := IndexOfStr(items,(Sender as tcxMRUEdit).Text);
+      if n <> -1 then
+        items.Move(n,0)
+      else
+      begin
+        if items.Count > 4 then
+          items.Delete(5);
+        items.Insert(0,(Sender as tcxMRUEdit).Text);
+      end;
+      SavePathList(items);
+    end;
+
+  finally
+    fields.Free;
   end;
 end;
 
@@ -262,32 +332,6 @@ var
             PChar(ExtractFilePath(ExtractFileDir(s))), nil, nil,
             SW_SHOWNORMAL) < 33 then
               MessageDlg(format(lang('_NO_DIRECTORY_'),[s]), mtInformation, [mbOk], 0);
-    end;
-  end;
-end;
-
-procedure Tdm.erPathTextPropertiesButtonClick(Sender: TObject;
-  AButtonIndex: Integer);
-var
-  {vars,}fields: tstringlist;
-begin
-  case AButtonIndex of
-    0:begin
-      //vars := tstringlist.Create;
-      try
-        fields := tstringlist.Create;
-        try
-          //FullResList.GetAllResourceFields(vars);
-          FullResList.GetAllPictureFields(fields,true);
-          (Sender as tcxbuttonedit).Text :=
-            ExecutePathEditor((Sender as tcxbuttonedit).Text,nil,fields);
-          (Sender as tcxbuttonedit).PostEditValue;
-        finally
-          fields.Free;
-        end;
-      finally
-        //vars.Free;
-      end;
     end;
   end;
 end;

@@ -6,6 +6,7 @@ uses Windows, SysUtils, Messages, GraberU, INIFiles, Classes, Common;
 
 var
   FullResList: TResourceList;
+  TagDump: TPictureTagList;
   GlobalSettings: TSettingsRec;
   IgnoreList,AddFields: TDSArray;
   rootdir: string;
@@ -48,10 +49,14 @@ type
 
 procedure LoadProfileSettings;
 procedure SaveProfileSettings;
+procedure SaveResourceSettings(AINI: TINIFile = nil);
 procedure SaveGUISettings(values: tGUIValues);
 procedure FillDSArray(const a1: TDSArray; var a2: TDSArray);
 function CopyDSArray(const a: TDSArray): TDSArray;
 procedure DeleteDSArrayRec(var a: TDSArray; const index: integer);
+procedure SaveTagDump;
+function LoadPathList: String;
+procedure SavePathList(list: TStrings);
 
 implementation
 
@@ -425,7 +430,50 @@ begin
 end;
 
 
+procedure SaveTagDump;
+begin
+    TagDump.SaveToFile(IncludeTrailingPathDelimiter(rootdir) + 'tagdump.txt');
+end;
+
+function LoadPathList: String;
+var
+  INI: TINIFile;
+  items: tstringlist;
+  i: integer;
+begin
+  INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+  try
+    items := tstringlist.Create;
+    try
+      INI.ReadSection('pathlist',items);
+      for i := 0 to items.Count-1 do
+        items[i] := INI.ReadString('pathlist',items[i],'');
+      result := items.Text;
+    finally
+      items.Free;
+    end;
+  finally
+    INI.Free;
+  end;
+end;
+
+procedure SavePathList(list: TStrings);
+var
+  i: integer;
+  ini: tinifile;
+begin
+  ini := tinifile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+  try
+    for i := 0 to list.Count-1 do
+      ini.WriteString('pathlist','item'+IntToStr(i),list[i]);
+  finally
+    ini.Free;
+  end;
+
+end;
+
 initialization
+
 rootdir := ExtractFileDir(paramstr(0));
 
 if fileexists(IncludeTrailingPathDelimiter(rootdir) + profname) then
@@ -439,7 +487,11 @@ end;
 CreateLangINI(IncludeTrailingPathDelimiter(rootdir)+IncludeTrailingPathDelimiter('languages')+langname+'.ini');
 
 FullResList := TResourceList.Create;
-FullResList.LoadList(rootdir + '\resources');
+FullResList.LoadList(IncludeTrailingPathDelimiter(rootdir) + 'resources');
+
+TagDump := TPictureTagList.Create;
+if FileExists(IncludeTrailingPathDelimiter(rootdir) + 'tagdump.txt') then
+  TagDump.LoadListFromFile(IncludeTrailingPathDelimiter(rootdir) + 'tagdump.txt');
 
 LoadResourceSettings;
 
@@ -449,5 +501,6 @@ LoadResourceSettings;
 finalization
 
 FullResList.Free;
+TagDump.Free;
 
 end.

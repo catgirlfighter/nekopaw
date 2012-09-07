@@ -1,7 +1,7 @@
 object fSettings: TfSettings
   Left = 0
   Top = 0
-  Width = 648
+  Width = 451
   Height = 304
   Align = alClient
   Font.Charset = DEFAULT_CHARSET
@@ -11,19 +11,17 @@ object fSettings: TfSettings
   Font.Style = []
   ParentFont = False
   TabOrder = 0
-  ExplicitWidth = 451
   object pButtons: TPanel
     AlignWithMargins = True
     Left = 3
     Top = 3
-    Width = 642
+    Width = 445
     Height = 25
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitWidth = 445
     DesignSize = (
-      642
+      445
       25)
     object btnOk: TcxButton
       Left = 0
@@ -119,20 +117,18 @@ object fSettings: TfSettings
   object pcMain: TcxPageControl
     Left = 172
     Top = 31
-    Width = 476
+    Width = 279
     Height = 273
     Align = alClient
     TabOrder = 3
     Properties.ActivePage = cxTabSheet1
     Properties.HideTabs = True
-    ExplicitWidth = 279
     ClientRectBottom = 273
-    ClientRectRight = 476
+    ClientRectRight = 279
     ClientRectTop = 0
     object cxTabSheet1: TcxTabSheet
       Caption = 'cxTabSheet1'
       ImageIndex = 0
-      ExplicitWidth = 279
       object lcLanguage: TcxLabel
         Left = 6
         Top = 4
@@ -214,7 +210,7 @@ object fSettings: TfSettings
     object cxTabSheet2: TcxTabSheet
       Caption = 'cxTabSheet2'
       ImageIndex = 1
-      ExplicitWidth = 279
+      ExplicitWidth = 476
       object eThreads: TcxSpinEdit
         Left = 206
         Top = 3
@@ -297,7 +293,7 @@ object fSettings: TfSettings
     object cxTabSheet3: TcxTabSheet
       Caption = 'cxTabSheet3'
       ImageIndex = 2
-      ExplicitWidth = 279
+      ExplicitWidth = 476
       object chbProxy: TcxCheckBox
         Left = 6
         Top = 3
@@ -387,7 +383,7 @@ object fSettings: TfSettings
     object cxTabSheet4: TcxTabSheet
       Caption = 'cxTabSheet4'
       ImageIndex = 3
-      ExplicitWidth = 279
+      ExplicitHeight = 0
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0
@@ -405,15 +401,13 @@ object fSettings: TfSettings
     object cxTabSheet5: TcxTabSheet
       Caption = 'cxTabSheet5'
       ImageIndex = 5
-      ExplicitWidth = 279
       object gDoubles: TcxGrid
         Left = 0
         Top = 26
-        Width = 476
+        Width = 279
         Height = 247
         Align = alClient
         TabOrder = 0
-        ExplicitWidth = 279
         object tvDoubles: TcxGridTableView
           DataController.Summary.DefaultGroupSummaryItems = <>
           DataController.Summary.FooterSummaryItems = <>
@@ -450,17 +444,16 @@ object fSettings: TfSettings
       object bcDoubles: TdxBarDockControl
         Left = 0
         Top = 0
-        Width = 476
+        Width = 279
         Height = 26
         Align = dalTop
         BarManager = BarManager
-        ExplicitWidth = 279
       end
     end
     object cxTabSheet6: TcxTabSheet
       Caption = 'cxTabSheet6'
       ImageIndex = 4
-      ExplicitWidth = 279
+      ExplicitWidth = 476
       object cxLabel1: TcxLabel
         Left = 6
         Top = 3

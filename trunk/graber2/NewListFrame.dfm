@@ -200,6 +200,8 @@ object fNewList: TfNewList
       Caption = 'tsSettings'
       ImageIndex = 1
       OnShow = tsSettingsShow
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0

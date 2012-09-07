@@ -16,17 +16,7 @@ uses
   dxSkinsDefaultPainters, dxSkinscxPCPainter,dxSkinsdxStatusBarPainter,
   dxSkinsdxBarPainter,
   {graber}
-  graberU, common, Menus, dxSkinBlack, dxSkinBlue, dxSkinBlueprint,
-  dxSkinCaramel, dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide,
-  dxSkinDevExpressDarkStyle, dxSkinDevExpressStyle, dxSkinFoggy,
-  dxSkinGlassOceans, dxSkinHighContrast, dxSkiniMaginary, dxSkinLilian,
-  dxSkinLiquidSky, dxSkinLondonLiquidSky, dxSkinMcSkin, dxSkinMoneyTwins,
-  dxSkinOffice2007Black, dxSkinOffice2007Blue, dxSkinOffice2007Green,
-  dxSkinOffice2007Pink, dxSkinOffice2007Silver, dxSkinOffice2010Black,
-  dxSkinOffice2010Blue, dxSkinOffice2010Silver, dxSkinPumpkin, dxSkinSeven,
-  dxSkinSevenClassic, dxSkinSharp, dxSkinSharpPlus, dxSkinSilver,
-  dxSkinSpringTime, dxSkinStardust, dxSkinSummer2008, dxSkinTheAsphaltWorld,
-  dxSkinValentine, dxSkinVS2010, dxSkinWhiteprint, dxSkinXmas2008Blue;
+  graberU, common;
 
 type
 
@@ -421,6 +411,8 @@ begin
 end;
 
 procedure TfGrid.OnStartJob(Sender: TObject; Action: integer);
+var
+  c: integer;
 begin
 {
   if (Action = JOB_LIST) and (ResList.PicsFinished)
@@ -461,6 +453,10 @@ begin
         sBar.Panels[0].Text := '';
       end;
       PostMessage(Application.MainForm.Handle,CM_ENDJOB,Integer(Self.Parent),0);
+      c := TagDump.Count;
+      TagDump.CopyTagList(ResList.PictureList.Tags);
+      if c <> TagDump.Count then
+        SaveTagDump;
     end;
     JOB_STOPPICS:
     begin
