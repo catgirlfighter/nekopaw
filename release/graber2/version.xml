@@ -1,8 +1,8 @@
-<item file="Graber2.exe" archive="Graber2.zip" version=30 />
+<item file="Graber2.exe" archive="Graber2.zip" version=31 />
 <item file="versionlog.txt" version=-1 />
 
-<item file="resources\danbooru.tmpl" version=13 />
-<item file="resources\gelbooru.tmpl" version=9 />
+<item file="resources\danbooru.tmpl" version=14 />
+<item file="resources\gelbooru.tmpl" version=10 />
 
 <item file="resources\xbooru.com.cfg" version=1 />
 <item file="resources\wildcritters.ws.cfg" version=2 />
@@ -21,16 +21,16 @@
 <item file="resources\donmai.us.cfg" version=1 />
 <item file="resources\lolibooru.com.cfg" version=0 />
 <item file="resources\ii.booru.org.cfg" version=0 />
-<item file="resources\zerochan.net.cfg" version=1 />
-<item file="resources\rmart.org.cfg" version=4 />
-<item file="resources\cosplay.paheal.net.cfg" version=1 />
-<item file="resources\rule34.paheal.net.cfg" version=1 />
-<item file="resources\tentaclerape.net.cfg" version=0 />
-<item file="resources\derpiboo.ru.cfg" version=3 />
-<item file="resources\minitokyo.net.cfg" version=2 />
-<item file="resources\rule63.paheal.net.cfg" version=0 />
-<item file="resources\nabyn.com.cfg" version=2 />
-<item file="resources\hentai-foundry.com.cfg" version=0 />
+<item file="resources\zerochan.net.cfg" version=2 />
+<item file="resources\rmart.org.cfg" version=5 />
+<item file="resources\cosplay.paheal.net.cfg" version=2 />
+<item file="resources\rule34.paheal.net.cfg" version=2 />
+<item file="resources\tentaclerape.net.cfg" version=1 />
+<item file="resources\derpiboo.ru.cfg" version=4 />
+<item file="resources\minitokyo.net.cfg" version=3 />
+<item file="resources\rule63.paheal.net.cfg" version=1 />
+<item file="resources\nabyn.com.cfg" version=3 />
+<item file="resources\hentai-foundry.com.cfg" version=1 />
 
 <item file="resources\oreno.imouto.org.cfg" version=0 deleted=1 />
 <item file="resources\ponibooru.413chan.net.cfg" version=1 deleted=1 />
@@ -60,7 +60,7 @@
 <item file="resources\icons\minitokyo.net.bmp" version=0 />
 <item file="resources\icons\rule63.paheal.net.bmp" version=0 />
 <item file="resources\icons\nabyn.com.bmp" version=0 />
-<item file="resources\icons\hentai-foundry.com.bmp" version=0 />
+<item file="resources\icons\hentai-foundry.com.bmp" version=1 />
 
 <item file="resources\icons\ponibooru.413chan.net.bmp" version=0 deleted=1 />
 
