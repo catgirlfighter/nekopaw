@@ -95,8 +95,8 @@ $thread.referer = $picture%post_url;
 			%preview=#src,
 			%post_url=$main.url+@trim($post_url,"/"),
 			%rating=@trim(@copyfromtoex(" ","rating:",#title + " ")),
-			%score=@isempty(@trim(@copyfromtoex(" ","score:",#title + " ")),0),
-			%id=@isempty(@urlvar("id",$post_url),0),
+			%score=@ifempty(@trim(@copyfromtoex(" ","score:",#title + " ")),0),
+			%id=@ifempty(@urlvar("id",$post_url),0),
 			%tags=csv(@trim(@copyto("score:",#title))," ")
 		);
 		$picture.filename = @emptyname($picture%url);
@@ -104,7 +104,7 @@ $thread.referer = $picture%post_url;
 }
 ^div#id='paginator'{
 	^a#alt='last page'{
-		$thread.count=@min(1000,@isempty(@urlvar("pid",#href),0)/$picsperpage + 1);
+		$thread.count=@min(1000,@ifempty(@urlvar("pid",#href),0)/$picsperpage + 1);
 		$thread.result=($thread.count)*$picsperpage;
 	}
 }

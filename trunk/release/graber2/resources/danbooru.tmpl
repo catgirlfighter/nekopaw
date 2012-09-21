@@ -62,7 +62,7 @@ $thread.referer = $picture%post_url;
 			%posted=@calc($pictime),
 			%md5=#md5,
 			%source=#source,
-			%aspect_ratio=@isempty(#width,0)/@isempty(#height,1),
+			%aspect_ratio=@ifempty(#width,0)/@ifempty(#height,1),
 			%tags=csv(#tags," ")
 		);
 		$picture.filename = @emptyname(#file_url);
@@ -85,7 +85,7 @@ $thread.referer = $picture%post_url;
 		%posted=@calc($pictime),
 		%md5=#md5,
 		%source=#source,
-		%aspect_ratio=@isempty(#width,0)/@isempty(#height,1),
+		%aspect_ratio=@ifempty(#width,0)/@ifempty(#height,1),
 		%tags=csv(#tags," ")
 	);
 	$picture.filename = @emptyname(#file_url);
