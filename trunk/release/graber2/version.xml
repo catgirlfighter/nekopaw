@@ -1,4 +1,4 @@
-<item file="Graber2.exe" archive="Graber2.zip" version=31 />
+<item file="Graber2.exe" archive="Graber2.zip" version=32 />
 <item file="versionlog.txt" version=-1 />
 
 <item file="resources\danbooru.tmpl" version=14 />
@@ -30,7 +30,8 @@
 <item file="resources\minitokyo.net.cfg" version=3 />
 <item file="resources\rule63.paheal.net.cfg" version=1 />
 <item file="resources\nabyn.com.cfg" version=3 />
-<item file="resources\hentai-foundry.com.cfg" version=1 />
+<item file="resources\hentai-foundry.com.cfg" version=2 />
+<item file="resources\furaffinity.net.cfg" version=0 />
 
 <item file="resources\oreno.imouto.org.cfg" version=0 deleted=1 />
 <item file="resources\ponibooru.413chan.net.cfg" version=1 deleted=1 />
@@ -61,6 +62,7 @@
 <item file="resources\icons\rule63.paheal.net.bmp" version=0 />
 <item file="resources\icons\nabyn.com.bmp" version=0 />
 <item file="resources\icons\hentai-foundry.com.bmp" version=1 />
+<item file="resources\icons\furaffinity.com.bmp" version=0 />
 
 <item file="resources\icons\ponibooru.413chan.net.bmp" version=0 deleted=1 />
 
