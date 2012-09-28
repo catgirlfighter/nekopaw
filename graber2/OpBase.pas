@@ -147,7 +147,7 @@ begin
         INI.DeleteKey(pref+FullResList[i].Name,'Password');
 
       for j := n to FullResList[i].Fields.Count-1 do
-        if FullResList[i].Fields.Items[j].restype <> ftNone then
+        if not(FullResList[i].Fields.Items[j].restype in [ftNone,ftMultiEdit]) then
         begin
           INI.WriteString(pref+FullResList[i].Name,
             FullResList[i].Fields.Items[j].resname,

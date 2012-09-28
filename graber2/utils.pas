@@ -5,13 +5,15 @@ interface
 uses
   {std}
   SysUtils, Classes, Math, Variants, Dialogs, Windows, ShellAPI,
+  ImgList, Controls,
   {devex}
   cxGridCustomTableView, cxGraphics, cxEdit,
   cxDataUtils, cxGridCommon, cxGridTableView, cxEditRepositoryItems,
   cxExtEditRepositoryItems, cxVGrid,
-  cxButtonEdit, cxDropDownEdit, cxMRUEdit, cxmycombobox,
+  cxButtonEdit, cxDropDownEdit, cxMRUEdit,
   {graber}
-  GraberU, common, OpBase, ImgList, Controls;
+  cxmycombobox, cxmymultirow,
+  GraberU, common, OpBase;
 
 type
   Tdm = class(TDataModule)
@@ -48,8 +50,8 @@ type
     function CreateCategory(vg: TcxVerticalGrid; AName, ACaption: String;
       Collapsed: boolean = false): TcxCategoryRow;
     function CreateField(vg: TcxVerticalGrid; AName,ACaption,ComboItems: string;
-      FieldType: TFieldType; Category: TcxCategoryRow; DefaultValue: Variant;
-      ReadOnly: Boolean = false): TcxEditorRow;
+      FieldType: TFieldType; Category: TcxCustomRow; DefaultValue: Variant;
+      ReadOnly: Boolean = false): TcxCustomRow;
     { Public declarations }
   end;
 
@@ -188,42 +190,87 @@ begin
 end;
 
 function Tdm.CreateField(vg: TcxVerticalGrid; AName,ACaption,ComboItems: string;
-  FieldType: TFieldType; Category: TcxCategoryRow; DefaultValue: Variant;
-  ReadOnly: boolean = false): TcxEditorRow;
+  FieldType: TFieldType; Category: TcxCustomRow; DefaultValue: Variant;
+  ReadOnly: boolean = false): TcxCustomRow;
 var
   cb: TcxEditRepositoryComboBoxItem;
+  p: tcxCustomRowProperties;
+
+  procedure sp(p: tcxCustomRowProperties; value: variant);
+  begin
+    if p is tcxEditorRowProperties then
+      (p as tcxEditorRowProperties).Value := value
+    else if p is tcxEditorRowItemProperties then
+      (p as tcxEditorRowItemProperties).Value := value;
+  end;
+
+  function pv(p: tcxCustomRowProperties): variant;
+  begin
+    if p is tcxEditorRowProperties then
+      result := (p as tcxEditorRowProperties).Value
+    else if p is tcxEditorRowItemProperties then
+      result := (p as tcxEditorRowItemProperties).Value;
+  end;
+
 begin
-  Result := vg.AddChild(Category, TcxEditorRow) as TcxEditorRow;
-  Result.Name := AName;
-  Result.Properties.Caption := ACaption;
+  if not Assigned(Category) or (Category is tcxCategoryRow) then
+  begin
+    if FieldType = ftMultiEdit then
+    begin
+      Result := vg.AddChild(Category,tcxMyMultiEditorRow);
+      (result as tcxMyMultiEditorRow).FirstEditorHeader := true;
+      Result.Name:= AName;
+      //p := (Result as tcxMyMultiEditorRow).Properties;
+      //(p as tcxMultiEditorRowProperties).Caption := ACaption;
+      Exit;
+    end else
+    begin
+      Result := vg.AddChild(Category, TcxEditorRow);
+      p := (Result as tcxEditorRow).Properties;
+      (p as tcxEditorRowProperties).Caption := ACaption;
+      Result.Name := AName;
+    end
+  end else if Category is tcxMyMultiEditorRow then
+  begin
+    Result := Category;
+    p := (Category as tcxMyMultiEditorRow).Properties.Editors.Add;
+    if (Category as tcxMultiEditorRow).Properties.Editors.Count = 1 then
+      (p as tcxEditorRowItemProperties).Caption := ACaption;
+  end else
+  begin
+    Result := nil;
+    Exit;
+  end;
+
   if FieldType <> ftIndexCombo then
-    Result.Properties.Value := DefaultValue;
+    sp(p,DefaultValue);
   //else
   //  Result.Properties.ItemIndex := DefaultValue;
+  with p as tcxCustomEditorRowProperties do
   case FieldType of
     ftString:
       if ReadOnly then
         if pos('://',DefaultValue) > 0 then
-          Result.Properties.RepositoryItem := erURLText
+          RepositoryItem := erURLText
         else
-          Result.Properties.RepositoryItem := erRDTextEdit;
+          RepositoryItem := erRDTextEdit;
     ftPassword:
       if  ReadOnly then
-        Result.Properties.RepositoryItem := erRDPassword
+        RepositoryItem := erRDPassword
       else
-        Result.Properties.RepositoryItem := erPassword;
+        RepositoryItem := erPassword;
 {    ftReadOnly:
       Result.Properties.RepositoryItem := erReadOnlyText;    }
     ftNumber:
       if ReadOnly then
-        Result.Properties.RepositoryItem := erRDTextEdit
+        RepositoryItem := erRDTextEdit
       else
-        Result.Properties.RepositoryItem := erSpinEdit;
+        RepositoryItem := erSpinEdit;
     ftFloatNumber:
       if ReadOnly then
-        Result.Properties.RepositoryItem := erRDFloatEdit
+        RepositoryItem := erRDFloatEdit
       else
-        Result.Properties.RepositoryItem := erFloatEdit;
+        RepositoryItem := erFloatEdit;
     ftCombo,ftIndexCombo:
       begin
         //erCombo.Properties.Items.Clear;
@@ -231,27 +278,27 @@ begin
         cb.Properties.DropDownListStyle := lsFixedList;
         //cb.Assign(erCombo);
         StringToList(comboitems, cb.Properties.Items);
-        Result.Properties.RepositoryItem := cb;
+        RepositoryItem := cb;
         if FieldType = ftIndexCombo then
-          Result.Properties.Value := cb.Properties.Items[DefaultValue];
+          sp(p,cb.Properties.Items[DefaultValue]);
       end;
     ftCheck:
     begin
       if ReadOnly then
-        Result.Properties.RepositoryItem := erRDCheckBox
+        RepositoryItem := erRDCheckBox
       else
-        Result.Properties.RepositoryItem := erCheckBox;
-      Result.Properties.Value := VarAsType(Result.Properties.Value,varBoolean);
+        RepositoryItem := erCheckBox;
+      sp(p,VarAsType(pv(p),varBoolean));
     end;
     ftPathText:
     begin
       if ReadOnly then
-        Result.Properties.RepositoryItem := erPathBrowse
+        RepositoryItem := erPathBrowse
       else
-        Result.Properties.RepositoryItem := erPathText;
+        RepositoryItem := erPathText;
     end;
     ftTagText:
-      Result.Properties.RepositoryItem := ertagedit;
+      RepositoryItem := ertagedit;
   end;
 end;
 

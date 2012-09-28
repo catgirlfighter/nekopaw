@@ -200,8 +200,6 @@ object fNewList: TfNewList
       Caption = 'tsSettings'
       ImageIndex = 1
       OnShow = tsSettingsShow
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0
@@ -209,7 +207,7 @@ object fNewList: TfNewList
         Height = 273
         Align = alClient
         OptionsView.GridLineColor = clBtnShadow
-        OptionsView.RowHeaderWidth = 143
+        OptionsView.RowHeaderWidth = 125
         TabOrder = 0
         Version = 1
       end

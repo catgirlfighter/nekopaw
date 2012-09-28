@@ -10,6 +10,7 @@ type
   TAttr = record
     Name: String;
     Value: String;
+    Compare: Char;
   end;
 
   TAttrs = array of TAttr;
@@ -27,7 +28,7 @@ type
     procedure Assign(AAttrs: TAttrList);
     property Attribute[AValue: Integer]: TAttr read GetAttr; default;
     property Count: Integer read GetCount;
-    procedure Add(AName: String; AValue: String);
+    procedure Add(AName: String; AValue: String; FCompVal: Char = #0);
     procedure Clear;
     function Value(AName: String): String;
     function IndexOf(AName: String): Integer;
@@ -88,6 +89,7 @@ type
       procedure CopyList(AList: TTagList; Parent: TTag);
       procedure ExportToFile(fname: string);
       function FirstItemByName(tagname: string): ttag;
+    function Text: String;
       property Items[ItemName: integer]: TTag read Get; default;
       function CreateChild(Parent: TTag; AName: String = '';
         TagKind: TTagKind = tkTag): TTag;
@@ -230,6 +232,34 @@ end;
 
 {*********** JSON ********************}
 
+procedure WriteList(List: TTagList; var s: String);
+var
+  i,j: integer;
+  tmp: string;
+begin
+  for i := 0 to List.Count -1 do
+  begin
+    if List[i].Kind = tkText then
+      s := s + List[i].Name
+    else
+    begin
+      tmp := '<' + List[i].Name;
+      for j := 0 to List[i].Attrs.Count-1 do
+          tmp := tmp + ' ' + List[i].Attrs[j].Name + '="'
+          + List[i].Attrs[j].Value + '"';
+      if not List[i].Closed and (List[i].Childs.Count = 0) then
+        s := s + (tmp + ' />')
+      else
+      begin
+        s := s + (tmp + '>');
+        WriteList(List[i].Childs,s);
+        s := s + ('</' + List[i].Name + '>');
+      end;
+    end;
+  end;
+
+end;
+
 procedure TTagList.Notify(Ptr: Pointer; Action: TListNotification);
 var
   p: TObject;
@@ -245,12 +275,18 @@ begin
   end;
 end;
 
+function TTagList.Text: String;
+begin
+  Result := '';
+  WriteList(Self,Result);
+end;
+
 function TTagList.Get(ItemIndex: Integer): TTag;
 begin
   Result := inherited Get(ItemIndex);
 end;
 
-function CheckRule(v1,v2: string): boolean;
+function CheckRule(v1,v2: string;r: char): boolean;
 var
   tmp: string;
 
@@ -267,14 +303,31 @@ begin
     Exit;
   end;
 
-  tmp := GetNextS(v1,' ');  //tags
-  if SameText(tmp,v2) then
+  while v1 <> '' do
   begin
-    Result := true;
-    Exit;
+    tmp := GetNextS(v1,' ');  //tags
+
+    case r of
+      '!':
+      if SameText(tmp,v2) then
+      begin
+        Result := false;
+        Exit;
+      end;
+      else if SameText(tmp,v2) then
+      begin
+        Result := true;
+        Exit;
+      end;
+    end;
+
   end;
 
-  Result := false;
+  case r of
+    '!': Result := true;
+    else   Result := false;
+  end;
+
 end;
 
 procedure TTagList.GetList(Tag: String; AAttrs: TAttrList; AList: TTagList);
@@ -299,7 +352,7 @@ begin
           for j := 0 to AAttrs.Count -1 do
           begin
             s := Items[i].Attrs.Value(AAttrs[j].Name);
-              if not CheckRule(s,AAttrs[j].Value) and
+              if not CheckRule(s,AAttrs[j].Value,AAttrs[j].Compare) and
               not ((AAttrs[j].Value = '') and (s <> '')) then
             begin
               b := false;
@@ -340,7 +393,7 @@ begin
               for j := 0 to AAttrs[l].Count -1 do
               begin
                 s := Items[i].Attrs.Value(AAttrs[l][j].Name);
-                  if not CheckRule(s,AAttrs[l][j].Value) and
+                  if not CheckRule(s,AAttrs[l][j].Value,AAttrs[l][j].Compare) and
                   not ((AAttrs[l][j].Value = '') and (s <> '')) then
                 begin
                   b := false;
@@ -372,34 +425,6 @@ begin
 end;
 
 procedure TTagList.ExportToFile(fname: string);
-
-  procedure WriteList(List: TTagList; var s: String);
-  var
-    i,j: integer;
-    tmp: string;
-  begin
-    for i := 0 to List.Count -1 do
-    begin
-      if List[i].Kind = tkText then
-        s := s + List[i].Name
-      else
-      begin
-        tmp := '<' + List[i].Name;
-        for j := 0 to List[i].Attrs.Count-1 do
-            tmp := tmp + ' ' + List[i].Attrs[j].Name + '="'
-            + List[i].Attrs[j].Value + '"';
-        if not List[i].Closed and (List[i].Childs.Count = 0) then
-          s := s + (tmp + ' />')
-        else
-        begin
-          s := s + (tmp + '>');
-          WriteList(List[i].Childs,s);
-          s := s + ('</' + List[i].Name + '>');
-        end;
-      end;
-    end;
-
-  end;
 
 var
   s: tstringlist;
@@ -569,13 +594,14 @@ begin
   Result := FNoParam and not(Count > 0);
 end;
 
-procedure TAttrList.Add(AName: String; AValue: String);
+procedure TAttrList.Add(AName: String; AValue: String; FCompVal: Char = #0);
 begin
   SetLength(FAttrs, length(FAttrs) + 1);
   with FAttrs[length(FAttrs) - 1] do
   begin
     Name := AName;
     Value := AValue;
+    Compare := FCompVal;
   end;
 //  FNoParam := false;
 end;

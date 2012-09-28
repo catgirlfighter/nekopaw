@@ -43,8 +43,20 @@ type
   function GetUrlVarValue(URL,Variable: String): String;
   function AddURLVar(URL,Variable: String; Value: Variant): String;
   function GetURLDomain(url: string): string;
-
+  procedure GetPostStrings(s: string; outs: TStrings);
 implementation
+
+procedure GetPostStrings(s: string; outs: TStrings);
+var
+  tmp: string;
+begin
+  s := trim(CopyFromTo(s, '?', ''));
+  while s <> '' do
+  begin
+    tmp := GetNextS(s, '&');
+    outs.Add(tmp);
+  end;
+end;
 
 function CreateHTTP{(AOwner: TComponent)}: TMyIdHTTP;
 begin

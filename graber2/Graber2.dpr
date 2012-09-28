@@ -26,7 +26,8 @@ uses
   LoginForm in 'LoginForm.pas' {fLogin},
   Whatsnewform in 'Whatsnewform.pas' {fWhatsNew},
   PathEditorForm in 'PathEditorForm.pas' {fPathEditor},
-  NewDoublesRuleForm in 'NewDoublesRuleForm.pas' {fmDoublesNewRule};
+  NewDoublesRuleForm in 'NewDoublesRuleForm.pas' {fmDoublesNewRule},
+  cxmymultirow in 'cxmymultirow.pas';
 
 {$R *.res}
 

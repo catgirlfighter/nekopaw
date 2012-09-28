@@ -12,9 +12,11 @@ type
     Memo1: TMemo;
     Button3: TButton;
     Button2: TButton;
+    Button4: TButton;
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
+    procedure Button4Click(Sender: TObject);
   private
     { Private declarations }
   public
@@ -27,7 +29,7 @@ var
 
 implementation
 
-uses GraberU, MyHTTP;
+uses GraberU, MyHTTP, MyXMLParser;
 
 {$R *.dfm}
 
@@ -118,6 +120,27 @@ begin
 
     fn := 0;
     reslist.StartJob(JOB_LIST);
+end;
+
+procedure TForm1.Button4Click(Sender: TObject);
+var
+  st: tstringlist;
+  s: string;
+  xml: tmyxmlparser;
+begin
+  st := tstringlist.Create;
+  try
+    st.LoadFromFile(ExtractFilePath(paramstr(0))+'xmltest.src');
+    xml := tmyxmlparser.Create;
+    try
+      xml.Parse(st,true);
+      memo1.Text := xml.TagList.Text;
+    finally
+      xml.Free;
+    end;
+  finally
+    st.Free;
+  end;
 end;
 
 procedure TForm1.oneal(sender: tobject);

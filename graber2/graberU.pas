@@ -112,18 +112,32 @@ type
     MenuCaptions: Boolean;
   end;
 
+  TScriptsRec = record
+    Login: String;
+    List: String;
+    Download: String;
+  end;
+
+  TPicNameTemplate = record
+    name: string;
+    ext: string;
+  end;
+
   THTTPMethod = (hmGet, hmPost);
 
   THTTPRec = record
     DefUrl: String;
     Url: string;
+    Post: String;
     Referer: string;
     ParseMethod: string;
     JSONItem: String;
     CookieStr: string;
     LoginStr: string;
     LoginPost: string;
+    LoginResult: Boolean;
     TryExt: string;
+    PicTemplate: TPicNameTemplate;
     Method: THTTPMethod;
     { Counter, } Count: integer;
     Theor: Word;
@@ -337,11 +351,12 @@ type
   // TResource = class;
 
   TFieldType = (ftNone, ftString, ftPassword, ftNumber, ftFloatNumber, ftCombo,
-    ftIndexCombo, ftCheck, ftPathText, ftTagText);
+    ftIndexCombo, ftCheck, ftPathText, ftTagText, ftMultiEdit);
 
   PResourceField = ^TResourceField;
 
   TResourceField = record
+    InMulti: Boolean;
     resname: string;
     restitle: string;
     restype: TFieldType;
@@ -793,6 +808,7 @@ type
     FPicScript: TScriptSection;
     FDownloadSet: TDownloadRec;
     FPictureList: TPictureLinkList;
+    FScripts: TScriptsRec;
     FHTTPRec: THTTPRec;
     // FAddToQueue: TResourceEvent;
     FOnJobFinished: TResourceEvent;
@@ -842,6 +858,7 @@ type
     property LoginPrompt: Boolean read FLoginPrompt;
     property DownloadSet: TDownloadRec read FDownloadSet write FDownloadSet;
     property HTTPRec: THTTPRec read FHTTPRec write FHTTPRec;
+    property ScriptStrings: TScriptsRec read FScripts;
     property PictureList: TPictureLinkList read FPictureList;
     property JobInitiated: Boolean read FJobInitiated;
     property InitialScript: TScriptSection read FInitialScript;
@@ -1044,9 +1061,9 @@ begin
       begin
         n2 := CharPos(s, '(', ['""'], ['()'], n1 + 1);
         if n2 = 0 then
-          n2 := CharPosEx(s, op, [], [], n1 + 1)
+          n2 := CharPosEx(s, op, [], ['""'], n1 + 1)
         else
-          n2 := CharPosEx(s, op - ['('], [], ['()'], n1 + 1);
+          n2 := CharPosEx(s, op - ['('], ['""'], ['()'], n1 + 1);
       end
       else
         n2 := CharPosEx(s, op, [], [], n1 + 1);
@@ -1691,6 +1708,7 @@ begin
   i := 1;
   l := length(s);
   newstring := true;
+
   while i <= l do
   begin
     case s[i] of
@@ -1713,6 +1731,15 @@ begin
         end
         else
           inc(i);
+      '`':
+        begin
+          n := CharPos(s, '`', [], [], i + 1);
+
+          if n = 0 then
+            n := l;
+
+          i := n + 1;
+        end;
       '^':
         begin
           newstring := false;
@@ -1744,7 +1771,7 @@ begin
             v1 := GetNextS(tmp, '#');
             p := CheckStrPos(v1, Cons, true);
             if p > 0 then
-              v2 := TrimEx(Copy(v1, 1, p - 1), EmptyS);
+              v2 := TrimEx(Copy(v1, 1, p), EmptyS);
 
             if v2 <> '' then
               if p = 0 then
@@ -1898,9 +1925,10 @@ begin
           Calced.Items[i].Value := CalcValue(Calced.Items[i].Value, PVE, Lnk);
 
       cont := SE(Self, Calced, Lnk);
-    finally
+    except on e: exception do begin
       FreeAndNil(Calced);
-    end;
+      raise Exception.Create('Script section item parametres calculation error: ' + e.Message);
+    end; end;
   end
   else
     cont := true;
@@ -2217,12 +2245,13 @@ begin
   FHTTPRec.CookieStr := R.HTTPRec.CookieStr;
   FHTTPRec.LoginStr := R.HTTPRec.LoginStr;
   FHTTPRec.LoginPost := R.HTTPRec.LoginPost;
-  FHTTPRec.Method := hmGet;
+  FHTTPRec.Method := R.HTTPRec.Method;
   FHTTPRec.ParseMethod := R.HTTPRec.ParseMethod;
   // FHTTPRec.Counter := 0;
   FHTTPRec.Count := 0;
   FHTTPRec.PageByPage := R.HTTPRec.PageByPage;
   FHTTPRec.TryExt := R.HTTPRec.TryExt;
+  FHTTPRec.PicTemplate := R.HTTPRec.PicTemplate;
 end;
 
 function TResource.CanAddThread: Boolean;
@@ -2256,12 +2285,20 @@ begin
   FPicScript := nil;
   FHTTPRec.ParseMethod := 'xml';
   FHTTPRec.TryExt := '';
+  FHTTPRec.PicTemplate.name := '';
+  FHTTPRec.PicTemplate.ext := '';
   // FAddToQueue := nil;
   // FJobFinished := false;
   // FPerpageMode := false;
-  //FHTTPRec.Content := 'xml';
+  // FHTTPRec.Content := 'xml';
   FNextPage := false;
   FJobList := TJobList.Create;
+  with FScripts do
+  begin
+    Login := '';
+    List := LIST_SCRIPT;
+    Download :=  DOWNLOAD_SCRIPT;
+  end;
   // FJobFinished := false;
 end;
 
@@ -2289,8 +2326,8 @@ end;
 
 procedure TResource.GetSectors(s: string; R: TValueList);
 const
-  isl: array [0 .. 1] of string = ('""', '''''');
-  brk: array [0 .. 0] of string = ('{}');
+  isl: array [0 .. 2] of string = ('""', '''''', '``');
+  brk: array [0 .. 1] of string = ('{}', '()');
 var
   n1, n2: integer;
   pr: String;
@@ -2322,7 +2359,7 @@ begin
 
     pr := Copy(s, n1 + 1, n2 - n1 - 1);
 
-    if CheckStr(pr, ['A' .. 'Z', 'a' .. 'z', '0'..'9']) then
+    if CheckStr(pr, ['A' .. 'Z', 'a' .. 'z', '0' .. '9']) then
       raise Exception.Create
         ('script read error: incorrect symbols in section name');
 
@@ -2355,16 +2392,25 @@ begin
           if not Assigned(FInitialScript) then
             FInitialScript := TScriptSection.Create;
 
-          FInitialScript.ParseValues(FSectors[LIST_SCRIPT]);
+          FInitialScript.ParseValues(FSectors[FScripts.List]);
 
           FJobList.Add(0, JOB_LIST);
         end;
 
         FHTTPRec.Count := FJobList.Count;
       end;
-    { JOB_LOGIN:
+     JOB_LOGIN:
       begin
-      end; }
+        if FScripts.Login <> '' then
+        begin
+          if not Assigned(FInitialScript) then
+            FInitialScript := TScriptSection.Create;
+
+          FInitialScript.ParseValues(FSectors[FScripts.Login]);
+        end else
+          if Assigned(FinitialScript) then
+            FInitialScript.Clear;
+      end;
     JOB_PICS:
       begin
         // FPictureList.Reset;
@@ -2384,7 +2430,7 @@ begin
         if not Assigned(FPicScript) then
           FPicScript := TScriptSection.Create;
 
-        FPicScript.ParseValues(FSectors[DOWNLOAD_SCRIPT]);
+        FPicScript.ParseValues(FSectors[FScripts.Download]);
 
       end;
   end;
@@ -2457,9 +2503,11 @@ begin
   t.XMLScript := nil;
   t.HTTPRec := HTTPRec;
   t.DownloadRec := DownloadSet;
+  t.Sectors := FSectors;
   t.Fields := FFields;
   t.Resource := Self;
   t.Job := JOB_LOGIN;
+  t.InitialScript := InitialScript;
   inc(FCurrThreadCount);
 end;
 
@@ -2506,13 +2554,42 @@ procedure TResource.DeclorationEvent(ItemName: String; ItemValue: Variant;
     Result := CalcValue(Value, nil, LinkedObj);
   end;
 
+  procedure FillField(p: PResourceField; s: string; h: string = '');
+  var
+    v: string;
+  begin
+    if h = '' then
+      v := Clc(nVal(s))
+    else
+      v := h;
+
+    if SameText(v, 'textedit') then
+      p.restype := ftString
+    else if SameText(v, 'passwordedit') then
+      p.restype := ftPassword
+    else if SameText(v, 'integeredit') then
+      p.restype := ftNumber
+    else if SameText(v, 'floatedit') then
+      p.restype := ftFloatNumber
+    else if SameText(v, 'listbox') then
+      p.restype := ftCombo
+    else if SameText(v, 'indexlistbox') then
+      p.restype := ftIndexCombo
+    else if SameText(v, 'checkbox') then
+      p.restype := ftCheck;
+
+    p.resvalue := Clc(nVal(s));
+
+    p.resitems := s;
+  end;
+
   procedure ProcValue(ItemName: String; ItemValue: Variant);
   var
     s, v: String;
     FSct: TValueList;
     FSS: TScriptSection;
     i: integer;
-    f: PResourceField;
+    f, p: PResourceField;
   begin
     if SameText(ItemName, '$main.url') then
       FHTTPRec.DefUrl := ItemValue
@@ -2520,6 +2597,12 @@ procedure TResource.DeclorationEvent(ItemName: String; ItemValue: Variant;
       FIconFile := ItemValue
     else if SameText(ItemName, '$main.loginprompt') then
       FLoginPrompt := Boolean(ItemValue)
+    else if SameText(ItemName, '$main.loginscript') then
+      FScripts.Login := ItemValue
+    else if SameText(ItemName, '$main.listscript') then
+      FScripts.List := ItemValue
+    else if SameText(ItemName, '$main.downloadscript') then
+      FScripts.Download := ItemValue
     else if SameText(ItemName, '$main.short') then
       FShort := ItemValue
     else if SameText(ItemName, '$main.checkcookie') then
@@ -2530,6 +2613,10 @@ procedure TResource.DeclorationEvent(ItemName: String; ItemValue: Variant;
       FHTTPRec.LoginPost := ItemValue
     else if SameText(ItemName, '$main.pagebypage') then
       FHTTPRec.PageByPage := ItemValue
+    else if SameText(ItemName, '$picture.template.name') then
+      FHTTPRec.PicTemplate.name := ItemValue
+    else if SameText(ItemName, '$picture.template.ext') then
+      FHTTPRec.PicTemplate.ext := ItemValue
     else if SameText(ItemName, '$tags.spacer') then
       if length(ItemValue) > 0 then
         fSpacer := VarToStr(ItemValue)[1]
@@ -2568,30 +2655,31 @@ procedure TResource.DeclorationEvent(ItemName: String; ItemValue: Variant;
     end
     else if SameText(ItemName, '@addfield') then
     begin
-      {
-        TFieldType = (ftNone, ftString, ftPassword,
-        ftNumber, ftFloatNumber,ftCombo, ftCheck);
-      }
       s := ItemValue;
       f := Fields.Items[Fields.AddField(Clc(nVal(s)), '', ftNone, null, '')];
+      f.InMulti := false;
       f.restitle := Clc(nVal(s));
-      f.resvalue := Clc(nVal(s));
+
       v := Clc(nVal(s));
-      if SameText(v, 'textedit') then
-        f.restype := ftString
-      else if SameText(v, 'passwordedit') then
-        f.restype := ftPassword
-      else if SameText(v, 'integeredit') then
-        f.restype := ftNumber
-      else if SameText(v, 'floatedit') then
-        f.restype := ftFloatNumber
-      else if SameText(v, 'listbox') then
-        f.restype := ftCombo
-      else if SameText(v, 'indexlistbox') then
-        f.restype := ftIndexCombo
-      else if SameText(v, 'checkbox') then
-        f.restype := ftCheck;
-      f.resitems := s;
+
+      if SameText(v, 'multiedit') then
+      begin
+        f.restype := ftMultiEdit;
+        i := 0;
+        while s <> '' do
+        begin
+          inc(i);
+          v := gVal(nVal(s));
+          p := Fields.Items[Fields.AddField(f.resname + '[' + IntToStr(i) + ']',
+            '', ftNone, null, '')];
+          p.InMulti := true;
+          p.restitle := f.restitle;
+          FillField(p, v);
+        end;
+        f.resvalue := i;
+      end
+      else
+        FillField(f, s, v);
     end
     else if ItemName[1] = '$' then
     begin
@@ -2742,6 +2830,7 @@ begin
   if (t.ReturnValue <> THREAD_COMPLETE) or (t.Job = JOB_ERROR) then
     if Assigned(FOnError) then
       FOnError(Self, t.Error);
+  FHTTPRec.LoginResult := t.HTTPRec.LoginResult;
   FRelogin := false;
   dec(FCurrThreadCount);
   FOnJobFinished(Self);
@@ -2794,7 +2883,10 @@ begin
       if Assigned(mainscript) then
         mainscript.Free;
       if Assigned(FOnError) then
-        FOnError(Self, e.Message);
+        FOnError(Self, 'Resource load error (' + FName + '): ' + e.Message)
+      else
+        raise Exception.Create('Resource load error (' + FName + '): ' +
+          e.Message);
     end;
   end;
 
@@ -3139,10 +3231,12 @@ begin
   begin
     R := Items[i];
     if FLoginMode then
-      if R.Relogin and (R.HTTPRec.CookieStr <> '') and
+      if R.Relogin and
+        ((R.ScriptStrings.Login<>'')
+        or (R.HTTPRec.CookieStr <> '') and
         (t.HTTP.CookieList.GetCookieValue(R.HTTPRec.CookieStr,
         trim(DeleteTo(DeleteTo(lowercase(R.HTTPRec.DefUrl), ':/'), 'www.'), '/')
-        ) = '') then
+        ) = '')) then
       begin
         R.CreateLoginJob(t);
         Result := true;
@@ -3296,9 +3390,12 @@ var
 begin
   if FLoginMode then
   begin
-    if ThreadHandler.Cookies.GetCookieValue(R.HTTPRec.CookieStr,
+    if (R.ScriptStrings.Login='')
+    and(ThreadHandler.Cookies.GetCookieValue(R.HTTPRec.CookieStr,
       trim(DeleteTo(DeleteTo(lowercase(R.HTTPRec.DefUrl), ':/'), 'www.'), '/')
-      ) = '' then
+      ) = '')
+    or(R.ScriptStrings.Login<>'') and not(R.HTTPRec.LoginResult)
+    then
       if Assigned(FOnError) then
         FOnError(Self, 'login error: ' + R.Name);
 
@@ -3612,19 +3709,21 @@ begin
         end;
 
         if Job = JOB_LOGIN then
-          ProcLogin
+          if not FInitialScript.Empty then
+            FInitialScript.Process(SE, DE, FE, VE, VE)
+          else
+            ProcLogin
         else
         begin
           if not FInitialScript.Empty then
           begin
-            {$IFDEF NEKODEBUG}FCSFiles.Enter;
+{$IFDEF NEKODEBUG}FCSFiles.Enter;
             SaveStrToFile('thread_' + Format('%p', [Pointer(Self)]) +
               ': initialscript start', debugthreads, true);
             FCSFiles.Leave; {$ENDIF}
-
             FInitialScript.Process(SE, DE, FE, VE, VE);
 
-            {$IFDEF NEKODEBUG}FCSFiles.Enter;
+{$IFDEF NEKODEBUG}FCSFiles.Enter;
             SaveStrToFile('thread_' + Format('%p', [Pointer(Self)]) +
               ': initialscript finished', debugthreads, true);
             FCSFiles.Leave; {$ENDIF}
@@ -3812,8 +3911,11 @@ begin
             a[0] := TAttrList.Create;
             try
               for i := 0 to Parametres.Count - 1 do
-                a[0].Add(Parametres.Items[i].Name,
-                  VarToStr(Parametres.Items[i].Value));
+                a[0].Add(
+                  Copy(Parametres.Items[i].Name,1,
+                  length(Parametres.Items[i].Name)-1),
+                VarToStr(Parametres.Items[i].Value),
+                Parametres.Items[i].Name[length(Parametres.Items[i].Name)]);
 
               // if Item.NoParameters then
               // a[0].NoParameters := Item.NoParameters;
@@ -3939,6 +4041,12 @@ begin
         end
         else if SameText(Value, 'main.url') then
           Result := HTTPRec.DefUrl
+        else if SameText(Value, 'main.login') then
+          Result := HTTPRec.LoginStr
+        else if SameText(Value, 'thread.loginresult') then
+          Result := HTTPRec.LoginResult
+        else if SameText(Value, 'thread.url') then
+          Result := HTTPRec.Url
         else if SameText(Value, 'thread.count') then
           Result := HTTPRec.Count
         else if SameText(Value, 'thread.result') then
@@ -3947,7 +4055,7 @@ begin
           Result := FJobId
         else if SameText(Value, 'thread.http.urlparams') then
           Result := trim(FHTTP.Url.GetPathAndParams, '/')
-        else if Fields.FindField(Result) > -1 then
+        else if Fields.FindField(Value) > -1 then
           Result := Fields[Value]
         else
           raise Exception.Create('unknown variable: ' + c + Value);
@@ -3971,7 +4079,7 @@ begin
           else if SameText(s, 'unixtime') then
             Result := UnixToDateTime(Clc(gVal(Value)))
           else if SameText(s, 'lowcase') then
-            Result := LowerCase(Clc(gVal(Value)))
+            Result := lowercase(Clc(gVal(Value)))
           else if SameText(s, 'removevars') then
           begin
             Result := CopyTo(CopyTo(Clc(gVal(Value)), '?', [], []),
@@ -4017,7 +4125,24 @@ begin
             s := gVal(Value);
             Result := Clc(nVal(s));
             if VarToStr(Result) = '' then
+              Result := 1
+            else
+              Result := 0;
+          end
+          else if SameText(s, 'ifempty') then
+          begin
+            s := gVal(Value);
+            Result := Clc(nVal(s));
+            if VarToStr(Result) = '' then
               Result := Clc(nVal(s));
+          end
+          else if SameText(s, 'cookie') then
+          begin
+            s := gVal(Value);
+            Result := FHTTP.CookieList.GetCookieValue(Clc(nVal(s)),
+              GetURLDomain(HTTPRec.DefUrl));
+            //FHTTP.CookieList.ChangeCookie(GetURLDomain(HTTPRec.DefUrl),
+            //  Clc(nVal(s)) + '=' + Clc(nVal(s)) + ';');
           end
           else if SameText(s, 'urlvar') then
           begin
@@ -4034,7 +4159,8 @@ begin
           else if SameText(s, 'copy') then
           begin
             s := gVal(Value);
-            Result := Copy(Clc(nVal(s)), Integer(Clc(nVal(s))), Integer(Clc(nVal(s))));
+            Result := Copy(Clc(nVal(s)), integer(Clc(nVal(s))),
+              integer(Clc(nVal(s))));
           end
           else if SameText(s, 'copyto') then
           begin
@@ -4098,6 +4224,23 @@ begin
             Result := DateOf(StrToDateTime(Clc(gVal(Value))))
           else if SameText(s, 'timepart') then
             Result := TimeOf(StrToDateTime(Clc(gVal(Value))))
+          else if SameText(s, 'listitem') then
+          begin
+            s := gVal(Value);
+            n := Clc(nVal(s));
+            i := 0;
+            while s <> '' do
+            begin
+              tmp := Clc(nVal(s));
+              if n = i then
+              begin
+                Result := tmp;
+                Exit;
+              end
+              else
+                inc(i);
+            end;
+          end
           else if SameText(s, 'trim') then
           begin
             s := gVal(Value);
@@ -4155,7 +4298,8 @@ begin
                 Break;
               end;
             end;
-          end;
+          end else
+            raise Exception.Create('unknown method: ' + c + Value);
         end;
       '%':
         begin
@@ -4247,10 +4391,19 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
       FXMLScript.ParseValues(FSectors[Value])
     else if SameText(Name, '$thread.xmlcontent') then
       FHTTPRec.ParseMethod := Value
+    else if SameText(name, '$thread.method') then
+      if SameText('get',Value) then
+        FHTTPRec.Method := hmGet
+      else if SameText('post',Value) then
+        FHTTPRec.Method := hmPost
+      else
+        raise Exception.Create('unknown method "' + Value + '"')
     else if SameText(Name, '$thread.jsonitem') then
       FHTTPRec.JSONItem := Value
-    else if SameText(Name,'$thread.tryext') then
+    else if SameText(Name, '$thread.tryext') then
       FHTTPRec.TryExt := Value
+    else if SameText(Name, '$thread.loginresult') then
+      FHTTPRec.LoginResult := Value
     else if SameText(Name, '$thread.count') then
       FHTTPRec.Count := Trunc(Value)
     else if SameText(Name, '$thread.counter') then
@@ -4414,9 +4567,11 @@ procedure TDownloadThread.ProcHTTP;
 var
   s: string;
   Url: string;
+  post: tstringlist;
+  {$IFDEF NEKODEBUG}debug_name: string;{$ENDIF}
 begin
 
-{$IFDEF NEKODEBUG}FCSFiles.Enter;
+  {$IFDEF NEKODEBUG}FCSFiles.Enter;
   SaveStrToFile('thread_' + Format('%p', [Pointer(Self)]) + ': starthttp',
     debugthreads, true);
   FCSFiles.Leave; {$ENDIF}
@@ -4451,21 +4606,39 @@ begin
         FHTTP.Request.Referer := FHTTPRec.Referer;
 
         {$IFDEF NEKODEBUG}FCSFiles.Enter;
-        SaveStrToFile('thread_' + Format('%p', [Pointer(Self)]) + ': connectto ' +
-          url,debugthreads, true);
+        SaveStrToFile('thread_' + Format('%p', [Pointer(Self)]) + ': connectto '
+          + Url, debugthreads, true);
         FCSFiles.Leave; {$ENDIF}
 
-        s := FHTTP.Get(Url);
+        post := TStringList.Create;
+        if FHTTPRec.Method = hmPost then
+          try
+            if FHTTPRec.Post = '' then
+            begin
+              GetPostStrings(Url, post);
+              Url := CopyTo(Url, '?');
+            end
+            else
+            begin
+              s := CalcValue(FHTTPRec.Post, VE, nil);
+              GetPostStrings(s, post);
+            end;
+            s := FHTTP.post(Url, post);
+          finally
+            post.Free;
+          end
+        else
+          s := FHTTP.Get(Url);
 
         FHTTP.Request.Referer := FHTTPRec.Referer;
 
         {$IFDEF NEKODEBUG}FCSFiles.Enter;
-        SaveStrToFile('thread_' + Format('%p', [Pointer(Self)]) + ': connectdone ' +
-          url,debugthreads, true);
+        SaveStrToFile('thread_' + Format('%p', [Pointer(Self)]) +
+          ': connectdone ' + Url, debugthreads, true);
         FCSFiles.Leave; {$ENDIF}
 
         if (ReturnValue = THREAD_FINISH) then
-            Break;
+          Break;
         // FHTTP.Disconnect;
         // inc(FHTTPRec.Counter);
 
@@ -4473,8 +4646,8 @@ begin
         on e: Exception do
         begin
           {$IFDEF NEKODEBUG}FCSFiles.Enter;
-          SaveStrToFile('thread_' + Format('%p', [Pointer(Self)]) + ': connecterror ' +
-            url + ' ' + e.Message,debugthreads, true);
+          SaveStrToFile('thread_' + Format('%p', [Pointer(Self)]) +
+            ': connecterror ' + Url + ' ' + e.Message, debugthreads, true);
           FCSFiles.Leave; {$ENDIF}
 
           if (ReturnValue = THREAD_FINISH) then
@@ -4501,7 +4674,7 @@ begin
       if SameText(FHTTPRec.ParseMethod, 'xml') then
         FXML.Parse(s)
       else if SameText(FHTTPRec.ParseMethod, 'html') then
-        FXML.Parse(s,true)
+        FXML.Parse(s, true)
       else if SameText(FHTTPRec.ParseMethod, 'json') then
         FXML.JSON(FHTTPRec.JSONItem, s)
       else
@@ -4509,16 +4682,18 @@ begin
 
       // ----  //
       {$IFDEF NEKODEBUG}
+      debug_name := ValidFName(emptyname(Url));
+      if debug_name = '' then
+        debug_name := IntToStr(FJobId);
       FXML.TagList.ExportToFile(ExtractFilePath(paramstr(0)) + 'log\' +
-        ValidFName(emptyname(Url)));
+        debug_name);
       SaveStrToFile(Url + #13#10 + s, ExtractFilePath(paramstr(0)) + 'log\' +
-        ValidFName(emptyname(Url)) + '.src');
-      {$ENDIF}
+        debug_name + '.src');{$ENDIF}
       // ---- //
 
       {$IFDEF NEKODEBUG}FCSFiles.Enter;
-      SaveStrToFile('thread_' + Format('%p', [Pointer(Self)]) + ': valuesparse ' +
-        url,debugthreads, true);
+      SaveStrToFile('thread_' + Format('%p', [Pointer(Self)]) + ': valuesparse '
+        + Url, debugthreads, true);
       FCSFiles.Leave; {$ENDIF}
 
       FXMLScript.Process(SE, DE, FE, VE, VE, FXML.TagList);
@@ -4553,6 +4728,7 @@ begin
       SaveStrToFile('thread_' + Format('%p', [Pointer(Self)]) + ': finishhttp',
         debugthreads, true);
       FCSFiles.Leave; {$ENDIF}
+
       Break;
     except
       on e: Exception do
@@ -4567,28 +4743,40 @@ procedure TDownloadThread.ProcPic;
 var
   f: TFileStream;
   fdir: string;
-  fext: string;
-  fname: string;
-  url: string;
+  FExt: string;
+  FName: string;
+  Url: string;
 begin
   f := nil;
   FRetries := 0;
   while true do
   begin
     try
-      fext := copyto(FHTTPREC.TryExt,',',[],[],true);
+      FExt := CopyTo(FHTTPRec.TryExt, ',', [], [], true);
 
-      if fext <> '' then
-        fname := ReplaceStr(FPicture.FileName,'%ext%',fext)
+      if (FHTTPRec.PicTemplate.name<>'') then
+        FName := ReplaceStr(FPicture.FileName, FHTTPRec.PicTemplate.name,
+          FPicture.PicName)
       else
-        fname := FPicture.FileName;
+        FName := FPicture.FileName;
+
+      if (FHTTPRec.PicTemplate.ext<>'') then
+        if (FExt = '') then
+          FName := ReplaceStr(FName, FHTTPRec.PicTemplate.ext,
+            FPicture.Ext)
+        else
+          FName := ReplaceStr(FName, FHTTPRec.PicTemplate.ext, FExt);
 
       fdir := ExtractFileDir(FPicture.FileName);
 
       FCSFiles.Enter;
       try
 
-        if fileexists(fname) then
+        if ExtractFileName(FName) = '' then
+        begin
+          SetHTTPError(HTTPRec.Url + ': can not get file name');
+          Exit;
+        end else if fileexists(FName) then
         begin
           { FPicture.Size := 1;
             FPicture.Pos; }
@@ -4601,7 +4789,7 @@ begin
         if not DirectoryExists(fdir) then
           CreateDirExt(fdir);
 
-        f := TFileStream.Create(fname, fmCreate);
+        f := TFileStream.Create(FName, fmCreate);
       finally
         FCSFiles.Leave;
       end;
@@ -4610,12 +4798,12 @@ begin
         // HTTP.Request.ContentRangeStart := f.Size;
         HTTP.Request.Referer := FHTTPRec.Referer;
 
-        if fext = '' then
-          url := HTTPRec.Url
+        if FExt = '' then
+          Url := HTTPRec.Url
         else
-          url := ReplaceStr(HTTPRec.Url,'%ext%',fext);
+          Url := ReplaceStr(HTTPRec.Url, FHTTPRec.PicTemplate.ext, FExt);
 
-        if SameText(Copy(url, 1, 6), 'https:') then
+        if SameText(Copy(Url, 1, 6), 'https:') then
         begin
           FHTTP.IOHandler := FSSLHandler;
           FHTTP.ConnectTimeout := 0;
@@ -4627,7 +4815,7 @@ begin
         FPicture.Changes := [pcSize, pcProgress];
         Synchronize(PicChanged);
 
-        HTTP.Get(url, f);
+        HTTP.Get(Url, f);
         // HTTP.Disconnect;
 
         if ReturnValue = THREAD_FINISH then
@@ -4644,7 +4832,7 @@ begin
           f.Free;
           FPicture.Size := 0;
           FPicture.Pos := 0;
-          DeleteFile(fname);
+          DeleteFile(FName);
           if (ReturnValue = THREAD_FINISH) then
             // begin
             // FPicture.Changes := [pcSize, pcProgress];
@@ -4667,7 +4855,7 @@ begin
         on e: EIdSocketError do
         begin
           f.Free;
-          DeleteFile(fname);
+          DeleteFile(FName);
           FPicture.Size := 0;
           FPicture.Pos := 0;
 
@@ -4690,7 +4878,7 @@ begin
         on e: Exception do
         begin
           f.Free;
-          DeleteFile(fname);
+          DeleteFile(FName);
           FPicture.Size := 0;
           FPicture.Pos := 0;
 
@@ -4700,7 +4888,7 @@ begin
           if (HTTP.ResponseCode <> 404) and (FRetries < FMaxRetries) then
             inc(FRetries)
           else if FHTTPRec.TryExt <> '' then
-            fRetries := 0
+            FRetries := 0
           else
           begin
             SetHTTPError(HTTPRec.Url + ': ' + e.Message);
@@ -4728,19 +4916,6 @@ begin
 end;
 
 procedure TDownloadThread.ProcLogin;
-
-  procedure GetPostStrings(s: string; outs: TStrings);
-  var
-    tmp: string;
-  begin
-    s := trim(CopyFromTo(s, '?', ''));
-    while s <> '' do
-    begin
-      tmp := GetNextS(s, '&');
-      outs.Add(tmp);
-    end;
-  end;
-
 var
   Url: string;
   poststr: string;
@@ -6518,7 +6693,7 @@ begin
         SetEvent(p.EventHandle)
       else
         p.ReturnValue := THREAD_FINISH;
-      if Force {and p.HTTP.Connected }then
+      if Force { and p.HTTP.Connected } then
         p.HTTP.Disconnect;
     end;
   finally
