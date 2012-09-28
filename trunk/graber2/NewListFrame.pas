@@ -15,7 +15,7 @@ uses
   cxButtons, ExtCtrls, cxSplitter,dxSkinsCore, dxSkinsDefaultPainters,
   dxSkinscxPCPainter,cxDropDownEdit,
   {graber2}
-  common, Graberu;
+  cxmymultirow,common, Graberu, cxCheckBox;
 
 type
   TListFrameState = (lfsNew, lfsEdit);
@@ -119,7 +119,8 @@ begin
     for i := 1 to tvRes.DataController.RecordCount-1 do
     begin
       n := FullResList[tvRes.DataController.Values[i, 0]];
-      if (n.HTTPRec.CookieStr<>'')and(n.LoginPrompt or (nullstr(n.Fields['login'])<>''))then
+      if (n.ScriptStrings.Login<>'')or(n.HTTPRec.CookieStr<>'')
+      and(n.LoginPrompt or (nullstr(n.Fields['login'])<>''))then
       begin
         n.Relogin := true;
         Result := true;
@@ -128,7 +129,8 @@ begin
   else
   begin
     n := FullResList[idx{tvRes.DataController.Values[idx, 0]}];
-    if(n.HTTPRec.CookieStr<>'')and(n.LoginPrompt or (nullstr(n.Fields['login'])<>''))then
+    if(n.ScriptStrings.Login<>'')or(n.HTTPRec.CookieStr<>'')
+    and(n.LoginPrompt or (nullstr(n.Fields['login'])<>''))then
     begin
       n.Relogin := true;
       Result := true;
@@ -185,7 +187,7 @@ end;
 procedure TfNewList.CreateSettings(n: Integer);
 var
   c: TcxCategoryRow;
-  //r: TcxEditorRow;
+  r: TcxCustomRow;
   i, d: Integer;
   s: string;
 
@@ -223,18 +225,22 @@ begin
 
     c := nil;
 
+    r := nil;
+
     if FullResList[n].Fields.Count > d then
     begin
+      if not Assigned(c) then
+        c := dm.CreateCategory(vgSettings,'vgieditional',lang('_EDITIONALCONFIG_'));
+
       with FullResList[n].Fields do
         for i := d to Count - 1 do
           if Items[i].restype <> ftNone then
           begin
-            if not Assigned(c) then
-              c := dm.CreateCategory(vgSettings,'vgieditional',lang('_EDITIONALCONFIG_'));
             with FullResList[n].Fields.Items[i]^ do
-              dm.CreateField(vgSettings,'evgi' + resname,restitle,resitems,restype,c,resvalue);
-
-               ///derp
+              if InMulti then
+                dm.CreateField(vgSettings,'evgi' + resname,restitle,resitems,restype,r,resvalue)
+              else
+                r := dm.CreateField(vgSettings,'evgi' + resname,restitle,resitems,restype,c,resvalue);
           end;
     end;
   end;
@@ -444,6 +450,7 @@ end;
 procedure TfNewList.SaveSettings;
 var
   i, n, d: Integer;
+  r: tcxMyMultiEditorRow;
 begin
   n := vgSettings.Tag;
   with FullResList[n] do
@@ -462,18 +469,33 @@ begin
       Inherit := (vgSettings.RowByName('vgiinherit') as TcxEditorRow)
         .Properties.Value;
       d := FullResList[0].Fields.Count;
+
+      r := nil;
+
       if Fields.Count > d then
         with Fields do
           for i := d to Count - 1 do
           if Items[i].restype <> ftNone then
-
           begin
-            if Items[i].restype = ftIndexCombo then
-              Items[i].resvalue := IndexOfStr(Items[i].resitems,(vgSettings.RowByName('evgi' + Items[i].resname)
-                as TcxEditorRow).Properties.Value)
-            else
-              Items[i].resvalue := (vgSettings.RowByName('evgi' + Items[i].resname)
-                as TcxEditorRow).Properties.Value;
+            case Items[i].restype of
+              ftMultiEdit:
+                r := vgSettings.RowByName('evgi' + Items[i].resname) as tcxMyMultiEditorRow;
+              ftIndexCombo:
+                if Items[i].InMulti then
+                  Items[i].resvalue := IndexOfStr(Items[i].resitems,r.Properties
+                  .Editors[StrToInt(CopyFromTo(items[i].resname,'[',']',[],[]))-1].Value)
+                else
+                  Items[i].resvalue := IndexOfStr(Items[i].resitems,(vgSettings.RowByName('evgi' + Items[i].resname)
+                    as TcxEditorRow).Properties.Value);
+              else
+                if Items[i].InMulti then
+                  Items[i].resvalue := r.Properties
+                  .Editors[StrToInt(CopyFromTo(items[i].resname,'[',']',[],[]))-1].Value
+                else
+                  Items[i].resvalue := (vgSettings.RowByName('evgi' + Items[i].resname)
+                    as TcxEditorRow).Properties.Value;
+            end;
+
           end;
     end;
   end;

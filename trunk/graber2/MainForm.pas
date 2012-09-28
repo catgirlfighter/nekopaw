@@ -718,7 +718,7 @@ end;
 procedure Tmf.ChangeResInfo;
 var
   i: integer;
-  c: TcxEditorRow;
+  c: TcxCustomRow;
 //  ACheckItem: TcxCheckListBoxItem;
 begin
     //EXIT;

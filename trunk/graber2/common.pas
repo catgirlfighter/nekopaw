@@ -786,7 +786,7 @@ begin
 //    Delete(tmp, 1, l1 + length(sub1) - 1)
     Exit;
 
-  l2 := PosEx(lowercase(sub2),lowercase(s),l1 + 1);
+  l2 := PosEx(lowercase(sub2),lowercase(s),l1 + length(sub1));
 
   if l2 = 0 then
     if re then
@@ -1378,26 +1378,22 @@ begin
     if s2 <> #0 then
       if str[i] = s2 then
         s2 := #0
-      //  dec(n)
-      //else if str[i] = s1 then
-      //  inc(n)
       else
-    else if (length(b2) > 0) then
-      if str[i] = b2[length(b2)-1] then
-        setlength(b2,length(b2)-1)
-      else if CharInSet(str[i],br) then
-      begin
-        for j := 0 to length(Brackets) - 1 do
-          if (str[i] = Brackets[j][1]) then
-          begin
-            //setlength(b1,length(b1)+1);
-            setlength(b2,length(b2)+1);
-            //b1[length(b1)-1] := Brackets[j][1];
-            b2[length(b2)-1] := Brackets[j][2];
-            break;
-          end;
-      end else
-    else if (str[i] = ch) then
+    else if (length(b2) > 0)
+    and (str[i] = b2[length(b2)-1]) then
+      setlength(b2,length(b2)-1)
+//    else
+//     if CharInSet(str[i],br) then
+//      begin
+//        for j := 0 to length(Brackets) - 1 do
+//          if (str[i] = Brackets[j][1]) then
+//          begin
+//            setlength(b2,length(b2)+1);
+//            b2[length(b2)-1] := Brackets[j][2];
+//            break;
+//          end;
+//      end else
+    else if (length(b2) = 0) and (str[i] = ch) then
     begin
       Result := i;
       Exit;
@@ -1453,26 +1449,21 @@ begin
     if s2 <> #0 then
       if str[i] = s2 then
         s2 := #0
-      //  dec(n)
-      //else if str[i] = s1 then
-      //  inc(n)
       else
-    else if (length(b2) > 0) then
-      if str[i] = b2[length(b2)-1] then
+    else if (length(b2) > 0)
+    and (str[i] = b2[length(b2)-1]) then
         setlength(b2,length(b2)-1)
-      else if CharInSet(str[i],br) then
-      begin
-        for j := 0 to length(Brackets) - 1 do
-          if (str[i] = Brackets[j][1]) then
-          begin
-            //setlength(b1,length(b1)+1);
-            setlength(b2,length(b2)+1);
-            //b1[length(b1)-1] := Brackets[j][1];
-            b2[length(b2)-1] := Brackets[j][2];
-            break;
-          end;
-      end else
-    else if CharInSet(str[i], ch) then
+//      else if CharInSet(str[i],br) then
+//      begin
+//        for j := 0 to length(Brackets) - 1 do
+//          if (str[i] = Brackets[j][1]) then
+//          begin
+//            setlength(b2,length(b2)+1);
+//            b2[length(b2)-1] := Brackets[j][2];
+//            break;
+//          end;
+//      end else
+    else if (length(b2) = 0) and CharInSet(str[i], ch) then
     begin
       Result := i;
       Exit;

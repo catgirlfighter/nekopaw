@@ -210,7 +210,6 @@ object fSettings: TfSettings
     object cxTabSheet2: TcxTabSheet
       Caption = 'cxTabSheet2'
       ImageIndex = 1
-      ExplicitWidth = 476
       object eThreads: TcxSpinEdit
         Left = 206
         Top = 3
@@ -293,7 +292,6 @@ object fSettings: TfSettings
     object cxTabSheet3: TcxTabSheet
       Caption = 'cxTabSheet3'
       ImageIndex = 2
-      ExplicitWidth = 476
       object chbProxy: TcxCheckBox
         Left = 6
         Top = 3
@@ -383,18 +381,16 @@ object fSettings: TfSettings
     object cxTabSheet4: TcxTabSheet
       Caption = 'cxTabSheet4'
       ImageIndex = 3
-      ExplicitHeight = 0
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0
-        Width = 476
+        Width = 279
         Height = 273
         Align = alClient
         OptionsView.ShowEditButtons = ecsbAlways
         OptionsView.GridLineColor = clBtnShadow
         OptionsView.RowHeaderWidth = 148
         TabOrder = 0
-        ExplicitWidth = 279
         Version = 1
       end
     end
@@ -453,7 +449,6 @@ object fSettings: TfSettings
     object cxTabSheet6: TcxTabSheet
       Caption = 'cxTabSheet6'
       ImageIndex = 4
-      ExplicitWidth = 476
       object cxLabel1: TcxLabel
         Left = 6
         Top = 3
@@ -548,8 +543,8 @@ object fSettings: TfSettings
   object BarManager: TdxBarManager
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
-    Font.Height = -12
-    Font.Name = 'Segoe UI'
+    Font.Height = -11
+    Font.Name = 'Tahoma'
     Font.Style = []
     Categories.Strings = (
       'Default')

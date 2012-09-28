@@ -59,6 +59,7 @@ object dm: Tdm
       Properties.ValueChecked = 'True'
     end
     object erSpinEdit: TcxEditRepositorySpinItem
+      Properties.ValueType = vtInt
     end
     object erCombo: TcxEditRepositoryComboBoxItem
       Properties.DropDownListStyle = lsFixedList
