@@ -24,9 +24,10 @@ object fmDoublesNewRule: TfmDoublesNewRule
     Height = 54
     Align = alTop
     BevelOuter = bvNone
-    Caption = 'Panel1'
     ShowCaption = False
     TabOrder = 0
+    ExplicitLeft = -2
+    ExplicitTop = 0
     object bOk: TcxButton
       Left = 0
       Top = 0
@@ -51,6 +52,7 @@ object fmDoublesNewRule: TfmDoublesNewRule
       Left = 0
       Top = 32
       Caption = 'lRuleName'
+      Transparent = True
     end
     object eName: TcxTextEdit
       Left = 97
@@ -66,8 +68,6 @@ object fmDoublesNewRule: TfmDoublesNewRule
     Height = 200
     Align = alClient
     TabOrder = 1
-    ExplicitLeft = -3
-    ExplicitTop = 92
     object tvValues: TcxGridTableView
       OnEditValueChanged = tvValuesEditValueChanged
       DataController.Summary.DefaultGroupSummaryItems = <>
@@ -110,8 +110,8 @@ object fmDoublesNewRule: TfmDoublesNewRule
   object BarManager: TdxBarManager
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
-    Font.Height = -12
-    Font.Name = 'Segoe UI'
+    Font.Height = -11
+    Font.Name = 'Tahoma'
     Font.Style = []
     Categories.Strings = (
       'Default')

@@ -150,6 +150,7 @@ object fSettings: TfSettings
         Top = 27
         Caption = 'chbAutoupdate'
         TabOrder = 2
+        Transparent = True
         Width = 339
       end
       object lCheckNow: TcxLabel
@@ -171,6 +172,7 @@ object fSettings: TfSettings
         Top = 77
         Caption = 'chbShowWhatsNew'
         TabOrder = 4
+        Transparent = True
         Width = 339
       end
       object lSkin: TcxLabel
@@ -197,6 +199,7 @@ object fSettings: TfSettings
         Top = 129
         Caption = 'chbUseLookAndFeel'
         TabOrder = 7
+        Transparent = True
         Width = 339
       end
       object chbMenuCaptions: TcxCheckBox
@@ -204,6 +207,7 @@ object fSettings: TfSettings
         Top = 156
         Caption = 'chbMenuCaptions'
         TabOrder = 8
+        Transparent = True
         Width = 339
       end
     end
@@ -224,6 +228,7 @@ object fSettings: TfSettings
         Top = 29
         Caption = 'chbUseThreadPerRes'
         TabOrder = 1
+        Transparent = True
         Width = 275
       end
       object eThreadPerRes: TcxSpinEdit
@@ -298,6 +303,7 @@ object fSettings: TfSettings
         Caption = 'chbProxy'
         Properties.OnEditValueChanged = chbProxyPropertiesEditValueChanged
         TabOrder = 0
+        Transparent = True
         Width = 323
       end
       object chbProxyAuth: TcxCheckBox
@@ -306,6 +312,7 @@ object fSettings: TfSettings
         Caption = 'chbProxyAuth'
         Properties.OnEditValueChanged = chbProxyAuthPropertiesEditValueChanged
         TabOrder = 1
+        Transparent = True
         Width = 323
       end
       object eHost: TcxTextEdit
@@ -339,6 +346,7 @@ object fSettings: TfSettings
         Top = 156
         Caption = 'chbProxySavePWD'
         TabOrder = 6
+        Transparent = True
         Width = 123
       end
       object lcProxyHost: TcxLabel
@@ -381,6 +389,8 @@ object fSettings: TfSettings
     object cxTabSheet4: TcxTabSheet
       Caption = 'cxTabSheet4'
       ImageIndex = 3
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0
@@ -543,8 +553,8 @@ object fSettings: TfSettings
   object BarManager: TdxBarManager
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
-    Font.Height = -11
-    Font.Name = 'Tahoma'
+    Font.Height = -12
+    Font.Name = 'Segoe UI'
     Font.Style = []
     Categories.Strings = (
       'Default')

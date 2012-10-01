@@ -30,6 +30,7 @@ const
   CM_REFRESHRESINFO = WM_USER + 18;
   CM_REFRESHPIC = WM_USER + 19;
   CM_MENUSTYLECHANGED = WM_USER + 20;
+  CM_JOBPROGRESS = WM_USER + 21;
 
   THREAD_STOP = 0;
   THREAD_START = 1;
@@ -1691,7 +1692,7 @@ const
   EmptyS = [#9, #10, #13, ' '];
 
   isl: array [0 .. 1] of string = ('''''', '""');
-  brk: array [0 .. 1] of string = ('()', '{}');
+  brk: array [0 .. 2] of string = ('()', '{}','[]');
   Cons = ['=', '<', '>', '!'];
 
 var
@@ -2789,7 +2790,7 @@ begin
           begin
             if not t.InitialScript.Empty then
               FJobList.Clear
-            else
+            else if t.JobId > 0 then
             begin
               inc(FJobList.FErrCount);
               FJobList[t.JobId].Status := JOB_ERROR;
@@ -3503,14 +3504,15 @@ begin
       if ListFinished then
       begin
         FQueueIndex := 0;
-        ThreadHandler.CreateThreads;
         for i := 0 to Count - 1 do
-          with Items[i] do
-          begin
-            MaxThreadCount := Self.MaxThreadCount;
-            StartJob(JobType);
-          end;
+          if items[i].Relogin then
+            with Items[i] do
+            begin
+              MaxThreadCount := Self.MaxThreadCount;
+              StartJob(JobType);
+            end;
         FLoginMode := true;
+        ThreadHandler.CreateThreads;
         ThreadHandler.CheckIdle;
 
         if Assigned(FJobChanged) then
@@ -3721,6 +3723,7 @@ begin
             SaveStrToFile('thread_' + Format('%p', [Pointer(Self)]) +
               ': initialscript start', debugthreads, true);
             FCSFiles.Leave; {$ENDIF}
+
             FInitialScript.Process(SE, DE, FE, VE, VE);
 
 {$IFDEF NEKODEBUG}FCSFiles.Enter;
@@ -4156,6 +4159,11 @@ begin
             Result := ClearHTML(StringDecode(AddURLVar(Clc(nVal(s)),
               Clc(nVal(s)), Clc(nVal(s)))));
           end
+          else if SameText(s, 'abs') then
+          begin
+            s := gVal(Value);
+            Result := abs(Clc(nVal(s)));
+          end
           else if SameText(s, 'copy') then
           begin
             s := gVal(Value);
@@ -4398,6 +4406,8 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
         FHTTPRec.Method := hmPost
       else
         raise Exception.Create('unknown method "' + Value + '"')
+    else if SameText(name,'$thread.post') then
+      FHTTPRec.Post := Value
     else if SameText(Name, '$thread.jsonitem') then
       FHTTPRec.JSONItem := Value
     else if SameText(Name, '$thread.tryext') then

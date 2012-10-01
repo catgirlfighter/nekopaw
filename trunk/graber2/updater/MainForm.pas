@@ -40,7 +40,11 @@ uses common;
 procedure tmf.UPDCHECK(var Msg: TMessage);
 begin
   case Msg.WParam of
-    0: lLog.Items.Add(t.Error);
+    0:
+    begin
+      lLog.Items.Add(t.Error);
+      MessageDlg('Update finished with error',mtError,[mbok],0);
+    end;
     2: lLog.Items.Add('Nothing new');
     else
     begin
@@ -48,8 +52,8 @@ begin
       lLog.Items.Add('Update finished');
     end;
   end;
-
   t.Free;
+  lLog.ItemIndex := lLog.Items.Count-1;
   bOk.Enabled := true;
 end;
 

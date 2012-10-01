@@ -193,7 +193,11 @@ begin
       f := TFileStream.Create(aroot+pname,fmCREATE);
     
       try
-        HTTP.Get(o,f);
+//        try
+          HTTP.Get(o,f);
+//        except on e: Exception do
+//          raise Exception.Create(pname + ': ' + e.Message);
+//        end;
       finally
         f.Free;
       end;
@@ -247,34 +251,39 @@ var
 begin
   WaitForSingleObject(FEventHandle, INFINITE);
   FHTTP := TmyIdHTTP.Create;
-  FHTTP.ConnectTimeout := 10000;
-  FHTTP.ReadTimeout := 10000;  
   items := TTagList.Create;
-  ReturnValue := -1;
   try
-    s := FHTTP.Get(FListURL + 'version.xml');
-    case JOB of
-      UPD_CHECK_UPDATES:
-        if CheckUpdates(s,items) then
-          ReturnValue := 1
-        else
-          ReturnValue := 2;
-      UPD_DOWNLOAD_UPDATES:
-      begin
-        if CheckUpdates(s,items) then
+    FHTTP.ConnectTimeout := 10000;
+    FHTTP.ReadTimeout := 10000;
+    ReturnValue := -1;
+    try
+      s := FHTTP.Get(FListURL + 'version.xml');
+      case JOB of
+        UPD_CHECK_UPDATES:
+          if CheckUpdates(s,items) then
+            ReturnValue := 1
+          else
+            ReturnValue := 2;
+        UPD_DOWNLOAD_UPDATES:
         begin
-          DownloadUpdates(items,FHTTP);
-          ReturnValue := 1;
-        end else
-          ReturnValue := 2;
+          if CheckUpdates(s,items) then
+          begin
+            DownloadUpdates(items,FHTTP);
+            ReturnValue := 1;
+          end else
+            ReturnValue := 2;
+        end;
       end;
-    end;
-  except on e: exception do
-    FString := e.Message;
+    except on e: exception do
+    begin
+      ReturnValue := 0;
+      FString := e.Message;
+    end; end;
+  finally
+    items.Free;
+    FHTTP.Free;
+    PostMessage(FHWND,CM_UPDATE,ReturnValue,0);
   end;
-  items.Free;
-  FHTTP.Free;
-  PostMessage(FHWND,CM_UPDATE,ReturnValue,0);
 end;
 
 end.

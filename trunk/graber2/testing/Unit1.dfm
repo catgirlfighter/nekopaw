@@ -11,6 +11,7 @@ object Form1: TForm1
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
   object Button1: TButton
@@ -20,7 +21,6 @@ object Form1: TForm1
     Height = 25
     Caption = 'Button1'
     TabOrder = 0
-    OnClick = Button1Click
   end
   object Memo1: TMemo
     Left = 8
@@ -37,6 +37,7 @@ object Form1: TForm1
     Width = 75
     Height = 25
     Caption = 'Button3'
+    Enabled = False
     TabOrder = 2
     OnClick = Button3Click
   end
@@ -55,7 +56,20 @@ object Form1: TForm1
     Width = 75
     Height = 25
     Caption = 'Button4'
+    Enabled = False
     TabOrder = 4
     OnClick = Button4Click
+  end
+  object ProgressBar1: TProgressBar
+    Left = 8
+    Top = 80
+    Width = 431
+    Height = 17
+    TabOrder = 5
+  end
+  object ApplicationEvents1: TApplicationEvents
+    OnMessage = ApplicationEvents1Message
+    Left = 160
+    Top = 64
   end
 end

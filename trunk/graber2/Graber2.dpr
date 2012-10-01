@@ -27,7 +27,8 @@ uses
   Whatsnewform in 'Whatsnewform.pas' {fWhatsNew},
   PathEditorForm in 'PathEditorForm.pas' {fPathEditor},
   NewDoublesRuleForm in 'NewDoublesRuleForm.pas' {fmDoublesNewRule},
-  cxmymultirow in 'cxmymultirow.pas';
+  cxmymultirow in 'cxmymultirow.pas',
+  win7taskbar in 'win7taskbar.pas';
 
 {$R *.res}
 
@@ -36,7 +37,7 @@ begin
 
   FormatSettings.DecimalSeparator := '.';
 
-  Application.MainFormOnTaskbar := True;
+  //Application.MainFormOnTaskbar := True;
   Application.Title := 'nekopaw grabber';
 
   //FullResList[0].NameFormat := GlobalSettings.Formats.PicFormat;

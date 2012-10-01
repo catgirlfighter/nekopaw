@@ -11,7 +11,7 @@ uses
   cxContainer, cxEdit, dxSkinsCore, cxHeader, cxImage,
   cxButtons, dxGDIPlusClasses,
   {graber2}
-  common;
+  common, XPMan;
 
 const
   IconWidth = 300;
@@ -27,6 +27,7 @@ type
     bSettings: TcxButton;
     iIcon: TImage;
     bExit: TcxButton;
+    XPManifest1: TXPManifest;
     procedure FrameResize(Sender: TObject);
     procedure bNewClick(Sender: TObject);
     procedure bExitClick(Sender: TObject);
@@ -41,7 +42,7 @@ type
 
 implementation
 
-uses MainForm, GraberU, LangString, AboutForm;
+uses MainForm, GraberU, LangString, AboutForm, win7taskbar;
 
 {$R *.dfm}
 

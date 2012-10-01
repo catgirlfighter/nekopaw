@@ -20,6 +20,12 @@ uses
 
 type
 
+  PDUInt64 = ^DUInt64;
+  DUInt64 = packed record
+    V1: UInt64;
+    V2: UInt64;
+  end;
+
   TfGrid = class(TFrame)
     GridLevel1: TcxGridLevel;
     Grid: TcxGrid;
@@ -134,6 +140,9 @@ type
     procedure UncheckInvisible;
     procedure updatechecks;
     procedure SetMenus;
+    function Busy: byte;
+    function getprogress: DUInt64;
+    procedure sendprogress;
     property OnPicChanged: TPictureNotifyEvent read FPicChanged write FPicChanged;
     //property OnPageComplete: TNotifyEvent read FPageComplete write FPageComplete;
     property OnTagUpdate: TTagUpdateEvent read FTagUpdate write FTagUpdate;
@@ -245,6 +254,16 @@ begin
   SelectSelected(false);
 end;
 
+function TfGrid.Busy: byte;
+begin
+  if not ResList.ListFinished then
+    result := 1
+  else if not ResList.PicsFinished then
+    result := 2
+  else
+    result := 0;
+end;
+
 procedure TfGrid.CreateList;
 begin
 {  if not Assigned(FFieldList) then
@@ -305,7 +324,10 @@ begin
   end;
 
   FChangesList.Clear;
+
   vGrid.EndUpdate;
+
+  SendProgress;
 end;
 
 procedure TfGrid.ForcePicsStop(Sender: TObject);
@@ -316,6 +338,13 @@ end;
 procedure TfGrid.ForceStop(Sender: TObject);
 begin
 
+end;
+
+function TfGrid.getprogress: DUInt64;
+begin
+  result.V1 := ResList.PictureList.PicCounter.FSH;
+  result.V2 := ResList.PictureList.Count
+               - ResList.PictureList.PicCounter.SKP;
 end;
 
 procedure TfGrid.InverseSelection;
@@ -775,6 +804,14 @@ begin
   finally
     vGrid.EndUpdate;
   end;
+end;
+
+procedure TfGrid.sendprogress;
+var
+  p: DUInt64;
+begin
+  p := GetProgress;
+  SendMessage(Application.MainForm.Handle,CM_JOBPROGRESS,Integer(Self.Parent),Integer(@p));
 end;
 
 procedure TfGrid.SetColWidths;

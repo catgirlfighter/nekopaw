@@ -174,14 +174,29 @@ object mf: Tmf
               OriginalHeight = 41
               object chlbFullTags: TcxCheckListBox
                 Left = 0
-                Top = 0
+                Top = 21
                 Width = 181
-                Height = 180
+                Height = 159
                 Align = alClient
                 AutoComplete = False
                 EditValueFormat = cvfCaptions
                 Items = <>
                 TabOrder = 0
+                OnClickCheck = chlbFullTagsClickCheck
+              end
+              object chlbtagsfilter: TcxButtonEdit
+                Left = 0
+                Top = 0
+                Align = alTop
+                Enabled = False
+                Properties.Buttons = <
+                  item
+                    Caption = 'go'
+                    Default = True
+                    Kind = bkText
+                  end>
+                TabOrder = 1
+                Width = 181
               end
             end
           end
@@ -372,8 +387,8 @@ object mf: Tmf
   object BarManager: TdxBarManager
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
-    Font.Height = -11
-    Font.Name = 'Tahoma'
+    Font.Height = -12
+    Font.Name = 'Segoe UI'
     Font.Style = []
     Categories.Strings = (
       'Default')
@@ -478,5 +493,9 @@ object mf: Tmf
     UseSkins = False
     Left = 368
     Top = 96
+  end
+  object XPManifest1: TXPManifest
+    Left = 504
+    Top = 224
   end
 end
