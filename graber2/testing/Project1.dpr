@@ -2,12 +2,8 @@ program Project1;
 
 uses
   Forms,
-  GraberU in '..\GraberU.pas',
-  MyXMLParser in '..\MyXMLParser.pas',
-  IdHTTP in '..\IdHTTP.pas',
-  MyHTTP in '..\MyHTTP.pas',
-  common in '..\common.pas',
-  Unit1 in 'Unit1.pas' {Form1};
+  Unit1 in 'Unit1.pas' , {FORM1}
+  unit_win7taskbar in 'unit_win7taskbar.pas' ;
 
 {$R *.res}
 

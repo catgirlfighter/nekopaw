@@ -11,7 +11,6 @@ object fLogin: TfLogin
   Font.Height = -11
   Font.Name = 'Tahoma'
   Font.Style = []
-  FormStyle = fsStayOnTop
   OldCreateOrder = False
   Position = poScreenCenter
   OnClose = FormClose

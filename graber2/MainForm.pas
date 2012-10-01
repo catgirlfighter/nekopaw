@@ -16,7 +16,7 @@ uses
   dxSkinscxPCPainter, dxSkinsdxNavBarPainter, dxSkinsdxDockControlPainter,
   dxSkinsdxBarPainter, dxSkinsForm,
   {graber2}
-  common, OpBase, graberU, MyHTTP, UPDUnit;
+  common, OpBase, graberU, MyHTTP, UPDUnit, XPMan, cxMaskEdit, cxButtonEdit;
   {skins}
   {dxSkinsCore, dxSkinBlack, dxSkinBlue, dxSkinBlueprint, dxSkinCaramel,
   dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide, dxSkinDevExpressDarkStyle,
@@ -132,6 +132,8 @@ type
     chlbFullTags: TcxCheckListBox;
     MainBarControl: TdxBarDockControl;
     dxSkinController: TdxSkinController;
+    XPManifest1: TXPManifest;
+    chlbtagsfilter: TcxButtonEdit;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
 {    procedure gLevel2GetGridView(Sender: TcxGridLevel;
@@ -149,13 +151,15 @@ type
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure cxSpinEdit1PropertiesEditValueChanged(Sender: TObject);
+    procedure chlbFullTagsClickCheck(Sender: TObject; AIndex: Integer;
+      APrevState, ANewState: TcxCheckBoxState);
   private
     mFrame: TFrame;
     FOldCaption: String;
     // tvMain: TmycxGridTableView;
   protected
 //    procedure EXPANDROW(var Msg: TMessage); message CM_EXPROW;
+    procedure WMActivate(var Msg: TWMActivate); message WM_ACTIVATE;
     procedure NEWLIST(var Msg: TMessage); message CM_NEWLIST;
     procedure APPLYNEWLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
     procedure CANCELNEWLIST(var Msg: TMessage); message CM_CANCELNEWLIST;
@@ -171,6 +175,7 @@ type
     procedure WREFRESHPIC(var Msg: TMessage); message CM_REFRESHPIC;
     procedure WREFRESHRESINFO(var Msg: TMessage); message CM_REFRESHRESINFO;
     procedure MENUSTYLECHANGED(var Msg: TMessage); message CM_MENUSTYLECHANGED;
+    procedure JOBPROGRESS(var Msg: TMessage); message CM_JOBPROGRESS;
     //procedure dxTabClose(Sender: TdxCustomDockControl);
     // procedure APPLYEDITLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
   private
@@ -203,6 +208,7 @@ type
    procedure DoRefreshResInfo(Sender: TObject);
     procedure ChangeTags;
     procedure updateTab;
+    procedure AddTag(name: string; add: boolean);
 
     { Public declarations }
   end;
@@ -214,7 +220,7 @@ var
 implementation
 
 uses StartFrame, NewListFrame, LangString, SettingsFrame, GridFrame, utils,
-  AboutForm, Whatsnewform;
+  AboutForm, Whatsnewform, win7taskbar;
 {$R *.dfm}
 
 procedure TMycxTabSheet.OnTimer(Sender: TObject);
@@ -347,6 +353,15 @@ begin
     cl.EndUpdate;
   end;
 end;    }
+
+procedure Tmf.WMActivate(var Msg: TWMActivate);
+begin
+  inherited;
+  if (msg.Active in [1,2])
+  and assigned(w7taskbar)
+  and (w7taskbar.State = tbpsError) then
+    w7taskbar.State := tbpsNone;
+end;
 
 procedure Tmf.NEWLIST(var Msg: TMessage);
 var
@@ -565,6 +580,11 @@ begin
       chlbFullTags.Items.EndUpdate;
     end;
   end;
+end;
+
+procedure Tmf.AddTag(name: string; add: boolean);
+begin
+
 end;
 
 procedure Tmf.ApplicationEvents1Exception(Sender: TObject; E: Exception);
@@ -812,9 +832,16 @@ begin
   SetEvent(t.Event);
 end;
 
+procedure Tmf.chlbFullTagsClickCheck(Sender: TObject; AIndex: Integer;
+  APrevState, ANewState: TcxCheckBoxState);
+begin
+  AddTag(chlbFullTags.Items[AIndex].Text,ANewState=cbsChecked);
+end;
+
 procedure Tmf.ENDJOB(var Msg: TMessage);
-{var
-  t: TMycxTabSheet; }
+var
+  i: integer;
+  p: DUint64;
 begin
   updateTab;
   if Msg.LParam = 0 then
@@ -822,6 +849,40 @@ begin
     changeTags;
     //bHint.
   end;
+
+  if assigned(w7taskbar) and (msg.WParam = w7taskbar.Tag) then
+  begin
+    for i := 0 to TabList.Count-1 do
+      if TMycxTabSheet(Tablist[i]).MainFrame is tfgrid then
+        case (TMycxTabSheet(Tablist[i]).MainFrame as tfgrid).Busy of
+          1:
+          begin
+            w7taskbar.Tag := Integer(TabList[i]);
+            w7taskbar.SetProgress(0,100);
+            w7taskbar.State := tbpsIndeterminate;
+            Exit;
+          end;
+          2:
+          begin
+            w7taskbar.Tag := Integer(TabList[i]);
+            p := (TMycxTabSheet(Tablist[i]).MainFrame as tfgrid).getprogress;
+            w7taskbar.State := tbpsNormal;
+            w7taskbar.SetProgress(p.V1,p.V2);
+            Exit;
+          end;
+        end;
+    w7taskbar.Tag := 0;
+    if mf.Active then
+    begin
+      w7taskbar.State := tbpsNone;
+      w7taskbar.SetProgress(0,100);
+    end else
+    begin
+      w7taskbar.State := tbpsError;
+      w7taskbar.SetProgress(100,100);
+    end;
+  end;
+
 {  t := TMycxTabSheet(Msg.WParam);
   t.SetIcon(0); }
 end;
@@ -919,6 +980,16 @@ procedure Tmf.STARTJOB(var Msg: TMessage);
   t: TMycxTabSheet;  }
 begin
   updateTab;
+  if assigned(w7taskbar) and (w7taskbar.Tag = 0) then
+  begin
+    w7taskbar.Tag := msg.WParam;
+    w7taskbar.SetProgress(0,100);
+    case msg.LParam of
+      0: w7taskbar.State := tbpsIndeterminate;
+      1: w7taskbar.State := tbpsNormal;
+    end;
+  end;
+
 {  t := TMycxTabSheet(Msg.WParam);
   t.SetIcon(0,15,true); }
 end;
@@ -1047,6 +1118,18 @@ begin
   end;
 end;
 
+procedure Tmf.JOBPROGRESS(var Msg: TMessage);
+var
+  p: PDUInt64;
+begin
+  if assigned(w7taskbar) then
+    if msg.WParam = w7taskbar.Tag then
+    begin
+      p := PDUInt64(msg.LParam);
+      w7taskbar.SetProgress(p.V1,p.V2);
+    end;
+end;
+
 procedure Tmf.StartUpdate;
 var
   f: tfileStream;
@@ -1161,12 +1244,6 @@ begin
   Result := n;
 
   ShowDs;
-end;
-
-procedure Tmf.cxSpinEdit1PropertiesEditValueChanged(Sender: TObject);
-begin
-  pcTables.ActivePage
-
 end;
 
 procedure Tmf.DoPicInfo(Sender: TObject; a: TTPicture);
@@ -1347,6 +1424,7 @@ begin
     PostMessage(Handle,CM_UPDATE,0,0);
   if GlobalSettings.ShowWhatsNew and GlobalSettings.IsNew then
     PostMessage(Handle,CM_WHATSNEW,0,0);
+
   //CheckUpdates;
 end;
 

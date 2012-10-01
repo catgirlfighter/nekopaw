@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls;
+  Dialogs, StdCtrls, ComCtrls, unit_win7taskbar, AppEvnts;
 
 type
   TForm1 = class(TForm)
@@ -13,14 +13,17 @@ type
     Button3: TButton;
     Button2: TButton;
     Button4: TButton;
-    procedure Button1Click(Sender: TObject);
+    ProgressBar1: TProgressBar;
+    ApplicationEvents1: TApplicationEvents;
     procedure Button2Click(Sender: TObject);
-    procedure Button3Click(Sender: TObject);
     procedure Button4Click(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure ApplicationEvents1Message(var Msg: tagMSG; var Handled: Boolean);
+    procedure Button3Click(Sender: TObject);
   private
+    Msg_TaskbarButtonCreated: Cardinal;
     { Private declarations }
   public
-    procedure oneal(sender: tobject);
     { Public declarations }
   end;
 
@@ -29,67 +32,21 @@ var
 
 implementation
 
-uses GraberU, MyHTTP, MyXMLParser;
-
 {$R *.dfm}
 
-var
-  fl,ResList: TResourceList;
-  FCookie: TMyCookieList;
-  fn: integer;
-
-procedure TForm1.Button1Click(Sender: TObject);
-
+procedure TForm1.ApplicationEvents1Message(var Msg: tagMSG;
+  var Handled: Boolean);
 begin
-  if not reslist.ListFinished then
+  if Msg.message = Msg_TaskbarButtonCreated then
   begin
-    ShowMessage('still working');
-    Exit;
+    if InitializeTaskBarAPI then
+    begin
+      Button4.Enabled := true;
+      Button3.Enabled := true;
+    end;
+    Handled := true;
   end;
-
-
-  memo1.Clear;
-  fl.Clear;
-  reslist.Clear;
-  FCookie.Clear;
-
-    fl.LoadList('d:\wg\nekopaw\compiled\resources');
-    Memo1.Lines.Add('loaded ' + IntToStr(fl.Count) + ' items');
-    fl.Items[0].NameFormat := '$rootdir$\$fname$';
-    fl.Items[0].Fields['tag'] := 'taokaka';
-{
-  if GlobalSettings.Downl.UsePerRes then
-    ResList.MaxThreadCount := GlobalSettings.Downl.PerResThreads
-  else
-    ResList.MaxThreadCount := 0;
-
-  ResList.ThreadHandler.Proxy := Globalsettings.Proxy;
-  ResList.ThreadHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
-  ResList.ThreadHandler.Retries := GlobalSettings.Downl.Retries;
-
-  ResList.DWNLDHandler.Proxy := Globalsettings.Proxy;
-  ResList.DWNLDHandler.ThreadCount := GlobalSettings.Downl.PicThreads;
-  ResList.DWNLDHandler.Retries := GlobalSettings.Downl.Retries;
-  ResList.PictureList.IgnoreList := CopyDSArray(IgnoreList);
-
-  bbDALF.Down := GlobalSettings.Downl.SDALF;
-  bbAutoUnch.Down := GlobalSettings.Downl.AutoUncheckInvisible;
-}
-
-    reslist.CopyResource(fl.ItemByName('gelbooru.com'));
-
-    reslist.CopyResource(fl.ItemByName('safebooru.org'));
-    reslist.CopyResource(fl.ItemByName('tbib.org'));
-
-    //reslist.CopyResource(fl.ItemByName('gelbooru.com'));
-    Memo1.Lines.Add('3 items copied to working list');
-
-    reslist.ThreadHandler.ThreadCount := 8;
-    reslist.MaxThreadCount := 4;
-    reslist.ThreadHandler.Cookies := FCookie;
-    reslist.PictureList.OnEndAddList := oneal;
 end;
-
 
 procedure TForm1.Button2Click(Sender: TObject);
 //var
@@ -111,61 +68,30 @@ end;
 
 procedure TForm1.Button3Click(Sender: TObject);
 begin
-  if not reslist.ListFinished then
-  begin
-    reslist.StartJob(JOB_STOPLIST);
-    ShowMessage('still working');
-    Exit;
-  end;
-
-    fn := 0;
-    reslist.StartJob(JOB_LIST);
+  SetTaskbarProgressState(tbpsNormal);
 end;
 
 procedure TForm1.Button4Click(Sender: TObject);
-var
-  st: tstringlist;
-  s: string;
-  xml: tmyxmlparser;
 begin
-  st := tstringlist.Create;
-  try
-    st.LoadFromFile(ExtractFilePath(paramstr(0))+'xmltest.src');
-    xml := tmyxmlparser.Create;
-    try
-      xml.Parse(st,true);
-      memo1.Text := xml.TagList.Text;
-    finally
-      xml.Free;
-    end;
-  finally
-    st.Free;
-  end;
+
+//  progressbar1.Min := 0;
+//  progressbar1.Max := 1000;
+//  InitializeTaskBarAPI;
+
+  SetTaskbarProgressValue(1,100)
+{  progressbar1.Style := pbstMarquee;
+  progressbar1.Position := 400;
+  SetTaskbarProgressValue(400,1000);
+  progressbar1.Position := 500;
+  SetTaskbarProgressValue(500,1000);
+  //  w7taskbar.SetProgress(50,100);  }
+//  w7taskbar.State := tbpsNormal;
 end;
 
-procedure TForm1.oneal(sender: tobject);
-var
-  i: integer;
+procedure TForm1.FormCreate(Sender: TObject);
 begin
-  if reslist.PictureList.Count <> fn then
-  begin
-    for i := fn to reslist.PictureList.Count-1 do
-      memo1.Lines.Add(reslist.PictureList.Items[i].PicName);
-    fn := reslist.PictureList.Count;
-  end;
-
+  Msg_TaskbarButtonCreated := RegisterWindowMessage('TaskbarButtonCreated');
 end;
 
-initialization
-
-  FCookie := TMyCookieList.Create;
-  ResList := TResourceList.Create;
-  fl := TResourceList.Create;
-
-finalization
-
-  ResList.Free;
-  fl.Free;
-  FCookie.Free;
 
 end.

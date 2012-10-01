@@ -56,8 +56,8 @@ end;
 
 procedure TfLogin.bOkClick(Sender: TObject);
 begin
-  bOk.Enabled := false;
   FCallBack(Self,FN,eLogin.Text,ePassword.Text,false);
+  bOk.Enabled := false;
 end;
 
 procedure TfLogin.Execute(N: integer; ACaption,Login,Password: String;

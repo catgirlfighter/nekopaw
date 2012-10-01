@@ -537,7 +537,7 @@ begin
     if ResetRelogin(N) then
     begin
       FLoggedOn := true;
-      FullResLIst.StartJob(JOB_LOGIN);
+      FullResList.StartJob(JOB_LOGIN);
     end else
       fLogin.Close;
   end;

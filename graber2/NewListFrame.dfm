@@ -206,6 +206,7 @@ object fNewList: TfNewList
         Width = 261
         Height = 273
         Align = alClient
+        OptionsView.ShowEditButtons = ecsbAlways
         OptionsView.GridLineColor = clBtnShadow
         OptionsView.RowHeaderWidth = 125
         TabOrder = 0
