@@ -19,10 +19,12 @@ $picture.fields(
 	source:s:$$SOURCE,
 	aspect_ratio:f:$$ASPECTRATIO);
 $pictime = '@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy")'; 
+$fileurl = '#file_url';
 $previewurl = '#preview_url';
 $picurl = '$picture%url';
 $fpxml = 'xml';
 $lxml = 'xml';
+$pbp = 0;
 $userstring = 'user[name]';
 $pwdstring = 'user[password]';
 $main.checkcookie = 'login';
@@ -32,7 +34,12 @@ $page = '@min(1000,#count/100+1)';
 [listscript]
 $thread.url = "$main.url+'post/index.'+$fpxml+'?limit=100&tags='+@httpencode($tag)";
 $thread.jsonitem = 'post';
-$thread.xml = 'firstpagexml';
+?$fpxml='json'{
+	$thread.xml = 'listxml';	
+}
+?$fpxml!'json'{
+	$thread.xml = 'firstpagexml';
+}
 $thread.xmlcontent = $fpxml;
 $thread.execute();
 $thread.xml = 'listxml';
@@ -45,11 +52,13 @@ $thread.referer = $picture%post_url;
 
 [firstpagexml]
 ^posts{
-	$thread.count=@calc($page);
-	$thread.result=#count;
+	?$fpxml!'json'{
+		$thread.count=@calc($page);
+		$thread.result=#count;
+	}
 	^post{
 		addpicture(
-			%url=#file_url,
+			%url=@calc($fileurl),
 			%preview=@calc($previewurl),
 			%sample_url=#sample_url,
 			%post_url=$main.url+'post/show/'+#id,
@@ -65,14 +74,17 @@ $thread.referer = $picture%post_url;
 			%aspect_ratio=@ifempty(#width,0)/@ifempty(#height,1),
 			%tags=csv(#tags," ")
 		);
-		$picture.filename = @emptyname(#file_url);
+		$picture.filename = @emptyname(@calc($fileurl));
 	}
 }
 
 [listxml]
+
+$ok = 0;
+
 ^post{
 	addpicture(
-		%url=#file_url,
+		%url=@calc($fileurl),
 		%preview=@calc($previewurl),
 		%sample_url=#sample_url,
 		%post_url=$main.url+'post/show/'+#id,
@@ -88,5 +100,10 @@ $thread.referer = $picture%post_url;
 		%aspect_ratio=@ifempty(#width,0)/@ifempty(#height,1),
 		%tags=csv(#tags," ")
 	);
-	$picture.filename = @emptyname(#file_url);
+	$picture.filename = @emptyname(@calc($fileurl));
+	$ok = 1;
+}
+
+?($pbp=1)&($ok=1){
+	$thread.count = $thread.counter + 2; 
 }
