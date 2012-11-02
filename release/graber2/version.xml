@@ -1,7 +1,7 @@
 <item file="Graber2.exe" archive="Graber2.zip" version=34 />
 <item file="versionlog.txt" version=-1 />
 
-<item file="resources\danbooru.tmpl" version=14 />
+<item file="resources\danbooru.tmpl" version=15 />
 <item file="resources\gelbooru.tmpl" version=10 />
 
 <item file="resources\xbooru.com.cfg" version=1 />
@@ -16,8 +16,8 @@
 <item file="resources\gelbooru.com.cfg" version=0 />
 <item file="resources\e621.net.cfg" version=1 />
 <item file="resources\behoimi.org.cfg" version=0 />
-<item file="resources\chan.sankakucomplex.com.cfg" version=0 />
-<item file="resources\idol.sankakucomplex.com.cfg" version=0 />
+<item file="resources\chan.sankakucomplex.com.cfg" version=1 />
+<item file="resources\idol.sankakucomplex.com.cfg" version=1 />
 <item file="resources\donmai.us.cfg" version=1 />
 <item file="resources\lolibooru.com.cfg" version=0 />
 <item file="resources\ii.booru.org.cfg" version=0 />
