@@ -30,8 +30,13 @@ $pwdstring = 'user[password]';
 $main.checkcookie = 'login';
 $main.login = '$main.url+"user/authenticate?"+$userstring+"="+$login+"&"+$pwdstring+"="+$password+"&commit=Login"';
 $page = '@min(1000,#count/100+1)';
+$picture.template.ext = '%ext%';
+$tryext = 0;
 
 [listscript]
+
+?$tryext=1{$thread.tryext = "jpg,gif,png,swf";};
+
 $thread.url = "$main.url+'post/index.'+$fpxml+'?limit=100&tags='+@httpencode($tag)";
 $thread.jsonitem = 'post';
 ?$fpxml='json'{
@@ -48,6 +53,7 @@ $thread.url = "$main.url+'post/index.'+$lxml+'?limit=100&tags='+@httpencode($tag
 
 [dwscript]
 $thread.url = @calc($picurl);
+?$tryext=1{$thread.url = @changeext("%ext%",$thread.url);}
 $thread.referer = $picture%post_url;
 
 [firstpagexml]
@@ -74,7 +80,8 @@ $thread.referer = $picture%post_url;
 			%aspect_ratio=@ifempty(#width,0)/@ifempty(#height,1),
 			%tags=csv(#tags," ")
 		);
-		$picture.filename = @emptyname(@calc($fileurl));
+		?$tryext=1{$picture.filename = @changeext("%ext%",@emptyname(@calc($fileurl)));}
+		?$tryext=0{$picture.filename = @emptyname(@calc($fileurl));}
 	}
 }
 
@@ -100,7 +107,8 @@ $ok = 0;
 		%aspect_ratio=@ifempty(#width,0)/@ifempty(#height,1),
 		%tags=csv(#tags," ")
 	);
-	$picture.filename = @emptyname(@calc($fileurl));
+	?$tryext=1{$picture.filename = @changeext("%ext%",@emptyname(@calc($fileurl)));}
+	?$tryext=0{$picture.filename = @emptyname(@calc($fileurl));}
 	$ok = 1;
 }
 
