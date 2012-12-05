@@ -21,6 +21,7 @@ $picture.fields(
 $pictime = '@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy")'; 
 $fileurl = '#file_url';
 $previewurl = '#preview_url';
+$sampleurl = '#sample_url';
 $picurl = '$picture%url';
 $fpxml = 'xml';
 $lxml = 'xml';
@@ -66,7 +67,7 @@ $thread.referer = $picture%post_url;
 		addpicture(
 			%url=@calc($fileurl),
 			%preview=@calc($previewurl),
-			%sample_url=#sample_url,
+			%sample_url=@calc($sampleurl),
 			%post_url=$main.url+'post/show/'+#id,
 			%width=#width,
 			%height=#height,
@@ -93,7 +94,7 @@ $ok = 0;
 	addpicture(
 		%url=@calc($fileurl),
 		%preview=@calc($previewurl),
-		%sample_url=#sample_url,
+		%sample_url=@calc($sampleurl),
 		%post_url=$main.url+'post/show/'+#id,
 		%width=#width,
 		%height=#height,

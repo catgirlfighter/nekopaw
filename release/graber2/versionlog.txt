@@ -1,5 +1,10 @@
 = other =
 
+- исправлен баг скачки с wildcritters.ws;
+- добавлен twentypercentcooler.net;
+
+= other =
+
 - исправлены проблемы авторизации на rule34/rule63.paheal.net;
 
 = other =
