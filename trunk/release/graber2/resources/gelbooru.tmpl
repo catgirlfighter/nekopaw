@@ -107,6 +107,10 @@ $thread.referer = $picture%post_url;
 		$thread.count=@min(1000,@ifempty(@urlvar("pid",#href),0)/$picsperpage + 1);
 		$thread.result=($thread.count)*$picsperpage;
 	}
+	^a#name='last_page'{
+		$thread.count=@min(1000,@ifempty(@urlvar("pid",#href),0)/$picsperpage + 1);
+		$thread.result=($thread.count)*$picsperpage;
+	}
 }
 
 [listgui]

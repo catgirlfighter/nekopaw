@@ -1,5 +1,9 @@
 = other =
 
+- добавлен http://www.nihonomaru.com/chan/ ;
+
+= other =
+
 - исправлен баг скачки с wildcritters.ws;
 - добавлен twentypercentcooler.net;
 
