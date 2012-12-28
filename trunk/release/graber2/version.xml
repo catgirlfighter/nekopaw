@@ -31,11 +31,11 @@
 <item file="resources\rule63.paheal.net.cfg" version=3 />
 <item file="resources\nabyn.com.cfg" version=3 />
 <item file="resources\hentai-foundry.com.cfg" version=3 />
-<item file="resources\furaffinity.net.cfg" version=1 />
+<item file="resources\furaffinity.net.cfg" version=2 />
 <item file="resources\seiga.nicovideo.jp.cfg" version=0 />
 <item file="resources\twentypercentcooler.net.cfg" version=0 />
 <item file="resources\nihonomaru.com.cfg" version=0 />
-<item file="resources\mangahere.com.cfg" version=0 />
+<item file="resources\mangahere.com.cfg" version=1 />
 
 <item file="resources\oreno.imouto.org.cfg" version=0 deleted=1 />
 <item file="resources\ponibooru.413chan.net.cfg" version=1 deleted=1 />
@@ -74,5 +74,5 @@
 
 <item file="resources\icons\ponibooru.413chan.net.bmp" version=0 deleted=1 />
 
-<item file="languages\Russian.ini" version=17 />
-<item file="languages\English.ini" version=17 />
+<item file="languages\Russian.ini" version=18 />
+<item file="languages\English.ini" version=18 />
