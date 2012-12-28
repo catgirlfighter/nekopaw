@@ -15,11 +15,13 @@ type
     Button4: TButton;
     ProgressBar1: TProgressBar;
     ApplicationEvents1: TApplicationEvents;
+    OpenDialog1: TOpenDialog;
     procedure Button2Click(Sender: TObject);
     procedure Button4Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure ApplicationEvents1Message(var Msg: tagMSG; var Handled: Boolean);
     procedure Button3Click(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
   private
     Msg_TaskbarButtonCreated: Cardinal;
     { Private declarations }
@@ -33,6 +35,7 @@ var
 implementation
 
 {$R *.dfm}
+uses common;
 
 procedure TForm1.ApplicationEvents1Message(var Msg: tagMSG;
   var Handled: Boolean);
@@ -45,6 +48,26 @@ begin
       Button3.Enabled := true;
     end;
     Handled := true;
+  end;
+end;
+
+procedure TForm1.Button1Click(Sender: TObject);
+var
+  f: tfilestream;
+  ext: string;
+  p: array of char;
+begin
+  setlength(p,1000);
+  if OpenDialog1.Execute then
+  begin
+    f := tfilestream.Create(OpenDialog1.FileName,fmOpenRead);
+    try
+      f.Read(p[0],1000);
+      ext := ImageFormat(@p[0]);
+      memo1.Text := ext;
+    finally
+      f.Free;
+    end;
   end;
 end;
 

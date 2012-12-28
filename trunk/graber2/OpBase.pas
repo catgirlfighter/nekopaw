@@ -2,7 +2,7 @@ unit OpBase;
 
 interface
 
-uses Windows, SysUtils, Messages, GraberU, INIFiles, Classes, Common;
+uses Windows, SysUtils, Messages, GraberU, INIFiles, Classes, Common, MyHTTP;
 
 var
   FullResList: TResourceList;
@@ -57,6 +57,8 @@ procedure DeleteDSArrayRec(var a: TDSArray; const index: integer);
 procedure SaveTagDump;
 function LoadPathList: String;
 procedure SavePathList(list: TStrings);
+procedure LoadFavList(dest: TStrings);
+procedure SaveFavList(src: tStrings);
 
 implementation
 
@@ -234,6 +236,8 @@ begin
         Debug := false;
       end;
 
+      idThrottler.BitsPerSec := INI.ReadInteger('download','Speed',0);
+
       with Proxy do
       begin
         UseProxy := INI.ReadBool('proxy','useproxy',false);
@@ -328,6 +332,8 @@ begin
         INI.WriteBool('download','SDALF',SDALF);
         INI.WriteBool('download','AutoUncheckInvisible',AutoUncheckInvisible);
       end;
+
+      INI.WriteInteger('download','Speed',idThrottler.BitsPerSec);
 
       with Proxy do
       begin
@@ -470,6 +476,44 @@ begin
     ini.Free;
   end;
 
+end;
+
+procedure LoadFavList(dest: TStrings);
+var
+  INI: TINIFile;
+  //items: tstringlist;
+  i: integer;
+begin
+  INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+  try
+  //  items := tstringlist.Create;
+    dest.Clear;
+  //  try
+      INI.ReadSection('favtaglist',dest);
+      for i := 0 to dest.Count-1 do
+        dest[i] := INI.ReadString('favtaglist',dest[i],'');
+  //   result := items.Text;
+  //  finally
+  //    items.Free;
+  //  end;
+  finally
+    INI.Free;
+  end;
+end;
+
+procedure SaveFavList(src: tStrings);
+var
+  i: integer;
+  ini: tinifile;
+begin
+  ini := tinifile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+  ini.EraseSection('favtaglist');
+  try
+    for i := 0 to src.Count-1 do
+      ini.WriteString('favtaglist','item'+IntToStr(i),src[i]);
+  finally
+    ini.Free;
+  end;
 end;
 
 initialization

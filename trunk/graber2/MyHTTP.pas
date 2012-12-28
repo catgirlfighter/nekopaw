@@ -2,7 +2,8 @@ unit MyHTTP;
 
 interface
 
-uses IdHTTP, Classes, SysUtils, SyncObjs, Strutils, Variants, Common;
+uses IdHTTP, IdInterceptThrottler, Classes, SysUtils, SyncObjs, Strutils,
+  Variants, Common;
 
 type
   TMyCookieList = class(TStringList)
@@ -44,6 +45,10 @@ type
   function AddURLVar(URL,Variable: String; Value: Variant): String;
   function GetURLDomain(url: string): string;
   procedure GetPostStrings(s: string; outs: TStrings);
+
+var
+  idThrottler: tidInterceptThrottler;
+
 implementation
 
 procedure GetPostStrings(s: string; outs: TStrings);
@@ -61,10 +66,12 @@ end;
 function CreateHTTP{(AOwner: TComponent)}: TMyIdHTTP;
 begin
   Result := TMyIdHTTP.Create{(AOwner)};
-  result.HandleRedirects := true;
-  result.AllowCookies := False;
-  result.Request.UserAgent :=
-    'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; en)';
+  Result.Intercept := idThrottler;
+  Result.HandleRedirects := true;
+  Result.AllowCookies := False;
+  Result.Request.UserAgent :=
+//    'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; en)';
+  'Mozilla/5.0 (Windows NT 6.1; rv:16.0) Gecko/20100101 Firefox/16.0';
 {  result.ReadTimeout := 30000;
   result.ConnectTimeout := 10000;    }
 end;
@@ -361,9 +368,12 @@ end;
 
 initialization
 
+  idThrottler := tidInterceptThrottler.Create(nil);
   //cs := TCriticalSection.Create;
 
 finalization
+
+  idThrottler.Free;
   //cs.Free;
 
 end.

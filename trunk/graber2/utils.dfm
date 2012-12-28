@@ -939,4 +939,11 @@ object dm: Tdm
           0000000000000000000000000000000000000000000000000000}
       end>
   end
+  object IdInterceptThrottler1: TIdInterceptThrottler
+    BitsPerSec = 0
+    RecvBitsPerSec = 0
+    SendBitsPerSec = 0
+    Left = 256
+    Top = 152
+  end
 end

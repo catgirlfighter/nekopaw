@@ -3,7 +3,8 @@ program Project1;
 uses
   Forms,
   Unit1 in 'Unit1.pas' , {FORM1}
-  unit_win7taskbar in 'unit_win7taskbar.pas' ;
+  unit_win7taskbar in 'unit_win7taskbar.pas',
+  common in '..\common.pas' ;
 
 {$R *.res}
 

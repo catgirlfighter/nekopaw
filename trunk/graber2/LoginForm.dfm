@@ -6,11 +6,13 @@ object fLogin: TfLogin
   ClientHeight = 97
   ClientWidth = 248
   Color = clBtnFace
+  DefaultMonitor = dmDesktop
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -11
   Font.Name = 'Tahoma'
   Font.Style = []
+  FormStyle = fsStayOnTop
   OldCreateOrder = False
   Position = poScreenCenter
   OnClose = FormClose

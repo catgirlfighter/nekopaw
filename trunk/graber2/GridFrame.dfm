@@ -59,10 +59,16 @@ object fGrid: TfGrid
       object vGridColumn1: TcxGridColumn
       end
     end
+    object vChildGrid: TcxGridTableView
+      DataController.Summary.DefaultGroupSummaryItems = <>
+      DataController.Summary.FooterSummaryItems = <>
+      DataController.Summary.SummaryGroups = <>
+    end
     object GridLevel1: TcxGridLevel
       GridView = vGrid
       Options.TabsForEmptyDetails = False
       object GridLevel2: TcxGridLevel
+        GridView = vChildGrid
       end
     end
   end

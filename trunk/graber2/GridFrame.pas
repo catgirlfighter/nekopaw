@@ -26,6 +26,29 @@ type
     V2: UInt64;
   end;
 
+    TmycxOnGetExpandable = procedure(MasterDataRow: TcxGridMasterDataRow;
+    var Expandable: Boolean) of object;
+
+    TmycxGridTableView = class(TcxGridTableView)
+    private
+    protected
+    function GetViewDataClass: TcxCustomGridViewDataClass; override;
+    public
+    OnGetExpandable: TmycxOnGetExpandable;
+    constructor Create(AOwner: TComponent); override;
+    end;
+
+    TmycxGridViewData = class(TcxGridViewData)
+    protected
+    function GetRecordClass(ARecordInfo: TcxRowInfo)
+    : TcxCustomGridRecordClass; override;
+    end;
+
+    TmycxGridMasterDataRow = class(TcxGridMasterDataRow)
+    protected
+    function GetExpandable: Boolean; override;
+    end;
+
   TfGrid = class(TFrame)
     GridLevel1: TcxGridLevel;
     Grid: TcxGrid;
@@ -63,6 +86,7 @@ type
     sBar: TdxStatusBar;
     bbAutoUnch: TdxBarButton;
     GridPopup: TcxGridPopupMenu;
+    vChildGrid: TcxGridTableView;
     procedure bbColumnsClick(Sender: TObject);
     procedure bbFilterClick(Sender: TObject);
     procedure vGrid1FocusedRecordChanged(Sender: TcxCustomGridTableView;
@@ -156,6 +180,75 @@ implementation
 uses LangString, utils, OpBase;
 
 {$R *.dfm}
+
+{ TmycxGridTableView }
+
+  constructor TmycxGridTableView.Create(AOwner: TComponent);
+  begin
+  inherited Create(AOwner);
+  OnGetExpandable := nil;
+  end;
+
+  function TmycxGridTableView.GetViewDataClass: TcxCustomGridViewDataClass;
+  begin
+  Result := TmycxGridViewData;
+  end;
+
+{ TmycxGridViewData }
+
+  function TmycxGridViewData.GetRecordClass(ARecordInfo: TcxRowInfo)
+  : TcxCustomGridRecordClass;
+  begin
+  Result := inherited GetRecordClass(ARecordInfo);
+  if Result = TcxGridMasterDataRow then
+  Result := TmycxGridMasterDataRow;
+  end;
+
+{ TmycxGridGroupRow }
+
+  function TmycxGridMasterDataRow.GetExpandable: Boolean;
+  begin
+  Result := false;
+  if Assigned((GridView as TmycxGridTableView).OnGetExpandable) then
+  (GridView as TmycxGridTableView).OnGetExpandable(Self, Result) else Result
+  := inherited GetExpandable;
+  end;
+
+{ Tmf }
+
+{ procedure Tmf.tvMainRecordExpandable(MasterDataRow: TcxGridMasterDataRow;
+  var Expandable: Boolean);
+  begin
+  Expandable := MasterDataRow.RecordIndex > 0;
+  end; }
+
+{procedure Tmf.EXPANDROW(var Msg: TMessage);
+var
+  mr: TcxCustomGridRecord;
+  gv: TcxGridTableView;
+  cl: TcxCustomGridView;
+begin
+  if not((TObject(Msg.WParam) is TcxCustomGridRecord) and
+    (TObject(Msg.LParam) is TcxGridTableView)) then
+    Exit;
+  mr := TcxCustomGridRecord(Msg.WParam);
+  gv := TcxGridTableView(Msg.LParam);
+  cl := gv.Clones[gv.CloneCount - 1];
+  cl.BeginUpdate;
+  try
+    if mr.RecordIndex = 1 then
+
+      with cl.DataController do
+      begin
+        cl.DataController.RecordCount := 2;
+        cl.DataController.Values[0, 1] := 'album1url1';
+        cl.DataController.Values[1, 1] := 'album1url2';
+      end;
+  finally
+    cl.EndUpdate;
+  end;
+end;    }
+
 
 function TfGrid.AddField(s: string; base: boolean = false): TcxGridColumn;
 var

@@ -387,8 +387,8 @@ object mf: Tmf
   object BarManager: TdxBarManager
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
-    Font.Height = -12
-    Font.Name = 'Segoe UI'
+    Font.Height = -11
+    Font.Name = 'Tahoma'
     Font.Style = []
     Categories.Strings = (
       'Default')
@@ -478,6 +478,26 @@ object mf: Tmf
       ImageIndex = 2
       OnClick = bbNewClick
     end
+    object bbAddFav: TdxBarButton
+      Caption = 'Add favorite'
+      Category = 0
+      Hint = 'Add favorite'
+      Visible = ivAlways
+    end
+    object bsFav: TdxBarSeparator
+      Caption = 'FavSep'
+      Category = 0
+      Hint = 'FavSep'
+      Visible = ivAlways
+      ShowCaption = False
+    end
+    object dxBarCombo1: TdxBarCombo
+      Caption = 'New Item'
+      Category = 0
+      Hint = 'New Item'
+      Visible = ivAlways
+      ItemIndex = -1
+    end
   end
   object ApplicationEvents1: TApplicationEvents
     OnException = ApplicationEvents1Exception
@@ -497,5 +517,20 @@ object mf: Tmf
   object XPManifest1: TXPManifest
     Left = 504
     Top = 224
+  end
+  object dxFavPopup: TdxBarPopupMenu
+    BarManager = BarManager
+    ItemLinks = <
+      item
+        Visible = True
+        ItemName = 'bbAddFav'
+      end
+      item
+        Visible = True
+        ItemName = 'bsFav'
+      end>
+    UseOwnFont = False
+    Left = 352
+    Top = 40
   end
 end
