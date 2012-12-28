@@ -15,7 +15,8 @@ uses
   cxButtons, ExtCtrls, cxSplitter,dxSkinsCore, dxSkinsDefaultPainters,
   dxSkinscxPCPainter,cxDropDownEdit,
   {graber2}
-  cxmymultirow,common, Graberu, cxCheckBox;
+  cxmymultirow,cxmycombobox,common, Graberu, cxCheckBox,
+  cxExtEditRepositoryItems;
 
 type
   TListFrameState = (lfsNew, lfsEdit);
@@ -45,6 +46,9 @@ type
     btnNext: TcxButton;
     EditRepository: TcxEditRepository;
     erAuthButton: TcxEditRepositoryButtonItem;
+    erLabel: TcxEditRepositoryLabel;
+    erEdit: TcxEditRepositoryTextItem;
+    tvFullShort: TcxGridColumn;
     procedure pcMainChange(Sender: TObject);
     procedure gRescButtonPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
@@ -60,6 +64,10 @@ type
     procedure btnPreviousClick(Sender: TObject);
     procedure erAuthButtonPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
+    procedure tvFullcButtonGetProperties(Sender: TcxCustomGridTableItem;
+      ARecord: TcxCustomGridRecord; var AProperties: TcxCustomEditProperties);
+    procedure tvFullcNameGetProperties(Sender: TcxCustomGridTableItem;
+      ARecord: TcxCustomGridRecord; var AProperties: TcxCustomEditProperties);
   private
     { Private declarations }
     FOnError: TLogEvent;
@@ -150,6 +158,8 @@ begin
   tvRes.DataController.Values[i, 1] := tvFull.DataController.Values[index, 2];
   tvRes.DataController.Values[i, 2] := tvFull.DataController.Values[index, 3];
   tvFull.DataController.DeleteRecord(index);
+  if tvFull.DataController.RowCount = 0 then
+    tvFull.DataController.FocusedRecordIndex := -1;
   tvRes.EndUpdate;
   tvFull.EndUpdate;
 
@@ -190,6 +200,7 @@ var
   r: TcxCustomRow;
   i, d: Integer;
   s: string;
+//  t: tcxMyEditRepositoryComboBoxItem;
 
 begin
   if vgSettings.Rows.Count > 0 then
@@ -201,6 +212,7 @@ begin
   begin
     c := dm.CreateCategory(vgSettings,'vgimain',lang('_MAINCONFIG_'));
     dm.CreateField(vgSettings,'vgitag',lang('_TAGSTRING_'),'',ftTagText,c,FullResList[n].Fields['tag']);
+
     dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftPathText,c,FullResList[n].NameFormat);
     dm.CreateField(vgSettings,'vgisdalf',lang('_SDALF_'),'',ftCheck,c,GlobalSettings.Downl.SDALF);
   end
@@ -211,8 +223,17 @@ begin
 
     s := VarToStr(Fields['tag']);
     if (s = ''){ or Inherit} then
-      s := VarToStr(FullResList[0].Fields['tag']);
-    dm.CreateField(vgSettings,'vgitag',lang('_TAGSTRING_'),'',ftString,c,s);
+      s := FullResList[n].FormatTagString(VarToStr(FullResList[0].Fields['tag']),
+        FullResList[0].HTTPRec.TagTemplate);
+
+    with dm.ertagedit.Properties,FullResList[n].HTTPRec do
+    begin
+      Spacer := TagTemplate.Spacer;
+      Separator := TagTemplate.Separator;
+      Isolator := Tagtemplate.Isolator;
+    end;
+
+    dm.CreateField(vgSettings,'vgitag',lang('_TAGSTRING_'),'',ftTagText,c,s);
 
     dm.CreateField(vgSettings,'vgiinherit',lang('_INHERIT_'),'',ftCheck,c,Inherit);
 
@@ -244,6 +265,11 @@ begin
           end;
     end;
   end;
+
+  dm.ertagedit.Properties.Spacer := FullResList[n].HTTPRec.TagTemplate.Spacer;
+  dm.ertagedit.Properties.Separator := FullResList[n].HTTPRec.TagTemplate.Separator;
+  dm.ertagedit.Properties.Isolator := FullResList[n].HTTPRec.TagTemplate.Isolator;
+
   vgSettings.EndUpdate;
 end;
 
@@ -320,6 +346,7 @@ procedure TfNewList.LoadItems;
           Values[n,ItemOffset+1] := s;
         end;
         Values[n,ItemOffset+2] := FullResList[RecordIndex].Name;
+        Values[n,ItemOffset+3] := FullResList[RecordIndex].Short;
       except
       end;
     end;
@@ -358,6 +385,7 @@ begin
 
   gRes.EndUpdate;
   gFull.EndUpdate;
+  tvFull.ApplyBestFit(tvFullShort);
 
   btnNext.Enabled := tvRes.DataController.RowCount > 1;
 end;
@@ -556,10 +584,24 @@ begin
   CreateSettings(tvRes.Controller.FocusedRow.Values[0]);
 end;
 
+procedure TfNewList.tvFullcButtonGetProperties(Sender: TcxCustomGridTableItem;
+  ARecord: TcxCustomGridRecord; var AProperties: TcxCustomEditProperties);
+begin
+  if Assigned(ARecord) and (ARecord.RecordIndex = -1) then
+    AProperties := erlabel.Properties;
+end;
+
 procedure TfNewList.tvFullcButtonPropertiesButtonClick(Sender: TObject;
   AButtonIndex: Integer);
 begin
   AddItem(tvFull.DataController.FocusedRecordIndex);
+end;
+
+procedure TfNewList.tvFullcNameGetProperties(Sender: TcxCustomGridTableItem;
+  ARecord: TcxCustomGridRecord; var AProperties: TcxCustomEditProperties);
+begin
+  if Assigned(ARecord) and (ARecord.RecordIndex = -1) then
+    AProperties := erEdit.Properties;
 end;
 
 procedure TfNewList.tvResFocusedRecordChanged(Sender: TcxCustomGridTableView;

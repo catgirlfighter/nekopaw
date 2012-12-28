@@ -143,6 +143,10 @@ object fNewList: TfNewList
           DataController.Summary.DefaultGroupSummaryItems = <>
           DataController.Summary.FooterSummaryItems = <>
           DataController.Summary.SummaryGroups = <>
+          FilterRow.SeparatorWidth = 4
+          FilterRow.Visible = True
+          FilterRow.ApplyChanges = fracDelayed
+          FilterRow.ApplyInputDelay = 500
           NewItemRow.SeparatorWidth = 2
           OptionsCustomize.ColumnFiltering = False
           OptionsCustomize.ColumnGrouping = False
@@ -164,6 +168,7 @@ object fNewList: TfNewList
               end>
             Properties.ViewStyle = vsButtonsOnly
             Properties.OnButtonClick = tvFullcButtonPropertiesButtonClick
+            OnGetProperties = tvFullcButtonGetProperties
             MinWidth = 23
             Options.ShowEditButtons = isebAlways
             Options.HorzSizing = False
@@ -186,8 +191,13 @@ object fNewList: TfNewList
           end
           object tvFullcName: TcxGridColumn
             PropertiesClassName = 'TcxLabelProperties'
+            OnGetProperties = tvFullcNameGetProperties
             Options.Editing = False
             Options.ShowEditButtons = isebAlways
+          end
+          object tvFullShort: TcxGridColumn
+            PropertiesClassName = 'TcxLabelProperties'
+            OnGetProperties = tvFullcNameGetProperties
           end
         end
         object lvlFull1: TcxGridLevel
@@ -255,6 +265,10 @@ object fNewList: TfNewList
       Properties.ReadOnly = True
       Properties.ViewStyle = vsHideCursor
       Properties.OnButtonClick = erAuthButtonPropertiesButtonClick
+    end
+    object erLabel: TcxEditRepositoryLabel
+    end
+    object erEdit: TcxEditRepositoryTextItem
     end
   end
 end

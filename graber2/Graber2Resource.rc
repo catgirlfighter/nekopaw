@@ -1,1 +1,3 @@
+XFAVORITE RCDATA "pictures\\Favorites-icon.bmp"
+XREMFAVORITE RCDATA "pictures\\rem-Favorites-icon.bmp"
 ZUPDATER UPDATER "..\\updater\\compiled\\NPUpdater.exe"

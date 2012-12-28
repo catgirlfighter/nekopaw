@@ -25,6 +25,7 @@ type
     procedure UPDPROG(var Msg: TMessage); message CM_UPDATEPROGRESS;
   public
     procedure LoadSettings;
+    procedure ProgressDone;
     { Public declarations }
   end;
 
@@ -50,6 +51,7 @@ begin
     begin
       pttl.Position := pttl.Max;
       lLog.Items.Add('Update finished');
+      ProgressDone;
     end;
   end;
   t.Free;
@@ -119,6 +121,14 @@ begin
   UPDServ := INI.ReadString('settings','updserver',
     'http://nekopaw.googlecode.com/svn/trunk/release/graber2/');
   INI.WriteInteger('settings','delupd',1);
+  INI.Free;
+end;
+
+procedure Tmf.ProgressDone;
+var
+  INI: TINIFile;
+begin
+  INI := TINIFIle.Create(extractfilepath(paramstr(0)) + 'settings.ini');
   INI.WriteBool('settings','IsNew',true);
   INI.Free;
 end;

@@ -93,6 +93,19 @@
 			<DCCReference Include="win7taskbar.pas">
 				<Form>$R *.res</Form>
 			</DCCReference>
+			<RcItem Include="pictures\Favorites-icon.bmp">
+				<ResourceType>RCDATA</ResourceType>
+				<ResourceId>XFAVORITE</ResourceId>
+			</RcItem>
+			<RcItem Include="pictures\rem-Favorites-icon.bmp">
+				<ResourceType>RCDATA</ResourceType>
+				<ResourceId>XREMFAVORITE</ResourceId>
+			</RcItem>
+			<RcItem Include="..\updater\compiled\NPUpdater.exe">
+				<ContainerId>ResourceItem</ContainerId>
+				<ResourceType>UPDATER</ResourceType>
+				<ResourceId>ZUPDATER</ResourceId>
+			</RcItem>
 			<BuildConfiguration Include="Debug">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>
@@ -122,7 +135,7 @@
 						<VersionInfo Name="MajorVer">2</VersionInfo>
 						<VersionInfo Name="MinorVer">0</VersionInfo>
 						<VersionInfo Name="Release">1</VersionInfo>
-						<VersionInfo Name="Build">16</VersionInfo>
+						<VersionInfo Name="Build">23</VersionInfo>
 						<VersionInfo Name="Debug">False</VersionInfo>
 						<VersionInfo Name="PreRelease">False</VersionInfo>
 						<VersionInfo Name="Special">False</VersionInfo>
@@ -134,7 +147,7 @@
 					<VersionInfoKeys>
 						<VersionInfoKeys Name="CompanyName">catgirl group</VersionInfoKeys>
 						<VersionInfoKeys Name="FileDescription">Nekopaw Grabber</VersionInfoKeys>
-						<VersionInfoKeys Name="FileVersion">2.0.1.16</VersionInfoKeys>
+						<VersionInfoKeys Name="FileVersion">2.0.1.23</VersionInfoKeys>
 						<VersionInfoKeys Name="InternalName"/>
 						<VersionInfoKeys Name="LegalCopyright">nekopaw.googlecode.com</VersionInfoKeys>
 						<VersionInfoKeys Name="LegalTrademarks"/>
@@ -155,6 +168,7 @@
 				<Platforms>
 					<Platform value="Win32">True</Platform>
 				</Platforms>
+				<ModelSupport>True</ModelSupport>
 			</BorlandProject>
 			<ProjectFileVersion>12</ProjectFileVersion>
 		</ProjectExtensions>

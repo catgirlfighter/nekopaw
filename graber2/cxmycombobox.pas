@@ -16,13 +16,16 @@ type
   TcxMyComboBoxProperties = class(cxDropDownEdit.TcxComboBoxProperties)
   private
     FWordMode: Boolean;
-    fSpacer: Char;
+    fSpacer,fSeparator,fIsolator:String;
     fOnBeforeGetItems: TOnBeforeGetItems;
   public
+    constructor Create(AOwner: TPersistent); override;
     procedure Assign(Source: TPersistent); override;
     class function GetContainerClass: TcxContainerClass; override;
     property WordMode: Boolean read FWordMode write FWordMode default false;
-    property Spacer: Char read fSpacer write fSpacer default ' ';
+    property Spacer: String read fSpacer write fSpacer;
+    property Separator: String read fSeparator write fSeparator;
+    property Isolator: String read fIsolator write fIsolator;
     property OnBeforeGetItems: TOnBeforeGetItems read fOnBeforeGetItems write fOnBeforeGetItems;
   end;
 
@@ -44,7 +47,8 @@ type
     function GetProperties: TcxMyComboBoxProperties;
     procedure SetProperties(Value: TcxMyComboBoxProperties);
   protected
-    function GetWord(s: string; sstart,slen: integer; full: boolean = false): string;
+    function GetWord(s: string; var sstart: integer;
+      slen: integer; full: boolean = false): string;
     function ChangeWord(wrd: string): integer;
     procedure HandleSelectItem(Sender: TObject); override;
     procedure DoEditKeyPress(var Key: Char); override;
@@ -66,6 +70,14 @@ type
 
 implementation
 
+constructor TcxMyComboBoxProperties.Create(AOwner: TPersistent);
+begin
+  inherited;
+  fSpacer := '_';
+  fSeparator := ' ';
+  fIsolator := '';
+end;
+
 procedure TcxMyComboBoxProperties.Assign(Source: TPersistent);
 begin
   if Source is TcxMyComboBoxProperties then
@@ -77,6 +89,8 @@ begin
       begin
         Self.WordMode := WordMode;
         Self.Spacer := Spacer;
+        Self.Separator := Separator;
+        Self.Isolator := Isolator;
         Self.OnBeforeGetItems := OnBeforeGetItems;
       //  Self.DropDownListStyle := DropDownListStyle;
       //  Self.DropDownRows := DropDownRows;
@@ -134,9 +148,10 @@ begin
   FProperties.Assign(Value);
 end;
 
-function tcxMyComboBox.GetWord(s: string; sstart,slen: integer; full: boolean = false): string;
+function tcxMyComboBox.GetWord(s: string; var sstart: integer;
+  slen: integer; full: boolean = false): string;
 var
-  n,i,astart,aend: integer;
+  n,i,j,astart,aend,ssStart: integer;
 
 begin
   if not properties.WordMode then
@@ -152,23 +167,55 @@ begin
   else
     n := sstart + 1;
 
+  ssStart := 1;
   astart := 1;
   aend := 0;
-  i := PosEx(' ',s);
 
-  if i > 0 then
-    while i > 0 do
+  if Properties.Isolator <> '' then
+  begin
+    j := PosEx(Properties.Isolator,s);
+
+    while j > 0 do
     begin
-      if i < n then
-        astart := i + 1
-      else
+      if j < n then
+        astart := j + 1;
+
+      j := PosEx(Properties.Isolator,s,j + 1);
+
+      if j = 0 then
       begin
-        aend := i;
+        j := 1;
+        Break;
+      end else if j < n then
+      begin
+        ssStart := j + 1;
+        j := PosEx(Properties.Isolator,s,j + 1);
+      end else
+      begin
+        aend := j;
         Break;
       end;
-
-      i := PosEx(' ',s,i + 1);
     end;
+  end else
+    j := 0;
+
+  if j = 0 then
+  begin
+    i := PosEx(properties.Separator,s,ssStart);
+    if i > 0 then
+      while i > 0 do
+      begin
+        if i < n then
+          astart := i + 1
+        else
+        begin
+          aend := i;
+          Break;
+        end;
+
+        i := PosEx(properties.Separator,s,i + 1);
+      end;
+  end;
 
   if aend = 0 then
     if full then
@@ -178,8 +225,12 @@ begin
 {  if aend > SelStart then
     aend := SelStart + SelLength;        }
 
+  if (slen > 0) and (aend > sstart) then
+    aend := sstart + 1;
+
   result := copy(s,astart,aend-astart);
 
+  sStart := sStart - aStart + 1;
   //InternalEditValue := copy(s,1,astart) + wrd + copy(s,aend,length(Text)-aend+1);
   //result := astart + length(wrd);
 end;
@@ -187,32 +238,66 @@ end;
 function tcxMyComboBox.ChangeWord(wrd: string): integer;
 var
   s: string;
-  n,i,astart,aend: integer;
-
+  n,i,j,astart,aend,sStart: integer;
 begin
+  wrd := Properties.Isolator + wrd + Properties.Isolator;
+
   s := DisplayValue;
   if SelLength < 0 then
     n := SelStart + SelLength + 1
   else
     n := SelStart + 1;
 
-  astart := 0;
-  aend := 0;
-  i := PosEx(properties.Spacer,s);
+  sStart := 1;
+  aStart := 0;
+  aEnd := 0;
 
-  if i > 0 then
-    while i > 0 do
+  if Properties.Isolator <> '' then
+  begin
+    j := PosEx(Properties.Isolator,s);
+
+    while j > 0 do
     begin
-      if i < n then
-        astart := i
-      else
+      if j < n then
+        astart := j - 1;
+
+      j := PosEx(Properties.Isolator,s,j + 1);
+
+      if j = 0 then
       begin
-        aend := i;
+        j := 1;
+        Break;
+      end else if j < n then
+      begin
+        sStart := j + 1;
+        j := PosEx(Properties.Isolator,s,j + 1);
+      end else
+      begin
+        aend := j + 1;
         Break;
       end;
-
-      i := PosEx(properties.Spacer,s,i + 1);
     end;
+  end else
+    j := 0;
+
+  if j = 0 then
+  begin
+    i := PosEx(Properties.Separator,s,sStart);
+
+    if i > 0 then
+      while i > 0 do
+      begin
+        if i < n then
+          astart := i
+        else
+        begin
+          aend := i;
+          Break;
+        end;
+
+        i := PosEx(Properties.Separator,s,i + 1);
+      end;
+  end;
 
   if aend = 0 then
     aend := length(DisplayValue) + 1;
@@ -306,8 +391,8 @@ procedure tcxMyComboBox.TextEditPressKey(var Key: Char);
     begin
       L := ChangeWord(AFindText + ATail);
       //DataBinding.DisplayValue := AFindText + ATail;
-      SelStart := L - length(ATail);//Length(AFindText);
-      SelLength := Length(ATail);
+      SelStart := L - length(ATail) - length(Properties.fIsolator);//Length(AFindText);
+      SelLength := Length(ATail) + length(Properties.fIsolator);
     end;
     UpdateDrawValue;
   end;
@@ -316,7 +401,7 @@ procedure tcxMyComboBox.TextEditPressKey(var Key: Char);
   begin
     Result := TcxCustomTextEditProperties(ActiveProperties).EditingStyle in [esEditList, esFixedList];
     if not Result then
-      Result := (SelLength = 0) and (SelStart = Length(DisplayValue)) or
+      Result := (SelLength = 0) {and (SelStart = Length(DisplayValue))} or
         FindSelection or (SelLength > 0);
   end;
 
@@ -326,6 +411,7 @@ var
   AFound: Boolean;
   APrevCurrentKey: TcxEditValue;
   APrevFindSelection: Boolean;
+  sStart: integer;
 begin
   AEditingStyle := TcxCustomTextEditProperties(ActiveProperties).EditingStyle;
   InnerTextEdit.InternalUpdating := True;
@@ -367,12 +453,13 @@ begin
             if ((AEditingStyle = esEditList) or (AEditingStyle = esEdit) and Properties.WordMode)
             and (Length(DisplayValue) > 0) and not FindSelection then
             begin
-              SelLength := Length(DisplayValue) - SelStart;
+              //SelLength := Length(DisplayValue) - SelStart;
               FindSelection := True;
             end;
             if FindSelection then
             begin
-              AFindText := GetWord(DisplayValue,SelStart,SelLength);//Copy(DisplayValue, 1, Length(DisplayValue) - SelLength);
+              sStart := SelStart;
+              AFindText := GetWord(DisplayValue,sStart,SelLength);//Copy(DisplayValue, 1, Length(DisplayValue) - SelLength);
               SetLength(AFindText, Length(AFindText) - Length(AnsiLastChar(AFindText)));
               LockLookupDataTextChanged;
               AFound := FillFromList(AFindText);
@@ -383,14 +470,16 @@ begin
             if Assigned(Properties.OnBeforeGetItems) then
             begin
               AFindText := DisplayValue;
+              sStart := SelStart;
               if SelLength > 0 then
               begin
                 Delete(AFindText,SelStart+1,SelLength);
-                Properties.OnBeforeGetItems(Self,GetWord(AFindText,SelStart,0),Properties.Items);
+                Properties.OnBeforeGetItems(Self,GetWord(AFindText,sStart,0),Properties.Items);
               end else
               begin
                 Delete(AFindText,SelStart,1);
-                Properties.OnBeforeGetItems(Self,GetWord(AFindText,SelStart-1,0),Properties.Items);
+                dec(sStart,1 + length(Properties.Isolator));
+                Properties.OnBeforeGetItems(Self,GetWord(AFindText,sStart,0),Properties.Items);
               end;
             end;
         end;
@@ -405,8 +494,9 @@ begin
             LockLookupDataTextChanged;
             AFound := False;
             AFindText := DisplayValue;
+            sStart := SelStart;
             if SelLength > 0 then
-              AFindText := GetWord(AFindText,SelStart,SelLength){Copy(AFindText, 1, SelStart)} + Key
+              AFindText := GetWord(AFindText,sStart,SelLength){Copy(AFindText, 1, SelStart)} + Key
             else
               if AEditingStyle = esFixedList then
                 if FindSelection then
@@ -422,7 +512,8 @@ begin
                 Insert(Key, AFindText, SelStart + 1);
             if not AFound then
             begin
-              AFindText := GetWord(AFindText,SelStart + 1, 0);
+              inc(sStart);
+              AFindText := GetWord(AFindText,sStart, 0);
               AFound := FillFromList(AFindText);
             end;
             if (AEditingStyle = esFixedList) and not TcxCustomTextEditProperties(ActiveProperties).FixedListSelection and not AFound then
@@ -433,7 +524,8 @@ begin
           end else
             if Assigned(Properties.OnBeforeGetItems) then
             begin
-              AFindText := GetWord(DisplayValue,SelStart,SelLength);
+              sStart := SelStart;
+              AFindText := GetWord(DisplayValue,sStart,SelLength);
               Insert(Key,AFindText,SelStart+1);
               Properties.OnBeforeGetItems(Self,AFindText,Properties.Items);
             end;

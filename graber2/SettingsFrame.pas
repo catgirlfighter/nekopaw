@@ -16,7 +16,7 @@ uses
   cxGridCustomTableView, cxGridTableView, cxClasses, cxGridLevel, cxGrid,
   dxSkinsdxBarPainter, dxBar,
   {Graber}
-  cxmymultirow, Common, GraberU;
+  cxmymultirow, MyHTTP, Common, GraberU;
 {
   dxSkinsdxBarPainter, dxBar, dxSkinBlack, dxSkinBlue,
   dxSkinBlueprint, dxSkinCaramel, dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide,
@@ -98,6 +98,9 @@ type
     il: TcxImageList;
     chbMenuCaptions: TcxCheckBox;
     lHelp: TcxLabel;
+    lcSpeed: TcxLabel;
+    eSpeed: TcxSpinEdit;
+    cxLabel6: TcxLabel;
     procedure btnOkClick(Sender: TObject);
     procedure chbProxyPropertiesEditValueChanged(Sender: TObject);
     procedure chbProxyAuthPropertiesEditValueChanged(Sender: TObject);
@@ -179,6 +182,8 @@ begin
     Downl.UsePerRes := chbUseThreadPerRes.Checked;
     Downl.PerResThreads := eThreadPerRes.EditValue;
     Downl.PicThreads := ePicThreads.EditValue;
+
+    idThrottler.BitsPerSec := eSpeed.Value * 8 * 1024;
 
     if (UseLookAndFeel <> chbUseLookAndFeel.Checked)
     or (SkinName <> cbSkin.Text) then
@@ -455,6 +460,7 @@ begin
     chbUseThreadPerRes.Checked := Downl.UsePerRes;
     eThreadPerRes.EditValue := Downl.PerResThreads;
     ePicThreads.EditValue := Downl.PicThreads;
+    eSpeed.Value := idThrottler.BitsPerSec / 1024 / 8;
   end;
 
 end;
@@ -495,6 +501,7 @@ begin
   lcProxyPort.Caption := lang('_PORT_');
   lcProxyLogin.Caption := lang('_LOGIN_');
   lcProxyPassword.Caption := lang('_PASSWORD_');
+  lcSpeed.Caption := lang('_SPEED_');
   lcLanguage.Caption := lang('_LANGUAGE_');
   tlList.Items[0].Texts[0] := lang('_INTERFACE_');
   tlList.Items[1].Texts[0] := lang('_THREADS_');

@@ -2,6 +2,8 @@ program Graber2;
 
 
 
+
+
 {$R *.dres}
 
 uses
@@ -43,8 +45,8 @@ begin
   //FullResList[0].NameFormat := GlobalSettings.Formats.PicFormat;
   //FullResList.PicFileFormat := GlobalSettings.Formats.PicFormat;
 
-  Application.CreateForm(Tdm, dm);
   Application.CreateForm(Tmf, mf);
+  Application.CreateForm(Tdm, dm);
   Application.CreateForm(TfmDoublesNewRule, fmDoublesNewRule);
   //Application.CreateForm(TfWhatsNew, fWhatsNew);
   //Application.CreateForm(TfPathEditor, fPathEditor);

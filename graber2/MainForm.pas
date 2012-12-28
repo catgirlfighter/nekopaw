@@ -6,7 +6,7 @@ uses
   {base}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, DB, ActnList, ExtCtrls, ImgList, rpVersionInfo,
-  AppEvnts, Types, ShellAPI, Math,
+  AppEvnts, Types, ShellAPI, Math, StrUtils,
   {devex}
   cxPC, cxGraphics, cxControls,
   cxLookAndFeels, cxLookAndFeelPainters, cxPCdxBarPopupMenu, cxEdit,
@@ -16,7 +16,8 @@ uses
   dxSkinscxPCPainter, dxSkinsdxNavBarPainter, dxSkinsdxDockControlPainter,
   dxSkinsdxBarPainter, dxSkinsForm,
   {graber2}
-  common, OpBase, graberU, MyHTTP, UPDUnit, XPMan, cxMaskEdit, cxButtonEdit;
+  common, OpBase, graberU, MyHTTP, UPDUnit, XPMan, cxMaskEdit, cxButtonEdit,
+  IdBaseComponent, IdIntercept, IdInterceptThrottler;
   {skins}
   {dxSkinsCore, dxSkinBlack, dxSkinBlue, dxSkinBlueprint, dxSkinCaramel,
   dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide, dxSkinDevExpressDarkStyle,
@@ -134,6 +135,10 @@ type
     dxSkinController: TdxSkinController;
     XPManifest1: TXPManifest;
     chlbtagsfilter: TcxButtonEdit;
+    dxFavPopup: TdxBarPopupMenu;
+    bbAddFav: TdxBarButton;
+    bsFav: TdxBarSeparator;
+    dxBarCombo1: TdxBarCombo;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
 {    procedure gLevel2GetGridView(Sender: TcxGridLevel;
@@ -153,6 +158,7 @@ type
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure chlbFullTagsClickCheck(Sender: TObject; AIndex: Integer;
       APrevState, ANewState: TcxCheckBoxState);
+    procedure dxBarButton1Click(Sender: TObject);
   private
     mFrame: TFrame;
     FOldCaption: String;
@@ -220,7 +226,7 @@ var
 implementation
 
 uses StartFrame, NewListFrame, LangString, SettingsFrame, GridFrame, utils,
-  AboutForm, Whatsnewform, win7taskbar;
+  AboutForm, Whatsnewform, win7taskbar, LoginForm;
 {$R *.dfm}
 
 procedure TMycxTabSheet.OnTimer(Sender: TObject);
@@ -396,14 +402,29 @@ begin
 end;
 
 procedure Tmf.OnError(Sender: TObject; Msg: String);
+//var
+  //b: boolean;
+  //h: HWND;
 begin
+  //h := Application.ActiveFormHandle;
+
   if mErrors.Lines.Count = 0 then
     mErrors.Lines[0] := FormatDateTime('hh:nn:ss',Time) + ' ' + Msg
   else
     mErrors.Lines.Add(FormatDateTime('hh:nn:ss',Time) + ' ' + Msg);
   dsLogs.AutoHide := false;
-  dsLogs.Show;
+//  dsLogs.Visible := true;
+
+  //if Assigned(fLogin) and fLogin.Active then
+  //  MessageDlg(Msg,mtError,[mbOk],0)
+  //else
+  //  dsLogs.AutoHide := false;
+
   dsLogs.ActiveChild := dpErrors;
+  //SendMessage(h,CM_UIACTIVATE,0,0);
+
+//  if Assigned(fLogin) and (fLogin.Visible) then
+//    fLogin.SetFocus;
 end;
 
 {procedure Tmf.OnTabClose(ASender: TObject; ATabSheet: TcxTabSheet);
@@ -620,7 +641,20 @@ begin
   with f.tvRes.DataController do
     for i := 0 to RecordCount - 1 do
       if Values[i, 0] <> 0 then
+      begin
         f2.ResList.CopyResource(FullResList[Values[i, 0]]);
+
+//        f2.ResList[j].Fields['tag'] := f2.ResList[j].FormatTagString(
+//          f2.ResList[j].Fields['tag'],FullResList[0].HTTPRec.TagTemplate);
+//        f2.ResList[j].Fields['tag'] :=
+//          ReplaceStr(ReplaceStr(ReplaceStr(f2.ResList[j].Fields['tag'],
+//            FullResList[0].HTTPRec.TagTemplate.Isolator,
+//            f2.ResList[j].HTTPRec.TagTemplate.Isolator),
+//            FullResList[0].HTTPRec.TagTemplate.Separator,
+//            f2.ResList[j].HTTPRec.TagTemplate.Separator),
+//            FullResList[0].HTTPRec.TagTemplate.Spacer,
+//            f2.ResList[j].HTTPRec.TagTemplate.Spacer);
+      end;
 
   FullResList.OnError := OnError;
   FullResList.OnJobChanged := nil;
@@ -1133,17 +1167,18 @@ end;
 procedure Tmf.StartUpdate;
 var
   f: tfileStream;
-  r: tresourcestream;
+  //r: tresourcestream;
 begin
   f := tfilestream.Create(IncludeTrailingPathDelimiter(rootdir)
     + 'NPUpdater.exe',fmCreate);
   try
-    r := tresourcestream.Create(hInstance,'ZUPDATER','UPDATER');
-    try
-      r.SaveToStream(f);
-    finally
-      r.Free;
-    end;
+    //r := tresourcestream.Create(hInstance,'ZUPDATER','UPDATER');
+    //try
+    //  r.SaveToStream(f);
+    //finally
+    //  r.Free;
+    //end;
+    LoadFromRes(f,'ZUPDATER','UPDATER');
   finally
     f.Free;
   end;
@@ -1256,6 +1291,11 @@ begin
   PostMessage(Handle,CM_REFRESHRESINFO,0,Integer(Sender));
 end;
 
+procedure Tmf.dxBarButton1Click(Sender: TObject);
+begin
+
+end;
+
 {procedure Tmf.dxTabClose(Sender: TdxCustomDockControl);
 begin
   PostMessage(Application.MainForm.Handle, CM_CLOSETAB, integer(Sender), 0);
@@ -1266,7 +1306,11 @@ begin
   {$IFDEF NEKODEBUG}
   Caption := FoldCaption + ' ' + VINFO.FileVersion + 'α debug';
   {$ELSE}
-  Caption := FoldCaption + ' ' + VINFO.FileVersion + 'α';
+    {$IFDEF NEKOLOG}
+    Caption := FoldCaption + ' ' + VINFO.FileVersion + 'α log';
+    {$ELSE}
+    Caption := FoldCaption + ' ' + VINFO.FileVersion + 'α';
+    {$ENDIF}
   {$ENDIF}
   bbNew.Caption := lang('_NEWLIST_');
   bbStartList.Caption := lang('_STARTLIST_');

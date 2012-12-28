@@ -51,6 +51,8 @@ function IndexOfStr(strlist,value: string): integer; overload;
 function IndexOfStr(list: tstrings; value: string): integer; overload;
 procedure DrawImage(AImage: TImage; AStream: TStream; Ext: String);
 procedure DrawImageFromRes(AImage: TImage; ResName, Ext: String);
+procedure LoadFromRes(ABitmap: TBitmap; ResName: String); overload;
+procedure LoadFromRes(AStream: TStream; ResName: String; TypeName: String); overload;
 procedure WriteLWToPChar(n: LongWord; p: PChar);
 function ReadLWFromPChar(p: PChar): LongWord;
 function PngToIcon(const Png: TPngImage; Background: TColor = clNone): HICON;
@@ -65,7 +67,7 @@ function CharPos(str: string; ch: Char; Isolators,Brackets: array of string;
   From: Integer = 1): Integer; //overload;
 function CharPosEx(str: string; ch: TSetOfChar; Isolators,Brackets: array of string;
   From: Integer = 1): Integer;
-function GetNextS(var s: string; del: Char = ';'; ins: Char = #0): string;
+function GetNextS(var s: string; del: String = ';'; ins: String = ''): string;
 function GetNextSEx(var s: string; del: TSetOfChar = [';'];
   ins: TSetOfChar = []): string;
 procedure FileToString(FileName: String; var AValue: AnsiString);
@@ -78,11 +80,13 @@ function ifn(b: boolean; thn, els: variant): variant;
 function DeleteEx(S: String; Index,Count: integer): String;
 procedure SaveStrToFile(S, FileName: String; Add: boolean = false);
 function GreatestCommonFactor(a,b: Word): Word;
+//function BatchReplaceStr(AText: String; AFromText,AToText: Array Of String): String;
+//function ReplaceStrMask(AText,AMaskText,AFromText,AToText: String): String;
 
 implementation
 
 const
-  _SYMBOL_MISSED_ = 'Cant found symbol "%s" for #%d "%s" in "%s"';
+  _SYMBOL_MISSED_ = 'Can''t find symbol "%s" for #%d "%s" in "%s"';
   _OPERATOR_MISSED_ = 'Must be an operator instead of "%s" in "%s"';
   _OPERAND_MISSED_ = 'Must be an oparand instead of "%s" in "%s"';
   _INVALID_TYPECAST_ = 'Invalid typecast for "%s" %s "%s" near #%d in "%s"';
@@ -639,7 +643,7 @@ BEGIN
     RESULT := UTF8TOSTRING(HTTPDECODE(ANSISTRING(S)));
 END;
 
-function GetNextS(var s: string; del: Char = ';'; ins: Char = #0): string;
+function GetNextS(var s: string; del: String = ';'; ins: String = ''): string;
 var
   n: Integer;
 begin
@@ -652,18 +656,18 @@ begin
       if (n > 0) and (pos(del, s) > n) then
       begin
         Result := Result + copy(s, 1, n - 1);
-        Delete(s, 1, n);
+        Delete(s, 1, n + length(ins) - 1);
         n := pos(ins, s);
         case n of
           0:
             raise Exception.Create('Can''t find 2nd insulator ''' + ins + ''':'
               + #13#10 + s);
           1:
-            Result := Result + copy(s, 1, n);
+            Result := Result + copy(s, 1, n + length(ins) - 1);
         else
           Result := Result + copy(s, 1, n - 1);
         end;
-        Delete(s, 1, n);
+        Delete(s, 1, n + length(ins) - 1);
       end
       else
         break;
@@ -673,7 +677,7 @@ begin
   if n > 0 then
   begin
     Result := Result + copy(s, 1, n - 1);
-    Delete(s, 1, n);
+    Delete(s, 1, n + length(del) - 1);
   end
   else
   begin
@@ -1028,8 +1032,35 @@ var
   F: TResourceStream;
 begin
   F := TResourceStream.Create(hInstance, ResName, RT_RCDATA);
-  DrawImage(AImage, F, Ext);
-  F.Free;
+  try
+    DrawImage(AImage, F, Ext);
+  finally
+    F.Free;
+  end;
+end;
+
+procedure LoadFromRes(ABitmap: TBitmap; ResName: String);
+var
+  F: TResourceStream;
+begin
+  F := TResourceStream.Create(hInstance, ResName, RT_RCDATA);
+  try
+    ABitmap.LoadFromStream(F);
+  finally
+    F.Free;
+  end;
+end;
+
+procedure LoadFromRes(AStream: TStream; ResName: String; TypeName: String);
+var
+  F: TResourceStream;
+begin
+  F := TResourceStream.Create(hInstance, ResName, RT_RCDATA);
+  try
+    F.SaveToStream(AStream);
+  finally
+    F.Free;
+  end;
 end;
 
 procedure WriteLWToPChar(n: LongWord; p: PChar);
@@ -1226,14 +1257,14 @@ begin
   if PL^ = $38464947 then
   begin
     { if PB^[4] = Ord('9') then Result := '.gif'
-      else } Result := '.gif';
+      else } Result := 'gif';
   end
   else if PW^ = $4D42 then
-    Result := '.bmp'
+    Result := 'bmp'
   else if PL^ = $474E5089 then
-    Result := '.png'
+    Result := 'png'
   else if PW^ = $D8FF then
-    Result := '.jpeg'
+    Result := 'jpeg'
   else
     Result := '';
 end;

@@ -5,7 +5,7 @@ interface
 uses
   {std}
   SysUtils, Classes, Math, Variants, Dialogs, Windows, ShellAPI,
-  ImgList, Controls,
+  ImgList, Controls, Forms,
   {devex}
   cxGridCustomTableView, cxGraphics, cxEdit,
   cxDataUtils, cxGridCommon, cxGridTableView, cxEditRepositoryItems,
@@ -13,7 +13,8 @@ uses
   cxButtonEdit, cxDropDownEdit, cxMRUEdit,
   {graber}
   cxmycombobox, cxmymultirow,
-  GraberU, common, OpBase;
+  GraberU, common, OpBase, dxBar, ActnList, IdBaseComponent, IdIntercept,
+  IdInterceptThrottler;
 
 type
   Tdm = class(TDataModule)
@@ -34,19 +35,19 @@ type
     erURLText: TcxEditRepositoryButtonItem;
     il: TcxImageList;
     erPathText: TcxEditRepositoryMRUItem;
+    IdInterceptThrottler1: TIdInterceptThrottler;
     procedure erPathBrowsePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure erURLTextPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure EditRepositoryMRUItem1PropertiesButtonClick(Sender: TObject);
     procedure DataModuleCreate(Sender: TObject);
-  private
-    ertagedit: TcxMyEditRepositoryComboBoxItem;
     { Private declarations }
   protected
     procedure OnGetTagItems(Sender: TObject; SearchWord: string;
       Items: TStrings);
   public
+    ertagedit: TcxMyEditRepositoryComboBoxItem;
     function CreateCategory(vg: TcxVerticalGrid; AName, ACaption: String;
       Collapsed: boolean = false): TcxCategoryRow;
     function CreateField(vg: TcxVerticalGrid; AName,ACaption,ComboItems: string;
@@ -63,7 +64,7 @@ procedure BestFitWidths(a: TcxGridTableView; FirstRec: integer = 0);
 
 implementation
 
-uses PathEditorForm, LangString;
+uses PathEditorForm, LangString, MainForm;
 
 {$R *.dfm}
 type
@@ -185,8 +186,17 @@ begin
 end;
 
 procedure tdm.OnGetTagItems(Sender: TObject; SearchWord: string; Items: TStrings);
+var
+  fmt: TTagTemplate;
 begin
-  Items.Text := tagdump.ContinueSearch(SearchWord);
+  with (sender as tcxmycombobox).Properties do
+  begin
+    fmt.Spacer := Spacer;
+    fmt.Separator := Separator;
+    fmt.Isolator := Isolator;
+  end;
+  Items.Text := tagdump.ContinueSearch(SearchWord,fmt);
+//  ShowMessage(Sender.ClassName);
 end;
 
 function Tdm.CreateField(vg: TcxVerticalGrid; AName,ACaption,ComboItems: string;
@@ -303,14 +313,37 @@ begin
 end;
 
 procedure Tdm.DataModuleCreate(Sender: TObject);
+//var
+//  r: tresourcestream;
+//  b: tdxBarItemLink;
 begin
   erPathText.Properties.Items.Text := LoadPathList;
   erPathText.Properties.IncrementalSearch := false;
+
   ertagedit := TcxMyEditRepositoryComboBoxItem.Create(erpathtext.Owner);
   ertagedit.Properties.WordMode := true;
   ertagedit.Properties.Spacer := ' ';
   ertagedit.Properties.OnBeforeGetItems := OnGetTagItems;
-  ertagedit.Properties.IncrementalSearch := false;
+
+  with  TcxCustomEditProperties(ertagedit.Properties).Buttons do
+  begin
+    with Add as tcxEditButton do
+    begin
+      Kind := bkGlyph;
+      LoadFromRes(Glyph,'XFAVORITE');
+    end;
+    with Add as tcxEditButton do
+    begin
+      Kind := bkGlyph;
+      LoadFromRes(Glyph,'XREMFAVORITE');
+    end;
+  end;
+
+  //b := mf.dxFavPopup.ItemLinks.AddItem(tdxBarButton);
+  //(b.Item as tdxBarCombo).ite;
+
+
+  //ertagedit.Properties.IncrementalSearch := false;
   //erPathText.Properties.LookupItems.Text := '';
 end;
 
