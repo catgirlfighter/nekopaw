@@ -9,6 +9,7 @@ var
   TagDump: TPictureTagList;
   GlobalSettings: TSettingsRec;
   IgnoreList,AddFields: TDSArray;
+  GlobalFavList: TStringList;
   rootdir: string;
   profname: string = 'default.ini';
   langname: string = '';
@@ -539,11 +540,16 @@ if FileExists(IncludeTrailingPathDelimiter(rootdir) + 'tagdump.txt') then
 
 LoadResourceSettings;
 
+GlobalFavList := TStringlist.Create;
+
+LoadFavList(GlobalFavlist);
+
 //LoadLang(IncludeTrailingPathDelimiter(rootdir)+IncludeTrailingPathDelimiter('languages')+langname+'.ini');
 
 
 finalization
 
+GlobalFavList.Free;
 FullResList.Free;
 TagDump.Free;
 

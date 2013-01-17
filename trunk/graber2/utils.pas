@@ -14,9 +14,11 @@ uses
   {graber}
   cxmycombobox, cxmymultirow,
   GraberU, common, OpBase, dxBar, ActnList, IdBaseComponent, IdIntercept,
-  IdInterceptThrottler;
+  IdInterceptThrottler, Menus;
 
 type
+  TFavProc = procedure(Value: String);
+
   Tdm = class(TDataModule)
     EditRepository: TcxEditRepository;
     erLabel: TcxEditRepositoryLabel;
@@ -336,6 +338,12 @@ begin
     begin
       Kind := bkGlyph;
       LoadFromRes(Glyph,'XREMFAVORITE');
+    end;
+    with Add as tcxEditButton do
+    begin
+      Kind := bktext;
+      Caption := '?';
+      Visible := false;
     end;
   end;
 

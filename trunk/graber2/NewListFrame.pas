@@ -5,9 +5,9 @@ interface
 uses
   {base}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, Menus, StdCtrls, INIFiles,
+  Dialogs, Menus, StdCtrls, INIFiles, ShellAPI,
   {devexp}
-  cxGraphics, cxControls, cxLookAndFeels,
+  cxGraphics, cxControls, cxLookAndFeels, cxTextEdit,
   cxLookAndFeelPainters, cxStyles, cxCustomData, cxFilter, cxData,
   cxDataStorage, cxEdit, cxImage, cxLabel, cxButtonEdit, cxPCdxBarPopupMenu,
   cxEditRepositoryItems, cxInplaceContainer, cxVGrid, cxPC, cxGridLevel,
@@ -20,6 +20,8 @@ uses
 
 type
   TListFrameState = (lfsNew, lfsEdit);
+
+  TcxTextEdit = class ( cxTextEdit.TcxTextEdit);
 
   TfNewList = class(TFrame)
     VSplitter: TcxSplitter;
@@ -49,6 +51,9 @@ type
     erLabel: TcxEditRepositoryLabel;
     erEdit: TcxEditRepositoryTextItem;
     tvFullShort: TcxGridColumn;
+    gResShort: TcxGridColumn;
+    pmFavList: TPopupMenu;
+    Label1: TLabel;
     procedure pcMainChange(Sender: TObject);
     procedure gRescButtonPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
@@ -68,11 +73,24 @@ type
       ARecord: TcxCustomGridRecord; var AProperties: TcxCustomEditProperties);
     procedure tvFullcNameGetProperties(Sender: TcxCustomGridTableItem;
       ARecord: TcxCustomGridRecord; var AProperties: TcxCustomEditProperties);
+    procedure AddToFavoritesClick(Sender: TObject);
+    procedure RemoveFromFavoritesClick(Sender: TObject);
+    procedure ExecAddFavClick(Sender: TObject);
+    procedure ExecRemFavClick(Sender: TObject);
+    procedure SetFavoriteClick(Sender: TObject);
+    procedure tvFullEditValueChanged(Sender: TcxCustomGridTableView;
+      AItem: TcxCustomGridTableItem);
+    procedure tvFullDataControllerFilterChanged(Sender: TObject);
+    procedure tvFullKeyPress(Sender: TObject; var Key: Char);
+    procedure ExecCheatSheetClick(Sender: TObject);
   private
     { Private declarations }
     FOnError: TLogEvent;
 //    fPathList: TStringList;
+    FAutoAdd: Boolean;
   protected
+    procedure OnTagstringButtonClick(Sender: TObject; AButtonIndex: Integer);
+    procedure LoadFavs(pm: TPopupMenu; Event: TNotifyEvent);
     function ResetRelogin(idx: integer = -1): boolean;
     procedure SetIntrfEnabled(b: boolean);
     procedure LoginCallBack(Sender: TObject; N: integer; Login,Password: String;
@@ -92,6 +110,8 @@ type
     procedure SaveSet;
 //    procedure LoadLists;
     procedure Release;
+    procedure ResetFav;
+    procedure ResetRemFav;
     //procedure LoadSet;
     property OnError: TLogEvent read FOnError write FOnError;
     { Public declarations }
@@ -146,6 +166,12 @@ begin
   end;
 end;
 
+procedure TfNewList.ResetRemFav;
+begin
+  pmFavList.Items.Clear;
+  LoadFavs(pmFavList,RemoveFromFavoritesClick);
+end;
+
 procedure TfNewList.AddItem(index: Integer);
 var
   i: Integer;
@@ -157,6 +183,7 @@ begin
   tvRes.DataController.Values[i, 0] := tvFull.DataController.Values[index, 1];
   tvRes.DataController.Values[i, 1] := tvFull.DataController.Values[index, 2];
   tvRes.DataController.Values[i, 2] := tvFull.DataController.Values[index, 3];
+  tvRes.DataController.Values[i, 3] := tvFull.DataController.Values[index, 4];
   tvFull.DataController.DeleteRecord(index);
   if tvFull.DataController.RowCount = 0 then
     tvFull.DataController.FocusedRecordIndex := -1;
@@ -164,6 +191,30 @@ begin
   tvFull.EndUpdate;
 
   btnNext.Enabled := tvRes.DataController.RowCount > 1;
+end;
+
+procedure TfNewList.AddToFavoritesClick(Sender: TObject);
+var
+  s: string;
+  n: integer;
+begin
+  n := vgSettings.Tag;
+
+ //(vgSettings.RowByName('vgitag') as TcxEditorRow).
+
+ s := (vgSettings.RowByName('vgitag') as TcxEditorRow)
+      .Properties.Value;
+  vgSettings.InplaceEditor.PostEditValue;
+  s := FullResList[0].FormatTagString(
+    VarToStr((vgSettings.RowByName('vgitag') as TcxEditorRow).Properties.DisplayTexts[0]),
+    FullResList[n].HTTPRec.TagTemplate);
+
+  if trim(s) = '' then
+    Exit;
+
+  AddSorted(s,GlobalFavList);
+
+  SaveFavList(GlobalFavList);
 end;
 
 procedure TfNewList.btnNextClick(Sender: TObject);
@@ -211,7 +262,15 @@ begin
   if n = 0 then
   begin
     c := dm.CreateCategory(vgSettings,'vgimain',lang('_MAINCONFIG_'));
-    dm.CreateField(vgSettings,'vgitag',lang('_TAGSTRING_'),'',ftTagText,c,FullResList[n].Fields['tag']);
+
+    s := VarToStr(FullResList[0].Fields['tag']);
+    dm.CreateField(vgSettings,'vgitag',lang('_TAGSTRING_'),'',ftTagText,c,s);
+
+    with (dm.ertagedit.Properties as TcxCustomEditProperties) do
+    begin
+      OnButtonClick := OnTagstringButtonClick;
+      Buttons[3].Visible := false;
+    end;
 
     dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftPathText,c,FullResList[n].NameFormat);
     dm.CreateField(vgSettings,'vgisdalf',lang('_SDALF_'),'',ftCheck,c,GlobalSettings.Downl.SDALF);
@@ -220,6 +279,8 @@ begin
   with FullResList[n] do begin
     c := dm.CreateCategory(vgSettings,'vgimain',lang('_MAINCONFIG_') + ' ' +
       FullResList[n].Name);
+
+    dm.CreateField(vgSettings,'vgiinherit',lang('_INHERIT_'),'',ftCheck,c,Inherit);
 
     s := VarToStr(Fields['tag']);
     if (s = ''){ or Inherit} then
@@ -235,11 +296,16 @@ begin
 
     dm.CreateField(vgSettings,'vgitag',lang('_TAGSTRING_'),'',ftTagText,c,s);
 
-    dm.CreateField(vgSettings,'vgiinherit',lang('_INHERIT_'),'',ftCheck,c,Inherit);
+    with (dm.ertagedit.Properties as TcxCustomEditProperties) do
+    begin
+      OnButtonClick := OnTagstringButtonClick;
+      Buttons[3].Visible := FulLResList[n].CheatSheet <> '';
+    end;
 
     s := NameFormat;
     if (s = '') or Inherit then
       s := FullResList[0].NameFormat;
+
     dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftPathText,c,s);
 
     d := FullResList[0].Fields.Count;
@@ -286,6 +352,26 @@ begin
     nullstr(FullResList[n].Fields['password']),
     LoginCallback
     );
+end;
+
+procedure TfNewList.ExecAddFavClick(Sender: TObject);
+begin
+  ResetFav;
+  pmFavList.Popup(Mouse.CursorPos.X,Mouse.CursorPos.Y);
+end;
+
+procedure TfNewList.ExecCheatSheetClick(Sender: TObject);
+begin
+  if FullResList[vgSettings.Tag].CheatSheet <> '' then
+    ShellExecute(0,nil,
+      PCHAR(FullResList[vgSettings.Tag].CheatSheet),
+      nil,nil,SW_SHOWNORMAL);
+end;
+
+procedure TfNewList.ExecRemFavClick(Sender: TObject);
+begin
+  ResetRemFav;
+  pmFavList.Popup(Mouse.CursorPos.X,Mouse.CursorPos.Y);
 end;
 
 procedure TfNewList.gRescButtonPropertiesButtonClick(Sender: TObject;
@@ -359,6 +445,7 @@ var
 begin
 //  fPathList := TStringList.Create;
 
+  FAutoAdd := false;
   gFull.BeginUpdate;
   gRes.BeginUpdate;
   // pic := TPicture.Create;
@@ -408,6 +495,13 @@ begin
 //  fPathList.Free;
 end;
 
+procedure TfNewList.RemoveFromFavoritesClick(Sender: TObject);
+begin
+  //s := (Sender as TMenuItem).Caption;
+  //RemSorted(s,GlobalFavList);
+  GlobalFavList.Delete((Sender as TMenuItem).Tag);
+end;
+
 procedure TfNewList.RemoveItem(index: Integer);
 
   procedure rem(index: integer);
@@ -416,9 +510,10 @@ procedure TfNewList.RemoveItem(index: Integer);
   begin
     i := tvFull.DataController.RecordCount;
     tvFull.DataController.RecordCount := i + 1;
-    tvFull.DataController.Values[i, 1] := tvRes.DataController.Values[index, 0];
+    tvFull.DataController.Values[i, 1] := tvRes.DataController.Values[index, 0];;
     tvFull.DataController.Values[i, 2] := tvRes.DataController.Values[index, 1];
     tvFull.DataController.Values[i, 3] := tvRes.DataController.Values[index, 2];
+    tvFull.DataController.Values[i, 4] := tvRes.DataController.Values[index, 3];
     tvRes.DataController.DeleteRecord(index);
   end;
 
@@ -452,6 +547,49 @@ begin
   tvRes.EndUpdate;
   tvFull.EndUpdate;
   btnNext.Enabled := tvRes.DataController.RowCount > 1;
+end;
+
+procedure TfNewList.ResetFav;
+var
+  n: TMenuItem;
+begin
+  pmFavList.Items.Clear;
+  n := tMenuItem.Create(pmFavList);
+  n.Caption := lang('_ADDTOFAVORITES_');
+  n.OnClick := AddToFavoritesClick;
+  pmFavList.Items.Add(n);
+  n := tmenuItem.Create(pmFavList);
+  n.Caption := '-';
+  pmFavList.Items.Add(n);
+  LoadFavs(pmFavList,SetFavoriteClick);
+end;
+
+procedure TfNewList.OnTagstringButtonClick(Sender: TObject; AButtonIndex: Integer);
+begin
+  case AButtonIndex of
+    1: ExecAddFavClick(Sender);
+    2: ExecRemFavClick(Sender);
+    3: ExecCheatSheetClick(Sender);
+  end;
+end;
+
+procedure TfNewList.LoadFavs(pm: TPopupMenu; Event: TNotifyEvent);
+var
+  i,l: integer;
+  n: TMenuItem;
+begin
+  l := vgSettings.Tag;
+  for i := 0 to GlobalFavlist.Count-1 do
+  begin
+    n := TMenuItem.Create(pm);
+    n.Caption :=
+      FullResList[l].FormatTagString(
+      GlobalFavList[i],
+      FullResList[0].HTTPRec.TagTemplate);
+    n.OnClick := Event;
+    n.Tag := i;
+    pm.Items.Add(n);
+  end;
 end;
 
 procedure TfNewList.ResetItems;
@@ -540,6 +678,15 @@ begin
   end;
 end;
 
+procedure TfNewList.SetFavoriteClick(Sender: TObject);
+//var
+//  s: string;
+//  n: integer;
+begin
+  vgSettings.InplaceEditor.EditValue := (Sender as TMenuItem).Caption;
+  vgSettings.InplaceEditor.PostEditValue;
+end;
+
 procedure TfNewList.SetIntrfEnabled(b: boolean);
 begin
   gFull.Enabled := b;
@@ -575,6 +722,9 @@ procedure TfNewList.SetLang;
 begin
   btnPrevious.Caption := lang('_PREVIOUSSTEP_');
   btnNext.Caption := lang('_NEXTSTEP_');
+  tvFull.FilterRow.InfoText := lang('_FILTERROWHINT_');
+  tvFull.OptionsView.NoDataToDisplayInfoText := lang('_GRIDNODATA_');
+  tvRes.OptionsView.NoDataToDisplayInfoText := lang('_GRIDNODATA_');
 end;
 
 procedure TfNewList.tsSettingsShow(Sender: TObject);
@@ -602,6 +752,47 @@ procedure TfNewList.tvFullcNameGetProperties(Sender: TcxCustomGridTableItem;
 begin
   if Assigned(ARecord) and (ARecord.RecordIndex = -1) then
     AProperties := erEdit.Properties;
+end;
+
+procedure TfNewList.tvFullDataControllerFilterChanged(Sender: TObject);
+begin
+  if FAutoAdd then
+  begin
+    tvFull.DataController.Filter.Clear;
+    FAutoAdd := false;
+  end;
+
+end;
+
+procedure TfNewList.tvFullEditValueChanged(Sender: TcxCustomGridTableView;
+  AItem: TcxCustomGridTableItem);
+begin
+    if Sender.ViewData.RecordCount = 1 then
+    begin
+      AddItem(Sender.DataController.FocusedRecordIndex);
+      FAutoAdd := true;
+    end;
+end;
+
+procedure TfNewList.tvFullKeyPress(Sender: TObject; var Key: Char);
+begin
+  if IsTextChar(Key) then
+  begin
+    tvFull.Controller.FocusedRow :=
+      tvFull.ViewData.FilterRow;
+
+    if tvFull.Controller.FocusedColumnIndex < 2 then
+      tvFull.Controller.FocusedColumnIndex := 2;
+    tvFull.ViewData.FilterRow.Focused := true;
+    //tvFull.Controller.EditingController.ShowEdit;
+
+//    (tvFull.Controller.EditingController.Edit as TcxTextEdit).SetFocus;
+//    (tvFull.Controller.EditingController.Edit as TcxTextEdit).EditingText := Key;
+    //TcxTextEdit(tvFull.Controller.EditingController.Edit).KeyPress(Key);
+//    (tvFull.Controller.EditingController.Edit as TcxTextEdit)
+//    .SelStart := 1;
+//    tvFull.Controller.EndUpdate;
+  end;
 end;
 
 procedure TfNewList.tvResFocusedRecordChanged(Sender: TcxCustomGridTableView;

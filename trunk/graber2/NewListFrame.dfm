@@ -11,6 +11,13 @@ object fNewList: TfNewList
   Font.Style = []
   ParentFont = False
   TabOrder = 0
+  object Label1: TLabel
+    Left = 208
+    Top = 144
+    Width = 31
+    Height = 13
+    Caption = 'Label1'
+  end
   object VSplitter: TcxSplitter
     Left = 182
     Top = 31
@@ -93,6 +100,9 @@ object fNewList: TfNewList
         OnGetProperties = gRescNameGetProperties
         Options.ShowEditButtons = isebAlways
       end
+      object gResShort: TcxGridColumn
+        Visible = False
+      end
       object gRescButton: TcxGridColumn
         PropertiesClassName = 'TcxButtonEditProperties'
         Properties.Buttons = <
@@ -140,13 +150,16 @@ object fNewList: TfNewList
         Align = alClient
         TabOrder = 0
         object tvFull: TcxGridTableView
+          OnKeyPress = tvFullKeyPress
+          OnEditValueChanged = tvFullEditValueChanged
+          DataController.Filter.OnChanged = tvFullDataControllerFilterChanged
           DataController.Summary.DefaultGroupSummaryItems = <>
           DataController.Summary.FooterSummaryItems = <>
           DataController.Summary.SummaryGroups = <>
           FilterRow.SeparatorWidth = 4
           FilterRow.Visible = True
-          FilterRow.ApplyChanges = fracDelayed
-          FilterRow.ApplyInputDelay = 500
+          FilterRow.ApplyChanges = fracImmediately
+          FilterRow.ApplyInputDelay = 0
           NewItemRow.SeparatorWidth = 2
           OptionsCustomize.ColumnFiltering = False
           OptionsCustomize.ColumnGrouping = False
@@ -198,6 +211,7 @@ object fNewList: TfNewList
           object tvFullShort: TcxGridColumn
             PropertiesClassName = 'TcxLabelProperties'
             OnGetProperties = tvFullcNameGetProperties
+            Options.Editing = False
           end
         end
         object lvlFull1: TcxGridLevel
@@ -270,5 +284,11 @@ object fNewList: TfNewList
     end
     object erEdit: TcxEditRepositoryTextItem
     end
+  end
+  object pmFavList: TPopupMenu
+    AutoHotkeys = maManual
+    AutoPopup = False
+    Left = 264
+    Top = 152
   end
 end

@@ -943,7 +943,7 @@ object dm: Tdm
     BitsPerSec = 0
     RecvBitsPerSec = 0
     SendBitsPerSec = 0
-    Left = 256
-    Top = 152
+    Left = 24
+    Top = 64
   end
 end

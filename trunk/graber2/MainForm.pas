@@ -6,7 +6,8 @@ uses
   {base}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, DB, ActnList, ExtCtrls, ImgList, rpVersionInfo,
-  AppEvnts, Types, ShellAPI, Math, StrUtils,
+  AppEvnts, Types, ShellAPI, Math, XPMan,
+  StrUtils, {IdBaseComponent, IdIntercept, IdInterceptThrottler,}
   {devex}
   cxPC, cxGraphics, cxControls,
   cxLookAndFeels, cxLookAndFeelPainters, cxPCdxBarPopupMenu, cxEdit,
@@ -14,12 +15,11 @@ uses
   cxCheckListBox, cxInplaceContainer, cxVGrid, dxNavBarCollns, dxNavBarBase,
   dxNavBar, dxDockPanel, cxStyles, dxSkinsCore, dxSkinsDefaultPainters,
   dxSkinscxPCPainter, dxSkinsdxNavBarPainter, dxSkinsdxDockControlPainter,
-  dxSkinsdxBarPainter, dxSkinsForm,
-  {graber2}
-  common, OpBase, graberU, MyHTTP, UPDUnit, XPMan, cxMaskEdit, cxButtonEdit,
-  IdBaseComponent, IdIntercept, IdInterceptThrottler;
-  {skins}
-  {dxSkinsCore, dxSkinBlack, dxSkinBlue, dxSkinBlueprint, dxSkinCaramel,
+  dxSkinsdxBarPainter, dxSkinsForm, cxMaskEdit, cxButtonEdit,
+{ graber2 }
+  common, OpBase, graberU, MyHTTP, UPDUnit, Balloon;
+{ skins }
+{ dxSkinsCore, dxSkinBlack, dxSkinBlue, dxSkinBlueprint, dxSkinCaramel,
   dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide, dxSkinDevExpressDarkStyle,
   dxSkinDevExpressStyle, dxSkinFoggy, dxSkinGlassOceans, dxSkinHighContrast,
   dxSkiniMaginary, dxSkinLilian, dxSkinLiquidSky, dxSkinLondonLiquidSky,
@@ -30,42 +30,44 @@ uses
   dxSkinSilver, dxSkinSpringTime, dxSkinStardust, dxSkinSummer2008,
   dxSkinTheAsphaltWorld, dxSkinsDefaultPainters, dxSkinValentine, dxSkinVS2010,
   dxSkinWhiteprint, dxSkinXmas2008Blue, dxSkinsForm, dxSkinscxPCPainter,
-  dxSkinsdxNavBarPainter, dxSkinsdxDockControlPainter, dxSkinsdxBarPainter}
+  dxSkinsdxNavBarPainter, dxSkinsdxDockControlPainter, dxSkinsdxBarPainter }
 
 type
 
-  TMycxTabSheet = class(TcxTabSheet)
-    private
-      FTimer: TTimer;
-      FStartFrame,FEndFrame,FCurrentFrame: Integer;
-      FLoop: Boolean;
-      FRName: String;
-      procedure OnTimer(Sender: TObject);
-    public
-      MainFrame: TFrame;
-      SecondFrame: TFrame;
-      property RName: String read FRName write FRName;
-      procedure SetIcon(AStartFrame: integer; AEndFrame: integer = -1;
-      Loop: boolean = false);
-      constructor Create(AOwner: TComponent); override;
-      destructor Destroy; override;
+  TMycxTabSheet = class(TcxTabSheet)private FTimer: TTimer;
+FStartFrame, FEndFrame, FCurrentFrame: Integer;
+FLoop:
+Boolean;
+FRName:
+String;
+procedure OnTimer(Sender: TObject);
+public
+  MainFrame: TFrame;
+  SecondFrame: TFrame;
+  property RName: String read FRName write FRName;
+  procedure SetIcon(AStartFrame: Integer; AEndFrame: Integer = -1;
+    Loop: Boolean = false);
+  constructor Create(AOwner: TComponent);
+  override;
+  destructor Destroy;
+  override;
   end;
 
-{
-  TcxTabSheetEvent = procedure(ASender: TObject; ATabSheet: TcxTabSheet)
+  {
+    TcxTabSheetEvent = procedure(ASender: TObject; ATabSheet: TcxTabSheet)
     of object;
-}
+  }
 
   TcxPageControl = class(cxPC.TcxPageControl);
-{
-  private
+  {
+    private
     FOnPageClose: TcxTabSheetEvent;
-  protected
+    protected
     procedure DoClose; override;
-  public
+    public
     property OnPageClose: TcxTabSheetEvent read FOnPageClose write FOnPageClose;
-  end;
-}
+    end;
+  }
 
   { TmycxOnGetExpandable = procedure(MasterDataRow: TcxGridMasterDataRow;
     var Expandable: Boolean) of object;
@@ -92,131 +94,147 @@ type
 
   // TmfState = (msStart, msNewList, msGrid, msSettings);
 
-  Tmf = class(TForm)
-    ds: TdxDockSite;
-    DockManager: TdxDockingManager;
-    BarManager: TdxBarManager;
-    bmbMain: TdxBar;
-    dpTable: TdxDockPanel;
-    dxLayoutDockSite2: TdxLayoutDockSite;
-    dpTags: TdxDockPanel;
-    dpCurTags: TdxDockPanel;
-    dsTable: TdxLayoutDockSite;
-    dsTags: TdxTabContainerDockSite;
-    dpLog: TdxDockPanel;
-    dxLayoutDockSite4: TdxLayoutDockSite;
-    dpErrors: TdxDockPanel;
-    dsLogs: TdxTabContainerDockSite;
-    pcTables: TcxPageControl;
-    bbStartList: TdxBarButton;
-    bbStartPics: TdxBarButton;
-    bbSettings: TdxBarButton;
-    bbNew: TdxBarButton;
-    mLog: TcxMemo;
-    mErrors: TcxMemo;
-    ApplicationEvents1: TApplicationEvents;
-    nvCur: TdxNavBar;
-    nbgCurMain: TdxNavBarGroup;
-    nbgCurTags: TdxNavBarGroup;
-    nbgCurMainControl: TdxNavBarGroupControl;
-    vgCurMain: TcxVerticalGrid;
-    nbgCurTagsControl: TdxNavBarGroupControl;
-    chlbTags: TcxCheckListBox;
-    vINFO: TrpVersionInfo;
-    lUPD: TcxLabel;
-    nvTags: TdxNavBar;
-    nbgTagsMain: TdxNavBarGroup;
-    nbgTagsTags: TdxNavBarGroup;
-    dxNavBarGroupControl1: TdxNavBarGroupControl;
-    vgTagsMain: TcxVerticalGrid;
-    dxNavBarGroupControl2: TdxNavBarGroupControl;
-    chlbFullTags: TcxCheckListBox;
-    MainBarControl: TdxBarDockControl;
-    dxSkinController: TdxSkinController;
-    XPManifest1: TXPManifest;
-    chlbtagsfilter: TcxButtonEdit;
-    dxFavPopup: TdxBarPopupMenu;
-    bbAddFav: TdxBarButton;
-    bsFav: TdxBarSeparator;
-    dxBarCombo1: TdxBarCombo;
-    procedure FormCreate(Sender: TObject);
-    procedure FormDestroy(Sender: TObject);
-{    procedure gLevel2GetGridView(Sender: TcxGridLevel;
-      AMasterRecord: TcxCustomGridRecord; var AGridView: TcxCustomGridView);   }
-    procedure bbSettingsClick(Sender: TObject);
-    procedure bbNewClick(Sender: TObject);
-    procedure pcTablesChange(Sender: TObject);
-    procedure bbStartListClick(Sender: TObject);
-    procedure ApplicationEvents1Exception(Sender: TObject; E: Exception);
-    procedure bbStartPicsClick(Sender: TObject);
-    procedure testoClick(Sender: TObject);
-    procedure pcTablesCanCloseEx(Sender: TObject; ATabIndex: Integer;
-      var ACanClose: Boolean);
-    procedure FormResize(Sender: TObject);
-    procedure FormClose(Sender: TObject; var Action: TCloseAction);
-    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
-    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure chlbFullTagsClickCheck(Sender: TObject; AIndex: Integer;
-      APrevState, ANewState: TcxCheckBoxState);
-    procedure dxBarButton1Click(Sender: TObject);
-  private
-    mFrame: TFrame;
-    FOldCaption: String;
-    // tvMain: TmycxGridTableView;
-  protected
-//    procedure EXPANDROW(var Msg: TMessage); message CM_EXPROW;
-    procedure WMActivate(var Msg: TWMActivate); message WM_ACTIVATE;
-    procedure NEWLIST(var Msg: TMessage); message CM_NEWLIST;
-    procedure APPLYNEWLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
-    procedure CANCELNEWLIST(var Msg: TMessage); message CM_CANCELNEWLIST;
-    procedure SHOWSETTINGS(var Msg: TMessage); message CM_SHOWSETTINGS;
-    procedure CANCELSETTINGS(var Msg: TMessage); message CM_CANCELSETTINGS;
-    procedure APPLYSETTINGS(var Msg: TMessage); message CM_APPLYSETTINGS;
-    procedure STARTJOB(var Msg: TMessage); message CM_STARTJOB;
-    procedure ENDJOB(var Msg: TMessage); message CM_ENDJOB;
-    procedure UPDATECHECK(var Msg: TMessage); message CM_UPDATE;
-    procedure LANGUAGECHANGED(var Msg: TMessage); message CM_LANGUAGECHANGED;
-    procedure WHATSNEW(var Msg: TMessage); message CM_WHATSNEW;
-    procedure STYLECHANGED(var Msg: TMessage); message CM_STYLECHANGED;
-    procedure WREFRESHPIC(var Msg: TMessage); message CM_REFRESHPIC;
-    procedure WREFRESHRESINFO(var Msg: TMessage); message CM_REFRESHRESINFO;
-    procedure MENUSTYLECHANGED(var Msg: TMessage); message CM_MENUSTYLECHANGED;
-    procedure JOBPROGRESS(var Msg: TMessage); message CM_JOBPROGRESS;
-    //procedure dxTabClose(Sender: TdxCustomDockControl);
-    // procedure APPLYEDITLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
-  private
-    TabList: TList;
-    dsFirstShow: Boolean;
-    SttPanel: TMycxTabSheet;
-    FCookie: TMyCookieList;
-    FCurPic: TTPicture;
-    { Private declarations }
-  public
-    // OldState: TmfState;
-    { procedure tvMainRecordExpandable(MasterDataRow: TcxGridMasterDataRow;
-      var Expandable: Boolean); }
-    function CreateTab(pc: TcxPageControl; Enc: boolean = true): TMycxTabSheet;
-    procedure ShowDs;
-    procedure HideDs;
-    procedure CloseTab(t: TcxTabSheet);
-//    procedure OnTabClose(ASender: TObject; ATabSheet: TcxTabSheet);
-    procedure ShowPanels;
-    procedure OnError(Sender: TObject; Msg: String);
-    procedure Setlang;
-    procedure PicInfo(Sender: TObject; a: TTPicture);
-    procedure CheckUpdates;
-    procedure StartUpdate;
-    procedure ChangeResInfo;
-    procedure RefreshResInfo(Sender: TObject);
-    function CloseAllTabs: boolean;
-    procedure RefreshTags(Sender: TObject; t: TPictureTagLinkList);
-    procedure DoPicInfo(Sender: TObject; a: TTPicture);
-   procedure DoRefreshResInfo(Sender: TObject);
-    procedure ChangeTags;
-    procedure updateTab;
-    procedure AddTag(name: string; add: boolean);
+  Tmf = class(TForm)ds: TdxDockSite;
+  DockManager: TdxDockingManager;
+  BarManager: TdxBarManager;
+  bmbMain: TdxBar;
+  dpTable: TdxDockPanel;
+  dxLayoutDockSite2: TdxLayoutDockSite;
+  dpTags: TdxDockPanel;
+  dpCurTags: TdxDockPanel;
+  dsTable: TdxLayoutDockSite;
+  dsTags: TdxTabContainerDockSite;
+  dpLog: TdxDockPanel;
+  dxLayoutDockSite4: TdxLayoutDockSite;
+  dpErrors: TdxDockPanel;
+  dsLogs: TdxTabContainerDockSite;
+  pcTables: TcxPageControl;
+  bbStartList: TdxBarButton;
+  bbStartPics: TdxBarButton;
+  bbSettings: TdxBarButton;
+  bbNew: TdxBarButton;
+  mLog: TcxMemo;
+  mErrors: TcxMemo;
+  ApplicationEvents1: TApplicationEvents;
+  nvCur: TdxNavBar;
+  nbgCurMain: TdxNavBarGroup;
+  nbgCurTags: TdxNavBarGroup;
+  nbgCurMainControl: TdxNavBarGroupControl;
+  vgCurMain: TcxVerticalGrid;
+  nbgCurTagsControl: TdxNavBarGroupControl;
+  chlbTags: TcxCheckListBox;
+  vINFO: TrpVersionInfo;
+  lUPD: TcxLabel;
+  nvTags: TdxNavBar;
+  nbgTagsMain: TdxNavBarGroup;
+  nbgTagsTags: TdxNavBarGroup;
+  dxNavBarGroupControl1: TdxNavBarGroupControl;
+  vgTagsMain: TcxVerticalGrid;
+  dxNavBarGroupControl2: TdxNavBarGroupControl;
+  chlbFullTags: TcxCheckListBox;
+  MainBarControl: TdxBarDockControl;
+  dxSkinController: TdxSkinController;
+  XPManifest1: TXPManifest;
+  chlbtagsfilter: TcxButtonEdit;
+  Bhint: TBalloonHint;
+  procedure FormCreate(Sender: TObject);
+  procedure FormDestroy(Sender: TObject);
+  { procedure gLevel2GetGridView(Sender: TcxGridLevel;
+    AMasterRecord: TcxCustomGridRecord; var AGridView: TcxCustomGridView); }
+  procedure bbSettingsClick(Sender: TObject);
+  procedure bbNewClick(Sender: TObject);
+  procedure pcTablesChange(Sender: TObject);
+  procedure bbStartListClick(Sender: TObject);
+  procedure ApplicationEvents1Exception(Sender: TObject; E: Exception);
+  procedure bbStartPicsClick(Sender: TObject);
+  procedure testoClick(Sender: TObject);
+  procedure pcTablesCanCloseEx(Sender: TObject; ATabIndex: Integer;
+    var ACanClose: Boolean);
+  procedure FormResize(Sender: TObject);
+  procedure FormClose(Sender: TObject; var Action: TCloseAction);
+  procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+  procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+  procedure chlbFullTagsClickCheck(Sender: TObject; AIndex: Integer;
+    APrevState, ANewState: TcxCheckBoxState);
 
-    { Public declarations }
+private
+  mFrame: TFrame;
+  FOldCaption: String;
+  // tvMain: TmycxGridTableView;
+protected
+  // procedure EXPANDROW(var Msg: TMessage); message CM_EXPROW;
+  procedure WMActivate(var Msg: TWMActivate);
+  message WM_ACTIVATE;
+  procedure NEWLIST(var Msg: TMessage);
+  message CM_NEWLIST;
+  procedure APPLYNEWLIST(var Msg: TMessage);
+  message CM_APPLYNEWLIST;
+  procedure CANCELNEWLIST(var Msg: TMessage);
+  message CM_CANCELNEWLIST;
+  procedure SHOWSETTINGS(var Msg: TMessage);
+  message CM_SHOWSETTINGS;
+  procedure CANCELSETTINGS(var Msg: TMessage);
+  message CM_CANCELSETTINGS;
+  procedure APPLYSETTINGS(var Msg: TMessage);
+  message CM_APPLYSETTINGS;
+  procedure STARTJOB(var Msg: TMessage);
+  message CM_STARTJOB;
+  procedure ENDJOB(var Msg: TMessage);
+  message CM_ENDJOB;
+  procedure UPDATECHECK(var Msg: TMessage);
+  message CM_UPDATE;
+  procedure LANGUAGECHANGED(var Msg: TMessage);
+  message CM_LANGUAGECHANGED;
+  procedure WHATSNEW(var Msg: TMessage);
+  message CM_WHATSNEW;
+  procedure STYLECHANGED(var Msg: TMessage);
+  message CM_STYLECHANGED;
+  procedure WREFRESHPIC(var Msg: TMessage);
+  message CM_REFRESHPIC;
+  procedure WREFRESHRESINFO(var Msg: TMessage);
+  message CM_REFRESHRESINFO;
+  procedure MENUSTYLECHANGED(var Msg: TMessage);
+  message CM_MENUSTYLECHANGED;
+  procedure JOBPROGRESS(var Msg: TMessage);
+  message CM_JOBPROGRESS;
+  // procedure dxTabClose(Sender: TdxCustomDockControl);
+  // procedure APPLYEDITLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
+private
+  TabList: TList;
+  dsFirstShow: Boolean;
+  SttPanel: TMycxTabSheet;
+  FCookie: TMyCookieList;
+  FCurPic: TTPicture;
+  FBalloon: TBalloon;
+  { Private declarations }
+public
+  // OldState: TmfState;
+  { procedure tvMainRecordExpandable(MasterDataRow: TcxGridMasterDataRow;
+    var Expandable: Boolean); }
+  function CreateTab(pc: TcxPageControl; Enc: Boolean = true): TMycxTabSheet;
+  procedure ShowDs;
+  procedure HideDs;
+  procedure CloseTab(t: TcxTabSheet);
+  // procedure OnTabClose(ASender: TObject; ATabSheet: TcxTabSheet);
+  procedure ShowPanels;
+  procedure OnError(Sender: TObject; Msg: String);
+  procedure Setlang;
+  procedure PicInfo(Sender: TObject; a: TTPicture);
+  procedure CheckUpdates;
+  procedure StartUpdate;
+  procedure ChangeResInfo;
+  procedure RefreshResInfo(Sender: TObject);
+  function CloseAllTabs: Boolean;
+  procedure RefreshTags(Sender: TObject; t: TPictureTagLinkList);
+  procedure DoPicInfo(Sender: TObject; a: TTPicture);
+  procedure DoRefreshResInfo(Sender: TObject);
+  procedure ChangeTags;
+  procedure updateTab;
+  procedure AddTag(name: string; add: Boolean);
+    procedure ShowBalloon;
+    procedure OnBalloonExitTimer(Sender: TObject);
+
+  { Public declarations }
   end;
 
 var
@@ -241,20 +259,20 @@ begin
   ImageIndex := FCurrentFrame;
 end;
 
-procedure TMycxTabSheet.SetIcon(AStartFrame: integer; AEndFrame: integer = -1;
-      Loop: boolean = false);
+procedure TMycxTabSheet.SetIcon(AStartFrame: Integer; AEndFrame: Integer = -1;
+  Loop: Boolean = false);
 begin
-  //FTimer.Enabled := false;
+  // FTimer.Enabled := false;
 
-{  FStartFrame := AStartFrame;
-  FLoop := Loop;
-  if not FTimer.Enabled or FTimer.Enabled and (AEndFrame > -1)
-  and (FCurrentFrame < FStartFrame) then
+  { FStartFrame := AStartFrame;
+    FLoop := Loop;
+    if not FTimer.Enabled or FTimer.Enabled and (AEndFrame > -1)
+    and (FCurrentFrame < FStartFrame) then
     FCurrentFrame := FStartFrame;
-  if (AEndFrame > -1) then
+    if (AEndFrame > -1) then
     FEndFrame := AEndFrame;
-  if (ImageIndex <> FStartFrame) or (AEndFrame > -1) then
-    FTimer.Enabled := true;   }
+    if (ImageIndex <> FStartFrame) or (AEndFrame > -1) then
+    FTimer.Enabled := true; }
   ImageIndex := FStartFrame;
 end;
 
@@ -273,24 +291,24 @@ end;
 destructor TMycxTabSheet.Destroy;
 begin
   FTimer.Free;
-{  if Assigned(MainFrame) then
-  begin
+  { if Assigned(MainFrame) then
+    begin
     if (MainFrame is TfGrid) then
-      (MainFrame as TfGrid).Relise;
+    (MainFrame as TfGrid).Relise;
     MainFrame.Free;
-  end;
-  if Assigned(SecondFrame) then
-    SecondFrame.Free;    }
+    end;
+    if Assigned(SecondFrame) then
+    SecondFrame.Free; }
   inherited;
 end;
 
-{procedure TcxPageControl.DoClose;
-begin
+{ procedure TcxPageControl.DoClose;
+  begin
   if Assigned(FOnPageClose) then
-    FOnPageClose(Self, ActivePage)
+  FOnPageClose(Self, ActivePage)
   else
-    inherited;
-end;   }
+  inherited;
+  end; }
 
 { TmycxGridTableView }
 
@@ -333,39 +351,38 @@ end;   }
   Expandable := MasterDataRow.RecordIndex > 0;
   end; }
 
-{procedure Tmf.EXPANDROW(var Msg: TMessage);
-var
+{ procedure Tmf.EXPANDROW(var Msg: TMessage);
+  var
   mr: TcxCustomGridRecord;
   gv: TcxGridTableView;
   cl: TcxCustomGridView;
-begin
+  begin
   if not((TObject(Msg.WParam) is TcxCustomGridRecord) and
-    (TObject(Msg.LParam) is TcxGridTableView)) then
-    Exit;
+  (TObject(Msg.LParam) is TcxGridTableView)) then
+  Exit;
   mr := TcxCustomGridRecord(Msg.WParam);
   gv := TcxGridTableView(Msg.LParam);
   cl := gv.Clones[gv.CloneCount - 1];
   cl.BeginUpdate;
   try
-    if mr.RecordIndex = 1 then
+  if mr.RecordIndex = 1 then
 
-      with cl.DataController do
-      begin
-        cl.DataController.RecordCount := 2;
-        cl.DataController.Values[0, 1] := 'album1url1';
-        cl.DataController.Values[1, 1] := 'album1url2';
-      end;
-  finally
-    cl.EndUpdate;
+  with cl.DataController do
+  begin
+  cl.DataController.RecordCount := 2;
+  cl.DataController.Values[0, 1] := 'album1url1';
+  cl.DataController.Values[1, 1] := 'album1url2';
   end;
-end;    }
+  finally
+  cl.EndUpdate;
+  end;
+  end; }
 
 procedure Tmf.WMActivate(var Msg: TWMActivate);
 begin
   inherited;
-  if (msg.Active in [1,2])
-  and assigned(w7taskbar)
-  and (w7taskbar.State = tbpsError) then
+  if (Msg.Active in [1, 2]) and assigned(w7taskbar) and
+    (w7taskbar.State = tbpsError) then
     w7taskbar.State := tbpsNone;
 end;
 
@@ -375,23 +392,22 @@ var
   f: TfNewList;
 
 begin
-  if Assigned(FullResList.OnJobChanged) then
+  if assigned(FullResList.OnJobChanged) then
   begin
-    MessageDlg(lang('_BUSY_MAIN_LIST_'),mtInformation,[mbOk],0);
+    MessageDlg(lang('_BUSY_MAIN_LIST_'), mtInformation, [mbOk], 0);
     Exit;
   end;
-
 
   n := CreateTab(pcTables);
   n.ImageIndex := 0;
   f := TfNewList.Create(n);
-  f.SetLang;
+  f.Setlang;
   f.State := lfsNew;
   FullResList.OnError := f.OnErrorEvent;
   FullResList.OnJobChanged := f.JobStatus;
   f.OnError := OnError;
-  //f.Tag := integer(n);
-  //n.Tag := integer(f);
+  // f.Tag := integer(n);
+  // n.Tag := integer(f);
   n.SecondFrame := f;
 
   f.LoadItems;
@@ -401,36 +417,43 @@ begin
   ShowDs;
 end;
 
-procedure Tmf.OnError(Sender: TObject; Msg: String);
-//var
-  //b: boolean;
-  //h: HWND;
+procedure Tmf.OnBalloonExitTimer(Sender: TObject);
 begin
-  //h := Application.ActiveFormHandle;
-
-  if mErrors.Lines.Count = 0 then
-    mErrors.Lines[0] := FormatDateTime('hh:nn:ss',Time) + ' ' + Msg
-  else
-    mErrors.Lines.Add(FormatDateTime('hh:nn:ss',Time) + ' ' + Msg);
-  dsLogs.AutoHide := false;
-//  dsLogs.Visible := true;
-
-  //if Assigned(fLogin) and fLogin.Active then
-  //  MessageDlg(Msg,mtError,[mbOk],0)
-  //else
-  //  dsLogs.AutoHide := false;
-
-  dsLogs.ActiveChild := dpErrors;
-  //SendMessage(h,CM_UIACTIVATE,0,0);
-
-//  if Assigned(fLogin) and (fLogin.Visible) then
-//    fLogin.SetFocus;
+  FBalloon := nil;
 end;
 
-{procedure Tmf.OnTabClose(ASender: TObject; ATabSheet: TcxTabSheet);
+procedure Tmf.OnError(Sender: TObject; Msg: String);
+// var
+// b: boolean;
+// h: HWND;
 begin
+  // h := Application.ActiveFormHandle;
+
+  if mErrors.Lines.Count = 0 then
+    mErrors.Lines[0] := FormatDateTime('hh:nn:ss', Time) + ' ' +
+    { Sender.ClassName + ': ' + } Msg
+  else
+    mErrors.Lines.add(FormatDateTime('hh:nn:ss', Time) + ' ' +
+      { Sender.ClassName + ': ' + } Msg);
+  dsLogs.AutoHide := false;
+  // dsLogs.Visible := true;
+
+  // if Assigned(fLogin) and fLogin.Active then
+  // MessageDlg(Msg,mtError,[mbOk],0)
+  // else
+  // dsLogs.AutoHide := false;
+
+  dsLogs.ActiveChild := dpErrors;
+  // SendMessage(h,CM_UIACTIVATE,0,0);
+
+  // if Assigned(fLogin) and (fLogin.Visible) then
+  // fLogin.SetFocus;
+end;
+
+{ procedure Tmf.OnTabClose(ASender: TObject; ATabSheet: TcxTabSheet);
+  begin
   CloseTab(ATabSheet);
-end;  }
+  end; }
 
 procedure Tmf.pcTablesCanCloseEx(Sender: TObject; ATabIndex: Integer;
   var ACanClose: Boolean);
@@ -442,30 +465,35 @@ end;
 procedure Tmf.pcTablesChange(Sender: TObject);
 begin
   updateTab;
-  changeTags;
+  ChangeTags;
 end;
 
 procedure Tmf.PicInfo(Sender: TObject; a: TTPicture);
 var
-  i: integer;
-  //r: TcxEditorRow;
+  i: Integer;
+  // r: TcxEditorRow;
 
-function VrType(a: variant): TFieldType;
-begin
-  case VarType(a) of
-    varInteger,varInt64: Result := ftNumber;
-    varBoolean: Result := ftCheck;
-    varUString,varDate: Result := ftString;
-    varDouble: Result := ftFloatNumber;
-    else Result := ftString;
+  function VrType(a: variant): TFieldType;
+  begin
+    case VarType(a) of
+      varInteger, varInt64:
+        Result := ftNumber;
+      varBoolean:
+        Result := ftCheck;
+      varUString, varDate:
+        Result := ftString;
+      varDouble:
+        Result := ftFloatNumber;
+    else
+      Result := ftString;
+    end;
   end;
-end;
 
 begin
   if Sender = nil then
     FCurPic := nil
-  else if ((pcTables.ActivePage as tMycxTabSheet).MainFrame <> Sender)
-     or (FCurPic = a) then
+  else if ((pcTables.ActivePage as TMycxTabSheet).MainFrame <> Sender) or
+    (FCurPic = a) then
     Exit
   else
     FCurPic := a;
@@ -480,26 +508,27 @@ begin
   vgCurMain.BeginUpdate;
   try
     vgCurMain.ClearRows;
-    dm.CreateField(vgCurMain,'vgiRName',lang('_RESNAME_'),'',ftString,nil,
-      a.Resource.Name,true);
-    dm.CreateField(vgCurMain,'vgiName',lang('_FILENAME_'),'',ftString,nil,
-      a.PicName + '.' + a.Ext,true);
-    dm.CreateField(vgCurMain,'vgiSavePath',lang('_SAVEPATH_'),'',ftPathText,nil,
-      a.FileName,true);
-    for i := 0 to a.Meta.Count -1 do
+    dm.CreateField(vgCurMain, 'vgiRName', lang('_RESNAME_'), '', ftString, nil,
+      a.Resource.Name, true);
+    dm.CreateField(vgCurMain, 'vgiName', lang('_FILENAME_'), '', ftString, nil,
+      a.PicName + '.' + a.Ext, true);
+    dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '', ftPathText,
+      nil, a.FileName, true);
+    for i := 0 to a.Meta.Count - 1 do
       with a.Meta.Items[i] do
-        dm.CreateField(vgCurMain,'avgi' + Name,Name,
-          '',VrType(Value),nil,VarToStr(Value),true);
+        dm.CreateField(vgCurMain, 'avgi' + Name, Name, '', VrType(Value), nil,
+          VarToStr(Value), true);
   finally
     vgCurMain.EndUpdate;
   end;
 
   chlbTags.Items.BeginUpdate;
   try
-  chlbTags.Clear;
+    chlbTags.Clear;
 
-  for i := 0 to a.Tags.Count-1 do
-    chlbTags.AddItem(a.Tags[i].Name + ' (' + IntTOStr(a.Tags[i].Linked.Count) + ')');
+    for i := 0 to a.Tags.Count - 1 do
+      chlbTags.AddItem(a.Tags[i].Name + ' (' +
+        IntTOStr(a.Tags[i].Linked.Count) + ')');
 
   finally
     chlbTags.Items.EndUpdate;
@@ -508,16 +537,16 @@ end;
 
 procedure Tmf.RefreshResInfo(Sender: TObject);
 var
-  i: integer;
+  i: Integer;
   c: TcxEditorRow;
 begin
-    //EXIT;
-    //vgTagsMain.ClearRows;
-    if (pcTables.ActivePage is TMycxTabSheet)
-    and ((pcTables.ActivePage as TMycxTabSheet).MainFrame is tfGrid) then
+  // EXIT;
+  // vgTagsMain.ClearRows;
+  if (pcTables.ActivePage is TMycxTabSheet) and
+    ((pcTables.ActivePage as TMycxTabSheet).MainFrame is tfGrid) then
     with ((pcTables.ActivePage as TMycxTabSheet).MainFrame as tfGrid) do
     begin
-    //for i := 0 to ResList.Count -1 do
+      // for i := 0 to ResList.Count -1 do
       if (Sender is TResource) then
       begin
         i := ResList.IndexOf(Sender);
@@ -526,32 +555,27 @@ begin
 
         vgTagsMain.BeginUpdate;
         try
-          c := (vgTagsMain.RowByName('vgT' + IntToStr(i)) as  TcxEditorRow);
-          c.Properties.Value :=
-            ifn(ResList.ListFinished,
-            ifn(ResList.PicsFinished,'',   //if pics
-            IntToStr(ResList[i].PictureList.PicCounter.FSH
-                     +ResList[i].PictureList.PicCounter.SKP
-                     +ResList[i].PictureList.PicCounter.UNCH)
-            + '/' + IntToStr(ResList[i].PictureList.Count)
-            + ifn(ResList[i].PictureList.PicCounter.ERR > 0,
-            ' err ' + IntToStr(ResList[i].PictureList.PicCounter.ERR),'')),
+          c := (vgTagsMain.RowByName('vgT' + IntTOStr(i)) as TcxEditorRow);
+          c.Properties.Value := ifn(ResList.ListFinished,
+            ifn(ResList.PicsFinished, '', // if pics
+            IntTOStr(ResList[i].PictureList.PicCounter.FSH + ResList[i]
+            .PictureList.PicCounter.SKP + ResList[i]
+            .PictureList.PicCounter.UNCH) + '/' +
+            IntTOStr(ResList[i].PictureList.Count) +
+            ifn(ResList[i].PictureList.PicCounter.ERR > 0,
+            ' err ' + IntTOStr(ResList[i].PictureList.PicCounter.ERR), '')),
 
-            IntToStr(ResList[i].JobList.OkCount) + '/'    //if pages
-            + IntToStr(ResList[i].JobList.Count)
-            + ' (' + IntToStr(ResList[i].HTTPRec.Theor) + ')'
-            + ifn(ResList[i].JobList.ErrorCount > 0,
-            ' err ' + IntToStr(ResList[i].JobList.ErrorCount),''));
+            IntTOStr(ResList[i].JobList.OkCount) + '/' // if pages
+            + IntTOStr(ResList[i].JobList.Count) + ' (' +
+            IntTOStr(ResList[i].HTTPRec.Theor) + ')' +
+            ifn(ResList[i].JobList.ErrorCount > 0,
+            ' err ' + IntTOStr(ResList[i].JobList.ErrorCount), ''));
 
-            c.Visible :=
-              ifn(ResList.ListFinished,
-              ifn(ResList.PicsFinished,true,
-                not(ResList[i].PictureList.PicCounter.FSH
-                    +ResList[i].PictureList.PicCounter.SKP
-                    +ResList[i].PictureList.PicCounter.UNCH
-                    =ResList[i].PictureList.Count)),
-                 not(ResList[i].JobList.OkCount
-                     = ResList[i].JobList.Count));
+          c.Visible := ifn(ResList.ListFinished, ifn(ResList.PicsFinished, true,
+            not(ResList[i].PictureList.PicCounter.FSH + ResList[i]
+            .PictureList.PicCounter.SKP + ResList[i]
+            .PictureList.PicCounter.UNCH = ResList[i].PictureList.Count)),
+            not(ResList[i].JobList.OkCount = ResList[i].JobList.Count));
         finally
           vgTagsMain.EndUpdate;
         end;
@@ -562,69 +586,75 @@ end;
 
 procedure Tmf.RefreshTags(Sender: TObject; t: TPictureTagLinkList);
 var
-  l,i: integer;
+  l, i: Integer;
   ACheckItem: TcxCheckListBoxItem;
-  //t: tpicturetaglinklist;
+  // t: tpicturetaglinklist;
 begin
-  //EXIT;
+  // EXIT;
 
-  if (pcTables.ActivePage is TMycxTabSheet)
-  and ((pcTables.ActivePage as TMycxTabSheet).MainFrame = Sender) then
-  with ((pcTables.ActivePage as TMycxTabSheet).MainFrame as tfGrid) do
-  begin
-    chlbFullTags.Items.BeginUpdate;
-    try
-    //chlbFullTags.Clear;
+  if (pcTables.ActivePage is TMycxTabSheet) and
+    ((pcTables.ActivePage as TMycxTabSheet).MainFrame = Sender) then
+    with ((pcTables.ActivePage as TMycxTabSheet).MainFrame as tfGrid) do
+    begin
+      chlbFullTags.Items.BeginUpdate;
+      try
+        // chlbFullTags.Clear;
 
-      //t := (sender as tpicturetaglist);
-      l := t.Count-1;
-      for i := 0 to l do
-        //if (n < chlbFullTags.Items.Count)and(chlbFullTags.Items[n].Tag = Integer(ResList.PictureList.Tags[i])) then
-        if (t[i].Tag > -1) then
-          //if (t[i].Tag < chlbFullTags.Items.Count)
-          //and(chlbFullTags.Items[t[i].Tag].Tag = Integer(
-          //ResList.PictureList.Tags[t[i].Tag])) then
-          if (ResList.PictureList.Tags[t[i].Tag].Tag <> 0) then
-          begin
-            ACheckItem := TcxCheckListBoxItem(ResList.PictureList.Tags[t[i].Tag].Tag);
-            ACheckItem.Text := ResList.PictureList.Tags[t[i].Tag].Name +
-              ' (' + IntToStr(ResList.PictureList.Tags[t[i].Tag].Linked.Count) + ')';
-          end else
-          begin
-            ACheckItem := chlbFullTags.Items.Insert(t[i].Tag) as TcxCheckListBoxItem;
-            ACheckItem.Text := ResList.PictureList.Tags[t[i].Tag].Name + ' (' + IntToStr(ResList.PictureList.Tags[t[i].Tag].Linked.Count) + ')';
-            ACheckItem.Tag := Integer(ResList.PictureList.Tags[t[i].Tag]);
-            ResList.PictureList.Tags[t[i].Tag].Tag := Integer(ACheckItem);
-          end;
+        // t := (sender as tpicturetaglist);
+        l := t.Count - 1;
+        for i := 0 to l do
+          // if (n < chlbFullTags.Items.Count)and(chlbFullTags.Items[n].Tag = Integer(ResList.PictureList.Tags[i])) then
+          if (t[i].Tag > -1) then
+            // if (t[i].Tag < chlbFullTags.Items.Count)
+            // and(chlbFullTags.Items[t[i].Tag].Tag = Integer(
+            // ResList.PictureList.Tags[t[i].Tag])) then
+            if (ResList.PictureList.Tags[t[i].Tag].Tag <> 0) then
+            begin
+              ACheckItem := TcxCheckListBoxItem
+                (ResList.PictureList.Tags[t[i].Tag].Tag);
+              ACheckItem.Text := ResList.PictureList.Tags[t[i].Tag].Name + ' ('
+                + IntTOStr(ResList.PictureList.Tags[t[i].Tag]
+                .Linked.Count) + ')';
+            end
+            else
+            begin
+              ACheckItem := chlbFullTags.Items.Insert(t[i].Tag)
+                as TcxCheckListBoxItem;
+              ACheckItem.Text := ResList.PictureList.Tags[t[i].Tag].Name + ' ('
+                + IntTOStr(ResList.PictureList.Tags[t[i].Tag]
+                .Linked.Count) + ')';
+              ACheckItem.Tag := Integer(ResList.PictureList.Tags[t[i].Tag]);
+              ResList.PictureList.Tags[t[i].Tag].Tag := Integer(ACheckItem);
+            end;
 
-    finally
-      chlbFullTags.Items.EndUpdate;
+      finally
+        chlbFullTags.Items.EndUpdate;
+      end;
     end;
-  end;
 end;
 
-procedure Tmf.AddTag(name: string; add: boolean);
+procedure Tmf.AddTag(name: string; add: Boolean);
 begin
 
 end;
 
 procedure Tmf.ApplicationEvents1Exception(Sender: TObject; E: Exception);
 begin
-  OnError(Sender,E.Message);
+  OnError(Sender, E.Message);
 end;
 
 procedure Tmf.APPLYNEWLIST(var Msg: TMessage);
 var
   n: TMycxTabSheet;
   f: TfNewList;
-  f2: TfGrid;
-  i: integer;
+  f2: tfGrid;
+  i: Integer;
 
 begin
   n := TMycxTabSheet(Msg.WParam);
 
-  f := n.SecondFrame as tfNewList; //TfNewList(n.Tag);
-  f2 := TfGrid.Create(n) as tfGrid;
+  f := n.SecondFrame as TfNewList; // TfNewList(n.Tag);
+  f2 := tfGrid.Create(n) as tfGrid;
   f2.CreateList;
   f2.ResList.OnError := OnError;
 
@@ -636,25 +666,12 @@ begin
     n.Caption := FullResList[0].Fields['tag'];
 
   f2.ResList.OnPageComplete := DoRefreshResInfo;
-  //f2.OnTagUpdate := RefreshTags;
+  // f2.OnTagUpdate := RefreshTags;
 
   with f.tvRes.DataController do
     for i := 0 to RecordCount - 1 do
       if Values[i, 0] <> 0 then
-      begin
         f2.ResList.CopyResource(FullResList[Values[i, 0]]);
-
-//        f2.ResList[j].Fields['tag'] := f2.ResList[j].FormatTagString(
-//          f2.ResList[j].Fields['tag'],FullResList[0].HTTPRec.TagTemplate);
-//        f2.ResList[j].Fields['tag'] :=
-//          ReplaceStr(ReplaceStr(ReplaceStr(f2.ResList[j].Fields['tag'],
-//            FullResList[0].HTTPRec.TagTemplate.Isolator,
-//            f2.ResList[j].HTTPRec.TagTemplate.Isolator),
-//            FullResList[0].HTTPRec.TagTemplate.Separator,
-//            f2.ResList[j].HTTPRec.TagTemplate.Separator),
-//            FullResList[0].HTTPRec.TagTemplate.Spacer,
-//            f2.ResList[j].HTTPRec.TagTemplate.Spacer);
-      end;
 
   FullResList.OnError := OnError;
   FullResList.OnJobChanged := nil;
@@ -668,10 +685,10 @@ begin
   f2.ResList.DWNLDHandler.Cookies := FCookie;
   f2.OnPicChanged := DoPicInfo;
   f2.SetSettings;
-  f2.SetLang;
+  f2.Setlang;
   f2.SetMenus;
 
-  f2.ResList.StartJob(JOB_LIST);
+  f2.ResList.STARTJOB(JOB_LIST);
   ShowPanels;
 end;
 
@@ -680,7 +697,7 @@ var
   // n: TdxDockPanel;
   f: TfSettings;
 begin
-  f := SttPanel.MainFrame as tfSettings;
+  f := SttPanel.MainFrame as TfSettings;
   SaveProfileSettings;
   f.OnClose;
   CloseTab(SttPanel as TcxTabSheet);
@@ -689,12 +706,12 @@ end;
 
 procedure Tmf.bbNewClick(Sender: TObject);
 begin
-  PostMessage(Handle,CM_NEWLIST,0,0);
+  PostMessage(Handle, CM_NEWLIST, 0, 0);
 end;
 
 procedure Tmf.bbSettingsClick(Sender: TObject);
 begin
-  PostMessage(Handle,CM_SHOWSETTINGS,0,0);
+  PostMessage(Handle, CM_SHOWSETTINGS, 0, 0);
 end;
 
 procedure Tmf.bbStartListClick(Sender: TObject);
@@ -703,16 +720,17 @@ var
 
 begin
   f := TFrame((pcTables.ActivePage as TMycxTabSheet).MainFrame);
-  if f is TfGrid then
-    with (f as TfGrid) do
+  if f is tfGrid then
+    with (f as tfGrid) do
     begin
       vGrid.DataController.Post;
       if ResList.ListFinished then
       begin
         SetSettings;
-        ResList.StartJob(JOB_LIST);
-      end else
-        ResList.StartJob(JOB_STOPLIST);
+        ResList.STARTJOB(JOB_LIST);
+      end
+      else
+        ResList.STARTJOB(JOB_STOPLIST);
     end;
 end;
 
@@ -722,36 +740,37 @@ var
 
 begin
   f := TFrame((pcTables.ActivePage as TMycxTabSheet).MainFrame);
-  if f is TfGrid then
-    with (f as TfGrid) do
+  if f is tfGrid then
+    with (f as tfGrid) do
     begin
-      //vGrid.DataController.Post;
+      // vGrid.DataController.Post;
       if ResList.PicsFinished then
       begin
         SetSettings;
-        //vGrid.BeginUpdate;
-        //try
-        //  ResList.PictureList.CheckExists;
-          UpdateChecks;
-        //finally
-        //  vGrid.EndUpdate;
-        //end;
+        // vGrid.BeginUpdate;
+        // try
+        // ResList.PictureList.CheckExists;
+        UpdateChecks;
+        // finally
+        // vGrid.EndUpdate;
+        // end;
         if GlobalSettings.Downl.AutoUncheckInvisible then
           UncheckInvisible;
-        ResList.StartJob(JOB_PICS);
-      end else
-        ResList.StartJob(JOB_STOPPICS);
+        ResList.STARTJOB(JOB_PICS);
+      end
+      else
+        ResList.STARTJOB(JOB_STOPPICS);
     end;
 end;
 
 procedure Tmf.CANCELNEWLIST(var Msg: TMessage);
 var
   n: TMycxTabSheet;
-  //f: TfNewList;
+  // f: TfNewList;
 
 begin
   n := Pointer(Msg.WParam);
-//  FreeAndNil(n.SecondFrame);
+  // FreeAndNil(n.SecondFrame);
   FullResList.OnError := OnError;
   FullResList.OnJobChanged := nil;
   CloseTab(n);
@@ -765,54 +784,48 @@ begin
   // n := Pointer(Msg.WParam);
   f := SttPanel.MainFrame as TfSettings;
   f.OnClose;
-//  f.Free;
+  // f.Free;
   CloseTab(SttPanel);
 end;
 
 procedure Tmf.ChangeResInfo;
 var
-  i: integer;
+  i: Integer;
   c: TcxCustomRow;
-//  ACheckItem: TcxCheckListBoxItem;
+  // ACheckItem: TcxCheckListBoxItem;
 begin
-    //EXIT;
+  // EXIT;
 
-    vgTagsMain.ClearRows;
-    if (pcTables.ActivePage is TMycxTabSheet)
-    and ((pcTables.ActivePage as TMycxTabSheet).MainFrame is tfGrid) then
+  vgTagsMain.ClearRows;
+  if (pcTables.ActivePage is TMycxTabSheet) and
+    ((pcTables.ActivePage as TMycxTabSheet).MainFrame is tfGrid) then
     with ((pcTables.ActivePage as TMycxTabSheet).MainFrame as tfGrid) do
     begin
       vgTagsMain.BeginUpdate;
       try
-        for i := 0 to ResList.Count -1 do
+        for i := 0 to ResList.Count - 1 do
         begin
-          c := dm.CreateField(vgTagsMain,'vgT' + IntToStr(i),ResList[i].Name,
-          '',ftString,nil,
-            ifn(ResList.ListFinished,
-            ifn(ResList.PicsFinished,'',   //if pics
-            IntToStr(ResList[i].PictureList.PicCounter.FSH
-                     +ResList[i].PictureList.PicCounter.SKP
-                     +ResList[i].PictureList.PicCounter.UNCH)
-            + '/' + IntToStr(ResList[i].PictureList.Count)
-            + ifn(ResList[i].PictureList.PicCounter.ERR > 0,
-            ' err ' + IntToStr(ResList[i].PictureList.PicCounter.ERR),'')),
+          c := dm.CreateField(vgTagsMain, 'vgT' + IntTOStr(i), ResList[i].Name,
+            '', ftString, nil, ifn(ResList.ListFinished,
+            ifn(ResList.PicsFinished, '', // if pics
+            IntTOStr(ResList[i].PictureList.PicCounter.FSH + ResList[i]
+            .PictureList.PicCounter.SKP + ResList[i]
+            .PictureList.PicCounter.UNCH) + '/' +
+            IntTOStr(ResList[i].PictureList.Count) +
+            ifn(ResList[i].PictureList.PicCounter.ERR > 0,
+            ' err ' + IntTOStr(ResList[i].PictureList.PicCounter.ERR), '')),
 
-            IntToStr(ResList[i].JobList.OkCount) + '/'    //if pages
-            + IntToStr(ResList[i].JobList.Count)
-            + ' (' + IntToStr(ResList[i].HTTPRec.Theor) + ')'
-            + ifn(ResList[i].JobList.ErrorCount > 0,
-            ' err ' + IntToStr(ResList[i].JobList.ErrorCount),''))
-            ,true);
+            IntTOStr(ResList[i].JobList.OkCount) + '/' // if pages
+            + IntTOStr(ResList[i].JobList.Count) + ' (' +
+            IntTOStr(ResList[i].HTTPRec.Theor) + ')' +
+            ifn(ResList[i].JobList.ErrorCount > 0,
+            ' err ' + IntTOStr(ResList[i].JobList.ErrorCount), '')), true);
 
-          c.Visible :=
-            ifn(ResList.ListFinished,
-            ifn(ResList.PicsFinished,true,
-              not(ResList[i].PictureList.PicCounter.FSH
-                  +ResList[i].PictureList.PicCounter.SKP
-                  +ResList[i].PictureList.PicCounter.UNCH
-                  =ResList[i].PictureList.Count)),
-               not(ResList[i].JobList.OkCount
-                   = ResList[i].JobList.Count));
+          c.Visible := ifn(ResList.ListFinished, ifn(ResList.PicsFinished, true,
+            not(ResList[i].PictureList.PicCounter.FSH + ResList[i]
+            .PictureList.PicCounter.SKP + ResList[i]
+            .PictureList.PicCounter.UNCH = ResList[i].PictureList.Count)),
+            not(ResList[i].JobList.OkCount = ResList[i].JobList.Count));
         end;
       finally
         vgTagsMain.EndUpdate;
@@ -822,27 +835,28 @@ end;
 
 procedure Tmf.ChangeTags;
 var
-  i: integer;
-  //ACheckItem: TcxCheckListBoxItem;
+  i: Integer;
+  // ACheckItem: TcxCheckListBoxItem;
 begin
 
-    if (pcTables.ActivePage is TMycxTabSheet)
-    and ((pcTables.ActivePage as TMycxTabSheet).MainFrame is tfGrid) then
+  if (pcTables.ActivePage is TMycxTabSheet) and
+    ((pcTables.ActivePage as TMycxTabSheet).MainFrame is tfGrid) then
     with ((pcTables.ActivePage as TMycxTabSheet).MainFrame as tfGrid) do
     begin
       chlbFullTags.Items.BeginUpdate;
       try
-      chlbFullTags.Clear;
+        chlbFullTags.Clear;
 
-      if ResList.ListFinished and ResList.PicsFinished then
-        for i := 0 to ResList.PictureList.Tags.Count-1 do
-        begin
-          chlbFullTags.AddItem(ResList.PictureList.Tags[i].Name + ' (' + IntToStr(ResList.PictureList.Tags[i].Linked.Count) + ')');
-          //ACheckItem := chlbFullTags.Items.Add;
-          //ACheckItem.Text := ResList.PictureList.Tags[i].Name + ' (' + IntToStr(ResList.PictureList.Tags[i].Linked.Count) + ')';
-          //ACheckItem.Tag := Integer(ResList.PictureList.Tags[i]);
-          //ResList.PictureList.Tags[i].Tag := Integer(ACheckItem);
-        end;
+        if ResList.ListFinished and ResList.PicsFinished then
+          for i := 0 to ResList.PictureList.Tags.Count - 1 do
+          begin
+            chlbFullTags.AddItem(ResList.PictureList.Tags[i].Name + ' (' +
+              IntTOStr(ResList.PictureList.Tags[i].Linked.Count) + ')');
+            // ACheckItem := chlbFullTags.Items.Add;
+            // ACheckItem.Text := ResList.PictureList.Tags[i].Name + ' (' + IntToStr(ResList.PictureList.Tags[i].Linked.Count) + ')';
+            // ACheckItem.Tag := Integer(ResList.PictureList.Tags[i]);
+            // ResList.PictureList.Tags[i].Tag := Integer(ACheckItem);
+          end;
 
       finally
         chlbFullTags.Items.EndUpdate;
@@ -861,87 +875,95 @@ begin
   t.MsgHWND := Self.Handle;
   t.FreeOnTerminate := true;
   t.ListURL := GlobalSettings.UPDServ;
-  lupd.Show;
-  lupd.BringToFront;
+  lUPD.Show;
+  lUPD.BringToFront;
   SetEvent(t.Event);
 end;
 
 procedure Tmf.chlbFullTagsClickCheck(Sender: TObject; AIndex: Integer;
   APrevState, ANewState: TcxCheckBoxState);
 begin
-  AddTag(chlbFullTags.Items[AIndex].Text,ANewState=cbsChecked);
+  AddTag(chlbFullTags.Items[AIndex].Text, ANewState = cbsChecked);
 end;
 
 procedure Tmf.ENDJOB(var Msg: TMessage);
 var
-  i: integer;
+  i: Integer;
   p: DUint64;
 begin
-  updateTab;
-  if Msg.LParam = 0 then
+  if (pcTables.ActivePage <> nil)
+  and (Integer(pcTables.ActivePage) = Msg.WParam)
+  then
   begin
-    changeTags;
-    //bHint.
+    updateTab;
+    if Msg.LParam = 0 then
+    begin
+      ChangeTags;
+      ShowBalloon;
+    end;
   end;
 
-  if assigned(w7taskbar) and (msg.WParam = w7taskbar.Tag) then
+  if assigned(w7taskbar) and (Msg.WParam = w7taskbar.Tag) then
   begin
-    for i := 0 to TabList.Count-1 do
-      if TMycxTabSheet(Tablist[i]).MainFrame is tfgrid then
-        case (TMycxTabSheet(Tablist[i]).MainFrame as tfgrid).Busy of
+    for i := 0 to TabList.Count - 1 do
+      if TMycxTabSheet(TabList[i]).MainFrame is tfGrid then
+        case (TMycxTabSheet(TabList[i]).MainFrame as tfGrid).Busy of
           1:
-          begin
-            w7taskbar.Tag := Integer(TabList[i]);
-            w7taskbar.SetProgress(0,100);
-            w7taskbar.State := tbpsIndeterminate;
-            Exit;
-          end;
+            begin
+              w7taskbar.Tag := Integer(TabList[i]);
+              w7taskbar.SetProgress(0, 100);
+              w7taskbar.State := tbpsIndeterminate;
+              Exit;
+            end;
           2:
-          begin
-            w7taskbar.Tag := Integer(TabList[i]);
-            p := (TMycxTabSheet(Tablist[i]).MainFrame as tfgrid).getprogress;
-            w7taskbar.State := tbpsNormal;
-            w7taskbar.SetProgress(p.V1,p.V2);
-            Exit;
-          end;
+            begin
+              w7taskbar.Tag := Integer(TabList[i]);
+              p := (TMycxTabSheet(TabList[i]).MainFrame as tfGrid).getprogress;
+              w7taskbar.State := tbpsNormal;
+              w7taskbar.SetProgress(p.V1, p.V2);
+              Exit;
+            end;
         end;
     w7taskbar.Tag := 0;
     if mf.Active then
     begin
       w7taskbar.State := tbpsNone;
-      w7taskbar.SetProgress(0,100);
-    end else
+      w7taskbar.SetProgress(0, 100);
+    end
+    else
     begin
       w7taskbar.State := tbpsError;
-      w7taskbar.SetProgress(100,100);
+      w7taskbar.SetProgress(100, 100);
     end;
   end;
 
-{  t := TMycxTabSheet(Msg.WParam);
-  t.SetIcon(0); }
+  { t := TMycxTabSheet(Msg.WParam);
+    t.SetIcon(0); }
 end;
 
 procedure Tmf.UPDATECHECK(var Msg: TMessage);
 begin
-  lupd.Hide;
-  case MSG.WParam of
-    0: CheckUpdates;
+  lUPD.Hide;
+  case Msg.WParam of
+    0:
+      CheckUpdates;
     1:
-      if MessageDLG(lang('_NEWUPDATES_'),mtConfirmation,[mbYes,mbNo],0) = mrYes then
+      if MessageDlg(lang('_NEWUPDATES_'), mtConfirmation, [mbYes, mbNo], 0)
+        = mrYes then
         StartUpdate;
-  end;
-  ;
+  end;;
 end;
 
 procedure Tmf.updateTab;
 begin
-  //EXIT;
+  // EXIT;
 
-  if (pcTables.ActivePage <> nil) and (pcTables.ActivePage is TMycxtabSheet) then
+  if (pcTables.ActivePage <> nil) and
+    (pcTables.ActivePage is TMycxTabSheet) then
   begin
-    if (TMycxtabSheet(pcTables.ActivePage).SecondFrame is TfNewList) then
+    if (TMycxTabSheet(pcTables.ActivePage).SecondFrame is TfNewList) then
     begin
-      //pcTables.Options := pcTables.Options + [pcoCloseButton];
+      // pcTables.Options := pcTables.Options + [pcoCloseButton];
       bbStartList.Caption := lang('_STARTLIST_');
       bbStartList.ImageIndex := 3;
       bbStartPics.Caption := lang('_STARTPICS_');
@@ -950,114 +972,120 @@ begin
       bbStartPics.Enabled := false;
       dsTags.Hide;
     end
-    else if (TMycxtabSheet(pcTables.ActivePage).MainFrame is TfGrid) then
-    with (TMycxtabSheet(pcTables.ActivePage).MainFrame as TfGrid) do
-    begin
-      //dsTags.Show;
-      if ResList.ListFinished then
+    else if (TMycxTabSheet(pcTables.ActivePage).MainFrame is tfGrid) then
+      with (TMycxTabSheet(pcTables.ActivePage).MainFrame as tfGrid) do
       begin
-        bbStartList.Caption := lang('_STARTLIST_');
-        bbStartList.ImageIndex := 3;
-        bbStartPics.Enabled := true;
-      end else
-      begin
-        bbStartList.Caption := lang('_STOPLIST_');
-        bbStartList.ImageIndex := 4;
-        bbStartPics.Enabled := false;
-      end;
-      bbStartList.Enabled := true;
-      //bbStartPics.Enabled := true;
+        // dsTags.Show;
+        if ResList.ListFinished then
+        begin
+          bbStartList.Caption := lang('_STARTLIST_');
+          bbStartList.ImageIndex := 3;
+          bbStartPics.Enabled := true;
+          // Barmanager.sh
+          // BalloonHint.ShowHint();
+          // bmbMain.ItemLinks[2].
 
-      if ResList.PicsFinished then
-      begin
-        bbStartPics.Caption := lang('_STARTPICS_');
-        bbStartPics.ImageIndex := 5;
+        end
+        else
+        begin
+          bbStartList.Caption := lang('_STOPLIST_');
+          bbStartList.ImageIndex := 4;
+          bbStartPics.Enabled := false;
+        end;
         bbStartList.Enabled := true;
-      end else
-      begin
-        bbStartPics.Caption := lang('_STOPPICS_');
-        bbStartPics.ImageIndex := 6;
-        bbStartList.Enabled := false;
-      end;
-      //bbStartList.Enabled := true;
+        // bbStartPics.Enabled := true;
 
-      //pcTables.Options := pcTables.Options + [pcoCloseButton];
+        if ResList.PicsFinished then
+        begin
+          bbStartPics.Caption := lang('_STARTPICS_');
+          bbStartPics.ImageIndex := 5;
+          bbStartList.Enabled := true;
+        end
+        else
+        begin
+          bbStartPics.Caption := lang('_STOPPICS_');
+          bbStartPics.ImageIndex := 6;
+          bbStartList.Enabled := false;
+        end;
+        // bbStartList.Enabled := true;
 
-      if not dsTags.AutoHide then
-        dsTags.Show;
+        // pcTables.Options := pcTables.Options + [pcoCloseButton];
 
-{      Screen.Cursor := crHourGlass;
-      try
-        vd.Open;
-      finally
-        Screen.Cursor := crDefault;
-      end;  }
-      UpdateFocusedRecord;
-      ChangeResInfo;
-      //ChangeTags;
-      //sBar.Panels[1].Text := 'TTL ' + IntToStr(vGrid.DataController.RecordCount);
-    end else
+        if not dsTags.AutoHide then
+          dsTags.Show;
+
+        { Screen.Cursor := crHourGlass;
+          try
+          vd.Open;
+          finally
+          Screen.Cursor := crDefault;
+          end; }
+        UpdateFocusedRecord(vGrid.Controller.FocusedRow);
+        ChangeResInfo;
+        // ChangeTags;
+        // sBar.Panels[1].Text := 'TTL ' + IntToStr(vGrid.DataController.RecordCount);
+      end
+    else
     begin
-      //dsTags.Hide;
+      // dsTags.Hide;
       bbStartList.Caption := lang('_STARTLIST_');
       bbStartPics.Caption := lang('_STARTPICS_');
       bbStartList.Enabled := false;
       bbStartPics.Enabled := false;
-      //pcTables.Options := pcTables.Options - [pcoCloseButton];
+      // pcTables.Options := pcTables.Options - [pcoCloseButton];
       dsTags.Hide;
     end;
   end;
 end;
 
 procedure Tmf.STARTJOB(var Msg: TMessage);
-{var
-  t: TMycxTabSheet;  }
+{ var
+  t: TMycxTabSheet; }
 begin
   updateTab;
   if assigned(w7taskbar) and (w7taskbar.Tag = 0) then
   begin
-    w7taskbar.Tag := msg.WParam;
-    w7taskbar.SetProgress(0,100);
-    case msg.LParam of
-      0: w7taskbar.State := tbpsIndeterminate;
-      1: w7taskbar.State := tbpsNormal;
+    w7taskbar.Tag := Msg.WParam;
+    w7taskbar.SetProgress(0, 100);
+    case Msg.LParam of
+      0:
+        w7taskbar.State := tbpsIndeterminate;
+      1:
+        w7taskbar.State := tbpsNormal;
     end;
   end;
 
-{  t := TMycxTabSheet(Msg.WParam);
-  t.SetIcon(0,15,true); }
+  { t := TMycxTabSheet(Msg.WParam);
+    t.SetIcon(0,15,true); }
 end;
 
 procedure Tmf.LANGUAGECHANGED(var Msg: TMessage);
 var
-  i: integer;
+  i: Integer;
 begin
-  //LoadLang(IncludeTrailingPathDelimiter(ExtractFilePath(paramstr(0))
-  //+ 'languages') + langname+'.ini');
-  CreateLangINI(IncludeTrailingPathDelimiter(ExtractFilePath(paramstr(0))
-  + 'languages') + langname+'.ini');
+  // LoadLang(IncludeTrailingPathDelimiter(ExtractFilePath(paramstr(0))
+  // + 'languages') + langname+'.ini');
+  CreateLangINI(IncludeTrailingPathDelimiter(ExtractFilePath(paramstr(0)) +
+    'languages') + langname + '.ini');
 
-  SetLang;
+  Setlang;
 
-  for i := 0 to pcTables.PageCount-1 do
-    if pcTables.Pages[i] is tMycxTabSheet then
-      with (pcTables.Pages[i] as tMycxTabSheet) do
+  for i := 0 to pcTables.PageCount - 1 do
+    if pcTables.Pages[i] is TMycxTabSheet then
+      with (pcTables.Pages[i] as TMycxTabSheet) do
       begin
-        if Assigned(MainFrame) then
+        if assigned(MainFrame) then
           if MainFrame is tfGrid then
-            (MainFrame as tfGrid).SetLang
-          else if MainFrame is tfNewList then
-            (MainFrame as tfNewList).SetLang
-          else if MainFrame is tfSettings then
-            (MainFrame as tfSettings).SetLang;
-        if Assigned(SecondFrame) then
-          if SecondFrame is tfNewList then
-            (SecondFrame as tfNewList).SetLang;
+            (MainFrame as tfGrid).Setlang else if MainFrame is TfNewList then
+              (MainFrame as TfNewList).Setlang else if MainFrame is TfSettings
+            then (MainFrame as TfSettings).Setlang;
+        if assigned(SecondFrame) then
+          if SecondFrame is TfNewList then
+            (SecondFrame as TfNewList).Setlang;
       end;
 
-  if Assigned(SttPanel) then
+  if assigned(SttPanel) then
     SttPanel.Caption := lang('_SETTINGS_');
-
 
 end;
 
@@ -1078,16 +1106,17 @@ begin
       nvTags.View := 15;
       nvCur.View := 15;
       dxSkinController.UseSkins := true;
-      //TdxNavBarSkinNavPanePainter(nvTags).SkinName := dxSkinController.SkinName;
-      //TdxNavBarSkinNavPanePainter(nvCur).SkinName := dxSkinController.SkinName;
+      // TdxNavBarSkinNavPanePainter(nvTags).SkinName := dxSkinController.SkinName;
+      // TdxNavBarSkinNavPanePainter(nvCur).SkinName := dxSkinController.SkinName;
     finally
       nvTags.EndUpdate;
       nvCur.EndUpdate;
     end;
-  end else
+  end
+  else
   begin
     dxSkinController.UseSkins := false;
-    nvTags.View:= 3;
+    nvTags.View := 3;
     nvCur.View := 3;
   end;
 end;
@@ -1099,56 +1128,57 @@ end;
 
 procedure Tmf.WREFRESHPIC(var Msg: TMessage);
 begin
-  PicInfo(TObject(Msg.WParam),TTPicture(Msg.LParam));
+  PicInfo(TObject(Msg.WParam), TTPicture(Msg.LParam));
 end;
 
 procedure Tmf.MENUSTYLECHANGED(var Msg: TMessage);
 var
-  i,j: integer;
+  i, j: Integer;
 begin
   if GlobalSettings.MenuCaptions then
   begin
-    for i := 0 to BarManager.ItemCount-1 do
-      if BarManager.Items[i] is tdxBarButton then
-        (BarManager.Items[i] as tdxBarButton).PaintStyle := psCaptionGlyph
-      else if BarManager.Items[i] is tdxBarSubItem  then
-        (BarManager.Items[i] as tdxBarSubItem).ShowCaption := true;
+    for i := 0 to BarManager.ItemCount - 1 do
+      if BarManager.Items[i] is TdxBarButton then
+        (BarManager.Items[i] as TdxBarButton).PaintStyle :=
+          psCaptionGlyph else if BarManager.Items[i] is tdxBarSubItem then
+          (BarManager.Items[i] as tdxBarSubItem).ShowCaption := true;
 
-    for j := 0 to pcTables.PageCount-1 do
-    if pcTables.Pages[j] is tMycxTabSheet then
-      with (pcTables.Pages[j] as tMycxTabSheet) do
-      begin
-        if Assigned(MainFrame) then
-          if MainFrame is tfGrid then
-            (MainFrame as tfGrid).SetMenus;
-{            for i := 0 to (MainFrame as tfGrid).BarManager.ItemCount -1 do
+      for j := 0 to pcTables.PageCount - 1 do
+        if pcTables.Pages[j] is TMycxTabSheet then
+          with (pcTables.Pages[j] as TMycxTabSheet) do
+          begin
+            if assigned(MainFrame) then
+              if MainFrame is tfGrid then
+                (MainFrame as tfGrid).SetMenus;
+            { for i := 0 to (MainFrame as tfGrid).BarManager.ItemCount -1 do
               if (MainFrame as tfGrid).BarManager.Items[i] is tdxBarButton then
-                ((MainFrame as tfGrid).BarManager.Items[i] as tdxBarButton).PaintStyle := psCaptionGlyph
+              ((MainFrame as tfGrid).BarManager.Items[i] as tdxBarButton).PaintStyle := psCaptionGlyph
               else if (MainFrame as tfGrid).BarManager.Items[i] is tdxBarSubItem  then
-                ((MainFrame as tfGrid).BarManager.Items[i] as tdxBarSubItem).ShowCaption := true;                      }
-      end;
+              ((MainFrame as tfGrid).BarManager.Items[i] as tdxBarSubItem).ShowCaption := true; }
+          end;
 
-  end else
+  end
+  else
   begin
-    for i := 0 to BarManager.ItemCount-1 do
-      if BarManager.Items[i] is tdxBarButton then
-        (BarManager.Items[i] as tdxBarButton).PaintStyle := psStandard
-      else if BarManager.Items[i] is tdxBarSubItem  then
-        (BarManager.Items[i] as tdxBarSubItem).ShowCaption := false;
+    for i := 0 to BarManager.ItemCount - 1 do
+      if BarManager.Items[i] is TdxBarButton then
+        (BarManager.Items[i] as TdxBarButton).PaintStyle :=
+          psStandard else if BarManager.Items[i] is tdxBarSubItem then
+          (BarManager.Items[i] as tdxBarSubItem).ShowCaption := false;
 
-    for j := 0 to pcTables.PageCount-1 do
-    if pcTables.Pages[j] is tMycxTabSheet then
-      with (pcTables.Pages[j] as tMycxTabSheet) do
-      begin
-        if Assigned(MainFrame) then
-          if MainFrame is tfGrid then
-            (MainFrame as tfGrid).SetMenus;
-{            for i := 0 to (MainFrame as tfGrid).BarManager.ItemCount -1 do
+      for j := 0 to pcTables.PageCount - 1 do
+        if pcTables.Pages[j] is TMycxTabSheet then
+          with (pcTables.Pages[j] as TMycxTabSheet) do
+          begin
+            if assigned(MainFrame) then
+              if MainFrame is tfGrid then
+                (MainFrame as tfGrid).SetMenus;
+            { for i := 0 to (MainFrame as tfGrid).BarManager.ItemCount -1 do
               if (MainFrame as tfGrid).BarManager.Items[i] is tdxBarButton then
-                ((MainFrame as tfGrid).BarManager.Items[i] as tdxBarButton).PaintStyle := psStandard
+              ((MainFrame as tfGrid).BarManager.Items[i] as tdxBarButton).PaintStyle := psStandard
               else if (MainFrame as tfGrid).BarManager.Items[i] is tdxBarSubItem  then
-                ((MainFrame as tfGrid).BarManager.Items[i] as tdxBarSubItem).ShowCaption := false;  }
-      end;
+              ((MainFrame as tfGrid).BarManager.Items[i] as tdxBarSubItem).ShowCaption := false; }
+          end;
   end;
 end;
 
@@ -1157,34 +1187,34 @@ var
   p: PDUInt64;
 begin
   if assigned(w7taskbar) then
-    if msg.WParam = w7taskbar.Tag then
+    if Msg.WParam = w7taskbar.Tag then
     begin
-      p := PDUInt64(msg.LParam);
-      w7taskbar.SetProgress(p.V1,p.V2);
+      p := PDUInt64(Msg.LParam);
+      w7taskbar.SetProgress(p.V1, p.V2);
     end;
 end;
 
 procedure Tmf.StartUpdate;
 var
   f: tfileStream;
-  //r: tresourcestream;
+  // r: tresourcestream;
 begin
-  f := tfilestream.Create(IncludeTrailingPathDelimiter(rootdir)
-    + 'NPUpdater.exe',fmCreate);
+  f := tfileStream.Create(IncludeTrailingPathDelimiter(rootdir) +
+    'NPUpdater.exe', fmCreate);
   try
-    //r := tresourcestream.Create(hInstance,'ZUPDATER','UPDATER');
-    //try
-    //  r.SaveToStream(f);
-    //finally
-    //  r.Free;
-    //end;
-    LoadFromRes(f,'ZUPDATER','UPDATER');
+    // r := tresourcestream.Create(hInstance,'ZUPDATER','UPDATER');
+    // try
+    // r.SaveToStream(f);
+    // finally
+    // r.Free;
+    // end;
+    LoadFromRes(f, 'ZUPDATER');
   finally
     f.Free;
   end;
 
-  ShellExecute(Handle, 'open',PWidechar(IncludeTrailingPathDelimiter(rootdir)
-    + 'NPUpdater.exe'), nil, nil, SW_SHOWNORMAL);
+  ShellExecute(Handle, 'open', PWidechar(IncludeTrailingPathDelimiter(rootdir) +
+    'NPUpdater.exe'), nil, nil, SW_SHOWNORMAL);
   Close;
 end;
 
@@ -1193,9 +1223,9 @@ begin
   fmAbout.Show;
 end;
 
-function Tmf.CloseAllTabs: boolean;
+function Tmf.CloseAllTabs: Boolean;
 var
-  i: integer;
+  i: Integer;
 begin
   i := pcTables.PageCount;
   while i > 0 do
@@ -1204,8 +1234,9 @@ begin
     if pcTables.PageCount = i then
     begin
       Result := false;
-      exit;
-    end else
+      Exit;
+    end
+    else
       i := pcTables.PageCount;
   end;
   Result := true;
@@ -1218,26 +1249,26 @@ begin
   // pcTables.Tabs
   if t is TMycxTabSheet then
   begin
-    f := (t as tMycxTabSheet).MainFrame;
-    if f is TfGrid then
-    with (f as TfGrid) do
-      if not ResList.ListFinished
-      or not ResList.PicsFinished then
-      begin
-        MessageDlg(lang('_TAB_IS_BUSY_'),mtError,[mbOk],0);
-        Exit;
-      end else
-        Relise;
-    if (t as tMycxTabSheet).SecondFrame is tfNewList then
+    f := (t as TMycxTabSheet).MainFrame;
+    if f is tfGrid then
+      with (f as tfGrid) do
+        if not ResList.ListFinished or not ResList.PicsFinished then
+        begin
+          MessageDlg(lang('_TAB_IS_BUSY_'), mtError, [mbOk], 0);
+          Exit;
+        end
+        else
+          Relise;
+    if (t as TMycxTabSheet).SecondFrame is TfNewList then
     begin
       FullResList.OnError := OnError;
       FullResList.OnJobChanged := nil;
     end;
-{    f := (t as tMycxTabSheet).MainFrame;
-    if f is TfNewList then
-    begin
+    { f := (t as tMycxTabSheet).MainFrame;
+      if f is TfNewList then
+      begin
       PostMessage(Handle, CM_CANCELNEWLIST, Integer(t), 0)
-    end;      }
+      end; }
     FreeAndNil(f);
   end;
 
@@ -1251,17 +1282,17 @@ begin
     HideDs;
 end;
 
-function Tmf.CreateTab(pc: TcxPageControl; Enc: boolean): TMycxTabSheet;
+function Tmf.CreateTab(pc: TcxPageControl; Enc: Boolean): TMycxTabSheet;
 var
   n: TMycxTabSheet;
 
 begin
-  if Assigned(mFrame) then
+  if assigned(mFrame) then
     FreeAndNil(mFrame);
 
   n := TMycxTabSheet.Create(Self);
-  //n.ImageIndex := 0;
-  n.Caption := lang('_NEWTABCAPTION_') + IntToStr(TabList.Count + 1);
+  // n.ImageIndex := 0;
+  n.Caption := lang('_NEWTABCAPTION_') + IntTOStr(TabList.Count + 1);
   // n.OnClose := dxTabClose;
   // n.Dockable := false;
   // n.ShowCaption := false;
@@ -1273,8 +1304,8 @@ begin
 
   if Enc then
   begin
-//    pc.Change;
-    TabList.Add(n);
+    // pc.Change;
+    TabList.add(n);
   end;
   Result := n;
 
@@ -1283,35 +1314,25 @@ end;
 
 procedure Tmf.DoPicInfo(Sender: TObject; a: TTPicture);
 begin
-  PostMessage(Handle,CM_REFRESHPIC,Integer(Sender),Integer(a));
+  PostMessage(Handle, CM_REFRESHPIC, Integer(Sender), Integer(a));
 end;
 
 procedure Tmf.DoRefreshResInfo(Sender: TObject);
 begin
-  PostMessage(Handle,CM_REFRESHRESINFO,0,Integer(Sender));
+  PostMessage(Handle, CM_REFRESHRESINFO, 0, Integer(Sender));
 end;
-
-procedure Tmf.dxBarButton1Click(Sender: TObject);
-begin
-
-end;
-
-{procedure Tmf.dxTabClose(Sender: TdxCustomDockControl);
-begin
-  PostMessage(Application.MainForm.Handle, CM_CLOSETAB, integer(Sender), 0);
-end;   }
 
 procedure Tmf.Setlang;
 begin
-  {$IFDEF NEKODEBUG}
-  Caption := FoldCaption + ' ' + VINFO.FileVersion + 'α debug';
-  {$ELSE}
-    {$IFDEF NEKOLOG}
-    Caption := FoldCaption + ' ' + VINFO.FileVersion + 'α log';
-    {$ELSE}
-    Caption := FoldCaption + ' ' + VINFO.FileVersion + 'α';
-    {$ENDIF}
-  {$ENDIF}
+{$IFDEF NEKODEBUG}
+  Caption := FOldCaption + ' ' + vINFO.FileVersion + 'α debug';
+{$ELSE}
+{$IFDEF NEKOLOG}
+  Caption := FOldCaption + ' ' + vINFO.FileVersion + 'α log';
+{$ELSE}
+  Caption := FOldCaption + ' ' + vINFO.FileVersion + 'α';
+{$ENDIF}
+{$ENDIF}
   bbNew.Caption := lang('_NEWLIST_');
   bbStartList.Caption := lang('_STARTLIST_');
   bbStartPics.Caption := lang('_STARTPICS_');
@@ -1324,6 +1345,36 @@ begin
   nbgTagsMain.Caption := lang('_GENERAL_');
   nbgCurTags.Caption := lang('_TAGS_');
   nbgTagsTags.Caption := lang('_TAGS_');
+end;
+
+procedure Tmf.ShowBalloon;
+var
+  p: TPoint;
+
+begin
+//  Bhint.Title := 'herp';
+//  Bhint.Description := 'derp';
+//  Bhint.ShowHint(ClientToScreen(bmbMain.ItemLinks[2].ItemRect.BottomRight));
+  if Assigned(FBalloon) then
+  begin
+    FBalloon.Hide;
+    FBalloon.Free;
+  end;
+
+  FBalloon := TBalloon.CreateNew(self);
+  FBalloon.OnExitTimer := OnBalloonExitTimer;
+
+  p.X := bmbMain.ItemLinks[2].ItemRect.Left + 15;
+  p.Y := bmbMain.ItemLinks[2].ItemRect.Bottom - 10;
+  p := ClientToScreen(p);
+  FBalloon := TBalloon.CreateNew(Self);
+  FBalloon.ShowBalloon(
+    p.X,p.Y,
+    lang('_HINT_STARTDOWNLOAD_TITLE_'),
+    lang('_HINT_STARTDOWNLOAD_DESCRIPTION_'),
+    blnNone,5,
+    blnArrowBottomRight
+  );
 end;
 
 procedure Tmf.ShowDs;
@@ -1341,7 +1392,7 @@ begin
   if not bmbMain.Visible then
     bmbMain.Visible := true;
   pcTables.Change;
-  PicInfo(nil,nil);
+  PicInfo(nil, nil);
   if not dsLogs.AutoHide then
     dsLogs.Visible := true;
 end;
@@ -1352,7 +1403,7 @@ var
   f: TfSettings;
 
 begin
-  if Assigned(SttPanel) then
+  if assigned(SttPanel) then
   begin
     pcTables.ActivePage := SttPanel;
     Exit;
@@ -1360,11 +1411,10 @@ begin
 
   if pcTables.PageCount = 0 then
   begin
-    pcTables.HideTabs :=  true;
-    //dpLog.Visible := false;
-    //dpErrors.Visible := false;
+    pcTables.HideTabs := true;
+    // dpLog.Visible := false;
+    // dpErrors.Visible := false;
   end;
-
 
   SttPanel := CreateTab(pcTables, false);
   SttPanel.ImageIndex := 1;
@@ -1372,17 +1422,17 @@ begin
 
   f := TfSettings.Create(SttPanel);
   FullResList.OnError := f.OnErrorEvent;
-  FulLResList.OnJobChanged := f.JobStatus;
+  FullResList.OnJobChanged := f.JobStatus;
   f.OnError := OnError;
-  f.SetLang;
+  f.Setlang;
   f.CreateResources;
-{  dxSkinController.
-  f.cbSkin.Properties.Items.Assign();   }
+  { dxSkinController.
+    f.cbSkin.Properties.Items.Assign(); }
   f.LoadSettings;
-{  f.GetLanguages;
+  { f.GetLanguages;
 
-  with f, GlobalSettings do
-  begin
+    with f, GlobalSettings do
+    begin
     chbProxy.Checked := Proxy.UseProxy;
     eHost.Text := Proxy.Host;
     ePort.Value := Proxy.Port;
@@ -1399,11 +1449,11 @@ begin
     eThreadPerRes.EditValue := Downl.PerResThreads;
     ePicThreads.EditValue := Downl.PicThreads;
 
-  end;                }
+    end; }
 
-  //f.Tag := integer(SttPanel);
+  // f.Tag := integer(SttPanel);
   SttPanel.MainFrame := f;
-  //SttPanel.Tag := integer(f);
+  // SttPanel.Tag := integer(f);
   f.ResetButons;
   f.Parent := SttPanel;
   ShowDs;
@@ -1411,36 +1461,43 @@ end;
 
 procedure Tmf.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  GlobalSettings.GUI.FormState := WindowState <> wsNormal;
-  GlobalSettings.GUI.PanelPage := dsTags.ActiveChildIndex;
-  GlobalSettings.GUI.PanelWidth := dsTags.Width;
-  SaveGUISettings([gvSizes]);
+  try
+    GlobalSettings.GUI.FormState := WindowState <> wsNormal;
+    GlobalSettings.GUI.PanelPage := dsTags.ActiveChildIndex;
+    GlobalSettings.GUI.PanelWidth := dsTags.Width;
+    SaveGUISettings([gvSizes]);
+  except
+  end;
 end;
 
 procedure Tmf.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 begin
-  CanClose := CloseAllTabs;
+  try
+    CanClose := CloseAllTabs;
+  except
+  end;
 end;
 
 procedure Tmf.FormCreate(Sender: TObject);
 var
-  tmp: tMessage;
+  tmp: TMessage;
 begin
   FOldCaption := Caption;
-{  if GlobalSettings.UseLookAndFeel then
-    dxSkinController.NativeStyle := true;  }
-  Self.SetBounds(Left,Top,Globalsettings.GUI.FormWidth,
-                          Globalsettings.GUI.FormHeight);
+  { if GlobalSettings.UseLookAndFeel then
+    dxSkinController.NativeStyle := true; }
+  Self.SetBounds(Left, Top, GlobalSettings.GUI.FormWidth,
+    GlobalSettings.GUI.FormHeight);
   dsTags.ActiveChildIndex := GlobalSettings.GUI.PanelPage;
   dsTags.Width := GlobalSettings.GUI.PanelWidth;
-  StyleChanged(tmp);
-  //ClientWidth := Globalsettings.GUI.FormWidth;
-  //ClientHeight := Globalsettings.GUI.FormHeight;
-  if Globalsettings.GUI.FormState then
+  STYLECHANGED(tmp);
+  // ClientWidth := Globalsettings.GUI.FormWidth;
+  // ClientHeight := Globalsettings.GUI.FormHeight;
+  if GlobalSettings.GUI.FormState then
     WindowState := wsMaximized;
 
-  SetLang;
-  //pcTables.OnPageClose := OnTabClose;
+  Setlang;
+  // pcTables.OnPageClose := OnTabClose;
+  FBalloon := nil;
   FullResList.OnError := OnError;
   dsFirstShow := true;
   SttPanel := nil;
@@ -1451,7 +1508,7 @@ begin
   FullResList.DWNLDHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
 
   mFrame := TfStart.Create(Self);
-  (mFrame as TfStart).SetLang;
+  (mFrame as TfStart).Setlang;
   mFrame.Parent := Self;
 
   TabList := TList.Create;
@@ -1461,22 +1518,22 @@ begin
   dsLogs.Hide;
   dsTags.Hide;
   FCurPic := nil;
-  SendMessage(Handle,CM_MENUSTYLECHANGED,0,0);
-  if opbase.ShowSettings then
-    PostMessage(Handle,CM_SHOWSETTINGS,0,0)
+  SendMessage(Handle, CM_MENUSTYLECHANGED, 0, 0);
+  if OpBase.SHOWSETTINGS then
+    PostMessage(Handle, CM_SHOWSETTINGS, 0, 0)
   else if GlobalSettings.AutoUPD then
-    PostMessage(Handle,CM_UPDATE,0,0);
+    PostMessage(Handle, CM_UPDATE, 0, 0);
   if GlobalSettings.ShowWhatsNew and GlobalSettings.IsNew then
-    PostMessage(Handle,CM_WHATSNEW,0,0);
+    PostMessage(Handle, CM_WHATSNEW, 0, 0);
 
-  //CheckUpdates;
+  // CheckUpdates;
 end;
 
 procedure Tmf.FormDestroy(Sender: TObject);
 begin
-  if Assigned(mFrame) then
+  if assigned(mFrame) then
     mFrame.Free;
-  if Assigned(SttPanel) then
+  if assigned(SttPanel) then
     SttPanel.Free;
   TabList.Free;
   FCookie.Free;
@@ -1484,10 +1541,8 @@ end;
 
 procedure Tmf.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  if (Shift = [ssCtrl])
-  and (key = $57 {W})
-  and (pcTables.ActivePageIndex <> -1)
-  and (SttPanel <> pcTables.ActivePage) then
+  if (Shift = [ssCtrl]) and (Key = $57 { W } ) and
+    (pcTables.ActivePageIndex <> -1) and (SttPanel <> pcTables.ActivePage) then
     CloseTab(pcTables.ActivePage);
 end;
 
@@ -1500,12 +1555,12 @@ begin
   end;
 end;
 
-{procedure Tmf.gLevel2GetGridView(Sender: TcxGridLevel;
+{ procedure Tmf.gLevel2GetGridView(Sender: TcxGridLevel;
   AMasterRecord: TcxCustomGridRecord; var AGridView: TcxCustomGridView);
 
-begin
+  begin
   PostMessage(Handle, CM_EXPROW, integer(AMasterRecord), integer(AGridView));
-end;            }
+  end; }
 
 procedure Tmf.HideDs;
 begin
@@ -1519,7 +1574,7 @@ begin
     dpLog.Visible := true;
     dpErrors.Visible := true;
     mFrame := TfStart.Create(Self);
-    (mFrame as TfStart).SetLang;
+    (mFrame as TfStart).Setlang;
     mFrame.Parent := Self;
   end;
 end;

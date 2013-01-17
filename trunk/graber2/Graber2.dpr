@@ -30,7 +30,8 @@ uses
   PathEditorForm in 'PathEditorForm.pas' {fPathEditor},
   NewDoublesRuleForm in 'NewDoublesRuleForm.pas' {fmDoublesNewRule},
   cxmymultirow in 'cxmymultirow.pas',
-  win7taskbar in 'win7taskbar.pas';
+  win7taskbar in 'win7taskbar.pas',
+  Balloon in 'Balloon.pas';
 
 {$R *.res}
 
