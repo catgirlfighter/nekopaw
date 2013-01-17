@@ -23,6 +23,8 @@ function RadioGroupDlg(ACaption, AHint: String;
   AItems: array of String): Integer;
 function DeleteTo(s: String; subs: string; casesens: boolean = true;
   re: boolean = false): string;
+function DeleteBackTo(s: String; subs: string; casesens: boolean = true;
+  re: boolean = false): string;
 function DeleteFromTo(s, sub1, sub2: String; casesens: boolean = true;
   recursive: boolean = false): String;
 function GetBtString(n: Extended): string;
@@ -52,7 +54,7 @@ function IndexOfStr(list: tstrings; value: string): integer; overload;
 procedure DrawImage(AImage: TImage; AStream: TStream; Ext: String);
 procedure DrawImageFromRes(AImage: TImage; ResName, Ext: String);
 procedure LoadFromRes(ABitmap: TBitmap; ResName: String); overload;
-procedure LoadFromRes(AStream: TStream; ResName: String; TypeName: String); overload;
+procedure LoadFromRes(AStream: TStream; ResName: String); overload;
 procedure WriteLWToPChar(n: LongWord; p: PChar);
 function ReadLWFromPChar(p: PChar): LongWord;
 function PngToIcon(const Png: TPngImage; Background: TColor = clNone): HICON;
@@ -80,6 +82,8 @@ function ifn(b: boolean; thn, els: variant): variant;
 function DeleteEx(S: String; Index,Count: integer): String;
 procedure SaveStrToFile(S, FileName: String; Add: boolean = false);
 function GreatestCommonFactor(a,b: Word): Word;
+procedure AddSorted(Value: String; List: TStrings);
+procedure RemSorted(Value: String; List: TStrings);
 //function BatchReplaceStr(AText: String; AFromText,AToText: Array Of String): String;
 //function ReplaceStrMask(AText,AMaskText,AFromText,AToText: String): String;
 
@@ -88,7 +92,7 @@ implementation
 const
   _SYMBOL_MISSED_ = 'Can''t find symbol "%s" for #%d "%s" in "%s"';
   _OPERATOR_MISSED_ = 'Must be an operator instead of "%s" in "%s"';
-  _OPERAND_MISSED_ = 'Must be an oparand instead of "%s" in "%s"';
+  _OPERAND_MISSED_ = 'Must be an operand instead of "%s" in "%s"';
   _INVALID_TYPECAST_ = 'Invalid typecast for "%s" %s "%s" near #%d in "%s"';
   _INCORRECT_SYMBOL_ = 'Incorrect value "%s" near #%d in "%s"';
 
@@ -619,6 +623,14 @@ begin
     Result := s;
 end;
 
+function DeleteBackTo(s: String; subs: string; casesens: boolean = true;
+  re: boolean = false): string;
+begin
+  s := ReverseString(s);
+  subs := ReverseString(subs);
+  Result := ReverseString(DeleteTo(s,subs,casesens,re));
+end;
+
 function diff(n1, n2: Extended): Extended;
 begin
   if n2 = 0 then
@@ -1051,7 +1063,7 @@ begin
   end;
 end;
 
-procedure LoadFromRes(AStream: TStream; ResName: String; TypeName: String);
+procedure LoadFromRes(AStream: TStream; ResName: String);
 var
   F: TResourceStream;
 begin
@@ -1680,7 +1692,10 @@ const
                     else
                       Result := Result <> d
                   else
-                    Result := not Result;
+                  begin
+                    Result := not Boolean(d);
+                    op := true;
+                  end;
               end;
 
               if (ls <> null) then
@@ -2058,6 +2073,81 @@ begin
 
   Result := b;
 
+end;
+
+procedure AddSorted(Value: String; List: TStrings);
+var
+  Hi, Lo, index: integer;
+
+begin
+  if List.Count = 0 then
+  begin
+    List.Add(Value);
+    Exit;
+  end;
+
+  Hi := List.Count;
+  Lo := 0;
+  index := Hi div 2;
+
+  try
+    while (Hi - Lo) > 0 do
+    begin
+      if SameText(Value,List[index]) then
+        Break
+      else if lowercase(Value) < lowercase(List[index]) then
+        Hi := index - 1
+      else
+        Lo := index + 1;
+
+      index := Lo + ((Hi - Lo) div 2);
+    end;
+
+    if (index < List.Count) and (lowercase(Value) > lowercase(List[index])) then
+      inc(index);
+
+    if (index >= List.Count) or not SameText(Value, List[index]) then
+      List.Insert(index,Value);
+  except
+    on e: Exception do
+      raise Exception.Create(e.Message + ' (value = ' + Value + ')');
+  end;
+end;
+
+procedure RemSorted(Value: String; List: TStrings);
+var
+  Hi, Lo, index: integer;
+
+begin
+  if List.Count = 0 then
+    Exit;
+
+  Hi := List.Count;
+  Lo := 0;
+  index := Hi div 2;
+
+  try
+    while (Hi - Lo) > 0 do
+    begin
+      if SameText(Value,List[index]) then
+        Break
+      else if lowercase(Value) < lowercase(List[index]) then
+        Hi := index - 1
+      else
+        Lo := index + 1;
+
+      index := Lo + ((Hi - Lo) div 2);
+    end;
+
+    if (index < List.Count) and (lowercase(Value) > lowercase(List[index])) then
+      inc(index);
+
+    if (index < List.Count) and SameText(Value, List[index]) then
+      List.Delete(index);
+  except
+    on e: Exception do
+      raise Exception.Create(e.Message + ' (value = ' + Value + ')');
+  end;
 end;
 
 end.

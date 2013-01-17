@@ -18,26 +18,7 @@ object fGrid: TfGrid
     Height = 258
     Align = alClient
     TabOrder = 0
-    object vChilds: TcxGridDBTableView
-      DataController.Summary.DefaultGroupSummaryItems = <>
-      DataController.Summary.FooterSummaryItems = <>
-      DataController.Summary.SummaryGroups = <>
-    end
-    object vGrid1: TcxGridDBTableView
-      OnFocusedRecordChanged = vGrid1FocusedRecordChanged
-      DataController.Summary.DefaultGroupSummaryItems = <
-        item
-          Kind = skCount
-          DisplayText = 'Count:'
-        end>
-      DataController.Summary.FooterSummaryItems = <>
-      DataController.Summary.SummaryGroups = <>
-      OptionsData.Deleting = False
-      OptionsData.Inserting = False
-      OptionsView.ColumnAutoWidth = True
-      OptionsView.ExpandButtonsForEmptyDetails = False
-      OptionsView.HeaderEndEllipsis = True
-    end
+    OnFocusedViewChanged = GridFocusedViewChanged
     object vGrid: TcxGridTableView
       OnEditValueChanged = vGridEditValueChanged
       OnFocusedItemChanged = vGridFocusedItemChanged
@@ -49,6 +30,7 @@ object fGrid: TfGrid
         end>
       DataController.Summary.FooterSummaryItems = <>
       DataController.Summary.SummaryGroups = <>
+      DataController.OnDetailExpanded = vGridDataControllerDetailExpanded
       OptionsData.CancelOnExit = False
       OptionsData.Deleting = False
       OptionsData.DeletingConfirmation = False
@@ -56,19 +38,27 @@ object fGrid: TfGrid
       OptionsSelection.MultiSelect = True
       OptionsView.ColumnAutoWidth = True
       OptionsView.ExpandButtonsForEmptyDetails = False
-      object vGridColumn1: TcxGridColumn
-      end
     end
     object vChildGrid: TcxGridTableView
+      FilterBox.Visible = fvNever
+      OnEditValueChanged = vChildGridEditValueChanged
+      OnFocusedItemChanged = vChildGridFocusedItemChanged
+      OnFocusedRecordChanged = vGrid1FocusedRecordChanged
       DataController.Summary.DefaultGroupSummaryItems = <>
       DataController.Summary.FooterSummaryItems = <>
       DataController.Summary.SummaryGroups = <>
+      OptionsView.ColumnAutoWidth = True
+      OptionsView.ExpandButtonsForEmptyDetails = False
+      OptionsView.GroupByBox = False
+      OptionsView.Header = False
     end
     object GridLevel1: TcxGridLevel
       GridView = vGrid
       Options.TabsForEmptyDetails = False
+      OnGetGridView = GridLevel2GetGridView
       object GridLevel2: TcxGridLevel
         GridView = vChildGrid
+        OnGetGridView = GridLevel2GetGridView
       end
     end
   end
