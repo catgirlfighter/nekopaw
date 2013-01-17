@@ -1,8 +1,8 @@
-<item file="Graber2.exe" archive="Graber2.zip" version=38 />
+<item file="Graber2.exe" archive="Graber2.zip" version=39 />
 <item file="versionlog.txt" version=-1 />
 
-<item file="resources\danbooru.tmpl" version=17 />
-<item file="resources\gelbooru.tmpl" version=11 />
+<item file="resources\danbooru.tmpl" version=18 />
+<item file="resources\gelbooru.tmpl" version=12 />
 
 <item file="resources\xbooru.com.cfg" version=1 />
 <item file="resources\wildcritters.ws.cfg" version=3 />
@@ -36,6 +36,7 @@
 <item file="resources\twentypercentcooler.net.cfg" version=0 />
 <item file="resources\nihonomaru.com.cfg" version=0 />
 <item file="resources\mangahere.com.cfg" version=1 />
+<item file="resources\pixiv.net.cfg" version=0 />
 
 <item file="resources\oreno.imouto.org.cfg" version=0 deleted=1 />
 <item file="resources\ponibooru.413chan.net.cfg" version=1 deleted=1 />
@@ -71,8 +72,9 @@
 <item file="resources\icons\twentypercentcooler.net.bmp" version=0 />
 <item file="resources\icons\nihonomaru.com.bmp" version=0 />
 <item file="resources\icons\mangahere.com.bmp" version=0 />
+<item file="resources\icons\pixiv.net.bmp" version=0 />
 
 <item file="resources\icons\ponibooru.413chan.net.bmp" version=0 deleted=1 />
 
-<item file="languages\Russian.ini" version=18 />
-<item file="languages\English.ini" version=18 />
+<item file="languages\Russian.ini" version=19 />
+<item file="languages\English.ini" version=19 />
