@@ -721,6 +721,7 @@ type
     function NextJob(Status: integer): TTPicture;
     function NextPostProcJob: TTPicture;
     function eol: Boolean;
+    function posteol: boolean;
     procedure Reset;
     property Cursor: integer read FCursor;
     property PostProccessCursor: integer read FPostCursor;
@@ -2304,6 +2305,15 @@ begin
   end
   else
     FNameFormat := R.NameFormat;
+
+    if VarToStr(FFields['tag']) = '' then
+    begin
+      n := R.Parent.Fields.FindField('tag');
+      if n > -1 then
+        FFields['tag'] := FormatTagString(R.Parent.Fields.Items[n].resvalue,
+          R.Parent.HTTPRec.TagTemplate);
+    end;
+
   FLoginPrompt := R.LoginPrompt;
   FResName := R.Name;
   // fSpacer := R.TagsSpacer;
@@ -2991,6 +3001,12 @@ end;
 
 function TResource.PostProcJobComplete(t: TDownloadThread): integer;
 begin
+  if not Assigned(t.Picture) then
+  begin
+    Result := THREAD_STOP;
+    Exit;
+  end;
+
   if not (t.ReturnValue in [THREAD_COMPLETE,THREAD_FINISH]) or (t.Job = JOB_ERROR) then
     if Assigned(FOnError) then
       FOnError(Self, t.Error);
@@ -3313,7 +3329,7 @@ var
       if (FMode = rmNormal)
       and not Items[i].PictureList.eol
       or (FMode = rmPostProcess)
-      and not (Items[i].PictureList.PostProcessFinished) then
+      and not (Items[i].PictureList.posteol) then
       begin
         Result := i;
         Exit;
@@ -3325,7 +3341,7 @@ var
       if (FMode = rmNormal)
       and not Items[i].PictureList.eol
       or (FMode = rmPostProcess)
-      and not (Items[i].PictureList.PostProcessFinished) then
+      and not (Items[i].PictureList.posteol) then
       begin
         Result := i;
         Exit;
@@ -3351,7 +3367,7 @@ begin
     R := Items[i];
     if (n > R.PicThreadCount)
     and ((FMode = rmNormal) and not R.PictureList.eol
-      or (FMode = rmPostProcess) and not  R.PictureList.PostProcessFinished) then
+      or (FMode = rmPostProcess) and not  R.PictureList.posteol) then
     begin
       if (FMode = rmPostProcess) then
         R.CreatePostProcJob(t)
@@ -3370,7 +3386,7 @@ begin
     R := Items[i];
     if (n > R.PicThreadCount)
     and ((FMode = rmNormal) and not R.PictureList.eol
-      or (FMode = rmPostProcess) and not  R.PictureList.PostProcessFinished) then
+      or (FMode = rmPostProcess) and not  R.PictureList.posteol) then
     begin
       if (FMode = rmPostProcess) then
         R.CreatePostProcJob(t)
@@ -3385,7 +3401,7 @@ begin
   R := Items[FPicQueue];
 
   if (FMode = rmNormal) and not R.PictureList.eol
-  or (FMode = rmPostProcess) and not R.PictureList.PostProcessFinished then
+  or (FMode = rmPostProcess) and not R.PictureList.posteol then
   begin
     if (FMode = rmPostProcess) then
       R.CreatePostProcJob(t)
@@ -3515,7 +3531,7 @@ end;
 function TResourceList.GetPicsFinished: Boolean;
 begin
   Result := (DWNLDHandler.Count = 0)
-    and ((FMode <> rmPostProcess) or (ThreadHandler.Count = 0));
+    or (FMode = rmPostProcess);
 end;
 
 function TResourceList.ItemByName(AName: String): TResource;
@@ -3783,7 +3799,7 @@ begin
         for i := 0 to Count - 1 do
           if not Items[i].PictureList.PostProcessFinished then
           begin
-            StartJob(JobType);
+            Items[i].StartJob(JobType);
             FDwnldHandler.CheckIdle;
           end else if i = FPicQueue then
             inc(FPicQueue);
@@ -4696,8 +4712,11 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
     else if SameText(Name, '@addtag') then
       if Assigned(FPicture) then
         if Job in [JOB_PICS,JOB_POSTPROCESS] then
-          FLPicList.Tags.Add(CalcValue(Value, VE, LinkedObj), FPicture)
-        else
+        begin
+          CSDATA.Enter;
+          FLPicList.Tags.Add(CalcValue(Value, VE, LinkedObj), FPicture);
+          CSDATA.Leave;
+        end else
           FPicList.Tags.Add(CalcValue(Value, VE, LinkedObj), FPicture)
       else
         raise Exception.Create('Picture not assigned')
@@ -6121,6 +6140,12 @@ begin
   Result := not(FCursor < Count);
 end;
 
+function TPictureLinkList.posteol: Boolean;
+begin
+  Result := not(FPostCursor < Count);
+end;
+
+
 // TTPictureList
 
 function TPictureList.Add(APicture: TTPicture; Resource: TResource): integer;
@@ -7049,6 +7074,7 @@ begin
   end;
   New(p);
   p.resname := lowercase(resname);
+  p.restitle := restitle;
   p.restype := restype;
   p.resvalue := resvalue;
   p.resitems := resitems;

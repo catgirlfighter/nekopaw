@@ -233,6 +233,7 @@ public
   procedure AddTag(name: string; add: Boolean);
     procedure ShowBalloon;
     procedure OnBalloonExitTimer(Sender: TObject);
+    procedure HideBalloon;
 
   { Public declarations }
   end;
@@ -466,6 +467,7 @@ procedure Tmf.pcTablesChange(Sender: TObject);
 begin
   updateTab;
   ChangeTags;
+  HideBalloon;
 end;
 
 procedure Tmf.PicInfo(Sender: TObject; a: TTPicture);
@@ -1042,6 +1044,7 @@ procedure Tmf.STARTJOB(var Msg: TMessage);
 { var
   t: TMycxTabSheet; }
 begin
+  HideBalloon;
   updateTab;
   if assigned(w7taskbar) and (w7taskbar.Tag = 0) then
   begin
@@ -1246,7 +1249,8 @@ procedure Tmf.CloseTab(t: TcxTabSheet);
 var
   f: TFrame;
 begin
-  // pcTables.Tabs
+  HideBalloon;
+
   if t is TMycxTabSheet then
   begin
     f := (t as TMycxTabSheet).MainFrame;
@@ -1355,19 +1359,21 @@ begin
 //  Bhint.Title := 'herp';
 //  Bhint.Description := 'derp';
 //  Bhint.ShowHint(ClientToScreen(bmbMain.ItemLinks[2].ItemRect.BottomRight));
+
+  if not Active or not Visible then
+    Exit;
+
   if Assigned(FBalloon) then
   begin
     FBalloon.Hide;
     FBalloon.Free;
   end;
 
-  FBalloon := TBalloon.CreateNew(self);
-  FBalloon.OnExitTimer := OnBalloonExitTimer;
-
   p.X := bmbMain.ItemLinks[2].ItemRect.Left + 15;
   p.Y := bmbMain.ItemLinks[2].ItemRect.Bottom - 10;
   p := ClientToScreen(p);
   FBalloon := TBalloon.CreateNew(Self);
+  FBalloon.OnRelease := OnBalloonExitTimer;
   FBalloon.ShowBalloon(
     p.X,p.Y,
     lang('_HINT_STARTDOWNLOAD_TITLE_'),
@@ -1561,6 +1567,15 @@ end;
   begin
   PostMessage(Handle, CM_EXPROW, integer(AMasterRecord), integer(AGridView));
   end; }
+
+procedure Tmf.HideBalloon;
+begin
+  if Assigned(FBalloon) then
+  begin
+    FBalloon.Release;
+    FBalloon := nil;
+  end;
+end;
 
 procedure Tmf.HideDs;
 begin
