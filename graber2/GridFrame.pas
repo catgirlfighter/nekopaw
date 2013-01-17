@@ -547,7 +547,7 @@ end;
 procedure TfGrid.OnListPicChanged(Pic: TTPicture; Changes: TPicChanges);
 begin
   Pic.Changes := Pic.Changes + Changes;
-  if not ResList.PicsFinished then
+  if updTimer.Enabled then
   begin
     if FChangesList.IndexOf(Pic) = -1 then
       FChangesList.Add(Pic);
@@ -1062,15 +1062,18 @@ var
   i: Integer;
 begin
   vGrid.BeginUpdate;
-  for i := 0 to vGrid.DataController.RecordCount - 1 do
-    if vGrid.DataController.FilteredIndexByRecordIndex[i] = -1 then
-    begin
-      vGrid.DataController.Values[i, FCheckColumn.Index] := false;
-      ResList.PictureList[i].Checked := false;
-    end;
+  try
+    for i := 0 to vGrid.DataController.RecordCount - 1 do
+      if vGrid.DataController.FilteredIndexByRecordIndex[i] = -1 then
+      begin
+        vGrid.DataController.Values[i, FCheckColumn.Index] := false;
+        ResList.PictureList[i].Checked := false;
+      end;
 
-  vGrid.DataController.Post(true);
-  vGrid.EndUpdate;
+    vGrid.DataController.Post(true);
+  finally
+    vGrid.EndUpdate;
+  end;
 end;
 
 procedure TfGrid.updatechecks;

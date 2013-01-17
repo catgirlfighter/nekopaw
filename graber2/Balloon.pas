@@ -28,7 +28,7 @@ Type
     pnlAlign: TPanel;
     iconBitmap: TImage;
     tmrExit: TTimer;
-    FOnExitTimer: TNotifyEvent;
+    FOnRelease: TNotifyEvent;
     Procedure FormPaint(Sender: TObject);
   protected
     Procedure CreateParams(Var Params: TCreateParams); override;
@@ -36,8 +36,9 @@ Type
     Procedure OnExitTimerEvent(Sender: TObject);
     Procedure OnChange(Sender: TObject);
     Procedure WndProc(Var Message: TMessage); override;
+    procedure DoRelease;
   public
-    property OnExitTimer: TNotifyEvent read FOnExitTimer write FOnExitTimer;
+    property OnRelease: TNotifyEvent read FOnRelease write FOnRelease;
     Constructor CreateNew(AOwner: TComponent; Dummy: Integer = 0); override;
     Procedure ShowBalloon(blnLeft, blnTop: Integer; blnTitle, blnText: String; blnType: TBalloonType; blnDuration: Integer; blnPosition: TBalloonPosition);
     Procedure ShowControlBalloon(blnControl: TWinControl; blnHoriz: TBalloonHoriz; blnVert: TBalloonVert; blnTitle, blnText: String; blnType: TBalloonType; blnDuration: Integer);
@@ -138,17 +139,21 @@ Begin
   Params.WndParent := GetDesktopWindow;
 End;
 
+procedure TBalloon.DoRelease;
+begin
+  if Assigned(FOnRelease) then
+    FOnRelease(Self);
+  Release;
+end;
+
 Procedure TBalloon.OnMouseClick(Sender: TObject);
 Begin
-  Release;
+  DoRelease;
 End;
 
 Procedure TBalloon.OnExitTimerEvent(Sender: TObject);
 Begin
-  if Assigned(FOnExitTimer) then
-    FonExitTimer(Self);
-
-  Release;
+  DoRelease;
 End;
 
 Procedure TBalloon.OnChange(Sender: TObject);
