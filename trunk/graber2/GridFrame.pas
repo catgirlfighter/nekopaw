@@ -187,6 +187,7 @@ type
     function getprogress: DUInt64;
     procedure sendprogress;
     procedure SetChildColWidths(clone: TcxGridTableView);
+    procedure FillRecord(dc: tcxGridDataController; RecNo: integer; pic: TTPicture);
     property OnPicChanged: TPictureNotifyEvent read FPicChanged
       write FPicChanged;
     // property OnPageComplete: TNotifyEvent read FPageComplete write FPageComplete;
@@ -429,6 +430,41 @@ begin
   end;
 end;
 
+procedure TfGrid.FillRecord(dc: tcxGridDataController; RecNo: integer; pic: TTPicture);
+var
+  j,idx: integer;
+  n: TListValue;
+  clm: TcxGridColumn;
+begin
+  for j := 0 to pic.Meta.Count - 1 do
+  begin
+    n := pic.Meta.Items[j];
+    idx := FFieldList.IndexOf(n.Name);
+    if idx <> -1 then
+    begin
+      clm := FFieldList.Objects[idx] as TcxGridColumn;
+      case clm.DataBinding.ValueType[1] of
+        'S':
+          dc.Values[RecNo, clm.Index] := VarToStr(n.Value);
+        'B':
+          dc.Values[RecNo, clm.Index] := n.Value;
+        'I', 'L':
+          dc.Values[RecNo, clm.Index] := n.Value;
+        'F':
+          dc.Values[RecNo, clm.Index] := n.Value;
+        'D':
+          dc.Values[RecNo, clm.Index] := VarToDateTime(n.Value);
+      end;
+    end
+    else
+    begin
+      IF Assigned(ResList.OnError) then
+        ResList.OnError(Self, pic.Resource.Name + ': field ' + n.Name +
+          ' does not declared in field list');
+    end;
+  end;
+end;
+
 procedure TfGrid.ForcePicsStop(Sender: TObject);
 begin
   ResList.DWNLDHandler.FinishThreads(true);
@@ -478,10 +514,10 @@ end;
 
 procedure TfGrid.OnEndPicList(Sender: TObject);
 var
-  c, i, j, idx: Integer;
+  c, i{, j, idx}: Integer;
   t1, t3: Integer;
-  n: TListValue;
-  clm: TcxGridColumn;
+//  n: TListValue;
+//  clm: TcxGridColumn;
 begin
   t1 := GetTickCount;
   vGrid.BeginUpdate;
@@ -502,33 +538,7 @@ begin
         Values[i, FLabelColumn.Index] := PictureList[i].DisplayLabel;
         { if PictureList[i].Meta.Count <> FFieldLIst.Count then
           raise Exception.Create('Picture Meta does not equal to grid fields'); }
-        for j := 0 to PictureList[i].Meta.Count - 1 do
-        begin
-          n := PictureList[i].Meta.Items[j];
-          idx := FFieldList.IndexOf(n.Name);
-          if idx <> -1 then
-          begin
-            clm := FFieldList.Objects[idx] as TcxGridColumn;
-            case clm.DataBinding.ValueType[1] of
-              'S':
-                Values[i, clm.Index] := VarToStr(n.Value);
-              'B':
-                Values[i, clm.Index] := n.Value;
-              'I', 'L':
-                Values[i, clm.Index] := n.Value;
-              'F':
-                Values[i, clm.Index] := n.Value;
-              'D':
-                Values[i, clm.Index] := VarToDateTime(n.Value);
-            end;
-          end
-          else
-          begin
-            IF Assigned(OnError) then
-              OnError(Self, PictureList[i].Resource.Name + ': field ' + n.Name +
-                ' does not declared in field list');
-          end;
-        end;
+        FillRecord(vGrid.DataController,i,PictureList[i]);
       end;
   finally
     vGrid.EndUpdate;
@@ -1159,6 +1169,15 @@ begin
 
   with dc do
   begin
+    if pcData in Changes then
+    begin
+      FillRecord(dc,n,pic);
+
+      if (Grid.FocusedView = dc.GridView)
+      and (dc.FocusedRecordIndex = n) then
+        FPicChanged(Self,pic);
+    end;
+
     if pcSize in Changes then
       if Pic.Size = 0 then
         Values[n, sc.Index] := null

@@ -387,8 +387,8 @@ object mf: Tmf
   object BarManager: TdxBarManager
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
-    Font.Height = -12
-    Font.Name = 'Segoe UI'
+    Font.Height = -11
+    Font.Name = 'Tahoma'
     Font.Style = []
     Categories.Strings = (
       'Default')
@@ -497,11 +497,5 @@ object mf: Tmf
   object XPManifest1: TXPManifest
     Left = 504
     Top = 224
-  end
-  object Bhint: TBalloonHint
-    Delay = 0
-    HideAfter = 1500
-    Left = 312
-    Top = 184
   end
 end

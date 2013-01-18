@@ -101,6 +101,7 @@ type
     lcSpeed: TcxLabel;
     eSpeed: TcxSpinEdit;
     cxLabel6: TcxLabel;
+    chbTips: TcxCheckBox;
     procedure btnOkClick(Sender: TObject);
     procedure chbProxyPropertiesEditValueChanged(Sender: TObject);
     procedure chbProxyAuthPropertiesEditValueChanged(Sender: TObject);
@@ -201,6 +202,8 @@ begin
       MenuCaptions := chbMenuCaptions.Checked;
       PostMessage(Application.MainForm.Handle,CM_MENUSTYLECHANGED,0,0);
     end;
+
+    Tips := chbTips.Checked;
 
   end;
 
@@ -436,6 +439,7 @@ begin
     else
       cbSkin.Text := SkinName;
     chbMenuCaptions.Checked := MenuCaptions;
+    chbTips.Checked := Tips;
 {    resnames := tstringlist.Create;
     skinnames := tstringlist.Create;
     try
@@ -525,6 +529,7 @@ begin
   cDoublesRuleName.Caption := lang('_RULENAME_');
   cDoublesRules.Caption := lang('_RULESTRING_');
   chbmenucaptions.Caption := lang('_MENUCAPTIONS_');
+  chbTips.Caption := lang('_SHOWTIPS_');
   lHELP.Caption := lang('_HELP_');
 end;
 
