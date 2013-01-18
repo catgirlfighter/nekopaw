@@ -207,6 +207,7 @@ begin
         'http://nekopaw.googlecode.com/svn/trunk/release/graber2/');
       langname := INI.ReadString('settings','language','');
       MenuCaptions := INI.ReadBool('settings','menucaptions',false);
+      Tips := INI.ReadBool('settings','tips',true);
 
       ShowSettings := langname = '';
 
@@ -317,12 +318,12 @@ begin
     begin
 
       INI.WriteString('Settings','Language',langname);
-      INI.WriteBool('Settings','autoUPD',AutoUPD);
+      INI.WriteBool('Settings','AutoUPD',AutoUPD);
       INI.WriteBool('Settings','ShowWhatsNew',ShowWhatsNew);
       INI.WriteBool('Settings','UseLookAndFeel',UseLookAndFeel);
       INI.WriteString('Settings','SkinName',SkinName);
-      INI.WriteBool('settings','menucaptions',MenuCaptions);
-
+      INI.WriteBool('Settings','MenuCaptions',MenuCaptions);
+      INI.WriteBool('Settings','Tips',Tips);
       with Downl do
       begin
         INI.WriteInteger('Download','ThreadCount',ThreadCount);
@@ -330,8 +331,8 @@ begin
         INI.WriteBool('Download','UsePerResource',UsePerRes);
         INI.WriteInteger('Download','PerResourceThreadCount',PerResThreads);
         INI.WriteInteger('Download','PictureThreadCount',PicThreads);
-        INI.WriteBool('download','SDALF',SDALF);
-        INI.WriteBool('download','AutoUncheckInvisible',AutoUncheckInvisible);
+        INI.WriteBool('Download','SDALF',SDALF);
+        INI.WriteBool('Download','AutoUncheckInvisible',AutoUncheckInvisible);
       end;
 
       INI.WriteInteger('download','Speed',idThrottler.BitsPerSec);

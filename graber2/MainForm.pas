@@ -16,7 +16,7 @@ uses
   dxNavBar, dxDockPanel, cxStyles, dxSkinsCore, dxSkinsDefaultPainters,
   dxSkinscxPCPainter, dxSkinsdxNavBarPainter, dxSkinsdxDockControlPainter,
   dxSkinsdxBarPainter, dxSkinsForm, cxMaskEdit, cxButtonEdit,
-{ graber2 }
+  {graber2}
   common, OpBase, graberU, MyHTTP, UPDUnit, Balloon;
 { skins }
 { dxSkinsCore, dxSkinBlack, dxSkinBlue, dxSkinBlueprint, dxSkinCaramel,
@@ -34,208 +34,150 @@ uses
 
 type
 
-  TMycxTabSheet = class(TcxTabSheet)private FTimer: TTimer;
-FStartFrame, FEndFrame, FCurrentFrame: Integer;
-FLoop:
-Boolean;
-FRName:
-String;
-procedure OnTimer(Sender: TObject);
-public
-  MainFrame: TFrame;
-  SecondFrame: TFrame;
-  property RName: String read FRName write FRName;
-  procedure SetIcon(AStartFrame: Integer; AEndFrame: Integer = -1;
-    Loop: Boolean = false);
-  constructor Create(AOwner: TComponent);
-  override;
-  destructor Destroy;
-  override;
+  TMycxTabSheet = class(TcxTabSheet)
+  private
+    FTimer: TTimer;
+    FStartFrame, FEndFrame, FCurrentFrame: Integer;
+    FLoop: Boolean;
+    FRName: String;
+    procedure OnTimer(Sender: TObject);
+  public
+    MainFrame: TFrame;
+    SecondFrame: TFrame;
+    property RName: String read FRName write FRName;
+    procedure SetIcon(AStartFrame: Integer; AEndFrame: Integer = -1;
+      Loop: Boolean = false);
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
   end;
 
-  {
-    TcxTabSheetEvent = procedure(ASender: TObject; ATabSheet: TcxTabSheet)
-    of object;
-  }
-
   TcxPageControl = class(cxPC.TcxPageControl);
-  {
-    private
-    FOnPageClose: TcxTabSheetEvent;
-    protected
-    procedure DoClose; override;
-    public
-    property OnPageClose: TcxTabSheetEvent read FOnPageClose write FOnPageClose;
-    end;
-  }
 
-  { TmycxOnGetExpandable = procedure(MasterDataRow: TcxGridMasterDataRow;
-    var Expandable: Boolean) of object;
+  Tmf = class(TForm)
+    ds: TdxDockSite;
+    DockManager: TdxDockingManager;
+    BarManager: TdxBarManager;
+    bmbMain: TdxBar;
+    dpTable: TdxDockPanel;
+    dxLayoutDockSite2: TdxLayoutDockSite;
+    dpTags: TdxDockPanel;
+    dpCurTags: TdxDockPanel;
+    dsTable: TdxLayoutDockSite;
+    dsTags: TdxTabContainerDockSite;
+    dpLog: TdxDockPanel;
+    dxLayoutDockSite4: TdxLayoutDockSite;
+    dpErrors: TdxDockPanel;
+    dsLogs: TdxTabContainerDockSite;
+    pcTables: TcxPageControl;
+    bbStartList: TdxBarButton;
+    bbStartPics: TdxBarButton;
+    bbSettings: TdxBarButton;
+    bbNew: TdxBarButton;
+    mLog: TcxMemo;
+    mErrors: TcxMemo;
+    ApplicationEvents1: TApplicationEvents;
+    nvCur: TdxNavBar;
+    nbgCurMain: TdxNavBarGroup;
+    nbgCurTags: TdxNavBarGroup;
+    nbgCurMainControl: TdxNavBarGroupControl;
+    vgCurMain: TcxVerticalGrid;
+    nbgCurTagsControl: TdxNavBarGroupControl;
+    chlbTags: TcxCheckListBox;
+    vINFO: TrpVersionInfo;
+    lUPD: TcxLabel;
+    nvTags: TdxNavBar;
+    nbgTagsMain: TdxNavBarGroup;
+    nbgTagsTags: TdxNavBarGroup;
+    dxNavBarGroupControl1: TdxNavBarGroupControl;
+    vgTagsMain: TcxVerticalGrid;
+    dxNavBarGroupControl2: TdxNavBarGroupControl;
+    chlbFullTags: TcxCheckListBox;
+    MainBarControl: TdxBarDockControl;
+    dxSkinController: TdxSkinController;
+    XPManifest1: TXPManifest;
+    chlbtagsfilter: TcxButtonEdit;
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    { procedure gLevel2GetGridView(Sender: TcxGridLevel;
+      AMasterRecord: TcxCustomGridRecord; var AGridView: TcxCustomGridView); }
+    procedure bbSettingsClick(Sender: TObject);
+    procedure bbNewClick(Sender: TObject);
+    procedure pcTablesChange(Sender: TObject);
+    procedure bbStartListClick(Sender: TObject);
+    procedure ApplicationEvents1Exception(Sender: TObject; E: Exception);
+    procedure bbStartPicsClick(Sender: TObject);
+    procedure testoClick(Sender: TObject);
+    procedure pcTablesCanCloseEx(Sender: TObject; ATabIndex: Integer;
+      var ACanClose: Boolean);
+    procedure FormResize(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure chlbFullTagsClickCheck(Sender: TObject; AIndex: Integer;
+      APrevState, ANewState: TcxCheckBoxState);
 
-    TmycxGridTableView = class(TcxGridTableView)
-    private
-    protected
-    function GetViewDataClass: TcxCustomGridViewDataClass; override;
-    public
-    OnGetExpandable: TmycxOnGetExpandable;
-    constructor Create(AOwner: TComponent); override;
-    end;
-
-    TmycxGridViewData = class(TcxGridViewData)
-    protected
-    function GetRecordClass(ARecordInfo: TcxRowInfo)
-    : TcxCustomGridRecordClass; override;
-    end;
-
-    TmycxGridMasterDataRow = class(TcxGridMasterDataRow)
-    protected
-    function GetExpandable: Boolean; override;
-    end; }
-
-  // TmfState = (msStart, msNewList, msGrid, msSettings);
-
-  Tmf = class(TForm)ds: TdxDockSite;
-  DockManager: TdxDockingManager;
-  BarManager: TdxBarManager;
-  bmbMain: TdxBar;
-  dpTable: TdxDockPanel;
-  dxLayoutDockSite2: TdxLayoutDockSite;
-  dpTags: TdxDockPanel;
-  dpCurTags: TdxDockPanel;
-  dsTable: TdxLayoutDockSite;
-  dsTags: TdxTabContainerDockSite;
-  dpLog: TdxDockPanel;
-  dxLayoutDockSite4: TdxLayoutDockSite;
-  dpErrors: TdxDockPanel;
-  dsLogs: TdxTabContainerDockSite;
-  pcTables: TcxPageControl;
-  bbStartList: TdxBarButton;
-  bbStartPics: TdxBarButton;
-  bbSettings: TdxBarButton;
-  bbNew: TdxBarButton;
-  mLog: TcxMemo;
-  mErrors: TcxMemo;
-  ApplicationEvents1: TApplicationEvents;
-  nvCur: TdxNavBar;
-  nbgCurMain: TdxNavBarGroup;
-  nbgCurTags: TdxNavBarGroup;
-  nbgCurMainControl: TdxNavBarGroupControl;
-  vgCurMain: TcxVerticalGrid;
-  nbgCurTagsControl: TdxNavBarGroupControl;
-  chlbTags: TcxCheckListBox;
-  vINFO: TrpVersionInfo;
-  lUPD: TcxLabel;
-  nvTags: TdxNavBar;
-  nbgTagsMain: TdxNavBarGroup;
-  nbgTagsTags: TdxNavBarGroup;
-  dxNavBarGroupControl1: TdxNavBarGroupControl;
-  vgTagsMain: TcxVerticalGrid;
-  dxNavBarGroupControl2: TdxNavBarGroupControl;
-  chlbFullTags: TcxCheckListBox;
-  MainBarControl: TdxBarDockControl;
-  dxSkinController: TdxSkinController;
-  XPManifest1: TXPManifest;
-  chlbtagsfilter: TcxButtonEdit;
-  Bhint: TBalloonHint;
-  procedure FormCreate(Sender: TObject);
-  procedure FormDestroy(Sender: TObject);
-  { procedure gLevel2GetGridView(Sender: TcxGridLevel;
-    AMasterRecord: TcxCustomGridRecord; var AGridView: TcxCustomGridView); }
-  procedure bbSettingsClick(Sender: TObject);
-  procedure bbNewClick(Sender: TObject);
-  procedure pcTablesChange(Sender: TObject);
-  procedure bbStartListClick(Sender: TObject);
-  procedure ApplicationEvents1Exception(Sender: TObject; E: Exception);
-  procedure bbStartPicsClick(Sender: TObject);
-  procedure testoClick(Sender: TObject);
-  procedure pcTablesCanCloseEx(Sender: TObject; ATabIndex: Integer;
-    var ACanClose: Boolean);
-  procedure FormResize(Sender: TObject);
-  procedure FormClose(Sender: TObject; var Action: TCloseAction);
-  procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
-  procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-  procedure chlbFullTagsClickCheck(Sender: TObject; AIndex: Integer;
-    APrevState, ANewState: TcxCheckBoxState);
-
-private
-  mFrame: TFrame;
-  FOldCaption: String;
-  // tvMain: TmycxGridTableView;
-protected
-  // procedure EXPANDROW(var Msg: TMessage); message CM_EXPROW;
-  procedure WMActivate(var Msg: TWMActivate);
-  message WM_ACTIVATE;
-  procedure NEWLIST(var Msg: TMessage);
-  message CM_NEWLIST;
-  procedure APPLYNEWLIST(var Msg: TMessage);
-  message CM_APPLYNEWLIST;
-  procedure CANCELNEWLIST(var Msg: TMessage);
-  message CM_CANCELNEWLIST;
-  procedure SHOWSETTINGS(var Msg: TMessage);
-  message CM_SHOWSETTINGS;
-  procedure CANCELSETTINGS(var Msg: TMessage);
-  message CM_CANCELSETTINGS;
-  procedure APPLYSETTINGS(var Msg: TMessage);
-  message CM_APPLYSETTINGS;
-  procedure STARTJOB(var Msg: TMessage);
-  message CM_STARTJOB;
-  procedure ENDJOB(var Msg: TMessage);
-  message CM_ENDJOB;
-  procedure UPDATECHECK(var Msg: TMessage);
-  message CM_UPDATE;
-  procedure LANGUAGECHANGED(var Msg: TMessage);
-  message CM_LANGUAGECHANGED;
-  procedure WHATSNEW(var Msg: TMessage);
-  message CM_WHATSNEW;
-  procedure STYLECHANGED(var Msg: TMessage);
-  message CM_STYLECHANGED;
-  procedure WREFRESHPIC(var Msg: TMessage);
-  message CM_REFRESHPIC;
-  procedure WREFRESHRESINFO(var Msg: TMessage);
-  message CM_REFRESHRESINFO;
-  procedure MENUSTYLECHANGED(var Msg: TMessage);
-  message CM_MENUSTYLECHANGED;
-  procedure JOBPROGRESS(var Msg: TMessage);
-  message CM_JOBPROGRESS;
-  // procedure dxTabClose(Sender: TdxCustomDockControl);
-  // procedure APPLYEDITLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
-private
-  TabList: TList;
-  dsFirstShow: Boolean;
-  SttPanel: TMycxTabSheet;
-  FCookie: TMyCookieList;
-  FCurPic: TTPicture;
-  FBalloon: TBalloon;
-  { Private declarations }
-public
-  // OldState: TmfState;
-  { procedure tvMainRecordExpandable(MasterDataRow: TcxGridMasterDataRow;
-    var Expandable: Boolean); }
-  function CreateTab(pc: TcxPageControl; Enc: Boolean = true): TMycxTabSheet;
-  procedure ShowDs;
-  procedure HideDs;
-  procedure CloseTab(t: TcxTabSheet);
-  // procedure OnTabClose(ASender: TObject; ATabSheet: TcxTabSheet);
-  procedure ShowPanels;
-  procedure OnError(Sender: TObject; Msg: String);
-  procedure Setlang;
-  procedure PicInfo(Sender: TObject; a: TTPicture);
-  procedure CheckUpdates;
-  procedure StartUpdate;
-  procedure ChangeResInfo;
-  procedure RefreshResInfo(Sender: TObject);
-  function CloseAllTabs: Boolean;
-  procedure RefreshTags(Sender: TObject; t: TPictureTagLinkList);
-  procedure DoPicInfo(Sender: TObject; a: TTPicture);
-  procedure DoRefreshResInfo(Sender: TObject);
-  procedure ChangeTags;
-  procedure updateTab;
-  procedure AddTag(name: string; add: Boolean);
+  private
+    mFrame: TFrame;
+    FOldCaption: String;
+    // tvMain: TmycxGridTableView;
+  protected
+    // procedure EXPANDROW(var Msg: TMessage); message CM_EXPROW;
+    procedure WMActivate(var Msg: TWMActivate); message WM_ACTIVATE;
+    procedure NEWLIST(var Msg: TMessage); message CM_NEWLIST;
+    procedure APPLYNEWLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
+    procedure CANCELNEWLIST(var Msg: TMessage); message CM_CANCELNEWLIST;
+    procedure SHOWSETTINGS(var Msg: TMessage); message CM_SHOWSETTINGS;
+    procedure CANCELSETTINGS(var Msg: TMessage); message CM_CANCELSETTINGS;
+    procedure APPLYSETTINGS(var Msg: TMessage); message CM_APPLYSETTINGS;
+    procedure STARTJOB(var Msg: TMessage); message CM_STARTJOB;
+    procedure ENDJOB(var Msg: TMessage); message CM_ENDJOB;
+    procedure UPDATECHECK(var Msg: TMessage); message CM_UPDATE;
+    procedure LANGUAGECHANGED(var Msg: TMessage); message CM_LANGUAGECHANGED;
+    procedure WHATSNEW(var Msg: TMessage); message CM_WHATSNEW;
+    procedure STYLECHANGED(var Msg: TMessage); message CM_STYLECHANGED;
+    procedure WREFRESHPIC(var Msg: TMessage); message CM_REFRESHPIC;
+    procedure WREFRESHRESINFO(var Msg: TMessage); message CM_REFRESHRESINFO;
+    procedure MENUSTYLECHANGED(var Msg: TMessage); message CM_MENUSTYLECHANGED;
+    procedure JOBPROGRESS(var Msg: TMessage); message CM_JOBPROGRESS;
+    // procedure dxTabClose(Sender: TdxCustomDockControl);
+    // procedure APPLYEDITLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
+  private
+    TabList: TList;
+    dsFirstShow: Boolean;
+    SttPanel: TMycxTabSheet;
+    FCookie: TMyCookieList;
+    FCurPic: TTPicture;
+    FBalloon: TBalloon;
+    { Private declarations }
+  public
+    // OldState: TmfState;
+    { procedure tvMainRecordExpandable(MasterDataRow: TcxGridMasterDataRow;
+      var Expandable: Boolean); }
+    function CreateTab(pc: TcxPageControl; Enc: Boolean = true): TMycxTabSheet;
+    procedure ShowDs;
+    procedure HideDs;
+    procedure CloseTab(t: TcxTabSheet);
+    // procedure OnTabClose(ASender: TObject; ATabSheet: TcxTabSheet);
+    procedure ShowPanels;
+    procedure OnError(Sender: TObject; Msg: String);
+    procedure Setlang;
+    procedure PicInfo(Sender: TObject; a: TTPicture);
+    procedure CheckUpdates;
+    procedure StartUpdate;
+    procedure ChangeResInfo;
+    procedure RefreshResInfo(Sender: TObject);
+    function CloseAllTabs: Boolean;
+    procedure RefreshTags(Sender: TObject; t: TPictureTagLinkList);
+    procedure DoPicInfo(Sender: TObject; a: TTPicture);
+    procedure DoRefreshResInfo(Sender: TObject);
+    procedure ChangeTags;
+    procedure updateTab;
+    procedure AddTag(name: string; add: Boolean);
     procedure ShowBalloon;
     procedure OnBalloonExitTimer(Sender: TObject);
     procedure HideBalloon;
 
-  { Public declarations }
+    { Public declarations }
   end;
 
 var
@@ -494,8 +436,8 @@ var
 begin
   if Sender = nil then
     FCurPic := nil
-  else if ((pcTables.ActivePage as TMycxTabSheet).MainFrame <> Sender) or
-    (FCurPic = a) then
+  else if ((pcTables.ActivePage as TMycxTabSheet).MainFrame <> Sender){ or
+    (FCurPic = a) }then
     Exit
   else
     FCurPic := a;
@@ -721,6 +663,7 @@ var
   f: TFrame;
 
 begin
+  HideBalloon;
   f := TFrame((pcTables.ActivePage as TMycxTabSheet).MainFrame);
   if f is tfGrid then
     with (f as tfGrid) do
@@ -741,6 +684,7 @@ var
   f: TFrame;
 
 begin
+  HideBalloon;
   f := TFrame((pcTables.ActivePage as TMycxTabSheet).MainFrame);
   if f is tfGrid then
     with (f as tfGrid) do
@@ -893,9 +837,8 @@ var
   i: Integer;
   p: DUint64;
 begin
-  if (pcTables.ActivePage <> nil)
-  and (Integer(pcTables.ActivePage) = Msg.WParam)
-  then
+  if (pcTables.ActivePage <> nil) and
+    (Integer(pcTables.ActivePage) = Msg.WParam) then
   begin
     updateTab;
     if Msg.LParam = 0 then
@@ -1356,31 +1299,24 @@ var
   p: TPoint;
 
 begin
-//  Bhint.Title := 'herp';
-//  Bhint.Description := 'derp';
-//  Bhint.ShowHint(ClientToScreen(bmbMain.ItemLinks[2].ItemRect.BottomRight));
+  // Bhint.Title := 'herp';
+  // Bhint.Description := 'derp';
+  // Bhint.ShowHint(ClientToScreen(bmbMain.ItemLinks[2].ItemRect.BottomRight));
 
-  if not Active or not Visible then
+  if not GlobalSettings.Tips or
+  not Active or not Visible then
     Exit;
 
-  if Assigned(FBalloon) then
-  begin
+  if assigned(FBalloon) then
     FBalloon.Hide;
-    FBalloon.Free;
-  end;
 
   p.X := bmbMain.ItemLinks[2].ItemRect.Left + 15;
   p.Y := bmbMain.ItemLinks[2].ItemRect.Bottom - 10;
   p := ClientToScreen(p);
   FBalloon := TBalloon.CreateNew(Self);
   FBalloon.OnRelease := OnBalloonExitTimer;
-  FBalloon.ShowBalloon(
-    p.X,p.Y,
-    lang('_HINT_STARTDOWNLOAD_TITLE_'),
-    lang('_HINT_STARTDOWNLOAD_DESCRIPTION_'),
-    blnNone,5,
-    blnArrowBottomRight
-  );
+  FBalloon.ShowBalloon(p.X, p.Y, lang('_HINT_STARTDOWNLOAD_TITLE_'),
+    lang('_HINT_STARTDOWNLOAD_DESCRIPTION_'), blnNone, 5, blnArrowBottomRight);
 end;
 
 procedure Tmf.ShowDs;
@@ -1570,11 +1506,8 @@ end;
 
 procedure Tmf.HideBalloon;
 begin
-  if Assigned(FBalloon) then
-  begin
-    FBalloon.Release;
-    FBalloon := nil;
-  end;
+  if assigned(FBalloon) then
+    FBalloon.Hide;
 end;
 
 procedure Tmf.HideDs;

@@ -114,6 +114,7 @@ type
     SkinName: String;
     IsNew: Boolean;
     MenuCaptions: Boolean;
+    Tips: Boolean;
   end;
 
   TScriptsRec = record
@@ -167,7 +168,7 @@ type
     property Value: Variant read FValue write FValue;
     end; }
 
-  TPicChange = (pcProgress, pcSize, pcLabel, pcDelete, pcChecked);
+  TPicChange = (pcProgress, pcSize, pcLabel, pcDelete, pcChecked,pcData);
 
   TPicChanges = Set of TPicChange;
 
@@ -2475,7 +2476,7 @@ begin
 
     if CheckStr(pr, ['A' .. 'Z', 'a' .. 'z', '0' .. '9']) then
       raise Exception.Create
-        ('script read error: incorrect symbols in section name');
+        ('script read error: incorrect symbols in section name (' + pr + ')');
 
     // Delete(s, 1, n2);
   end;
@@ -2554,17 +2555,32 @@ end;
 function TResource.StringFromFile(FName: string): string;
 var
   f: TFileStream;
+  ss: TStringStream;
   s: AnsiString;
-
 begin
   f := TFileStream.Create(FName, FmOpenRead);
-  if f.Size > 0 then
-  begin
-    SetLength(s, f.Size);
-    f.Read(s[1], f.Size);
+  try
+    if f.Size > 0 then
+    begin
+      SetLength(s, f.Size);
+      f.Read(s[1], 2);
+    end;
+
+    //f.Position := 0;
+
+    if (Ord(s[1]) = $FF) and (Ord(s[2]) = $FE) then
+      ss := TStringStream.Create(result,TEncoding.Unicode)
+    else
+      ss := TStringStream.Create;
+    try
+      ss.LoadFromStream(f);
+      Result := ss.DataString;
+    finally
+      ss.Free;
+    end;
+  finally
+    f.Free;
   end;
-  f.Free;
-  Result := String(s);
 end;
 
 function TResource.CreateFullFieldList: TStringList;
@@ -3018,7 +3034,7 @@ begin
   t.Picture.Pos := 0;
 
   if Assigned(t.Picture.OnPicChanged) then
-    t.Picture.OnPicChanged(t.Picture, [pcProgress]);
+    t.Picture.OnPicChanged(t.Picture, [pcProgress,pcData]);
 
   if (FPictureList.PostProcessFinished) then
     FOnPicJobFinished(Self);

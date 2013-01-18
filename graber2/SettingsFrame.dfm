@@ -1,7 +1,7 @@
 object fSettings: TfSettings
   Left = 0
   Top = 0
-  Width = 599
+  Width = 587
   Height = 304
   Align = alClient
   Font.Charset = DEFAULT_CHARSET
@@ -16,14 +16,14 @@ object fSettings: TfSettings
     AlignWithMargins = True
     Left = 3
     Top = 3
-    Width = 593
+    Width = 581
     Height = 25
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
     ExplicitWidth = 445
     DesignSize = (
-      593
+      581
       25)
     object btnOk: TcxButton
       Left = 0
@@ -53,7 +53,7 @@ object fSettings: TfSettings
       OnClick = btnApplyClick
     end
     object lHelp: TcxLabel
-      Left = 668
+      Left = 804
       Top = 3
       Cursor = crHandPoint
       Anchors = [akTop, akRight]
@@ -65,10 +65,10 @@ object fSettings: TfSettings
       Properties.Alignment.Horz = taRightJustify
       Transparent = True
       OnClick = lHelpClick
-      ExplicitLeft = 520
+      ExplicitLeft = 668
       Height = 17
       Width = 113
-      AnchorX = 781
+      AnchorX = 917
     end
   end
   object tlList: TcxTreeList
@@ -120,7 +120,7 @@ object fSettings: TfSettings
   object pcMain: TcxPageControl
     Left = 172
     Top = 31
-    Width = 427
+    Width = 415
     Height = 273
     Align = alClient
     TabOrder = 3
@@ -128,7 +128,7 @@ object fSettings: TfSettings
     Properties.HideTabs = True
     ExplicitWidth = 279
     ClientRectBottom = 273
-    ClientRectRight = 427
+    ClientRectRight = 415
     ClientRectTop = 0
     object cxTabSheet1: TcxTabSheet
       Caption = 'cxTabSheet1'
@@ -212,6 +212,14 @@ object fSettings: TfSettings
         Top = 156
         Caption = 'chbMenuCaptions'
         TabOrder = 8
+        Transparent = True
+        Width = 339
+      end
+      object chbTips: TcxCheckBox
+        Left = 6
+        Top = 183
+        Caption = 'chbTips'
+        TabOrder = 9
         Transparent = True
         Width = 339
       end
@@ -426,7 +434,7 @@ object fSettings: TfSettings
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0
-        Width = 427
+        Width = 415
         Height = 273
         Align = alClient
         OptionsView.ShowEditButtons = ecsbAlways
@@ -444,7 +452,7 @@ object fSettings: TfSettings
       object gDoubles: TcxGrid
         Left = 0
         Top = 26
-        Width = 427
+        Width = 415
         Height = 247
         Align = alClient
         TabOrder = 0
@@ -485,7 +493,7 @@ object fSettings: TfSettings
       object bcDoubles: TdxBarDockControl
         Left = 0
         Top = 0
-        Width = 427
+        Width = 415
         Height = 26
         Align = dalTop
         BarManager = BarManager
@@ -603,8 +611,8 @@ object fSettings: TfSettings
     PopupMenuLinks = <>
     Style = bmsUseLookAndFeel
     UseSystemFont = True
-    Left = 208
-    Top = 192
+    Left = 392
+    Top = 232
     DockControlHeights = (
       0
       0
