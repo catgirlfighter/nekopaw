@@ -32,27 +32,53 @@ $userstring = 'user[name]';
 $pwdstring = 'user[password]';
 $main.checkcookie = 'login';
 $main.login = '$main.url+"user/authenticate?"+$userstring+"="+$login+"&"+$pwdstring+"="+$password+"&commit=Login"';
-$page = '@min(1000,#count/100+1)';
+$maxpage = 1000;
+
 $picture.template.ext = '%ext%';
 $tryext = 0;
+$GUImode = 0;
+
+$gui_thumbs_dir = 'preview/';
+$gui_images_dir = '';
+$gui_thumbs_part = '';
+$gui_images_part = '';
 
 [listscript]
 
+;unknown ext mode;
 ?$tryext=1{$thread.tryext = "jpg,gif,png,swf";};
 
-$thread.url = "$main.url+'post/index.'+$fpxml+'?limit=100&tags='+@httpencode($tag)";
-$thread.jsonitem = 'post';
-?$fpxml='json'{
-	$thread.xml = 'listxml';	
+;XML API mode
+?$GUImode=0{
+	$thread.url = "$main.url+'post/index.'+$fpxml+'?limit=100&tags='+@httpencode($tag)";
+	$thread.jsonitem = 'post';
+
+	;non-JSON firstpage
+	?$fpxml!'json'{
+		$thread.xml = 'firstpagexml';
+	}
+
+	;JSON firstpage
+	?$fpxml='json'{
+		$thread.xml = 'listxml';	
+	}
+
+	$thread.xmlcontent = $fpxml;
+	$thread.execute();
+	$thread.xml = 'listxml';
+	$thread.xmlcontent = $lxml;
+	$thread.url = "$main.url+'post/index.'+$fpxml+'?limit=100&tags='+@httpencode($tag)";
 }
-?$fpxml!'json'{
-	$thread.xml = 'firstpagexml';
+
+;GUI HTML mode
+?$GUImode!0{
+	$thread.xmlcontent = 'html';
+	$thread.url = "$main.url+'post?tags='+@httpencode($tag)";
+	$thread.xml = "listfp";
+	@thread.execute;
+	$thread.xml = "listgui";
+	$thread.url = "$main.url+'post?tags='+@httpencode($tag)+'&page='+$thread.counter+1";
 }
-$thread.xmlcontent = $fpxml;
-$thread.execute();
-$thread.xml = 'listxml';
-$thread.xmlcontent = $lxml;
-$thread.url = "$main.url+'post/index.'+$lxml+'?limit=100&tags='+@httpencode($tag)+'&page='+$thread.counter+1";
 
 [dwscript]
 $thread.url = @calc($picurl);
@@ -60,13 +86,14 @@ $thread.url = @calc($picurl);
 $thread.referer = $picture%post_url;
 
 [firstpagexml]
+
 ^posts{
 	?$fpxml!'json'{
-		$thread.count=@calc($page);
+		$thread.count=@min($maxpage,#count/100+1);
 		$thread.result=#count;
 	}
 	^post{
-		addpicture(
+		@addpicture(
 			%url=@calc($fileurl),
 			%preview=@calc($previewurl),
 			%sample_url=@calc($sampleurl),
@@ -93,7 +120,7 @@ $thread.referer = $picture%post_url;
 $ok = 0;
 
 ^post{
-	addpicture(
+	@addpicture(
 		%url=@calc($fileurl),
 		%preview=@calc($previewurl),
 		%sample_url=@calc($sampleurl),
@@ -117,4 +144,70 @@ $ok = 0;
 
 ?($pbp=1)&($ok=1){
 	$thread.count = $thread.counter + 2; 
+}
+
+[listfp]
+
+^head{
+	^link#rel="last"{
+		$thread.count = @min($maxpage,@urlvar("page",#href));
+	}
+}
+
+^div#class="content"{
+	^{
+		^div#id="popular-preview"{$non=0;}
+
+		^span#class="thumb"{
+			$id = @copyfrom("p",#id);
+			^a{
+				$post_url = #href;
+
+				^img{
+					@addpicture(
+						%url=@replace($gui_images_part,$gui_thumbs_part,@replace($gui_images_dir,$gui_thumbs_dir,@removevars(#src))),
+						%preview=#src,
+						%post_url=$main.url+@trim($post_url,"/"),
+						%rating=@trim(@copyfromtoex(" ","rating:",#title + " ")),
+						%score=@trim(@copyfromtoex(" ","score:",#title + " ")),
+						%id=$id,
+						%author=@trim(@copyfromtoex(" ","user:",#title + " ")),
+						%tags=csv(@trim(@copyto("rating:",#title))," ")
+					);
+					?$tryext=1{$picture.filename = @changeext("%ext%",@emptyname($picture%url));}
+					?$tryext=0{$picture.filename = @emptyname(@emptyname($picture%url));}
+				}
+			}
+		}
+	}
+}
+
+[listgui]
+
+^div#class="content"{
+	^{
+		^div#id="popular-preview"{$non=0;}
+
+		^span#class="thumb"{
+			$id = @copyfrom("p",#id);
+			^a{
+				$post_url = #href;
+
+				^img{
+					addpicture(
+						%url=@replace($gui_images_part,$gui_thumbs_part,@replace($gui_images_dir,$gui_thumbs_dir,@removevars(#src))),
+						%preview=#src,
+						%post_url=$main.url+@trim($post_url,"/"),
+						%rating=@trim(@copyfromtoex(" ","rating:",#title + " ")),
+						%score=@trim(@copyfromtoex(" ","score:",#title + " ")),
+						%id=$id,
+						%author = @trim(@copyfromtoex(" ","user:",#title + " ")),
+						%tags=csv(@trim(@copyto("score:",#title))," ")
+					);
+					?$tryext=1{$picture.filename = @changeext("%ext%",@emptyname($picture%url));}
+					?$tryext=0{$picture.filename = @emptyname(@emptyname($picture%url));}
+				}
+			}
+		}
+	}
 }
