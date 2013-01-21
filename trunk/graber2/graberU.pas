@@ -451,7 +451,7 @@ type
     procedure SeFields(Value: TResourceFields);
     procedure DoJobComplete;
     procedure DoFinish;
-    function SE(const Item: TScriptSection; const Parametres: TValueList;
+    function SE(const Item: TScriptSection; const Parameters: TValueList;
       var LinkedObj: TObject): Boolean;
     procedure VE(Value: String; var Result: Variant; var LinkedObj: TObject);
     procedure DE(ItemName: String; ItemValue: Variant; LinkedObj: TObject);
@@ -4144,7 +4144,7 @@ begin
 end;
 
 function TDownloadThread.SE(const Item: TScriptSection;
-  const Parametres: TValueList; var LinkedObj: TObject): Boolean;
+  const Parameters: TValueList; var LinkedObj: TObject): Boolean;
 
   function copytag(s: ttag): ttag;
   begin
@@ -4199,11 +4199,11 @@ begin
 
             a[0] := TAttrList.Create;
             try
-              for i := 0 to Parametres.Count - 1 do
-                a[0].Add(Copy(Parametres.Items[i].Name, 1,
-                  length(Parametres.Items[i].Name) - 1),
-                  VarToStr(Parametres.Items[i].Value),
-                  Parametres.Items[i].Name[length(Parametres.Items[i].Name)]);
+              for i := 0 to Parameters.Count - 1 do
+                a[0].Add(Copy(Parameters.Items[i].Name, 1,
+                  length(Parameters.Items[i].Name) - 1),
+                  VarToStr(Parameters.Items[i].Value),
+                  Parameters.Items[i].Name[length(Parameters.Items[i].Name)]);
 
               // if Item.NoParameters then
               // a[0].NoParameters := Item.NoParameters;
@@ -4231,14 +4231,17 @@ begin
               for j := 0 to Item.ChildSections.Count - 1 do
                 with (Item.ChildSections[j] as TScriptSection) do
                 begin
-                  Tags[j] := Item.ChildSections[j].Name;
+                  //Tags[j] := Item.ChildSections[j].ClassName;
+                  Tags[j] := Name;
                   a[j] := TAttrList.Create;
                   a[j].Tag := integer(Item.ChildSections[j]);
 
                   for i := 0 to Parameters.Count - 1 do
-                    a[j].Add(Parametres.Items[i].Name,
-                      VarToStr(CalcValue(Parametres.Items[i].Value, VE,
-                      LinkedObj)));
+                    a[j].Add(Copy(Parameters.Items[i].Name,1,
+                      length(Parameters.Items[i].Name) - 1),
+                      VarToStr(CalcValue(Parameters.Items[i].Value, VE,
+                      LinkedObj)),
+                      Parameters.Items[i].Name[length(Parameters.Items[i].Name)]);
 
                   a[j].NoParameters := NoParameters;
                 end;
@@ -6981,7 +6984,7 @@ procedure TResourceFields.Assign(List: TResourceFields;
   AOperator: TListAssignOp);
 var
   i: integer;
-  p: PResourceField;
+//  p: PResourceField;
 
 begin
   case AOperator of
@@ -6991,10 +6994,10 @@ begin
         Capacity := List.Capacity;
         for i := 0 to List.Count - 1 do
         begin
-          New(p);
+          //New(p);
           with List.Items[i]^ do
             AddField(resname, restitle, restype, resvalue, resitems);
-          Add(p);
+          //Add(p);
         end;
       end;
     laAnd:

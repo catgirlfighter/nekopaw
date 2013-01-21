@@ -844,7 +844,9 @@ begin
     if Msg.LParam = 0 then
     begin
       ChangeTags;
-      ShowBalloon;
+      if ((pcTables.ActivePage as tmycxTabSheet).MainFrame
+      as tfGrid).vGrid.DataController.RecordCount > 0 then
+        ShowBalloon;
     end;
   end;
 
