@@ -405,6 +405,7 @@ begin
             begin
               t := AList.CopyTag(Items[i]);
               t.Tag := AAttrs[l].Tag;
+              Break;
             end;
           end;
 
