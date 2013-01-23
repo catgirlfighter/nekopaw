@@ -1,0 +1,35 @@
+= 2.0.1.xx =
+
+- versionlog now in english! Updater now downloading a version of versionlog according to language used in settings. Default is English if it's not a preinstalled language;
+- fixed max 50kb download speed for a speed limit feature;
+
+= 2.0.1.30 =
+
+- fixed a bug that preventes realisation of loading from danbooru GUI;
+- fixed a bug when you need to check a settings of minitokyo at least once to download from it;
+- fixed sankaku work;
+
+= 2.0.1.27 =
+
+- fixed a few more bugs that cause a criticals;
+- tips now can be disabled in settings;
+- for pixiv added user-works and user-favorites modes. Set a check near "Use user id", input an user id and select source (works or favorites);
+
+= 2.0.1.26 =
+
+- ALOT more stable now. If you see more bugs - let me know, I try fix it as possible.
+
+= 2.0.1.24 =
+
+/ huge update with a bunch of changes that can cause a new bugs. I'll try to list "visible" changes, what I remember:
+- now you can limit the download speed (Settings -> Threads -> Speed);
+- list of supported resources is growing, and searching of needed become harder. Added the field allows you to filter the list.
+- now you can save your favorite queries (buttons with stars next to the tags field in the "new list" mode);
+- at the request of inattentive people, suffering about small and unnoticeable buttons, added a hint showing where to click to start a pics downloading;
+- released mechanism of album storing;
+- added the postprocessing mode (editional pics processing after list is finished);
+- added pixiv.net. There is "Get tags" mode for a pics. In this mode, after list is finished, postprocessing get tags and r-18 rating for a pics.
+
+= other =
+
+- other changes in a russian language and too old. Too lazy to translate;
