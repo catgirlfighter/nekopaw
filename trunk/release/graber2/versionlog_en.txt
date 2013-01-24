@@ -2,6 +2,7 @@
 
 - versionlog now in english! Updater now downloading a version of versionlog according to language used in settings. Default is English if it's not a preinstalled language;
 - fixed max 50kb download speed for a speed limit feature;
+- fixed a bug of an encoding identification, because of which some special symbols is broken in a tags (now Grabber think  it's always  UTF-8, hope it will be);
 
 = 2.0.1.30 =
 
