@@ -4905,13 +4905,15 @@ end;
 
 procedure TDownloadThread.ProcHTTP;
 var
-  s: string;
-  Url: string;
+  Result: TStringStream;
+  tmp,Url: string;
   Post: TStringList;
 {$IFDEF NEKOLOG}debug_name: string; {$ENDIF}
 begin
 
   FRetries := 0;
+  try Result := TStringStream.Create('',TEncoding.UTF8);
+
   while true do
     try
       FBeforeScript.Process(SE, DE, FE, VE, VE);
@@ -4935,6 +4937,7 @@ begin
 
         FHTTP.Request.Referer := FHTTPRec.Referer;
 
+        Result.Clear;
         Post := TStringList.Create;
         if FHTTPRec.Method = hmPost then
           try
@@ -4945,15 +4948,15 @@ begin
             end
             else
             begin
-              s := CalcValue(FHTTPRec.Post, VE, nil);
-              GetPostStrings(s, Post);
+              tmp := CalcValue(FHTTPRec.Post, VE, nil);
+              GetPostStrings(tmp, Post);
             end;
-            s := FHTTP.Post(Url, Post);
+            FHTTP.Post(Url, Post,Result);
           finally
             Post.Free;
           end
         else
-          s := FHTTP.Get(Url);
+          FHTTP.Get(Url,Result);
 
         if (ReturnValue = THREAD_FINISH) then
           Break;
@@ -4990,14 +4993,13 @@ begin
       end;
 
       if SameText(FHTTPRec.ParseMethod, 'xml') then
-        FXML.Parse(s)
+        FXML.Parse(Result.DataString)
       else if SameText(FHTTPRec.ParseMethod, 'html') then
-        FXML.Parse(s, true)
+        FXML.Parse(Result.DataString, true)
       else if SameText(FHTTPRec.ParseMethod, 'json') then
-        FXML.JSON(FHTTPRec.JSONItem, s)
+        FXML.JSON(FHTTPRec.JSONItem, Result.DataString)
       else
         raise Exception.Create('unknown method: ' + FHTTPRec.ParseMethod);
-
       // ----  //
 {$IFDEF NEKOLOG}
       debug_name := ValidFName(emptyname(Url));
@@ -5036,6 +5038,8 @@ begin
         Break;
       end;
     end;
+
+  finally Result.Free; end;
 end;
 
 procedure TDownloadThread.ProcPic;
