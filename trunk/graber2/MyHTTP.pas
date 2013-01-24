@@ -33,7 +33,8 @@ type
 {      procedure Get(AURL: string; AResponseContent: TStream;
         AIgnoreReplies: array of SmallInt);  }
       function Get(AURL: string; AResponse: TStream = nil): string;
-      function Post(AURL: string; ASource: TStrings): string;
+      function Post(AURL: string; ASource: TStrings): string; overload;
+      procedure Post(AURL: string; ASource: TStrings; AResponse: TStream); overload;
       procedure ReadCookies(url: string; AResponse: TIdHTTPResponse);
       procedure WriteCookies(url: string; ARequest: TIdHTTPRequest);
       property CookieList: TMyCookieList read FCookieList write SetCookieList;
@@ -301,6 +302,11 @@ end;
 function TMyIdHTTP.Post(AURL: string; ASource: TStrings): string;
 begin
   Result := inherited Post(AURL,ASource);
+end;
+
+procedure TMyIdHTTP.Post(AURL: string; ASource: TStrings; AResponse: TStream);
+begin
+  inherited Post(AURL,ASource,AResponse);
 end;
 
 procedure TMyIdHTTP.ReadCookies(url: string; AResponse: TIdHTTPResponse);
