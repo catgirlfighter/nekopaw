@@ -67,7 +67,7 @@ $gui_images_part = '';
 	$thread.execute();
 	$thread.xml = 'listxml';
 	$thread.xmlcontent = $lxml;
-	$thread.url = "$main.url+'post/index.'+$fpxml+'?limit=100&tags='+@httpencode($tag)";
+	$thread.url = "$main.url+'post/index.'+$fpxml+'?limit=100&tags='+@httpencode($tag)+'&page='+$thread.counter+1";
 }
 
 ;GUI HTML mode
