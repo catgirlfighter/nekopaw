@@ -16,7 +16,7 @@ uses
   dxSkinscxPCPainter,cxDropDownEdit,
   {graber2}
   cxmymultirow,cxmycombobox,common, Graberu, cxCheckBox,
-  cxExtEditRepositoryItems;
+  cxExtEditRepositoryItems, cxContainer;
 
 type
   TListFrameState = (lfsNew, lfsEdit);
@@ -54,6 +54,7 @@ type
     gResShort: TcxGridColumn;
     pmFavList: TPopupMenu;
     Label1: TLabel;
+    lTip: TcxLabel;
     procedure pcMainChange(Sender: TObject);
     procedure gRescButtonPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
@@ -198,8 +199,9 @@ var
   s: string;
   n: integer;
 begin
+//  vgSettings.
   n := vgSettings.Tag;
-
+  vgSettings.InplaceEditor.PostEditValue;
  //(vgSettings.RowByName('vgitag') as TcxEditorRow).
 
  s := (vgSettings.RowByName('vgitag') as TcxEditorRow)
@@ -238,11 +240,13 @@ end;
 
 procedure TfNewList.btnPreviousClick(Sender: TObject);
 begin
-  if pcMain.ActivePage = tsSettings then
-    pcMain.ActivePage := tsList;
   if not FullResList.ListFinished then
+  begin
     FullResList.StartJob(JOB_STOPLIST);
-  FLoggedOn := false;
+    FLoggedOn := false;
+  end else
+    if pcMain.ActivePage = tsSettings then
+      pcMain.ActivePage := tsList;
 end;
 
 procedure TfNewList.CreateSettings(n: Integer);
@@ -398,18 +402,24 @@ end;
 
 procedure TfNewList.JobStatus(Sander: TObject; Action: integer);
 begin
-  if Action = JOB_STOPLIST then
-  begin
-    SetIntrfEnabled(true);
-    if Assigned(fLogin) then
-      if FLoggedOn or FullResList.Canceled then
-        fLogin.Close
-      else
-        fLogin.bOk.Enabled := true
-    else if FLoggedOn then
-      SendMsg;
-  end else
-    SetIntrfEnabled(false);
+  case Action of
+    JOB_LOGIN:
+    begin
+      SetIntrfEnabled(false);
+      lTip.Caption := lang('_LOGGINGIN_');
+    end;
+    JOB_STOPLIST:
+    begin
+      SetIntrfEnabled(true);
+      if Assigned(fLogin) then
+        if FLoggedOn or FullResList.Canceled then
+          fLogin.Close
+        else
+          fLogin.bOk.Enabled := true
+      else if FLoggedOn then
+        SendMsg;
+    end;
+    end;
 end;
 
 procedure TfNewList.LoadItems;
@@ -462,10 +472,13 @@ begin
     s.Text := StrToStrList(GlobalSettings.GUI.LastUsedSet,',');
 
     for i := 1 to FullResList.Count -1 do
+    begin
+      FullResList[i].Fields['tag'] := '';
       if s.IndexOf(FullResList[i].Name) <> -1 then
         fillRec(tvRes.DataController,i,0)
       else
         fillRec(tvFull.DataController,i,1);
+    end;
   finally
     s.Free;
   end;
@@ -621,11 +634,11 @@ begin
   n := vgSettings.Tag;
   with FullResList[n] do
   begin
-    Fields['tag'] := (vgSettings.RowByName('vgitag') as TcxEditorRow)
-      .Properties.Value;
+    Fields['tag'] := VarToStr((vgSettings.RowByName('vgitag') as TcxEditorRow)
+      .Properties.Value);
 
-    NameFormat := (vgSettings.RowByName('vgidwpath') as TcxEditorRow)
-      .Properties.Value;
+    NameFormat := VarToStr((vgSettings.RowByName('vgidwpath') as TcxEditorRow)
+      .Properties.Value);
 
     if vgSettings.Tag = 0 then
       GlobalSettings.Downl.SDALF := (vgSettings.RowByName('vgisdalf') as TcxEditorRow)
@@ -693,6 +706,8 @@ begin
   gRes.Enabled := b;
   btnNext.Enabled := b;
   vgSettings.Enabled := b;
+  if b then
+    lTip.Caption := '';
 end;
 
 procedure TfNewList.LoginCallBack(Sender: TObject; N: integer; Login,Password: String;

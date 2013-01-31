@@ -1194,19 +1194,22 @@ begin
       case Pic.Status of
         JOB_NOJOB: Values[n, prgc.Index] := null;
         JOB_INPROGRESS:
-          if Pic.Size = 0 then
+          if (Pic.Size = 0) and (Pic.Linked.Count = 0) then
             Values[n, prgc.Index] := 'START'
+          else if (Pic.Linked.Count = 0) then
+            Values[n, prgc.Index] := Pic.Pos / Pic.Size * 100
           else
-            Values[n, prgc.Index] := Pic.Pos / Pic.Size * 100;
+            Values[n, prgc.Index] := Pic.Linked.PicCounter.FSH / Pic.Linked.Count * 100;
         // FormatFloat('00.00%',);
         JOB_FINISHED:
-          if Pic.Size = 0 then
-          begin
-            Values[n, prgc.Index] := 'SKIP';
-            // vGrid.EndUpdate;
-            // Application.ProcessMessages;
-            // vGrid.BeginUpdate;
-          end
+          if (Pic.Size = 0) and (Pic.Linked.Count = 0) then
+            Values[n, prgc.Index] := 'SKIP'
+          else if (Pic.Linked.Count = 0) then
+            Values[n, prgc.Index] := 'OK'
+          else if Pic.Linked.PicCounter.ERR > 0 then
+            Values[n, prgc.Index] := 'ERROR'
+          else if Pic.Linked.PicCounter.OK = 0 then
+            Values[n, prgc.Index] := 'SKIP'
           else
             Values[n, prgc.Index] := 'OK';
         JOB_ERROR:
@@ -1387,7 +1390,7 @@ begin
       viewClone.DataController.Values[i, FChildIdColumn.Index] :=
         Integer(Pic.Linked[i]);
       viewClone.DataController.Values[i, FChildCheckColumn.Index] :=
-        Pic.Checked;
+        Pic.Linked[i].Checked;
       viewClone.DataController.Values[i, FChildLabelColumn.Index] :=
         Pic.Linked[i].DisplayLabel;
       updatepic(Pic.Linked[i]);

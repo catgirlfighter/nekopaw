@@ -4,7 +4,7 @@
 			<MainSource>NPUpdater.dpr</MainSource>
 			<ProjectVersion>12.3</ProjectVersion>
 			<Base>True</Base>
-			<Config Condition="'$(Config)'==''">Debug</Config>
+			<Config Condition="'$(Config)'==''">Release</Config>
 			<Platform>Win32</Platform>
 			<AppType>Application</AppType>
 			<FrameworkType>VCL</FrameworkType>
@@ -43,6 +43,8 @@
 			<DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
+			<DCC_ExeOutput>..\..\updater\compiled</DCC_ExeOutput>
+			<DCC_DcuOutput>..\..\updater\dcu</DCC_DcuOutput>
 			<DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
 			<DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
 			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
@@ -118,6 +120,8 @@
 						<Parameters Name="LoadAllSymbols">False</Parameters>
 					</Parameters>
 					<Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Bpl\dxSkinscxScheduler3PainterD15.bpl">File C:\Users\Public\Documents\RAD Studio\8.0\Bpl\dxSkinscxScheduler3PainterD15.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\8.0\Bpl\dxSkinsdxNavBar2PainterD15.bpl">File C:\Users\Public\Documents\RAD Studio\8.0\Bpl\dxSkinsdxNavBar2PainterD15.bpl not found</Excluded_Packages>
 						<Excluded_Packages Name="$(BDSBIN)\dclwebsnap150.bpl">Embarcadero WebSnap Components</Excluded_Packages>
 						<Excluded_Packages Name="$(BDSBIN)\dclwbm150.bpl">Embarcadero InternetExpress Components</Excluded_Packages>
 						<Excluded_Packages Name="$(BDSBIN)\dclDBXDriversEnt150.bpl">Embarcadero Enterprise Driver Components</Excluded_Packages>

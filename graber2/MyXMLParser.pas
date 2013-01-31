@@ -293,7 +293,11 @@ var
 begin
   if (v1 = '') then
   begin
-    Result := false;
+    case r of
+      '!': Result := v2 <> '';
+      '=': Result := v2 = '';
+      else raise Exception.Create('Check Rule: unknown operation "' + r + '"');
+    end;
     Exit;
   end;
 
@@ -325,7 +329,8 @@ begin
 
   case r of
     '!': Result := true;
-    else   Result := false;
+    '=': Result := false;
+    else raise Exception.Create('Check Rule: unknown operation "' + r + '"');
   end;
 
 end;
@@ -338,27 +343,26 @@ var
   s: string;
 
 begin
-  //Tag := lowercase(Tag);
-  if Assigned(AAttrs) and AAttrs.NoParameters then
-    AAttrs.NoParameters := true;
+  //if not Assigned(AAttrs) then
+  //  Exit;
 
   for i := 0 to Count -1 do
     if (Items[i].Kind = tkTag) then
       if SameText(Items[i].Name,Tag)
-      and not (Assigned(AAttrs) and AAttrs.NoParameters and (Items[i].Attrs.Count > 0)) then
+      and not (Assigned(AAttrs) and AAttrs.NoParameters{ and (Items[i].Attrs.Count > 0)}) then
       begin
         b := true;
         if Assigned(AAttrs) then
-          for j := 0 to AAttrs.Count -1 do
+        for j := 0 to AAttrs.Count -1 do
+        begin
+          s := Items[i].Attrs.Value(AAttrs[j].Name);
+            if not CheckRule(s,AAttrs[j].Value,AAttrs[j].Compare) and
+            not ((AAttrs[j].Value = '') and (s <> '')) then
           begin
-            s := Items[i].Attrs.Value(AAttrs[j].Name);
-              if not CheckRule(s,AAttrs[j].Value,AAttrs[j].Compare) and
-              not ((AAttrs[j].Value = '') and (s <> '')) then
-            begin
-              b := false;
-              Break;
-            end;
+            b := false;
+            Break;
           end;
+        end;
 
         if b then
           AList.CopyTag(Items[i])
@@ -386,20 +390,20 @@ begin
 
         for l := 0 to Length(Tags)-1 do
           if SameText(Items[i].Name,Tags[l])
-          and not(AAttrs[l].NoParameters and (Items[i].Attrs.Count > 0)) then
+          and not(AAttrs[l].NoParameters{ and (Items[i].Attrs.Count > 0)}) then
           begin
             b := true;
             if Assigned(AAttrs[l]) then
-              for j := 0 to AAttrs[l].Count -1 do
+            for j := 0 to AAttrs[l].Count -1 do
+            begin
+              s := Items[i].Attrs.Value(AAttrs[l][j].Name);
+                if not CheckRule(s,AAttrs[l][j].Value,AAttrs[l][j].Compare) and
+                not ((AAttrs[l][j].Value = '') and (s <> '')) then
               begin
-                s := Items[i].Attrs.Value(AAttrs[l][j].Name);
-                  if not CheckRule(s,AAttrs[l][j].Value,AAttrs[l][j].Compare) and
-                  not ((AAttrs[l][j].Value = '') and (s <> '')) then
-                begin
-                  b := false;
-                  Break;
-                end;
+                b := false;
+                Break;
               end;
+            end;
 
             if b then
             begin

@@ -378,19 +378,15 @@ begin
   else
     mErrors.Lines.add(FormatDateTime('hh:nn:ss', Time) + ' ' +
       { Sender.ClassName + ': ' + } Msg);
-  dsLogs.AutoHide := false;
-  // dsLogs.Visible := true;
 
-  // if Assigned(fLogin) and fLogin.Active then
-  // MessageDlg(Msg,mtError,[mbOk],0)
-  // else
-  // dsLogs.AutoHide := false;
+  if Assigned(mFrame) and (mFrame is tfStart) then
+    MessageDlg(Msg,mtError,[mbOk],0)
+  else
+    dsLogs.AutoHide := false;
+
+//  ShowMessage(mFrame.ClassName);
 
   dsLogs.ActiveChild := dpErrors;
-  // SendMessage(h,CM_UIACTIVATE,0,0);
-
-  // if Assigned(fLogin) and (fLogin.Visible) then
-  // fLogin.SetFocus;
 end;
 
 { procedure Tmf.OnTabClose(ASender: TObject; ATabSheet: TcxTabSheet);
@@ -892,8 +888,8 @@ procedure Tmf.UPDATECHECK(var Msg: TMessage);
 begin
   lUPD.Hide;
   case Msg.WParam of
-    0:
-      CheckUpdates;
+    -1: CheckUpdates;
+    0: OnError(Self,'Update check is failed: ' + TUPDThread(msg.LParam).Error);
     1:
       if MessageDlg(lang('_NEWUPDATES_'), mtConfirmation, [mbYes, mbNo], 0)
         = mrYes then
@@ -1466,7 +1462,7 @@ begin
   if OpBase.SHOWSETTINGS then
     PostMessage(Handle, CM_SHOWSETTINGS, 0, 0)
   else if GlobalSettings.AutoUPD then
-    PostMessage(Handle, CM_UPDATE, 0, 0);
+    PostMessage(Handle, CM_UPDATE, -1, 0);
   if GlobalSettings.ShowWhatsNew and GlobalSettings.IsNew then
     PostMessage(Handle, CM_WHATSNEW, 0, 0);
 

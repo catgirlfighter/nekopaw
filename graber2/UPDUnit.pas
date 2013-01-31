@@ -93,6 +93,10 @@ begin
 //  items := TTagList.Create;
   xml.TagList.GetList('item',nil,items);
 
+  if items.Count = 0 then
+    raise Exception.Create('Result of parsing VERSION.XML is ZERO. It can not be ZERO');
+
+
   INI := TINIFile.Create(root + 'settings.ini');
 
   //result := false;
@@ -258,6 +262,11 @@ begin
     ReturnValue := -1;
     try
       s := FHTTP.Get(FListURL + 'version.xml');
+
+      // checking critical parts
+      if s = '' then
+        raise Exception.Create('VERSION.XML is EMPTY. It can not be EMPTY');
+
       case JOB of
         UPD_CHECK_UPDATES:
           if CheckUpdates(s,items) then
@@ -282,7 +291,7 @@ begin
   finally
     items.Free;
     FHTTP.Free;
-    PostMessage(FHWND,CM_UPDATE,ReturnValue,0);
+    SendMessage(FHWND,CM_UPDATE,ReturnValue,Integer(Self));
   end;
 end;
 

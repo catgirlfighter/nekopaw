@@ -2,7 +2,8 @@ unit OpBase;
 
 interface
 
-uses Windows, SysUtils, Messages, GraberU, INIFiles, Classes, Common, MyHTTP;
+uses Windows, SysUtils, Messages, GraberU, INIFiles, Classes, Common,
+MyHTTP, MyINIFile;
 
 var
   FullResList: TResourceList;
@@ -313,6 +314,16 @@ var
 
 begin
   INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+
+  if not fileexists(INI.FileName) then
+  begin
+    with TStringStream.Create('[Settings]',TEncoding.Unicode) do
+    begin
+      SaveToFile(INI.FileName);
+      Free;
+    end;
+  end;
+
   try
     with GlobalSettings do
     begin
@@ -527,6 +538,7 @@ if fileexists(IncludeTrailingPathDelimiter(rootdir) + profname) then
 else
 begin
   LoadProfileSettings;
+
   SaveProfileSettings;
 end;
 

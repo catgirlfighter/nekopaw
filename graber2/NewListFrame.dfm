@@ -1,8 +1,8 @@
 object fNewList: TfNewList
   Left = 0
   Top = 0
-  Width = 451
-  Height = 304
+  Width = 570
+  Height = 315
   Align = alClient
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -11,6 +11,8 @@ object fNewList: TfNewList
   Font.Style = []
   ParentFont = False
   TabOrder = 0
+  ExplicitWidth = 451
+  ExplicitHeight = 304
   object Label1: TLabel
     Left = 208
     Top = 144
@@ -22,21 +24,23 @@ object fNewList: TfNewList
     Left = 182
     Top = 31
     Width = 8
-    Height = 273
+    Height = 284
     Margins.Left = 0
     Margins.Right = 0
     MinSize = 150
     Control = gRes
+    ExplicitHeight = 273
   end
   object pButtons: TPanel
     AlignWithMargins = True
     Left = 3
     Top = 3
-    Width = 445
+    Width = 564
     Height = 25
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 1
+    ExplicitWidth = 445
     object btnPrevious: TcxButton
       Left = 0
       Top = 0
@@ -57,15 +61,20 @@ object fNewList: TfNewList
       TabOrder = 1
       OnClick = btnNextClick
     end
+    object lTip: TcxLabel
+      Left = 202
+      Top = 3
+    end
   end
   object gRes: TcxGrid
     Left = 0
     Top = 31
     Width = 182
-    Height = 273
+    Height = 284
     Margins.Right = 0
     Align = alLeft
     TabOrder = 2
+    ExplicitHeight = 273
     object tvRes: TcxGridTableView
       OnFocusedRecordChanged = tvResFocusedRecordChanged
       DataController.Summary.DefaultGroupSummaryItems = <>
@@ -128,27 +137,33 @@ object fNewList: TfNewList
   object pcMain: TcxPageControl
     Left = 190
     Top = 31
-    Width = 261
-    Height = 273
+    Width = 380
+    Height = 284
     Align = alClient
     TabOrder = 3
     Properties.ActivePage = tsList
     Properties.HideTabs = True
     OnChange = pcMainChange
-    ClientRectBottom = 273
-    ClientRectRight = 261
+    ExplicitWidth = 261
+    ExplicitHeight = 273
+    ClientRectBottom = 284
+    ClientRectRight = 380
     ClientRectTop = 0
     object tsList: TcxTabSheet
       Caption = 'tsList'
       ImageIndex = 0
+      ExplicitWidth = 261
+      ExplicitHeight = 273
       object gFull: TcxGrid
         Left = 0
         Top = 0
-        Width = 261
-        Height = 273
+        Width = 380
+        Height = 284
         Margins.Right = 0
         Align = alClient
         TabOrder = 0
+        ExplicitWidth = 261
+        ExplicitHeight = 273
         object tvFull: TcxGridTableView
           OnKeyPress = tvFullKeyPress
           OnEditValueChanged = tvFullEditValueChanged
@@ -224,16 +239,20 @@ object fNewList: TfNewList
       Caption = 'tsSettings'
       ImageIndex = 1
       OnShow = tsSettingsShow
+      ExplicitWidth = 261
+      ExplicitHeight = 273
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0
-        Width = 261
-        Height = 273
+        Width = 380
+        Height = 284
         Align = alClient
         OptionsView.ShowEditButtons = ecsbAlways
         OptionsView.GridLineColor = clBtnShadow
         OptionsView.RowHeaderWidth = 125
         TabOrder = 0
+        ExplicitWidth = 261
+        ExplicitHeight = 273
         Version = 1
       end
     end
