@@ -33,7 +33,8 @@ uses
   NewDoublesRuleForm in 'NewDoublesRuleForm.pas' {fmDoublesNewRule},
   cxmymultirow in 'cxmymultirow.pas',
   win7taskbar in 'win7taskbar.pas',
-  Balloon in 'Balloon.pas';
+  Balloon in 'Balloon.pas',
+  MyINIFile in 'MyINIFile.pas';
 
 {$R *.res}
 

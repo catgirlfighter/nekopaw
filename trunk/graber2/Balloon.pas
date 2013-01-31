@@ -11,7 +11,7 @@ Unit Balloon;
 Interface
 
 Uses
-  Forms, Classes, Controls, StdCtrls, ExtCtrls, Windows, Graphics,
+  Types,Forms, Classes, Controls, StdCtrls, ExtCtrls, Windows, Graphics,
   Messages, SysUtils;
 
 Type
