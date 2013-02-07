@@ -1922,6 +1922,9 @@ function TIdHTTPProtocol.ProcessResponse(AIgnoreReplies: array of SmallInt): TId
     LTempResponse: TMemoryStream;
     LTempStream: TStream;
   begin
+    if Request.Method = Id_HTTPMethodHead then
+      Exit;
+
     LTempResponse := TMemoryStream.Create;
     try
       LTempStream := Response.ContentStream;
@@ -2033,7 +2036,8 @@ begin
     if FHTTP.Connected then begin
       // This is a workaround for buggy HTTP 1.1 servers which
       // does not return any body with 302 response code
-      DiscardContent(5000); // Lets wait for any kind of content
+//!!NO      DiscardContent(5000); // Lets wait for any kind of content
+      DiscardContent(100);
     end;
   end else begin
     //Ciaran, 30th Nov 2004: I commented out the following code.  When a https server

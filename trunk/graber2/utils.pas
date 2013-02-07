@@ -38,12 +38,15 @@ type
     il: TcxImageList;
     erPathText: TcxEditRepositoryMRUItem;
     IdInterceptThrottler1: TIdInterceptThrottler;
+    erCSVListEdit: TcxEditRepositoryButtonItem;
     procedure erPathBrowsePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure erURLTextPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure EditRepositoryMRUItem1PropertiesButtonClick(Sender: TObject);
     procedure DataModuleCreate(Sender: TObject);
+    procedure erCSVListEditPropertiesButtonClick(Sender: TObject;
+      AButtonIndex: Integer);
     { Private declarations }
   protected
     procedure OnGetTagItems(Sender: TObject; SearchWord: string;
@@ -66,7 +69,7 @@ procedure BestFitWidths(a: TcxGridTableView; FirstRec: integer = 0);
 
 implementation
 
-uses PathEditorForm, LangString, MainForm;
+uses PathEditorForm, LangString, MainForm, TextEditorForm;
 
 {$R *.dfm}
 type
@@ -311,6 +314,8 @@ begin
     end;
     ftTagText:
       RepositoryItem := ertagedit;
+    ftCSVList:
+      RepositoryItem := erCSVListEdit;
   end;
 end;
 
@@ -389,6 +394,19 @@ begin
 
   finally
     fields.Free;
+  end;
+end;
+
+procedure Tdm.erCSVListEditPropertiesButtonClick(Sender: TObject;
+  AButtonIndex: Integer);
+begin
+  fTextEdit.mText.Lines.BeginUpdate; try
+  fTextEdit.mText.Text := strtostrlist((Sender as tcxbuttonedit).Text);
+  finally fTextEdit.mText.Lines.EndUpdate; end;
+  if fTextEdit.Execute then
+  begin
+    (Sender as tcxbuttonedit).EditValue := strlisttostr(fTextEdit.mText.Lines);
+    (Sender as tcxbuttonedit).PostEditValue;
   end;
 end;
 

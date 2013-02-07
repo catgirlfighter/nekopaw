@@ -70,11 +70,10 @@ begin
   Result.Intercept := idThrottler;
   Result.HandleRedirects := true;
   Result.AllowCookies := False;
-  Result.Request.UserAgent :=
-//    'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; en)';
-  'Mozilla/5.0 (Windows NT 6.1; rv:16.0) Gecko/20100101 Firefox/16.0';
-{  result.ReadTimeout := 30000;
-  result.ConnectTimeout := 10000;    }
+  Result.Request.UserAgent :=  'Mozilla/5.0 (Windows NT 6.1; rv:18.0) Gecko/20100101 Firefox/18.0';
+//  Result.Request.AcceptLanguage := 'en-us,en;q=0.8';
+//  Result.Request.AcceptEncoding := 'gzip, deflate';
+//  Result.Request.Accept := 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
 end;
 
 {var

@@ -1,8 +1,8 @@
 object fNewList: TfNewList
   Left = 0
   Top = 0
-  Width = 570
-  Height = 315
+  Width = 451
+  Height = 304
   Align = alClient
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -11,8 +11,6 @@ object fNewList: TfNewList
   Font.Style = []
   ParentFont = False
   TabOrder = 0
-  ExplicitWidth = 451
-  ExplicitHeight = 304
   object Label1: TLabel
     Left = 208
     Top = 144
@@ -24,23 +22,21 @@ object fNewList: TfNewList
     Left = 182
     Top = 31
     Width = 8
-    Height = 284
+    Height = 273
     Margins.Left = 0
     Margins.Right = 0
     MinSize = 150
     Control = gRes
-    ExplicitHeight = 273
   end
   object pButtons: TPanel
     AlignWithMargins = True
     Left = 3
     Top = 3
-    Width = 564
+    Width = 445
     Height = 25
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitWidth = 445
     object btnPrevious: TcxButton
       Left = 0
       Top = 0
@@ -70,11 +66,11 @@ object fNewList: TfNewList
     Left = 0
     Top = 31
     Width = 182
-    Height = 284
+    Height = 273
     Margins.Right = 0
     Align = alLeft
+    PopupMenu = pmgResCopy
     TabOrder = 2
-    ExplicitHeight = 273
     object tvRes: TcxGridTableView
       OnFocusedRecordChanged = tvResFocusedRecordChanged
       DataController.Summary.DefaultGroupSummaryItems = <>
@@ -137,33 +133,28 @@ object fNewList: TfNewList
   object pcMain: TcxPageControl
     Left = 190
     Top = 31
-    Width = 380
-    Height = 284
+    Width = 261
+    Height = 273
     Align = alClient
     TabOrder = 3
     Properties.ActivePage = tsList
     Properties.HideTabs = True
     OnChange = pcMainChange
-    ExplicitWidth = 261
-    ExplicitHeight = 273
-    ClientRectBottom = 284
-    ClientRectRight = 380
+    ClientRectBottom = 273
+    ClientRectRight = 261
     ClientRectTop = 0
     object tsList: TcxTabSheet
       Caption = 'tsList'
       ImageIndex = 0
-      ExplicitWidth = 261
-      ExplicitHeight = 273
       object gFull: TcxGrid
         Left = 0
         Top = 0
-        Width = 380
-        Height = 284
+        Width = 261
+        Height = 273
         Margins.Right = 0
         Align = alClient
+        PopupMenu = pmgFullCopy
         TabOrder = 0
-        ExplicitWidth = 261
-        ExplicitHeight = 273
         object tvFull: TcxGridTableView
           OnKeyPress = tvFullKeyPress
           OnEditValueChanged = tvFullEditValueChanged
@@ -239,20 +230,16 @@ object fNewList: TfNewList
       Caption = 'tsSettings'
       ImageIndex = 1
       OnShow = tsSettingsShow
-      ExplicitWidth = 261
-      ExplicitHeight = 273
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0
-        Width = 380
-        Height = 284
+        Width = 261
+        Height = 273
         Align = alClient
         OptionsView.ShowEditButtons = ecsbAlways
         OptionsView.GridLineColor = clBtnShadow
         OptionsView.RowHeaderWidth = 125
         TabOrder = 0
-        ExplicitWidth = 261
-        ExplicitHeight = 273
         Version = 1
       end
     end
@@ -309,5 +296,21 @@ object fNewList: TfNewList
     AutoPopup = False
     Left = 264
     Top = 152
+  end
+  object pmgFullCopy: TPopupMenu
+    Left = 232
+    Top = 80
+    object COPY1: TMenuItem
+      Caption = '_COPY_'
+      OnClick = COPY1Click
+    end
+  end
+  object pmgResCopy: TPopupMenu
+    Left = 32
+    Top = 96
+    object COPY2: TMenuItem
+      Caption = '_COPY_'
+      OnClick = COPY2Click
+    end
   end
 end

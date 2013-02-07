@@ -1063,6 +1063,8 @@ begin
   ResList.DWNLDHandler.Retries := GlobalSettings.Downl.Retries;
   ResList.PictureList.IgnoreList := CopyDSArray(IgnoreList);
 
+  ResList.LogMode := GLOBAL_LOGMODE;
+
   bbDALF.Down := GlobalSettings.Downl.SDALF;
   bbAutoUnch.Down := GlobalSettings.Downl.AutoUncheckInvisible;
 end;
@@ -1216,6 +1218,7 @@ begin
           Values[n, prgc.Index] := 'ERROR';
         JOB_CANCELED:
           Values[n, prgc.Index] := 'ABORT';
+        JOB_REFRESH: Values[n, prgc.Index] := 'REFRESH';
       end;
     end;
 

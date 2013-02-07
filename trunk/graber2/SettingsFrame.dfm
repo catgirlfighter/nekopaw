@@ -218,6 +218,14 @@ object fSettings: TfSettings
         Transparent = True
         Width = 339
       end
+      object chbLogMode: TcxCheckBox
+        Left = 6
+        Top = 210
+        Caption = 'chbLogMode'
+        TabOrder = 10
+        Transparent = True
+        Width = 339
+      end
     end
     object cxTabSheet2: TcxTabSheet
       Caption = 'cxTabSheet2'

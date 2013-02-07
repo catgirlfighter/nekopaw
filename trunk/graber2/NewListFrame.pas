@@ -5,7 +5,7 @@ interface
 uses
   {base}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, Menus, StdCtrls, INIFiles, ShellAPI,
+  Dialogs, Menus, StdCtrls, INIFiles, ShellAPI, Clipbrd,
   {devexp}
   cxGraphics, cxControls, cxLookAndFeels, cxTextEdit,
   cxLookAndFeelPainters, cxStyles, cxCustomData, cxFilter, cxData,
@@ -55,6 +55,10 @@ type
     pmFavList: TPopupMenu;
     Label1: TLabel;
     lTip: TcxLabel;
+    pmgFullCopy: TPopupMenu;
+    COPY1: TMenuItem;
+    pmgResCopy: TPopupMenu;
+    COPY2: TMenuItem;
     procedure pcMainChange(Sender: TObject);
     procedure gRescButtonPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
@@ -84,6 +88,8 @@ type
     procedure tvFullDataControllerFilterChanged(Sender: TObject);
     procedure tvFullKeyPress(Sender: TObject; var Key: Char);
     procedure ExecCheatSheetClick(Sender: TObject);
+    procedure COPY1Click(Sender: TObject);
+    procedure COPY2Click(Sender: TObject);
   private
     { Private declarations }
     FOnError: TLogEvent;
@@ -231,7 +237,10 @@ begin
   end
   else
   begin
-    tvRes.Controller.FocusedRowIndex := 0;
+    if tvRes.ViewData.RowCount < 3 then
+      tvRes.Controller.FocusedRowIndex := 1
+    else
+      tvRes.Controller.FocusedRowIndex := 0;
     pcMain.ActivePage := tsSettings;
     Application.MainForm.ActiveControl := vgSettings;
     vgSettings.RowByName('vgitag').Focused := true;
@@ -247,6 +256,16 @@ begin
   end else
     if pcMain.ActivePage = tsSettings then
       pcMain.ActivePage := tsList;
+end;
+
+procedure TfNewList.COPY1Click(Sender: TObject);
+begin
+  if Assigned(tvFull.Controller.FocusedItem) then
+
+    if (tvRes.Controller.FocusedColumn.Index in [0,2])  then
+      clipboard.AsText := VarToStr(tvFull.Controller.FocusedRow.Values[3])
+    else
+      clipboard.AsText := VarToStr(tvFull.Controller.FocusedItem.EditValue);
 end;
 
 procedure TfNewList.CreateSettings(n: Integer);
@@ -647,7 +666,11 @@ begin
     begin
       Inherit := (vgSettings.RowByName('vgiinherit') as TcxEditorRow)
         .Properties.Value;
+
       d := FullResList[0].Fields.Count;
+
+      if tvRes.ViewData.RowCount < 3 then
+        FullResList[0].NameFormat := NameFormat;
 
       r := nil;
 
@@ -733,6 +756,12 @@ begin
   end;
 end;
 
+procedure TfNewList.COPY2Click(Sender: TObject);
+begin
+  if Assigned(tvRes.Controller.FocusedRow) then
+    clipboard.AsText := VarToStr(tvRes.Controller.FocusedRow.Values[2]);
+end;
+
 procedure TfNewList.SetLang;
 begin
   btnPrevious.Caption := lang('_PREVIOUSSTEP_');
@@ -740,6 +769,8 @@ begin
   tvFull.FilterRow.InfoText := lang('_FILTERROWHINT_');
   tvFull.OptionsView.NoDataToDisplayInfoText := lang('_GRIDNODATA_');
   tvRes.OptionsView.NoDataToDisplayInfoText := lang('_GRIDNODATA_');
+  Copy1.Caption := lang('_COPY_');
+  Copy2.Caption := Copy1.Caption;
 end;
 
 procedure TfNewList.tsSettingsShow(Sender: TObject);

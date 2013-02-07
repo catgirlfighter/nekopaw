@@ -121,7 +121,7 @@ object fGrid: TfGrid
         item
           Description = 'OK'
           ImageIndex = 13
-          Value = 'OK'
+          Value = 'FINISH'
         end
         item
           Description = 'SKIP'
@@ -139,6 +139,9 @@ object fGrid: TfGrid
           Value = 'ABORT'
         end
         item
+          Description = 'REFRESH'
+          ImageIndex = 20
+          Value = 'REFRESH'
         end>
       Properties.ReadOnly = True
       Properties.ShowDescriptions = False

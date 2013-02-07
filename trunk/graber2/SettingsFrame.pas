@@ -102,6 +102,7 @@ type
     eSpeed: TcxSpinEdit;
     cxLabel6: TcxLabel;
     chbTips: TcxCheckBox;
+    chbLogMode: TcxCheckBox;
     procedure btnOkClick(Sender: TObject);
     procedure chbProxyPropertiesEditValueChanged(Sender: TObject);
     procedure chbProxyAuthPropertiesEditValueChanged(Sender: TObject);
@@ -207,12 +208,18 @@ begin
 
   end;
 
+
+
   if (cbLanguage.ItemIndex > -1)
   and not SameText(FLangList[cbLanguage.ItemIndex],langname) then
   begin
     langname := FLangList[cbLanguage.ItemIndex];
-    PostMessage(Application.MainForm.Handle, CM_LANGUAGECHANGED,
-      0, 0);
+    SetLogMode(chbLogMode.Checked);
+    PostMessage(Application.MainForm.Handle, CM_LANGUAGECHANGED, 0, 0);
+  end else if GLOBAL_LOGMODE <> chbLogMode.Checked then
+  begin
+    SetLogMode(chbLogMode.Checked);
+    PostMessage(Application.MainForm.Handle, CM_LOGMODECHANGED, 0, 0);
   end;
 
 end;
@@ -391,7 +398,7 @@ end;
 procedure TfSettings.lCheckNowClick(Sender: TObject);
 begin
   PostMessage(Application.MainForm.Handle, CM_UPDATE,
-    0, 0);
+    -1, 0);
 end;
 
 procedure TfSettings.lHelpClick(Sender: TObject);
@@ -440,6 +447,7 @@ begin
       cbSkin.Text := SkinName;
     chbMenuCaptions.Checked := MenuCaptions;
     chbTips.Checked := Tips;
+    chbLogMode.Checked := GLOBAL_LOGMODE;
 {    resnames := tstringlist.Create;
     skinnames := tstringlist.Create;
     try
@@ -531,6 +539,7 @@ begin
   chbmenucaptions.Caption := lang('_MENUCAPTIONS_');
   chbTips.Caption := lang('_SHOWTIPS_');
   lHELP.Caption := lang('_HELP_');
+  chbLogMode.Caption := lang('_LOGMODE_');
 end;
 
 procedure TfSettings.tlListFocusedNodeChanged(Sender: TcxCustomTreeList;

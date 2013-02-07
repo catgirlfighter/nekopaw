@@ -2,7 +2,7 @@ object Form1: TForm1
   Left = 0
   Top = 0
   Caption = 'Form1'
-  ClientHeight = 202
+  ClientHeight = 298
   ClientWidth = 447
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -25,7 +25,7 @@ object Form1: TForm1
   end
   object Memo1: TMemo
     Left = 8
-    Top = 39
+    Top = 111
     Width = 431
     Height = 155
     Lines.Strings = (
@@ -63,10 +63,27 @@ object Form1: TForm1
   end
   object ProgressBar1: TProgressBar
     Left = 8
-    Top = 80
+    Top = 272
     Width = 431
     Height = 17
     TabOrder = 5
+  end
+  object Edit1: TEdit
+    Left = 8
+    Top = 82
+    Width = 345
+    Height = 21
+    TabOrder = 6
+    Text = 'Edit1'
+  end
+  object Button5: TButton
+    Left = 364
+    Top = 80
+    Width = 75
+    Height = 25
+    Caption = 'Button5'
+    TabOrder = 7
+    OnClick = Button5Click
   end
   object ApplicationEvents1: TApplicationEvents
     OnMessage = ApplicationEvents1Message
