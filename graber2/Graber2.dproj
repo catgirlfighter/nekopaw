@@ -93,6 +93,9 @@
 			<DCCReference Include="win7taskbar.pas"/>
 			<DCCReference Include="Balloon.pas"/>
 			<DCCReference Include="MyINIFile.pas"/>
+			<DCCReference Include="TextEditorForm.pas">
+				<Form>fTextEdit</Form>
+			</DCCReference>
 			<None Include="ModelSupport_Graber2\default.txaPackage"/>
 			<RcItem Include="pictures\Favorites-icon.bmp">
 				<ResourceType>RCDATA</ResourceType>
@@ -136,7 +139,7 @@
 						<VersionInfo Name="MajorVer">2</VersionInfo>
 						<VersionInfo Name="MinorVer">0</VersionInfo>
 						<VersionInfo Name="Release">1</VersionInfo>
-						<VersionInfo Name="Build">36</VersionInfo>
+						<VersionInfo Name="Build">37</VersionInfo>
 						<VersionInfo Name="Debug">False</VersionInfo>
 						<VersionInfo Name="PreRelease">False</VersionInfo>
 						<VersionInfo Name="Special">False</VersionInfo>
@@ -148,7 +151,7 @@
 					<VersionInfoKeys>
 						<VersionInfoKeys Name="CompanyName">catgirl group</VersionInfoKeys>
 						<VersionInfoKeys Name="FileDescription">Nekopaw Grabber</VersionInfoKeys>
-						<VersionInfoKeys Name="FileVersion">2.0.1.36</VersionInfoKeys>
+						<VersionInfoKeys Name="FileVersion">2.0.1.37</VersionInfoKeys>
 						<VersionInfoKeys Name="InternalName"/>
 						<VersionInfoKeys Name="LegalCopyright">nekopaw.googlecode.com</VersionInfoKeys>
 						<VersionInfoKeys Name="LegalTrademarks"/>

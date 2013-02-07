@@ -62,6 +62,11 @@ procedure SavePathList(list: TStrings);
 procedure LoadFavList(dest: TStrings);
 procedure SaveFavList(src: tStrings);
 
+var
+  GLOBAL_LOGMODE: Boolean;
+
+procedure SetLogMode(Value: Boolean);
+
 implementation
 
 uses LangString, EncryptStrings, AES;
@@ -172,7 +177,6 @@ var
   //s: string;
   dlu: integer;
 begin
-
   INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + 'settings.ini');
   try
     profname := INI.ReadString('settings','profile',profname);
@@ -526,6 +530,24 @@ begin
       ini.WriteString('favtaglist','item'+IntToStr(i),src[i]);
   finally
     ini.Free;
+  end;
+end;
+
+procedure SetLogMode(Value: Boolean);
+var
+  d: string;
+
+begin
+  if GLOBAL_LOGMODE <> Value then
+  begin
+    GLOBAL_LOGMODE := Value;
+
+    if Value then
+    begin
+      d := ExtractFilePath(paramstr(0))+'log';
+      if not DirectoryExists(d) then
+        CreateDirExt(d);
+    end;
   end;
 end;
 

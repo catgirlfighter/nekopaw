@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ComCtrls, unit_win7taskbar, AppEvnts;
+  Dialogs, StdCtrls, ComCtrls, unit_win7taskbar, AppEvnts, MyHTTP;
 
 type
   TForm1 = class(TForm)
@@ -16,12 +16,15 @@ type
     ProgressBar1: TProgressBar;
     ApplicationEvents1: TApplicationEvents;
     OpenDialog1: TOpenDialog;
+    Edit1: TEdit;
+    Button5: TButton;
     procedure Button2Click(Sender: TObject);
     procedure Button4Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure ApplicationEvents1Message(var Msg: tagMSG; var Handled: Boolean);
     procedure Button3Click(Sender: TObject);
     procedure Button1Click(Sender: TObject);
+    procedure Button5Click(Sender: TObject);
   private
     Msg_TaskbarButtonCreated: Cardinal;
     { Private declarations }
@@ -109,6 +112,25 @@ begin
   SetTaskbarProgressValue(500,1000);
   //  w7taskbar.SetProgress(50,100);  }
 //  w7taskbar.State := tbpsNormal;
+end;
+
+procedure TForm1.Button5Click(Sender: TObject);
+var
+  h: tmyidhttp;
+begin
+  h := CreateHTTP;
+  h.HandleRedirects := false;
+  try
+    try
+      h.Head(edit1.Text);
+    except
+    end;
+    memo1.Clear;
+    memo1.Lines.Add(h.ResponseText);
+    memo1.Lines.Add(h.Response.Location);
+  finally
+    h.Free;
+  end;
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);

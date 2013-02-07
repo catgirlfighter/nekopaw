@@ -139,6 +139,7 @@ type
     procedure WREFRESHRESINFO(var Msg: TMessage); message CM_REFRESHRESINFO;
     procedure MENUSTYLECHANGED(var Msg: TMessage); message CM_MENUSTYLECHANGED;
     procedure JOBPROGRESS(var Msg: TMessage); message CM_JOBPROGRESS;
+    procedure LOGMODECHANGED(var Msg: TMessage); message CM_LOGMODECHANGED;
     // procedure dxTabClose(Sender: TdxCustomDockControl);
     // procedure APPLYEDITLIST(var Msg: TMessage); message CM_APPLYNEWLIST;
   private
@@ -594,13 +595,12 @@ begin
   n := TMycxTabSheet(Msg.WParam);
 
   f := n.SecondFrame as TfNewList; // TfNewList(n.Tag);
+  f.ResetItems;
+  SaveResourceSettings;
+
   f2 := tfGrid.Create(n) as tfGrid;
   f2.CreateList;
   f2.ResList.OnError := OnError;
-
-  f.ResetItems;
-
-  SaveResourceSettings;
 
   if VarToStr(FullResList[0].Fields['tag']) <> '' then
     n.Caption := FullResList[0].Fields['tag'];
@@ -627,9 +627,8 @@ begin
   f2.SetSettings;
   f2.Setlang;
   f2.SetMenus;
-
-  f2.ResList.STARTJOB(JOB_LIST);
   ShowPanels;
+  f2.ResList.STARTJOB(JOB_LIST);
 end;
 
 procedure Tmf.APPLYSETTINGS(var Msg: TMessage);
@@ -1138,6 +1137,11 @@ begin
     end;
 end;
 
+procedure Tmf.LOGMODECHANGED(var Msg: TMessage);
+begin
+  SetLang;
+end;
+
 procedure Tmf.StartUpdate;
 var
   f: tfileStream;
@@ -1272,11 +1276,10 @@ begin
 {$IFDEF NEKODEBUG}
   Caption := FOldCaption + ' ' + vINFO.FileVersion + 'α debug';
 {$ELSE}
-{$IFDEF NEKOLOG}
-  Caption := FOldCaption + ' ' + vINFO.FileVersion + 'α log';
-{$ELSE}
-  Caption := FOldCaption + ' ' + vINFO.FileVersion + 'α';
-{$ENDIF}
+  if GLOBAL_LOGMODE then
+    Caption := FOldCaption + ' ' + vINFO.FileVersion + 'α log'
+  else
+    Caption := FOldCaption + ' ' + vINFO.FileVersion + 'α';
 {$ENDIF}
   bbNew.Caption := lang('_NEWLIST_');
   bbStartList.Caption := lang('_STARTLIST_');

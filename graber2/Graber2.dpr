@@ -34,7 +34,8 @@ uses
   cxmymultirow in 'cxmymultirow.pas',
   win7taskbar in 'win7taskbar.pas',
   Balloon in 'Balloon.pas',
-  MyINIFile in 'MyINIFile.pas';
+  MyINIFile in 'MyINIFile.pas',
+  TextEditorForm in 'TextEditorForm.pas' {fTextEdit};
 
 {$R *.res}
 
@@ -52,6 +53,7 @@ begin
   Application.CreateForm(Tmf, mf);
   Application.CreateForm(Tdm, dm);
   Application.CreateForm(TfmDoublesNewRule, fmDoublesNewRule);
+  Application.CreateForm(TfTextEdit, fTextEdit);
   //Application.CreateForm(TfWhatsNew, fWhatsNew);
   //Application.CreateForm(TfPathEditor, fPathEditor);
   //Application.CreateForm(TfLogin, fLogin);

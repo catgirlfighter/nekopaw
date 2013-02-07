@@ -47,7 +47,7 @@ function MoveDir(const fromDir, toDir: string): boolean;
 procedure MultWordArrays(var a1: TArrayOfWord; a2: TArrayOfWord);
 procedure _Delay(dwMilliseconds: Longint);
 function ValidFName(FName: String; bckslsh: boolean = false): String;
-function strlisttostr(s: tstringlist; del: Char = ';'; ins: Char = '"'): string;
+function strlisttostr(s: tStrings; del: Char = ';'; ins: Char = '"'): string;
 function strtostrlist(s: string; del: Char = ';'; ins: Char = '"'): string;
 function IndexOfStr(strlist,value: string): integer; overload;
 function IndexOfStr(list: tstrings; value: string): integer; overload;
@@ -936,7 +936,7 @@ begin
   Result := FName;
 end;
 
-function strlisttostr(s: tstringlist; del, ins: Char): string;
+function strlisttostr(s: tStrings; del, ins: Char): string;
 var
   i, j: Integer;
   s1, s2: string;
