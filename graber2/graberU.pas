@@ -1181,11 +1181,10 @@ begin
   else
     try
       Result := MathCalcStr(s);
-    except
-      on e: Exception do
-        raise Exception.Create('Error when calculating string (' + VarToStr(rsv)
-          + '): ' + e.Message);
-    end;
+    except on e: Exception do begin
+      e.Message := 'Error when calculating string (' + VarToStr(rsv)
+        + '): ' + e.Message; raise;
+    end; end;
 end;
 
 function gVal(Value: string): string;
@@ -1582,11 +1581,9 @@ begin
     if (FVariantType <> varUString) and (VarToStr(Value) = '') then
       Value := 0;
     Value := VarAsType(Value, FVariantType);
-  except
-    on e: Exception do
-      raise Exception.Create('"' + Value + '" - ' + e.Message);
-
-  end;
+  except on e: Exception do begin
+    e.Message := '"' + Value + '" - ' + e.Message; raise;
+  end; end;
 
   Hi := Count;
   Lo := 0;
@@ -1609,11 +1606,10 @@ begin
       inc(i);
 
     Result := (i < Count) and VarSameValue(Value, PVariant(Items[i])^);
-  except
-    on e: Exception do
-      raise Exception.Create(e.Message + ' (' + VarToStr(PVariant(Items[i])^) +
-        ') - (' + VarToStr(Value) + ')');
-  end;
+  except on e: Exception do begin
+    e.Message := e.Message + ' (' + VarToStr(PVariant(Items[i])^) +
+      ') - (' + VarToStr(Value) + ')'; raise;
+  end; end;
 end;
 
 function TMetaList.Add(Value: Variant; Pos: integer): PVariant;
@@ -2000,8 +1996,9 @@ begin
         on e: Exception do
         begin
           FreeAndNil(Calced);
-          raise Exception.Create
+          e.Message :=
             ('Script section item parametres calculation error: ' + e.Message);
+          raise;
         end;
       end;
     end
@@ -3126,9 +3123,10 @@ begin
         mainscript.Free;
       if Assigned(FOnError) then
         FOnError(Self, 'Resource load error (' + FName + '): ' + e.Message)
-      else
-        raise Exception.Create('Resource load error (' + FName + '): ' +
-          e.Message);
+      else begin
+        e.Message := 'Resource load error (' + FName + '): ' + e.Message;
+        raise;
+      end;
     end;
   end;
 
@@ -4371,7 +4369,7 @@ begin
               on e: Exception do
               begin
                 p.Free;
-                raise Exception.Create(e.Message);
+                raise;
               end;
             end;
           end;
@@ -4383,7 +4381,7 @@ begin
       begin
         if Assigned(l) then
           l.Free;
-        raise Exception.Create(e.Message);
+        raise;
       end;
     end;
   end
@@ -4718,11 +4716,10 @@ begin
         raise Exception.Create('unknown value: ' + c + Value);
       end;
     end;
-  except
-    on e: Exception do
-      raise Exception.Create('making value error (' + c + Value + '): ' +
-        e.Message);
-  end;
+  except on e: Exception do begin;
+    e.Message := 'making value error (' + c + Value + '): ' +
+      e.Message; raise;
+  end; end;
   // tmp := VarToStr(Result); //for watching
 end;
 
@@ -4972,11 +4969,9 @@ begin
   // if not (LinkedObj is TTagList) then
   try
     ProcValue(ItemName, ItemValue);
-  except
-    on e: Exception do
-      raise Exception.Create(ItemName + '(' + VarToStr(ItemValue) + '): ' +
-        e.Message);
-  end;
+  except on e: Exception do begin
+    e.Message := ItemName + '(' + VarToStr(ItemValue) + '): ' + e.Message;
+  end; end;
 end;
 
 procedure TDownloadThread.FE(const Item: TScriptSection; LinkedObj: TObject);
@@ -5037,10 +5032,7 @@ begin
       try
         FBeforeScript.Process(SE, DE, FE, VE, VE);
         try
-          try
-            FHTTP.Disconnect;
-          except
-          end;
+          try FHTTP.Disconnect; except end;
           Url := '';
 
           Url := CalcValue(FHTTPRec.Url, VE, nil);
@@ -5382,10 +5374,7 @@ begin
             Break;
 
           if e.LastError = 10054 then
-            try
-              HTTP.Disconnect
-            except
-            end
+            try HTTP.Disconnect except end
           else if (FRetries < FMaxRetries) then
             inc(FRetries)
           else
@@ -5452,10 +5441,7 @@ var
   Post: TStringList;
 begin
   try
-    try
-      FHTTP.Disconnect;
-    except
-    end;
+    try FHTTP.Disconnect; except end;
     Url := CalcValue(FHTTPRec.LoginStr, VE, nil);
     if Url = '' then
       Exit;
@@ -5547,7 +5533,7 @@ begin
       Result := URL;
       try FHTTP.Head(Result);
       except on e: EIdConnClosedGracefully do begin end;
-             on e: Exception do Exception.Create(e.Message)
+             on e: Exception do raise;
       end;
 
       while FHTTP.ResponseCode = 302 do
@@ -5555,7 +5541,7 @@ begin
         Result := FHTTP.Response.Location;
         try FHTTP.Head(Result)
         except on e: EIdConnClosedGracefully do begin end;
-               on e: Exception do Exception.Create(e.Message)
+               on e: Exception do raise;
         end;
       end;
 
@@ -5567,8 +5553,7 @@ begin
     begin
       if FHTTP.ResponseCode = 404 then
         Result := ''
-      else
-        raise Exception.Create(e.Message);
+      else raise;
     end; end;
   finally
     FHTTP.HandleRedirects := true;
@@ -5698,11 +5683,10 @@ begin
       inc(index);
 
     Result := (index < Count) and SameText(Value, (Items[index].Name));
-  except
-    on e: Exception do
-      raise Exception.Create(e.Message + ' tag(' + Items[index].Name + ') - (' +
-        Value + ')');
-  end;
+  except on e: Exception do begin
+      e.Message := e.Message + ' tag(' + Items[index].Name + ') - (' +
+        Value + ')'; raise;
+  end; end;
 end;
 
 function TPictureTagLinkList.Get(Index: integer): TPictureTag;
@@ -6526,11 +6510,9 @@ begin
       v := p.Add(MetaValue, n);
 
     Pic.Meta.SetLink(MetaName, v);
-  except
-    on e: Exception do
-      raise Exception.Create( { pic.Meta['url'] + #13#10 + } MetaName + ': ' +
-        e.Message);
-  end;
+  except on e: Exception do begin
+      e.Message := MetaName + ': ' + e.Message; raise;
+  end; end;
 end;
 
 function TPictureList.CopyPicture(Pic: TTPicture; Child: Boolean): TTPicture;
@@ -7105,7 +7087,6 @@ end;
 function TPictureList.CheckDoubles(Pic: TTPicture): Boolean;
 var
   i: integer;
-  // source,rule,srcfield,checkfield
   sstr, rstr, srfield, chfield: String;
   v1: Variant;
   m: TMetaList;
@@ -7140,25 +7121,7 @@ begin
     if Result then
       Break;
 
-    {
-      s1 := Pic.Meta[FIgnoreList[i][0]];
-      if (VarToStr(s1) <> '') then
-      begin
-      try
-      m := FMetaContainer[FIgnoreList[i][1]];
-      if Assigned(m) and (m.FindPosition(s1,pos)) then
-      begin
-      Result := true;
-      Exit;
-      end;
-      except on e: exception do
-      raise Exception.Create('Doubles searching('+FIgnoreList[i][0] + ','
-      + FIgnoreList[i][1] + '): ' + e.Message);
-      end;
-      end;
-    }
   end;
-  // Result := false;
 end;
 
 procedure TPictureList.Clear;
@@ -7472,12 +7435,6 @@ begin
     index := 0;
     Exit;
   end;
-  // try
-  // Value := VarAsType(Value,FVariantType);
-  // except
-  // on e: exception do
-  // raise Exception.Create('"' + Value + '" - ' + e.Message);
-  // end;
 
   Hi := List.Count;
   Lo := 0;
@@ -7500,11 +7457,10 @@ begin
       inc(index);
 
     Result := (index < List.Count) and SameText(Value, (List[index]));
-  except
-    on e: Exception do
-      raise Exception.Create(e.Message + ' tag(' + List[index] + ') - (' +
-        Value + ')');
-  end;
+  except on e: Exception do begin
+      e.Message := e.Message + ' tag(' + List[index] + ') - (' +
+        Value + ')'; raise;
+  end; end;
 end;
 
 initialization

@@ -9,7 +9,7 @@ uses Classes, Variants, SysUtils, Math, Forms, StdCtrls, ExtCtrls, ComCtrls,
 type
   TArrayOfWord = array of word;
   TArrayOfString = array of string;
-  TSetOfChar = Set of Char;
+  TSetOfChar = Set of ANSIChar;
 
 {function Replace(src, AFrom, ATo: string;    use SysUtils.StringReplace
   rpall: boolean = false): string;     }
@@ -90,11 +90,11 @@ procedure RemSorted(Value: String; List: TStrings);
 implementation
 
 const
-  _SYMBOL_MISSED_ = 'Can''t find symbol "%s" for #%d "%s" in "%s"';
-  _OPERATOR_MISSED_ = 'Must be an operator instead of "%s" in "%s"';
-  _OPERAND_MISSED_ = 'Must be an operand instead of "%s" in "%s"';
-  _INVALID_TYPECAST_ = 'Invalid typecast for "%s" %s "%s" near #%d in "%s"';
-  _INCORRECT_SYMBOL_ = 'Incorrect value "%s" near #%d in "%s"';
+  _SYMBOL_MISSED_ = 'Can''t find symbol "%s" for #%d "%s" in "... %s ..."';
+  _OPERATOR_MISSED_ = 'Must be an operator instead of "%s" in "... %s ..."';
+  _OPERAND_MISSED_ = 'Must be an operand instead of "%s" in "... %s ..."';
+  _INVALID_TYPECAST_ = 'Invalid typecast for "%s" %s "%s" near #%d in "... %s ..."';
+  _INCORRECT_SYMBOL_ = 'Incorrect value "%s" near #%d in "... %s ..."';
 
 function ClearHTML(s: string): string; // Заебись
 
@@ -1707,14 +1707,10 @@ const
                   ls := null;
                 end;
 
-            except
-              on e: exception do
-              begin
-                e.Message := Format(_INVALID_TYPECAST_,[VarToStr(Result),s[tmp],VarToStr(d),tmp,s]) +
-                  #13#10 + e.Message;
-                raise exception.Create(e.Message);
-              end;
-            end;
+            except on e: exception do begin
+              e.Message := Format(_INVALID_TYPECAST_,[VarToStr(Result),s[tmp],VarToStr(d),tmp,s]) +
+                #13#10 + e.Message; raise;
+            end;end;
           end;
         '(':
           begin
@@ -2108,10 +2104,9 @@ begin
 
     if (index >= List.Count) or not SameText(Value, List[index]) then
       List.Insert(index,Value);
-  except
-    on e: Exception do
-      raise Exception.Create(e.Message + ' (value = ' + Value + ')');
-  end;
+  except on e: Exception do begin
+    e.Message := e.Message + ' (value = ' + Value + ')'; raise;
+  end; end;
 end;
 
 procedure RemSorted(Value: String; List: TStrings);
@@ -2144,10 +2139,9 @@ begin
 
     if (index < List.Count) and SameText(Value, List[index]) then
       List.Delete(index);
-  except
-    on e: Exception do
-      raise Exception.Create(e.Message + ' (value = ' + Value + ')');
-  end;
+  except on e: Exception do begin
+    e.Message := e.Message + ' (value = ' + Value + ')'; raise;
+  end; end;
 end;
 
 end.
