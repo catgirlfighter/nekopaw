@@ -195,13 +195,9 @@ begin
         CreateDirExt(dir);
 
       f := TFileStream.Create(aroot+pname,fmCREATE);
-    
+
       try
-//        try
-          HTTP.Get(o,f);
-//        except on e: Exception do
-//          raise Exception.Create(pname + ': ' + e.Message);
-//        end;
+        HTTP.Get(o,f);
       finally
         f.Free;
       end;
