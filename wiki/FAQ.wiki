@@ -1,4 +1,4 @@
-#summary часто задаваемые вопросы
+#summary Frequently Asked Questions
 #labels Featured,Phase-Support
 
 = Could not load SSL library =
