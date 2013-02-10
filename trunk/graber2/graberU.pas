@@ -762,8 +762,9 @@ type
     function DirNumber(Dir: String): Word;
     procedure disposeDirList;
     procedure SetPicChange(Value: TPicChangeEvent);
-    function fNameNumber(FileName: String): Word;
+    function fNameNumber(FileName: String; inc: boolean = true): Word;
     procedure AddfName(FileName: String);
+    procedure fNameDec(FileName: String);
   protected
     procedure DeallocateMeta;
     procedure AddPicMeta(Pic: TTPicture; MetaName: String; MetaValue: Variant);
@@ -6390,24 +6391,35 @@ begin
 
 end;
 
-function TPictureList.fNameNumber(FileName: String): Word;
+procedure TPictureList.fNameDec(FileName: String);
 var
   n: integer;
   v: PWORD;
 begin
-  // FileName := lowercase(FileName);
-  // n := FDirList.IndexOf(FileName);
   if strFind(FileName, FFileNames, n) then
-  // begin
-  // New(v);
-  // v^ := 0;
-  // n := FDirList.Add(dir);
-  // FDirList.Objects[n] := TObject(v);
-  // end else
   begin
     v := PWORD(FFileNames.Objects[n]);
-    v^ := v^ + 1;
-    Result := v^;
+    v^ := v^ - 1;
+//    Result := v^;
+  end
+//  else
+//    Result := 0;
+end;
+
+function TPictureList.fNameNumber(FileName: String; inc: boolean = true): Word;
+var
+  n: integer;
+  v: PWORD;
+begin
+  if strFind(FileName, FFileNames, n) then
+  begin
+    v := PWORD(FFileNames.Objects[n]);
+    if inc then
+    begin
+      v^ := v^ + 1;
+      Result := v^;
+    end else
+      Result := v^ + 1;
   end
   else
     Result := 0;
@@ -6429,10 +6441,11 @@ var
   v: PWORD;
 begin
   if strFind(FileName, FFileNames, n) then
+  begin
     if Assigned(FSameNames) then
       FSameNames(Self, FileName)
     else
-  else
+  end else
   begin
     New(v);
     v^ := 0;
@@ -6676,17 +6689,25 @@ var
             else
               p := bfr + bfr2 + formatstr(Value, s2, false) + aft2 + aft;
 
+            if ExtractFileName(p) = '' then
+            begin
+              Value := null;
+              Exit;
+            end;
+
             if fnoext then
               p := p + '.' + Pic.Ext;
 
-            c := fNameNumber(p);
-            if Value > 0 then
-            begin
-              Value := c + 1;
-              c := 0;
-            end
+            c := fNameNumber(p, Value = 0);
+
+            if Value = 0 then
+            //begin
+              Value := c
+            //  c := 0;
+            //end
             else if c > 0 then
               inc(Value);
+
           until (c = 0);
 
           if (Value = 0) and b then
@@ -6739,6 +6760,7 @@ var
     else
     begin
       n := Pic.Meta.FindItem(s) as TListValue;
+      d := true;
 
       if n = nil then
       begin
@@ -6759,7 +6781,9 @@ var
   var
     i, n: integer;
     genval, // generic (%%) value exists
+    gvalrs, // neneric (%%) value have result
     conval, // constant ($$) value exists
+    havers, // have result
     hghlvl: Boolean; // if $$ not generated then it must be genetared leter
     key: string;
     rsl: Variant;
@@ -6767,7 +6791,9 @@ var
     brk: array of string;
   begin
     genval := false;
+    gvalrs := false;
     conval := false;
+    havers := false;
     hghlvl := false;
     SetLength(isl, 0);
     if not b then
@@ -6791,14 +6817,21 @@ var
         Continue;
 
       key := Copy(s, i + 1, n - i - 1);
+
+      if not genval and (s[i] = '%') then
+        genval := true
+      else if not conval and (s[i] = '$') then
+        conval := true;
+
       if ParamCheck(Pic, bfr, Copy(s, 1, i - 1), key, aft,
-        Copy(s, n + 1, length(s) - n - 1), level, s[i] = '$', b, rsl) then
+        Copy(s, n + 1, length(s) - n), level, s[i] = '$', b, rsl) then
       begin
         if (VarToStr(rsl) <> '') then
-          if not genval and (s[i] = '%') then
-            genval := true
-          else if not conval and (s[i] = '$') then
-            conval := true;
+        begin
+          havers := true;
+          if (s[i] = '%') then
+            gvalrs := true;
+        end;
 
         s := StringReplace(s, s[i] + key + s[n], VarToStr(rsl), []);
       end
@@ -6813,13 +6846,15 @@ var
     end;
 
     if b then
-      if not genval then
+      if genval and not gvalrs then
+        Result := ''
+      else
         if hghlvl then
           Result := '<' + s + '>'
+        else if havers then
+          Result := s
         else
           Result := ''
-      else
-        Result := s
     else
       Result := s;
 
@@ -6915,6 +6950,14 @@ var
         Format := NameFormat;
 
     fnoext := System.Pos('$ext$', ExtractFileName(lowercase(Format))) = 0;
+    if System.Pos('$fn$', ExtractFileName(lowercase(Format))) = 0 then
+      if fnoext then
+        Format := Format + '<($fn$)>'
+      else
+        Format := ChangeFileExt(Format,'') + '<($fn$)>' + ExtractFileExt(Format);
+
+    if Pic.FileName <> '' then
+      fNameDec(Pic.FileName);
 
     Pic.FileName := ParseSections(Pic, Format);
 
