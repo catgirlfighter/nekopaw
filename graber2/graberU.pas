@@ -4326,7 +4326,7 @@ begin
               for j := 0 to Item.ChildSections.Count - 1 do
                 with (Item.ChildSections[j] as TScriptSection) do
                 begin
-                  // Tags[j] := Item.ChildSections[j].ClassName;
+                  // Tags[j] :=  Item.ChildSections[j].ClassName;
                   Tags[j] := Name;
                   a[j] := TAttrList.Create;
                   a[j].Tag := integer(Item.ChildSections[j]);
