@@ -55,7 +55,8 @@ $gui_images_part = '';
 
 	;non-JSON firstpage
 	?$fpxml!'json'{
-		$thread.xml = 'firstpagexml';
+		?$pbp=0{ $thread.xml = 'firstpagexml'; }
+		?$pbp!0{ $thread.xml = 'listxml'; }
 	}
 
 	;JSON firstpage
@@ -89,8 +90,10 @@ $thread.referer = $picture%post_url;
 
 ^posts{
 	?$fpxml!'json'{
-		$thread.count=@min($maxpage,#count/100+1);
-		$thread.result=#count;
+		?$main.pagebypage=0{
+			$thread.count=@min($maxpage,#count/100+1);
+			$thread.result=#count;
+		}
 	}
 	^post{
 		@addpicture(
