@@ -10,7 +10,7 @@
 
 = 2.0.1.44 =
 
-- fixed donmai.us work, using old API. Because of mechanics of the New Danbooru Engenie now grabber can't download many pageses at the same time;
+- fixed donmai.us work, using old API. Because of mechanics of the New Danbooru Engenie now grabber can't download many pages at the same time;
 
 = 2.0.1.42 =
 
