@@ -1,4 +1,4 @@
-<item file="Graber2.exe" archive="Graber2.zip" version=50 />
+<item file="Graber2.exe" archive="Graber2.zip" version=51 />
 <item file="versionlog.txt" version=-1 />
 
 <item file="resources\danbooru.tmpl" version=21 />
@@ -38,7 +38,8 @@
 <item file="resources\mangahere.com.cfg" version=1 />
 <item file="resources\pixiv.net.cfg" version=4 />
 <item file="resources\deviantart.com.cfg" version=2 />
-<item file="resources\anime-pictures.net.cfg" version=0 />
+<item file="resources\anime-pictures.net.cfg" version=1 />
+<item file="resources\comicartcommunity.com.cfg" version=0 />
 
 <item file="resources\oreno.imouto.org.cfg" version=0 deleted=1 />
 <item file="resources\ponibooru.413chan.net.cfg" version=1 deleted=1 />
@@ -77,6 +78,7 @@
 <item file="resources\icons\pixiv.net.bmp" version=0 />
 <item file="resources\icons\deviantart.com.bmp" version=0 />
 <item file="resources\icons\anime-pictures.net.bmp" version=0 />
+<item file="resources\icons\comicartcommunity.com.bmp" version=0 />
 
 <item file="resources\icons\ponibooru.413chan.net.bmp" version=0 deleted=1 />
 
