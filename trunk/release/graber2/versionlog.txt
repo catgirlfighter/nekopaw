@@ -1,12 +1,12 @@
 = 2.0.1.46 =
 
-- fixed a little bug with a big mathematical expressions calculation in a scripts;
+- fixed a little bug with big mathematical expressions calculation in a scripts;
 - added comicartcommunity.com;
 
 = 2.0.1.45 =
 
 - added anime-pictures.net;
-- now, after a picture downloaded, full path to it will be updated;
+- now, after picture downloaded, full path to it will be updated;
 
 = 2.0.1.44 =
 
@@ -18,7 +18,7 @@
 
 = 2.0.1.39 =
 
-- now  when name making in the %key% not changing the "\" symbol to the safe "_" symbol;
+- now when name making in a %key% not changing the "\" symbol to the safe "_" symbol;
 
 = 2.0.1.38 =
 
