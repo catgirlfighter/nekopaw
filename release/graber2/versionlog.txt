@@ -18,7 +18,7 @@
 
 = 2.0.1.39 =
 
-- now when name making in a %key% not changing the "\" symbol to the safe "_" symbol;
+- now, when file name is creating, in a %key% does no changing the "\" symbol to the safe "_" symbol;
 
 = 2.0.1.38 =
 
