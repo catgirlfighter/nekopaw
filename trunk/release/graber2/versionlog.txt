@@ -1,3 +1,8 @@
+= other =
+
+- fixed deviantart getting list error when loading from a user's gallery;
+- fixed getting title for pics from a user's gellry;
+
 = 2.0.1.46 =
 
 - fixed a little bug with big mathematical expressions calculation in a scripts;
