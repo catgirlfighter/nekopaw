@@ -1,7 +1,8 @@
-= other =
+= 2.0.1.47 =
 
-- fixed deviantart getting list error when loading from a user's gallery;
-- fixed getting title for pics from a user's gellry;
+- added feature to delete already downloaded duplicates by it's MD5-sum (Advanced > Delete duplicates by MD5, check new button in main menu); 
+- fixed deviantart getting list error when loading from the user's gallery;
+- fixed getting title for pics from the user's gellry;
 
 = 2.0.1.46 =
 
