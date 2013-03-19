@@ -72,6 +72,7 @@ object fNewList: TfNewList
     PopupMenu = pmgResCopy
     TabOrder = 2
     object tvRes: TcxGridTableView
+      Navigator.Buttons.CustomButtons = <>
       OnFocusedRecordChanged = tvResFocusedRecordChanged
       DataController.Summary.DefaultGroupSummaryItems = <>
       DataController.Summary.FooterSummaryItems = <>
@@ -138,6 +139,7 @@ object fNewList: TfNewList
     Align = alClient
     TabOrder = 3
     Properties.ActivePage = tsList
+    Properties.CustomButtons.Buttons = <>
     Properties.HideTabs = True
     OnChange = pcMainChange
     ClientRectBottom = 273
@@ -157,6 +159,7 @@ object fNewList: TfNewList
         TabOrder = 0
         object tvFull: TcxGridTableView
           OnKeyPress = tvFullKeyPress
+          Navigator.Buttons.CustomButtons = <>
           OnEditValueChanged = tvFullEditValueChanged
           DataController.Filter.OnChanged = tvFullDataControllerFilterChanged
           DataController.Summary.DefaultGroupSummaryItems = <>

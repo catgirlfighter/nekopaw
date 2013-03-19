@@ -46,7 +46,7 @@ function ExtractFolder(s: string): string;
 function MoveDir(const fromDir, toDir: string): boolean;
 procedure MultWordArrays(var a1: TArrayOfWord; a2: TArrayOfWord);
 procedure _Delay(dwMilliseconds: Longint);
-function ValidFName(FName: String; bckslsh: boolean = false): String;
+function ValidFName(FName: String; bckslsh: boolean = false;  nodrive: boolean = false): String;
 function strlisttostr(s: tStrings; del: Char = ';'; ins: Char = '"'): string;
 function strtostrlist(s: string; del: Char = ';'; ins: Char = '"'): string;
 function IndexOfStr(strlist,value: string): integer; overload;
@@ -924,14 +924,15 @@ begin
   until (iStop - iStart) >= DWORD(dwMilliseconds);
 end;
 
-function ValidFName(FName: String; bckslsh: boolean): String;
+function ValidFName(FName: String; bckslsh: boolean; nodrive: boolean): String;
 const
   n = ['\', '/', ':', '*', '"', '<', '>', '|', '?'];
 var
   i: Integer;
 begin
   for i := 1 to length(FName) do
-    if CharInSet(FName[i], n) and (not bckslsh or not CharInSet(FName[i],['\',':'])) then
+    if CharInSet(FName[i], n) and (not bckslsh
+    or not((FName[i] = '\') or not nodrive and (FName[i] = ':'))) then
       FName[i] := '_';
   Result := FName;
 end;
@@ -1628,6 +1629,7 @@ const
                 raise Exception.Create(Format(_OPERAND_MISSED_, [s[i],s]));
 
             lvl := 0;
+
             case s[i] of
               '|':
                 lvl := 1;
@@ -1646,7 +1648,17 @@ const
 
             tmp := i;
             inc(i);
-            d := Proc(lvl, s, i, l, ls, VarIsStr(Result));
+
+            if (s[i - 1] = '|') and (Result = true) then
+            begin
+              d := true;
+              i := l + 1;
+            end else if (s[i - 1] = '&') and (Result = false) then
+            begin
+              d := false;
+              i := l + 1;
+            end else
+              d := Proc(lvl, s, i, l, ls, VarIsStr(Result));
 
             if d = null then
               break;
@@ -1717,7 +1729,7 @@ const
             if op then
               raise Exception.Create(Format(_OPERATOR_MISSED_, [s[i], copy(s,i-10,20)]));
 
-            n := CharPos(s, ')', ['''' + '''','""'], [], i + 1);
+            n := CharPos(s, ')', ['''' + '''','""'], ['()'], i + 1);
 
             if n = 0 then
               raise Exception.Create(Format(_SYMBOL_MISSED_, [')', i, s[i], copy(s,i-10,20)]));

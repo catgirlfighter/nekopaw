@@ -20,6 +20,7 @@ object fGrid: TfGrid
     TabOrder = 0
     OnFocusedViewChanged = GridFocusedViewChanged
     object vGrid: TcxGridTableView
+      Navigator.Buttons.CustomButtons = <>
       OnEditValueChanged = vGridEditValueChanged
       OnFocusedItemChanged = vGridFocusedItemChanged
       OnFocusedRecordChanged = vGrid1FocusedRecordChanged
@@ -40,6 +41,7 @@ object fGrid: TfGrid
       OptionsView.ExpandButtonsForEmptyDetails = False
     end
     object vChildGrid: TcxGridTableView
+      Navigator.Buttons.CustomButtons = <>
       FilterBox.Visible = fvNever
       OnEditValueChanged = vChildGridEditValueChanged
       OnFocusedItemChanged = vChildGridFocusedItemChanged
@@ -121,7 +123,7 @@ object fGrid: TfGrid
         item
           Description = 'OK'
           ImageIndex = 13
-          Value = 'FINISH'
+          Value = 'OK'
         end
         item
           Description = 'SKIP'
@@ -161,7 +163,6 @@ object fGrid: TfGrid
       True)
     ImageOptions.Images = dm.il
     PopupMenuLinks = <>
-    Style = bmsUseLookAndFeel
     UseSystemFont = True
     Left = 208
     Top = 192

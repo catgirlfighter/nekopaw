@@ -12,6 +12,7 @@ uses
   Forms,
   SysUtils,
   common in 'common.pas',
+  md5 in 'md5.pas',
   MainForm in 'MainForm.pas' {mf},
   graberU in 'graberU.pas' {GraberU},
   StartFrame in 'StartFrame.pas' {fStart: TFrame},

@@ -159,6 +159,7 @@ type
     Theor: Word;
     PageByPage: Boolean;
     TryAgain: Boolean;
+    AcceptError: Boolean;
   end;
 
   { TListValue = class(TObject)
@@ -651,6 +652,7 @@ type
     FDisplayLabel: String;
     FPicName: String;
     FFileName: String;
+    FFactFileName: String;
     FExt: String;
     FSize: Int64;
     FPos: Int64;
@@ -658,6 +660,8 @@ type
     FChanges: TPicChanges;
     FBookMark: integer;
     FPostProc: Boolean;
+    FMD5: PVariant;
+    //FMD5Double: boolean;
   protected
     procedure SetParent(Item: TTPicture);
     procedure SetRemoved(Value: Boolean);
@@ -668,6 +672,8 @@ type
     procedure Assign(Value: TTPicture; Links: Boolean = false);
     // procedure MakeFileName(Format: String);
     procedure SetPicName(Value: String);
+    procedure MakeMD5(s: tStream);
+    procedure DeleteFile;
     property Removed: Boolean read FRemoved write SetRemoved;
     property Status: integer read FStatus write FStatus;
     property Checked: Boolean read FChecked write FChecked;
@@ -679,6 +685,7 @@ type
     property List: TPictureList read FList write FList;
     property DisplayLabel: String read FDisplayLabel write FDisplayLabel;
     property FileName: String read FFileName write FFileName;
+    property FactFileName: String read fFactFileName write fFactFileName;
     property Ext: String read FExt;
     // property md5: TMD5Digest read FMD5;
     // property MD5String: String read GetMD5String;
@@ -691,6 +698,8 @@ type
     property Changes: TPicChanges read FChanges write FChanges;
     property BookMark: integer read FBookMark write FBookMark;
     property PostProcessed: Boolean read FPostProc write FPostProc;
+    property MD5: PVariant read FMD5;
+    //property MD5Double: Boolean read FMD5Double;
     // property Obj: TObject read FObj write FObj;
   end;
 
@@ -1043,7 +1052,7 @@ function strFind(Value: string; List: TStringList; var index: integer): Boolean;
 
 implementation
 
-uses {LangString,} common;
+uses {LangString,} common, md5;
 
 {$IFDEF NEKODEBUG}
 
@@ -1264,6 +1273,7 @@ var
 begin
   if ItemName = '' then
     Exit;
+
   if FNodouble then
   begin
     p := FindItem(ItemName);
@@ -1292,6 +1302,12 @@ function TTagedList.FindItem(ItemName: String): TTagedListValue;
 var
   i: integer;
 begin
+  if ItemName = '' then
+  begin
+    Result := nil;
+    Exit;
+  end;
+
   for i := 0 to Count - 1 do
   begin
     Result := inherited Get(i);
@@ -3199,7 +3215,7 @@ begin
             end;
 
             if Assigned(t.Picture.OnPicChanged) then
-              t.Picture.OnPicChanged(t.Picture, [pcChecked, pcProgress]);
+              t.Picture.OnPicChanged(t.Picture, [pcChecked, pcProgress, pcData]);
           end;
         JOB_CANCELED:
           t.Picture.Status := JOB_NOJOB;
@@ -3710,11 +3726,11 @@ begin
   if FMode = rmLogin then
   begin
     if (R.ScriptStrings.Login = '') and
-      (ThreadHandler.Cookies.GetCookieValue(R.HTTPRec.CookieStr,
-      trim(DeleteTo(DeleteTo(lowercase(R.HTTPRec.DefUrl), ':/'), 'www.'), '/'))
-      = '') or (R.ScriptStrings.Login <> '') and not(R.HTTPRec.LoginResult) then
+    (ThreadHandler.Cookies.GetCookieValue(R.HTTPRec.CookieStr,
+    trim(DeleteTo(DeleteTo(lowercase(R.HTTPRec.DefUrl), ':/'), 'www.'), '/'))
+    = '') or (R.ScriptStrings.Login <> '') and not(R.HTTPRec.LoginResult) then
       if Assigned(FOnError) then
-        FOnError(Self, 'login is failed');
+        FOnError(Self, r.Name +  ': login is failed');
 
     for i := 0 to Count - 1 do
       if Items[i].Relogin then
@@ -4052,6 +4068,7 @@ begin
     // FErrorString := '';
     FResource := nil;
     FPicsAdded := false;
+    FHTTP.HandleRedirects := true;
     try
       Synchronize(DoFinish);
       case ReturnValue of
@@ -4447,6 +4464,8 @@ begin
           Result := trim(FHTTP.Url.GetPathAndParams, '/')
         else if SameText(Value, 'thread.http.code') then
           Result := FHTTP.ResponseCode
+        else if SameText(Value, 'main.pagebypage') then
+          Result := HTTPRec.PageByPage
         else if Fields.FindField(Value) > -1 then
           Result := Fields[Value]
         else
@@ -4618,8 +4637,9 @@ begin
           else if SameText(s, 'replace') then
           begin
             s := gVal(Value);
-            Result := StringReplace(Clc(nVal(s)), Clc(nVal(s)), Clc(nVal(s)),
+            tmp :=  StringReplace(Clc(nVal(s)), Clc(nVal(s)), Clc(nVal(s)),
               [rfReplaceAll, rfIgnoreCase]);
+            Result := tmp;
           end
           else if SameText(s, 'vartime') then
           begin
@@ -4852,8 +4872,10 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
       FHTTPRec.Referer := Value
     else if SameText(Name, '$thread.tryagain') then
       FHTTPRec.TryAgain := Value
-    //else if SameText(Name, '@thread.trackredirect') then
-
+    else if SameText(Name, '$thread.accepterror') then
+      FHTTPRec.AcceptError := Value
+    else if SameText(Name, '$thread.HandleRedirects') then
+      FHTTP.HandleRedirects := Value
     else if SameText(Name, '@picture.makename') then
       if Job in [JOB_PICS, JOB_POSTPROCESS] then
         if not Assigned(FPicture.Parent) then
@@ -4971,7 +4993,7 @@ begin
   try
     ProcValue(ItemName, ItemValue);
   except on e: Exception do begin
-    e.Message := ItemName + '(' + VarToStr(ItemValue) + '): ' + e.Message;
+    e.Message := ItemName + '(' + VarToStr(ItemValue) + '): ' + e.Message; raise;
   end; end;
 end;
 
@@ -5024,19 +5046,25 @@ var
   Post: TStringList;
   debug_name: string;
 begin
-
   FRetries := 0;
   Result := TStringStream.Create('', FHTTPRec.Encoding);
   try
-
     while true do
       try
         FBeforeScript.Process(SE, DE, FE, VE, VE);
+
+        if FHTTPRec.Url = '' then
+          raise Exception.Create('URL template is empty');
+
         try
           try FHTTP.Disconnect; except end;
           Url := '';
 
-          Url := CalcValue(FHTTPRec.Url, VE, nil);
+          Url := CheckProto(CalcValue(FHTTPRec.Url, VE, nil),FHTTPRec.Referer);
+
+
+
+
 
           if SameText(Copy(Url, 1, 6), 'https:') then
           begin
@@ -5083,27 +5111,30 @@ begin
               Break;
 
             FHTTPRec.TryAgain := false;
+            FHTTPRec.AcceptError := true;
 
             FErrorScript.Process(SE, DE, FE, VE, VE);
 
             if FHTTPRec.TryAgain then
               Continue;
 
-            if (FHTTP.ResponseCode = 404) { or (FHTTP.ResponseCode = -1) } then
-            begin
-              SetHTTPError(Url + ': ' + e.Message);
-              Break;
-            end
-            else if (FRetries < FMaxRetries) then
-            begin
-              inc(FRetries);
-              Continue;
-            end
-            else
-            begin
-              SetHTTPError(Url + ': ' + e.Message);
-              Break;
-            end;
+            if FHTTPRec.AcceptError then
+              if (FHTTP.ResponseCode = 404) { or (FHTTP.ResponseCode = -1) } then
+              begin
+                SetHTTPError(Url + ': ' + e.Message);
+                Break;
+              end
+              else if (FRetries < FMaxRetries) then
+              begin
+                inc(FRetries);
+                Continue;
+              end
+              else
+              begin
+                SetHTTPError(Url + ': ' + e.Message);
+                Break;
+              end;
+
           end;
         end;
 
@@ -5234,7 +5265,8 @@ begin
           begin
             { FPicture.Size := 1;
               FPicture.Pos; }
-            FPicture.Changes := [pcSize, pcProgress];
+            FPicture.Changes := [pcSize, pcProgress,pcData];
+            FPicture.FactFileName := FName;
             Synchronize(PicChanged);
             // FCS.Leave;
             Exit;
@@ -5249,8 +5281,10 @@ begin
             (m.Size = FPicture.Size) then
           begin
             m.SaveToStream(f);
+            fPicture.MakeMD5(m);
             m.Free;
             f.Free;
+            fPicture.FactFileName := FName;
             Break;
           end;
 
@@ -5359,7 +5393,11 @@ begin
             SetHTTPError(HTTPRec.Url + ': incorrect filesize');
         end
         else
+        begin
+          fPicture.MakeMD5(f);
           f.Free;
+          fPicture.FactFileName := FName;
+        end;
 
         Break;
 
@@ -5946,9 +5984,18 @@ begin
   FLinked.ChildMode := true;
   FTags := TPictureTagLinkList.Create;
   FDisplayLabel := '';
+  fFactFileName := '';
   FBookMark := 0;
   FPostProc := false;
+  FMD5 := nil;
   // FObj := nil;
+end;
+
+procedure TTPicture.DeleteFile;
+begin
+  SysUtils.DeleteFile(FactFileName);
+  FactFileName := '';
+  FMD5 := nil;
 end;
 
 destructor TTPicture.Destroy;
@@ -5959,6 +6006,21 @@ begin
   { if Assigned(FObj) then
     Obj.Free; }
   inherited;
+end;
+
+procedure TTPicture.MakeMD5(s: tStream);
+var
+  m: tMetaList;
+  i: integer;
+  v: Variant;
+begin
+  v := MD5DigestToStr(MD5Stream(s));
+  m := FList.Meta.Items[0].Value;
+
+  if not m.FindPosition(v,i) then
+    FMD5 := m.Add(v,i)
+  else
+    FMD5 := m[i];
 end;
 
 // function TTPicture.GetMD5String: string;
@@ -6572,16 +6634,29 @@ begin
 end;
 
 constructor TPictureList.Create(makenames: Boolean);
+var
+  md5item: TTagedListValue;
+  md5meta: TMetaList;
 begin
   inherited Create;
   FTags := TPictureTagList.Create;
+
+  md5meta := TMetaList.Create;
+  //md5meta.VariantType := varUString;
+  md5meta.ValueType := db.ftString;
+  md5item := TtagedListValue.Create;
+  md5item.Name := '';
+  md5item.Value := md5meta;
   FMetaContainer := TTagedList.Create;
+  FMetaContainer.Add(md5item);
+
   if makenames then
   begin
     FDirList := TStringList.Create;
     FFileNames := TStringList.Create;
   end;
-  FMakeNames := makenames;
+
+  FMakeNames := MakeNames;
   FIgnoreList := nil;
   FParentsCount := 0;
   FChildsCount := 0;
@@ -6614,31 +6689,39 @@ var
   function ParamCheck(Pic: TTPicture; bfr, bfr2, s2, aft, aft2: String;
     level: byte; main, b: Boolean; var Value: Variant): Boolean;
 
-    function formatstr(Value: Variant; aformat: string; d: Boolean): string;
+    function formatstr(Value: Variant; aformat: string; d: byte): string;
     var
       t: integer;
+      pt,ndr: boolean;
     begin
+      case d of
+        //0: begin pt := false; dr := true; end;
+        1: begin pt := true; ndr := true; end;
+        2: begin pt := true; ndr := false; end;
+        else begin pt := false; ndr := true; end;
+      end;
+
       if (aformat = '') then
-        Result := ValidFName(Value, d)
+        Result := ValidFName(Value, pt,ndr)
       else if VarIsType(Value, varDate) then
-        Result := ValidFName(FormatDateTime(aformat, Value), d)
+        Result := ValidFName(FormatDateTime(aformat, Value), pt,ndr)
       else
       begin
         t := CharPosEx(s2, ['d', 'e', 'f', 'g', 'n', 'm', 'p', 's', 'u', 'x',
           'D', 'E', 'F', 'G', 'N', 'M', 'P', 'S', 'U', 'X'], [], []);
         case lowercase(s2[t])[1] of
           'd', 'u', 'x':
-            Result := ValidFName(SysUtils.Format('%' + s2, [Trunc(Value)]), d);
+            Result := ValidFName(SysUtils.Format('%' + s2, [Trunc(Value)]), pt, ndr);
           'e', 'f', 'g', 'n', 'm':
-            Result := ValidFName(SysUtils.Format('%' + s2, [Double(Value)]), d);
+            Result := ValidFName(SysUtils.Format('%' + s2, [Double(Value)]), pt, ndr);
           's':
             Result := ValidFName(SysUtils.Format('%' + s2,
-              [VarToStr(Value)]), d);
+              [VarToStr(Value)]), pt, ndr);
           'p':
             begin
               s2[t] := 'x';
               Result := ValidFName(SysUtils.Format('%' + s2,
-                [Trunc(Value)]), d);
+                [Trunc(Value)]), pt, ndr);
             end;
           // s2[2] := 'x';
         end;
@@ -6650,7 +6733,7 @@ var
     n: TListValue;
     s, p, tmp: string;
     c: integer;
-    d: Boolean;
+    d: byte; //path mode; 0 - not a path, 1 - path without drive, 2 - path with drive
 
   begin
     Result := true;
@@ -6659,7 +6742,7 @@ var
     p := CopyFromTo(s, '(', ')', true);
     if p <> '' then
       s := CopyTo(s, '(');
-    d := false;
+    d := 0;
     if main then
       if SameText(s, 'nn') then
         Value := IndexOf(Pic) + 1
@@ -6687,7 +6770,7 @@ var
             if b and (Value = 0) then
               p := bfr + aft
             else
-              p := bfr + bfr2 + formatstr(Value, s2, false) + aft2 + aft;
+              p := bfr + bfr2 + formatstr(Value, s2, 0) + aft2 + aft;
 
             if ExtractFileName(p) = '' then
             begin
@@ -6738,7 +6821,7 @@ var
       else if SameText(s, 'rootdir') then
       begin
         Value := ExtractFileDir(paramstr(0));
-        d := true;
+        d := 2;
       end
       else if SameText(s, 'tag') then
         Value := VarToStr(Pic.Resource.Fields['tag'])
@@ -6760,7 +6843,7 @@ var
     else
     begin
       n := Pic.Meta.FindItem(s) as TListValue;
-      d := true;
+      d := 1;
 
       if n = nil then
       begin

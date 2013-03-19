@@ -16,7 +16,7 @@ uses
   dxSkinscxPCPainter,cxDropDownEdit,
   {graber2}
   cxmymultirow,cxmycombobox,common, Graberu, cxCheckBox,
-  cxExtEditRepositoryItems, cxContainer;
+  cxExtEditRepositoryItems, cxContainer, cxNavigator;
 
 type
   TListFrameState = (lfsNew, lfsEdit);
@@ -750,6 +750,7 @@ begin
     if ResetRelogin(N) then
     begin
       FLoggedOn := true;
+      SetConSettings(FullResList);
       FullResList.StartJob(JOB_LOGIN);
     end else
       fLogin.Close;

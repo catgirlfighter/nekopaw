@@ -5,6 +5,7 @@ uses
   Unit1 in 'Unit1.pas' , {FORM1}
   unit_win7taskbar in 'unit_win7taskbar.pas',
   common in '..\common.pas',
+  MyIDURI in '..\MyIdURI.pas',
   MyHTTP in '..\MyHTTP.pas',
   IdHTTP in '..\IdHTTP.pas' ;
 

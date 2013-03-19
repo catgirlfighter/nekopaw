@@ -1005,6 +1005,7 @@ type
     constructor Create(AOwner: TPersistent); override;
   published
     property CloseButtonMode;
+    property CloseTabWithMiddleClick;
     property HotTrack;
     property ImageBorder;
     property MultiLine;
@@ -1058,8 +1059,10 @@ type
 
   TdxDockingTabControlController = class(TcxCustomTabControlController)
   private
+    FProcessMouseEventCount: Integer;
     FUpdateCount: Integer;
     function GetDockControl(Index: Integer): TdxCustomDockControl;
+    function GetIsProcessingMouseEvent: Boolean;
     function GetIsUpdating: Boolean;
     function GetMappedToTabsPoint(const P: TPoint): TPoint;
     function GetMappedToTabsSmallPoint(const P: TSmallPoint): TPoint;
@@ -1069,12 +1072,14 @@ type
     function GetViewInfo: TdxDockingTabControlViewInfo;
     function GetVisibleDockControl(Index: Integer): TdxCustomDockControl;
   protected
+    procedure BeginProcessMouseEvent;
+    procedure EndProcessMouseEvent;
     function GetClientToScreen(const APoint: TPoint): TPoint; override;
     function GetScreenToClient(const APoint: TPoint): TPoint; override;
     function IsDockable(AControl: TdxCustomDockControl): Boolean; virtual;
     procedure DoChanged(Sender: TObject; AType: TcxCustomTabControlPropertiesChangedType);
     procedure DoMouseDblClick(var Message: TWMLButtonDblClk);
-    procedure DoMouseDown(var Message: TWMLButtonDown);
+    procedure DoMouseDown(var Message: TWMMouse);
     procedure DoMouseMove(var Message: TWMMouseMove);
     procedure DoMouseUp(var Message: TWMLButtonUp);
     procedure DoStyleChanged(Sender: TObject);
@@ -1084,6 +1089,8 @@ type
     procedure TabDown(ATabVisibleIndex: Integer; AShift: TShiftState); override;
     procedure TabInfoChanged(ADockControl: TdxCustomDockControl);
     procedure TabUp(ATabVisibleIndex: Integer; AShift: TShiftState); override;
+    //
+    property IsProcessingMouseEvent: Boolean read GetIsProcessingMouseEvent;
   public
     constructor Create(AOwner: TObject); override;
     procedure AddTab(ADockControl: TdxCustomDockControl; AVisible: Boolean);
@@ -1119,12 +1126,15 @@ type
 
   TdxTabContainerDockSiteTabControlController = class(TdxDockingTabControlController)
   private
+    function GetActiveChild: TdxCustomDockControl;
     function GetOwner: TdxTabContainerDockSite;
+    procedure SetActiveChild(AValue: TdxCustomDockControl);
   protected
     procedure DoTabIndexChanged(Sender: TObject); override;
   public
     procedure UpdateActiveTabIndex;
     //
+    property ActiveChild: TdxCustomDockControl read GetActiveChild write SetActiveChild;
     property Owner: TdxTabContainerDockSite read GetOwner;
   end;
 
@@ -1144,6 +1154,7 @@ type
     procedure WMLButtonDown(var Message: TWMLButtonDown); message WM_LBUTTONDOWN;
     procedure WMLButtonUp(var Message: TWMLButtonUp); message WM_LBUTTONUP;
     procedure WMLButtonDblClk(var Message: TWMLButtonDblClk); message WM_LBUTTONDBLCLK;
+    procedure WMMButtonDown(var Message: TWMMButtonDown); message WM_MBUTTONDOWN;
     procedure WMMouseMove(var Message: TWMMouseMove); message WM_MOUSEMOVE;
   protected
     // IcxTabControl
@@ -2067,7 +2078,7 @@ type
   TdxDockingInternalState = (disManagerChanged, disContextMenu, disRedrawLocked, disLoading);
   TdxDockingInternalStates = set of TdxDockingInternalState;
 
-  TdxDockingController = class(TcxMessageWindow)
+  TdxDockingController = class(TcxMessageWindow, IcxLookAndFeelNotificationListener)
   private
     FActivatingDockControl: TdxCustomDockControl;
     FActiveDockControl: TdxCustomDockControl;
@@ -2169,6 +2180,10 @@ type
     procedure SaveLayoutToCustomIni(AIniFile: TCustomIniFile; AForm: TCustomForm);
     procedure SaveControlToCustomIni(AIniFile: TCustomIniFile; AControl: TdxCustomDockControl);
     procedure UpdateLayout(AForm: TCustomForm);
+    // IcxLookAndFeelNotificationListener
+    function GetObject: TObject;
+    procedure MasterLookAndFeelChanged(Sender: TcxLookAndFeel; AChangedValues: TcxLookAndFeelValues);
+    procedure MasterLookAndFeelDestroying(Sender: TcxLookAndFeel);
     // Painting
     procedure BeginUpdateNC(ALockRedraw: Boolean = True);
     procedure EndUpdateNC;
@@ -2503,6 +2518,5199 @@ begin
     Result := dtNone;
 end;
 
+{ TdxVertContainerDockSite }
+
+procedure TdxVertContainerDockSite.UpdateControlResizeZones(AControl: TdxCustomDockControl);
+begin
+  inherited;
+  if (AControl.SideContainerItem <> nil) and (AControl.SideContainer = Self) then
+    if GetNextValidChild(AControl.SideContainerIndex) <> nil then
+    begin
+      AControl.ResizeZones.RegisterZone(TdxVertContainerZone.Create(
+        AControl.SideContainerItem, ControllerResizeZonesWidth, zkResizing));
+    end;
+end;
+
+procedure TdxVertContainerDockSite.UpdateControlOriginalSize(AControl: TdxCustomDockControl);
+begin
+  if (AControl = Self) or (DockType in [dtLeft, dtRight]) then
+    inherited
+  else if (DockType = dtClient) and (FloatDockSite <> nil) then
+    AControl.FOriginalWidth := FloatDockSite.Width;
+end;
+
+class function TdxVertContainerDockSite.GetHeadDockType: TdxDockingType;
+begin
+  Result := dtTop;
+end;
+
+class function TdxVertContainerDockSite.GetTailDockType: TdxDockingType;
+begin
+  Result := dtBottom;
+end;
+
+function TdxVertContainerDockSite.GetContainerSize: Integer;
+begin
+  if HandleAllocated and (ClientHeight > 0) then
+    Result := ClientHeight
+  else Result := Height;
+end;
+
+function TdxVertContainerDockSite.GetDimension(AWidth, AHeight: Integer): Integer;
+begin
+  Result := AHeight;
+end;
+
+function TdxVertContainerDockSite.GetMinSize(Index: Integer): Integer;
+begin
+  Result := Children[Index].GetMinimizedHeight;
+end;
+
+function TdxVertContainerDockSite.GetOriginalSize(Index: Integer): Integer;
+begin
+  Result := Children[Index].OriginalHeight;
+end;
+
+function TdxVertContainerDockSite.GetSize(Index: Integer): Integer;
+begin
+  Result := Children[Index].Height;
+end;
+
+function TdxVertContainerDockSite.GetPosition(Index: Integer): Integer;
+begin
+  Result := Children[Index].Top;
+end;
+
+procedure TdxVertContainerDockSite.SetDimension(var AWidth, AHeight: Integer; AValue: Integer);
+begin
+  AHeight := AValue;
+end;
+
+procedure TdxVertContainerDockSite.SetOriginalSize(Index: Integer;
+  const Value: Integer);
+var
+  I: Integer;
+begin
+  Children[Index].FOriginalHeight := Value;
+  if Children[Index] is TdxTabContainerDockSite then
+    for I := 0 to Children[Index].ChildCount - 1 do
+      Children[Index].Children[I].FOriginalHeight := Value;
+end;
+
+procedure TdxVertContainerDockSite.SetSize(Index: Integer; const Value: Integer);
+begin
+  Children[Index].Height := Value;
+end;
+
+procedure TdxVertContainerDockSite.SetPosition(Index: Integer; const Value: Integer);
+begin
+  Children[Index].Top := Value;
+end;
+
+
+{ TdxSideContainerDockSite }
+
+procedure TdxSideContainerDockSite.ChildChanged(AChild: TdxCustomDockControl);
+begin
+  InvalidateNC(False);
+end;
+
+procedure TdxSideContainerDockSite.DoActiveChildChanged(APrevActiveChild: TdxCustomDockControl);
+begin
+  inherited;
+  NCChanged;
+  AdjustChildrenBounds(nil);
+end;
+
+function TdxSideContainerDockSite.CanChildResize(AControl: TdxCustomDockControl; ADeltaSize: Integer): Boolean;
+var
+  AIndex, ANextIndex: Integer;
+begin
+  AIndex := AControl.DockIndex;
+  ANextIndex := GetNextValidChildIndex(AIndex);
+  Result := (ANextIndex > -1) and (MinSizes[AIndex] < OriginalSizes[AIndex] + ADeltaSize) and
+    (MinSizes[ANextIndex] < OriginalSizes[ANextIndex] - ADeltaSize);
+end;
+
+procedure TdxSideContainerDockSite.DoChildResize(AControl: TdxCustomDockControl;
+  ADeltaSize: Integer; AResizeNextControl: Boolean);
+var
+  I, AIndex, ANextIndex: Integer;
+begin
+  if ADeltaSize = 0 then
+    Exit;
+  AIndex := AControl.DockIndex;
+  if AResizeNextControl then
+    ANextIndex := GetNextValidChildIndex(AIndex)
+  else
+    ANextIndex := GetPrevValidChildIndex(AIndex);
+
+  if (AIndex > -1) and (ANextIndex > -1) then
+  begin
+    BeginAdjustBounds;
+    try
+      if ActiveChild <> nil then
+      begin
+        for I := 0 to ChildCount - 1 do
+          OriginalSizes[I] := Sizes[I];
+        ActiveChild := nil;
+      end;
+      OriginalSizes[AIndex] := OriginalSizes[AIndex] + ADeltaSize;
+      OriginalSizes[ANextIndex] := OriginalSizes[ANextIndex] - ADeltaSize;
+      if OriginalSizes[AIndex] < MinSizes[AIndex] then
+      begin
+        ADeltaSize := MinSizes[AIndex] - OriginalSizes[AIndex];
+        OriginalSizes[AIndex] := OriginalSizes[AIndex] + ADeltaSize;
+        OriginalSizes[ANextIndex] := OriginalSizes[ANextIndex] - ADeltaSize;
+      end;
+      if OriginalSizes[ANextIndex] < MinSizes[ANextIndex] then
+      begin
+        ADeltaSize := MinSizes[ANextIndex] - OriginalSizes[ANextIndex];
+        OriginalSizes[ANextIndex] := OriginalSizes[ANextIndex] + ADeltaSize;
+        OriginalSizes[AIndex] := OriginalSizes[AIndex] - ADeltaSize;
+      end;
+      Sizes[AIndex] := OriginalSizes[AIndex];
+      Sizes[ANextIndex] := OriginalSizes[ANextIndex];
+    finally
+      EndAdjustBounds;
+    end;
+  end;
+end;
+
+procedure TdxSideContainerDockSite.BeginAdjustBounds;
+begin
+  Inc(FAdjustBoundsLock);
+  inherited;
+end;
+
+procedure TdxSideContainerDockSite.EndAdjustBounds;
+begin
+  inherited;
+  Dec(FAdjustBoundsLock);
+end;
+
+function TdxSideContainerDockSite.IsAdjustBoundsLocked: Boolean;
+begin
+  Result := AdjustBoundsLock > 0;
+end;
+
+procedure TdxSideContainerDockSite.AdjustChildrenBounds(AControl: TdxCustomDockControl);
+var
+  I, ADeltaSize: Integer;
+  APrevIndex: Integer;
+begin
+  if IsAdjustBoundsLocked or IsUpdateLayoutLocked and (AControl = nil) then exit;
+  BeginAdjustBounds;
+  try
+    if ActiveChild <> nil then
+    begin
+      for I := 0 to ActiveChildIndex - 1 do
+      begin
+        if not IsValidChild(Children[I]) then continue;
+        Children[I].SetDockType(GetHeadDockType);
+        Sizes[I] := MinSizes[I];
+      end;
+      for I := ChildCount - 1 downto ActiveChildIndex + 1 do
+      begin
+        if not IsValidChild(Children[I]) then continue;
+        Children[I].SetDockType(GetTailDockType);
+        Sizes[I] := MinSizes[I];
+      end;
+      if IsValidChild(ActiveChild) then ActiveChild.SetDockType(dtClient);
+    end
+    else if ValidChildCount > 1 then
+    begin
+      if AControl <> nil then
+        ADeltaSize := GetDifferentSize div (ValidChildCount - 1)
+      else ADeltaSize := GetDifferentSize div ValidChildCount;
+      for I := 0 to ChildCount - 1 do
+      begin
+        if Children[I] = AControl then continue;
+        if not IsValidChild(Children[I]) then continue;
+        OriginalSizes[I] := OriginalSizes[I] + ADeltaSize;
+        if OriginalSizes[I] < MinSizes[I] then
+          OriginalSizes[I] := MinSizes[I];
+      end;
+      NormalizeChildrenBounds(GetDifferentSize);
+      for I := 0 to ChildCount - 1 do
+      begin
+        if not IsValidChild(Children[I]) then continue;
+        Children[I].SetDockType(GetHeadDockType);
+        APrevIndex := GetPrevValidChildIndex(I);
+        if APrevIndex > -1 then
+          Positions[I] := Positions[APrevIndex] + Sizes[APrevIndex];
+        Sizes[I] := OriginalSizes[I];
+      end;
+    end
+    else if ValidChildCount > 0 then
+    begin
+      for I := 0 to ChildCount - 1 do
+      begin
+        if not IsValidChild(Children[I]) then continue;
+        Children[I].SetDockType(dtClient);
+      end;
+    end;
+  finally
+    EndAdjustBounds;
+  end;
+end;
+
+procedure TdxSideContainerDockSite.NormalizeChildrenBounds(ADeltaSize: Integer);
+var
+  I: Integer;
+begin
+  for I := 0 to ChildCount - 1 do
+  begin
+    if not IsValidChild(Children[I]) then continue;
+    if ADeltaSize = 0 then break;
+    if OriginalSizes[I] > MinSizes[I] then
+      if OriginalSizes[I] + ADeltaSize < MinSizes[I] then
+      begin
+        ADeltaSize := ADeltaSize + (OriginalSizes[I] - MinSizes[I]);
+        OriginalSizes[I] := MinSizes[I];
+      end
+      else
+      begin
+        OriginalSizes[I] := OriginalSizes[I] + ADeltaSize;
+        ADeltaSize := 0;
+      end;
+  end;
+end;
+
+procedure TdxSideContainerDockSite.SetChildBounds(AControl: TdxCustomDockControl;
+  var AWidth, AHeight: Integer);
+begin
+  if (ActiveChild = nil) and not IsAdjustBoundsLocked then
+  begin
+    OriginalSizes[AControl.DockIndex] := GetDimension(AWidth, AHeight);
+    AdjustChildrenBounds(nil);
+    SetDimension(AWidth, AHeight, OriginalSizes[AControl.DockIndex]);
+  end;
+end;
+
+function TdxSideContainerDockSite.IsValidActiveChild(AControl: TdxCustomDockControl): Boolean;
+begin
+  Result := IsValidChild(AControl) or (AControl = nil);
+end;
+
+procedure TdxSideContainerDockSite.ValidateActiveChild(AIndex: Integer);
+begin
+  if not IsValidChild(ActiveChild) then
+  begin
+    if (ActiveChild <> nil) and IsValidChild(ActiveChild.Container) then
+      ActiveChild := ActiveChild.Container
+    else ActiveChild := nil;
+  end;
+end;
+
+function TdxSideContainerDockSite.HasBorder: Boolean;
+begin
+  Result := (doSideContainerHasCaption in ControllerOptions) and
+    ShowCaption and (FloatDockSite = nil) and (ValidChildCount > 1);
+end;
+
+function TdxSideContainerDockSite.HasCaption: Boolean;
+begin
+  Result := (doSideContainerHasCaption in ControllerOptions) and
+    ShowCaption and (FloatDockSite = nil) and ((ValidChildCount > 1) or AutoHide);
+end;
+
+function TdxSideContainerDockSite.CanActive: Boolean;
+begin
+  Result := True;
+end;
+
+function TdxSideContainerDockSite.CanAutoHide: Boolean;
+begin
+  Result := IsLoading or ((AutoHideHostSite <> nil) and
+    ((AutoHideControl = nil) or (AutoHideControl = Self)));
+end;
+
+function TdxSideContainerDockSite.CanDockHost(AControl: TdxCustomDockControl; AType: TdxDockingType): Boolean;
+var
+  ACanDockHost: Boolean;
+begin
+  ACanDockHost := CanContainerDockHost(AType);
+  if doSideContainerCanInSideContainer in ControllerOptions then
+    ACanDockHost := ACanDockHost or (AType in [dtLeft, dtRight, dtTop, dtBottom]);
+  if doSideContainerCanInTabContainer in ControllerOptions then
+    ACanDockHost := ACanDockHost or (AType in [dtClient]);
+  Result := inherited CanDockHost(AControl, AType) and ACanDockHost;
+end;
+
+function TdxSideContainerDockSite.CanMaximize: Boolean;
+begin
+  Result := not AutoHide and (SideContainer <> nil) and (SideContainer.ValidChildCount > 1);
+end;
+
+procedure TdxSideContainerDockSite.SetBounds(ALeft, ATop, AWidth, AHeight: Integer);
+begin
+  inherited;
+  AdjustChildrenBounds(nil);
+end;
+
+procedure TdxSideContainerDockSite.UpdateControlDockZones(AControl: TdxCustomDockControl;
+  AZoneWidth: Integer);
+begin
+  if doSideContainerCanInSideContainer in ControllerOptions then
+    inherited;
+end;
+
+procedure TdxSideContainerDockSite.IncludeToDock(AControl: TdxCustomDockControl;
+  AType: TdxDockingType; Index: Integer);
+var
+  AChild: TdxCustomDockControl;
+begin
+  if AControl.CanAcceptSideContainerItems(Self) and (ChildCount > 0) then
+  begin
+    Include(FInternalState, dcisDestroying);
+    while ChildCount > 0 do
+    begin
+      AChild := Children[ChildCount - 1];
+      AChild.ExcludeFromDock;
+      AChild.IncludeToDock(AControl, AType, Index);
+      if AControl is TdxSideContainerDockSite then
+        (AControl as TdxSideContainerDockSite).AdjustChildrenBounds(AChild);
+    end;
+    DoDestroy;
+  end
+  else inherited;
+end;
+
+procedure TdxSideContainerDockSite.CreateLayout(AControl: TdxCustomDockControl;
+  AType: TdxDockingType; Index: Integer);
+begin
+  if CanContainerDockHost(AType) then
+  begin
+    AControl.IncludeToDock(Self, AType, Index);
+    AdjustChildrenBounds(AControl);
+  end
+  else if (Container <> nil) and Container.CanContainerDockHost(AType) then
+    CreateContainerLayout(Container, AControl, AType, DockIndex)
+  else
+    case AType of
+      dtLeft, dtRight,
+      dtTop, dtBottom:
+        CreateSideContainerLayout(AControl, AType, Index);
+      dtClient:
+        CreateTabContainerLayout(AControl, AType, Index);
+    else
+      Assert(False, Format(sdxInternalErrorCreateLayout, [TdxTabContainerDockSite.ClassName]));
+    end;
+end;
+
+procedure TdxSideContainerDockSite.UpdateLayout;
+begin
+  inherited;
+  AdjustChildrenBounds(nil);
+end;
+
+procedure TdxSideContainerDockSite.LoadLayoutFromCustomIni(AIniFile: TCustomIniFile;
+  AParentForm: TCustomForm; AParentControl: TdxCustomDockControl; ASection: string);
+begin
+  BeginAdjustBounds;
+  try
+    inherited;
+  finally
+    EndAdjustBounds;
+  end;
+end;
+
+function TdxSideContainerDockSite.CanAcceptSideContainerItems(AContainer: TdxSideContainerDockSite): Boolean;
+begin
+  if (doSideContainerCanInSideContainer in ControllerOptions) or IsLoading then
+    Result := AContainer.ClassType = ClassType
+  else
+    Result := True;
+end;
+
+function TdxSideContainerDockSite.CanAcceptTabContainerItems(AContainer: TdxTabContainerDockSite): Boolean;
+begin
+  if (doTabContainerCanInSideContainer in ControllerOptions) or IsLoading then
+    Result := False
+  else
+    Result := True;
+end;
+
+procedure TdxSideContainerDockSite.UpdateCaption;
+var
+  I: Integer;
+  ACaption: string;
+begin
+  ACaption := '';
+  for I := 0 to ChildCount - 1 do
+  begin
+    if not IsValidChild(Children[I]) then continue;
+    ACaption := ACaption + Children[I].Caption;
+    if GetNextValidChild(I) <> nil then
+      ACaption := ACaption + ', ';
+  end;
+  if Caption <> ACaption then
+    Caption := ACaption;
+  inherited UpdateCaption;
+end;
+
+procedure TdxSideContainerDockSite.ChangeAutoHide;
+begin
+  if AutoHide then
+    AutoHide := False
+  else if doSideContainerCanAutoHide in ControllerOptions then
+    inherited ChangeAutoHide
+  else if ActiveChild <> nil then
+    ActiveChild.ChangeAutoHide
+  else if GetFirstValidChild <> nil then
+    GetFirstValidChild.ChangeAutoHide
+end;
+
+procedure TdxSideContainerDockSite.DoClose;
+begin
+  if (doSideContainerCanClose in ControllerOptions) then
+    inherited DoClose
+  else if ActiveChild <> nil then
+    ActiveChild.DoClose
+  else if GetFirstValidChild <> nil then
+    GetFirstValidChild.DoClose;
+end;
+
+procedure TdxSideContainerDockSite.ChildVisibilityChanged(Sender: TdxCustomDockControl);
+begin
+  inherited;
+  if IsValidChild(Sender) then
+    AdjustChildrenBounds(Sender)
+  else if Sender = ActiveChild then
+    ValidateActiveChild(Sender.DockIndex);
+  NCChanged;
+end;
+
+function TdxSideContainerDockSite.GetDifferentSize: Integer;
+var
+  I: Integer;
+begin
+  Result := 0;
+  for I := 0 to ChildCount - 1 do
+  begin
+    if not IsValidChild(Children[I]) then continue;
+    Inc(Result, OriginalSizes[I]);
+  end;
+  Result := GetContainerSize - Result;
+end;
+
+{ TdxContainerDockSite }
+
+constructor TdxContainerDockSite.Create(AOwner: TComponent);
+begin
+  inherited;
+  UseDoubleBuffer := True;
+end;
+
+function TdxContainerDockSite.CanDock: Boolean;
+begin
+  Result := True;
+end;
+
+function TdxContainerDockSite.CanDockHost(AControl: TdxCustomDockControl; AType: TdxDockingType): Boolean;
+begin
+  Result := inherited CanDockHost(AControl, AType);
+end;
+
+function TdxContainerDockSite.CanContainerDockHost(AType: TdxDockingType): Boolean;
+begin
+  Result := (AType = GetHeadDockType) or (AType = GetTailDockType);
+end;
+
+function TdxContainerDockSite.GetControlAutoHidePosition(AControl: TdxCustomDockControl): TdxAutoHidePosition;
+begin
+  Result := inherited GetControlAutoHidePosition(Self);
+end;
+
+procedure TdxContainerDockSite.ChildVisibilityChanged(Sender: TdxCustomDockControl);
+begin
+  if disManagerChanged in Controller.FInternalState then Exit;
+  Visible := (ValidChildCount > 0) and not (AutoHide and not Visible);
+end;
+
+procedure TdxContainerDockSite.Loaded;
+begin
+  inherited;
+  SetActiveChildByIndex(FActiveChildIndex)
+end;
+
+procedure TdxContainerDockSite.SetParent(AParent: TWinControl);
+begin
+  if not IsUpdateLayoutLocked and not IsDestroying and
+    ((AParent = nil) or not (csLoading in AParent.ComponentState)) then
+    raise EdxException.Create(sdxInvalidParentAssigning)
+  else if (AParent <> nil) and not ((AParent is TdxCustomDockControl) or
+    (AutoHide and (AParent is TdxDockSiteAutoHideContainer))) then
+    raise EdxException.CreateFmt(sdxInvalidParent, [ClassName])
+  else inherited SetParent(AParent);
+end;
+
+procedure TdxContainerDockSite.CreateLayout(AControl: TdxCustomDockControl;
+  AType: TdxDockingType; Index: Integer);
+begin
+  if CanContainerDockHost(AType) then
+    AControl.IncludeToDock(Self, AType, Index)
+  else Assert(False, Format(sdxInternalErrorCreateLayout, [TdxContainerDockSite.ClassName]));
+end;
+
+procedure TdxContainerDockSite.DestroyChildLayout;
+var
+  ADockIndex: Integer;
+  AAutoHide, AActive: Boolean;
+  AParentControl, ASite: TdxCustomDockControl;
+begin
+  Include(FInternalState, dcisDestroying);
+  ADockIndex := DockIndex;
+  AParentControl := ParentDockControl;
+  if AutoHide then
+  begin
+    AAutoHide := True;
+    AutoHide := False;
+  end
+  else
+    AAutoHide := False;
+  AActive := (Container <> nil) and (Container.ActiveChild = Self);
+  ASite := Children[0];
+  ASite.ExcludeFromDock;
+  ExcludeFromDock;
+  ASite.SetDockType(dtClient);
+  ASite.AdjustControlBounds(Self);
+  ASite.IncludeToDock(AParentControl, DockType, ADockIndex);
+  if (ASite.Container <> nil) and AActive then
+    ASite.Container.ActiveChild := ASite;
+  if AAutoHide then
+    ASite.AutoHide := True;
+  DoDestroy;
+end;
+
+procedure TdxContainerDockSite.DestroyLayout(AControl: TdxCustomDockControl);
+var
+  AParentControl: TdxCustomDockControl;
+begin
+  AParentControl := ParentDockControl;
+  AParentControl.BeginUpdateLayout;
+  try
+    AControl.ExcludeFromDock;
+    if ChildCount = 1 then // !!!
+      DestroyChildLayout
+    else
+      Assert(ChildCount > 0, Format(sdxInternalErrorDestroyLayout, [ClassName]));
+  finally
+    AParentControl.EndUpdateLayout;
+  end;
+end;
+
+procedure TdxContainerDockSite.UpdateLayout;
+begin
+  inherited;
+  ValidateActiveChild(-1);
+end;
+
+procedure TdxContainerDockSite.LoadLayoutFromCustomIni(AIniFile: TCustomIniFile;
+  AParentForm: TCustomForm; AParentControl: TdxCustomDockControl; ASection: string);
+begin
+  BeginAdjustBounds;
+  try
+    inherited;
+    ActiveChildIndex := AIniFile.ReadInteger(ASection, 'ActiveChildIndex', -1);
+  finally
+    EndAdjustBounds;
+  end;
+end;
+
+procedure TdxContainerDockSite.SaveLayoutToCustomIni(AIniFile: TCustomIniFile;
+  ASection: string);
+begin
+  inherited;
+  with AIniFile do
+    WriteInteger(ASection, 'ActiveChildIndex', ActiveChildIndex);
+end;
+
+procedure TdxContainerDockSite.BeginAdjustBounds;
+begin
+  DisableAlign;
+end;
+
+procedure TdxContainerDockSite.EndAdjustBounds;
+begin
+  EnableAlign;
+end;
+
+procedure TdxContainerDockSite.DoActiveChildChanged(APrevActiveChild: TdxCustomDockControl);
+begin
+  ValidateActiveChild(-1);
+  UpdateCaption;
+end;
+
+class function TdxContainerDockSite.GetHeadDockType: TdxDockingType;
+begin
+  Result := dtClient;
+end;
+
+class function TdxContainerDockSite.GetTailDockType: TdxDockingType;
+begin
+  Result := dtClient;
+end;
+
+function TdxContainerDockSite.GetFirstValidChild: TdxCustomDockControl;
+var
+  I: Integer;
+begin
+  Result := nil;
+  for I := 0 to ChildCount - 1 do
+    if IsValidChild(Children[I]) then
+    begin
+      Result := Children[I];
+      break;
+    end;
+end;
+
+function TdxContainerDockSite.GetFirstValidChildIndex: Integer;
+var
+  AControl: TdxCustomDockControl;
+begin
+  AControl := GetFirstValidChild;
+  if AControl <> nil then
+    Result := AControl.DockIndex
+  else Result := -1;
+end;
+
+function TdxContainerDockSite.GetLastValidChild: TdxCustomDockControl;
+var
+  I: Integer;
+begin
+  Result := nil;
+  for I := ChildCount - 1 downto 0 do
+    if IsValidChild(Children[I]) then
+    begin
+      Result := Children[I];
+      break;
+    end;
+end;
+
+function TdxContainerDockSite.GetLastValidChildIndex: Integer;
+var
+  AControl: TdxCustomDockControl;
+begin
+  AControl := GetLastValidChild;
+  if AControl <> nil then
+    Result := AControl.DockIndex
+  else Result := -1;
+end;
+
+function TdxContainerDockSite.GetNextValidChild(AIndex: Integer): TdxCustomDockControl;
+var
+  I: Integer;
+begin
+  Result := nil;
+  for I := AIndex + 1 to ChildCount - 1 do
+    if IsValidChild(Children[I]) then
+    begin
+      Result := Children[I];
+      break;
+    end;
+end;
+
+function TdxContainerDockSite.GetNextValidChildIndex(AIndex: Integer): Integer;
+var
+  AControl: TdxCustomDockControl;
+begin
+  AControl := GetNextValidChild(AIndex);
+  if AControl <> nil then
+    Result := AControl.DockIndex
+  else Result := -1;
+end;
+
+function TdxContainerDockSite.GetPrevValidChild(AIndex: Integer): TdxCustomDockControl;
+var
+  I: Integer;
+begin
+  Result := nil;
+  for I := AIndex - 1 downto 0  do
+    if IsValidChild(Children[I]) then
+    begin
+      Result := Children[I];
+      break;
+    end;
+end;
+
+function TdxContainerDockSite.GetPrevValidChildIndex(AIndex: Integer): Integer;
+var
+  AControl: TdxCustomDockControl;
+begin
+  AControl := GetPrevValidChild(AIndex);
+  if AControl <> nil then
+    Result := AControl.DockIndex
+  else Result := -1;
+end;
+
+function TdxContainerDockSite.IsValidActiveChild(AControl: TdxCustomDockControl): Boolean;
+begin
+  Result := IsValidChild(AControl);
+end;
+
+procedure TdxContainerDockSite.ValidateActiveChild(AIndex: Integer);
+begin
+end;
+
+function TdxContainerDockSite.GetActiveChildIndex: Integer;
+begin
+  if IsLoading then
+    Result := FActiveChildIndex
+  else
+    if ActiveChild <> nil then
+      Result := ActiveChild.DockIndex
+    else
+      Result := -1;
+end;
+
+procedure TdxContainerDockSite.SetActiveChildByIndex(AIndex: Integer);
+begin
+  if (0 <= AIndex) and (AIndex < ChildCount) then
+    ActiveChild := Children[AIndex]
+  else
+    ActiveChild := nil;
+end;
+
+procedure TdxContainerDockSite.SetActiveChild(Value: TdxCustomDockControl);
+var
+  APrevActiveChild: TdxCustomDockControl;
+begin
+  if (FActiveChild <> Value) and ((Value = nil) or IsValidActiveChild(Value)) then
+  begin
+    BeginUpdateNC;
+    try
+      APrevActiveChild := FActiveChild;
+      FActiveChild := Value;
+      DoActiveChildChanged(APrevActiveChild);
+      if Assigned(FOnActiveChildChanged) then
+        FOnActiveChildChanged(Self, FActiveChild);
+    finally
+      EndUpdateNC;
+    end;
+    Modified;
+  end;
+end;
+
+procedure TdxContainerDockSite.SetActiveChildIndex(Value: Integer);
+begin
+  if IsLoading then
+    FActiveChildIndex := Value
+  else
+    SetActiveChildByIndex(Value);
+end;
+
+{ TdxCustomDockControlProperties }
+
+constructor TdxCustomDockControlProperties.Create(AOwner: TdxDockingManager);
+begin
+  FOwner := AOwner;
+  FAllowDock := dxDockingDefaultDockingTypes;
+  FAllowDockClients := dxDockingDefaultDockingTypes;
+  FAllowFloating := True;
+  FCaptionButtons := dxDockinkDefaultCaptionButtons;
+  FColor := clBtnFace;
+  FDockable := True;
+  FFont := TFont.Create;
+  FImageIndex := -1;
+  FManagerColor := True;
+  FManagerFont := True;
+  FShowCaption := True;
+  FShowHint := False;
+  FTag := 0;
+end;
+
+destructor TdxCustomDockControlProperties.Destroy;
+begin
+  FreeAndNil(FFont);
+  inherited;
+end;
+
+procedure TdxCustomDockControlProperties.AssignTo(Dest: TPersistent);
+var
+  AControl: TdxCustomDockControl;
+  AControlProperties: TdxCustomDockControlProperties;
+begin
+  if Dest is TdxCustomDockControl then
+  begin
+    AControl := Dest as TdxCustomDockControl;
+    AControl.AllowDock := FAllowDock;
+    AControl.AllowDockClients := FAllowDockClients;
+    AControl.AllowFloating := FAllowFloating;
+    AControl.Caption := FCaption;
+    AControl.CaptionButtons := FCaptionButtons;
+    AControl.Dockable := FDockable;
+    AControl.ImageIndex := FImageIndex;
+    AControl.ShowCaption := FShowCaption;
+    AControl.Color := FColor;
+    AControl.Cursor := FCursor;
+    AControl.Font := FFont;
+    AControl.Hint := FHint;
+    AControl.ManagerColor := FManagerColor;
+    AControl.ManagerFont := FManagerFont;
+    AControl.PopupMenu := FPopupMenu;
+    AControl.ShowHint := FShowHint;
+    AControl.Tag := FTag;
+  end
+  else if Dest is TdxCustomDockControlProperties then
+  begin
+    AControlProperties := Dest as TdxCustomDockControlProperties;
+    AControlProperties.AllowDock := FAllowDock;
+    AControlProperties.AllowDockClients := FAllowDockClients;
+    AControlProperties.AllowFloating := FAllowFloating;
+    AControlProperties.Caption := FCaption;
+    AControlProperties.CaptionButtons := FCaptionButtons;
+    AControlProperties.Dockable := FDockable;
+    AControlProperties.ImageIndex := FImageIndex;
+    AControlProperties.ShowCaption := FShowCaption;
+    AControlProperties.Color := FColor;
+    AControlProperties.Cursor := FCursor;
+    AControlProperties.Font := FFont;
+    AControlProperties.Hint := FHint;
+    AControlProperties.ManagerColor := FManagerColor;
+    AControlProperties.ManagerFont := FManagerFont;
+    AControlProperties.PopupMenu := FPopupMenu;
+    AControlProperties.ShowHint := FShowHint;
+    AControlProperties.Tag := FTag;
+  end
+  else inherited;
+end;
+
+function  TdxCustomDockControlProperties.GetOwner: TPersistent;
+begin
+  Result := FOwner;
+end;
+
+function TdxCustomDockControlProperties.IsColorStored: Boolean;
+begin
+  Result := not ManagerColor;
+end;
+
+function TdxCustomDockControlProperties.IsFontStored: Boolean;
+begin
+  Result := not ManagerFont;
+end;
+
+procedure TdxCustomDockControlProperties.SetColor(const Value: TColor);
+begin
+  if FColor <> Value then
+  begin
+    FColor := Value;
+    if not (csLoading in FOwner.ComponentState)then
+      FManagerColor := False;
+  end;
+end;
+
+procedure TdxCustomDockControlProperties.SetFont(const Value: TFont);
+begin
+  FFont.Assign(Value);
+  if not (csLoading in FOwner.ComponentState)then
+    FManagerFont := False;
+end;
+
+procedure TdxCustomDockControlProperties.SetManagerColor(const Value: Boolean);
+begin
+  if FManagerColor <> Value then
+  begin
+    if Value and not (csLoading in FOwner.ComponentState) then
+      FColor := FOwner.Color;
+    FManagerColor := Value;
+  end;
+end;
+
+procedure TdxCustomDockControlProperties.SetManagerFont(const Value: Boolean);
+begin
+  if FManagerFont <> Value then
+  begin
+    if Value and not (csLoading in FOwner.ComponentState) then
+      FFont.Assign(FOwner.Font);
+    FManagerFont := Value;
+  end;
+end;
+
+{ TdxDockSiteBottomHideBar }
+
+procedure TdxDockSiteBottomHideBar.CalculateBounds(const R: TRect);
+begin
+  FBounds := cxRectSetBottom(R, R.Bottom, GetHideBarSize);
+end;
+
+function TdxDockSiteBottomHideBar.GetContainersAnchors: TAnchors;
+begin
+  Result := Owner.Anchors;
+  if akBottom in Result then
+    Exclude(Result, akTop);
+end;
+
+function TdxDockSiteBottomHideBar.GetControlsAlign: TAlign;
+begin
+  Result := alTop;
+end;
+
+function TdxDockSiteBottomHideBar.GetPosition: TdxAutoHidePosition;
+begin
+  Result := ahpBottom;
+end;
+
+procedure TdxDockSiteBottomHideBar.SetFinalPosition(AControl: TdxCustomDockControl);
+begin
+  AControl.AutoHideContainer.SetBounds(Owner.GetClientLeft,
+    Owner.GetClientTop + Owner.GetClientHeight - AControl.OriginalHeight,
+    Owner.GetClientWidth, AControl.OriginalHeight);
+end;
+
+procedure TdxDockSiteBottomHideBar.SetInitialPosition(AControl: TdxCustomDockControl);
+begin
+  AControl.AutoHideContainer.SetBounds(Owner.GetClientLeft, Owner.GetClientTop + Owner.GetClientHeight,
+    Owner.GetClientWidth, 0);
+end;
+
+procedure TdxDockSiteBottomHideBar.UpdatePosition(ADelta: Integer);
+begin
+  if (ADelta > 0) and (Owner.MovingContainer.Height + ADelta > Owner.MovingControl.OriginalHeight) then
+    SetFinalPosition(Owner.MovingControl)
+  else if (ADelta < 0) and (Owner.MovingContainer.Height + ADelta < 0) then
+    SetInitialPosition(Owner.MovingControl)
+  else Owner.MovingContainer.SetBounds(Owner.MovingContainer.Left, Owner.MovingContainer.Top - ADelta,
+    Owner.MovingContainer.Width, Owner.MovingContainer.Height + ADelta);
+end;
+
+{ TdxDockSiteHideBar }
+
+constructor TdxDockSiteHideBar.Create(AOwner: TdxDockSite);
+begin
+  inherited Create;
+  FOwner := AOwner;
+  FButtons := TdxDockSiteHideBarButtonsList.Create;
+  FScrollDownButton := CreateScrollButton(-1);
+  FScrollUpButton := CreateScrollButton(1);
+end;
+
+destructor TdxDockSiteHideBar.Destroy;
+begin
+  FreeAndNil(FScrollDownButton);
+  FreeAndNil(FScrollUpButton);
+  FreeAndNil(FButtons);
+  inherited Destroy;
+end;
+
+procedure TdxDockSiteHideBar.Calculate(const R: TRect);
+var
+  ARect: TRect;
+  ASections: TdxDockSiteHideBarButtonSectionList;
+  I: Integer;
+begin
+  CalculateBounds(R);
+  if Visible then
+  begin
+    ARect := ContentRect;
+    for I := 0 to Buttons.Count - 1 do
+      CalculateButton(ARect, Buttons[I]);
+
+    ASections := Buttons.GetSections;
+    try
+      if ASections.Count > 0 then
+        ARect := cxRectUnion(ASections.First.Bounds, ASections.Last.Bounds)
+      else
+        ARect := cxNullRect;
+
+      CalculateScrollButtons(ARect);
+      FButtonSectionMaxTopIndex := CalculateButtonSectionMaxTopIndex(ASections);
+      FButtonSectionTopIndex := Min(ButtonSectionTopIndex, ButtonSectionMaxTopIndex);
+      ScrollUpButton.Enabled := ButtonSectionTopIndex < ButtonSectionMaxTopIndex;
+      ScrollDownButton.Enabled := ButtonSectionTopIndex > 0;
+      CalculateButtonsPosition(ASections);
+    finally
+      ASections.Free;
+    end;
+  end;
+end;
+
+procedure TdxDockSiteHideBar.CalculateButton(var R: TRect; AButton: TdxDockSiteHideBarButton);
+begin
+  AButton.ClearSections;
+  if AButton.DockControl is TdxTabContainerDockSite then
+    CalculateMultiSectionButton(R, AButton)
+  else
+    CalculateSingleSectionButton(R, AButton);
+end;
+
+procedure TdxDockSiteHideBar.CreateAutoHideContainer(AControl: TdxCustomDockControl);
+var
+  AContainer: TdxDockSiteAutoHideContainer;
+begin
+  AContainer := TdxDockSiteAutoHideContainer.Create(Owner);
+  AContainer.Anchors := GetContainersAnchors;
+  AContainer.Parent := Owner.Parent;
+  AContainer.BringToFront;
+
+  AControl.BeginUpdateLayout;
+  try
+    AControl.Parent := AContainer;
+    AControl.Align := GetControlsAlign;
+    AControl.SetVisibility(False);
+    AControl.AdjustControlBounds(AControl);
+  finally
+    AControl.EndUpdateLayout;
+  end;
+end;
+
+function TdxDockSiteHideBar.CreateScrollButton(ADirection: Integer): TdxDockSiteHideBarScrollButton;
+begin
+  Result := TdxDockSiteHideBarScrollButton.Create(Owner.ButtonsController);
+  Result.OnClick := DoScrollButtonClick;
+  Result.Direction := ADirection;
+end;
+
+procedure TdxDockSiteHideBar.DestroyAutoHideContainer(AControl: TdxCustomDockControl);
+var
+  AContainer: TdxDockSiteAutoHideContainer;
+begin
+  AContainer := AControl.AutoHideContainer;
+  if AContainer <> nil then
+  begin
+    AControl.BeginUpdateLayout;
+    try
+      AContainer.Perform(WM_SETREDRAW, Integer(False), 0);
+      AControl.SetVisibility(True);
+      AControl.SetParentDockControl(AControl.ParentDockControl);
+      AControl.SetDockType(AControl.DockType);
+      AControl.AdjustControlBounds(AControl);
+    finally
+      AControl.EndUpdateLayout;
+    end;
+    dxDockingController.PostponedDestroyComponent(AContainer);
+  end;
+end;
+
+procedure TdxDockSiteHideBar.DoScrollButtonClick(Sender: TObject);
+begin
+  ButtonSectionTopIndex := ButtonSectionTopIndex +
+    (Sender as TdxDockSiteHideBarScrollButton).Direction;
+end;
+
+procedure TdxDockSiteHideBar.Draw(ACanvas: TcxCanvas);
+begin
+  Painter.DrawHideBar(ACanvas, Bounds, Position);
+  DrawScrollButtons(ACanvas);
+  DrawButtons(ACanvas);
+end;
+
+procedure TdxDockSiteHideBar.DrawButtons(ACanvas: TcxCanvas);
+var
+  I: Integer;
+begin
+  ACanvas.SaveClipRegion;
+  try
+    ACanvas.IntersectClipRect(ButtonsVisibleRect);
+    for I := 0 to Buttons.Count - 1 do
+      Painter.DrawHideBarButton(ACanvas, Buttons[I], Position);
+  finally
+    ACanvas.RestoreClipRegion;
+  end;
+end;
+
+procedure TdxDockSiteHideBar.DrawScrollButtons(ACanvas: TcxCanvas);
+
+  procedure DrawScrollButton(AButton: TdxDockSiteHideBarScrollButton; AArrow: TcxArrowDirection);
+  begin
+    if AButton.Visible then
+      Painter.DrawHideBarScrollButton(ACanvas, AButton.Bounds, AButton.State, AArrow);
+  end;
+
+const
+  ScrollDownButtonArrows: array[Boolean] of TcxArrowDirection = (adLeft, adUp);
+  ScrollUpButtonArrows: array[Boolean] of TcxArrowDirection = (adRight, adDown);
+begin
+  DrawScrollButton(ScrollUpButton, ScrollUpButtonArrows[Position in [ahpLeft, ahpRight]]);
+  DrawScrollButton(ScrollDownButton, ScrollDownButtonArrows[Position in [ahpLeft, ahpRight]]);
+end;
+
+function TdxDockSiteHideBar.IndexOfDockControl(AControl: TdxCustomDockControl): Integer;
+begin
+  Result := Buttons.IndexOfDockControl(AControl);
+end;
+
+procedure TdxDockSiteHideBar.RegisterDockControl(AControl: TdxCustomDockControl);
+begin
+  Buttons.Add(AControl);
+  CreateAutoHideContainer(AControl);
+  if DockControlCount = 1 then
+    Owner.NCChanged(True);
+end;
+
+procedure TdxDockSiteHideBar.UnregisterDockControl(AControl: TdxCustomDockControl);
+begin
+  DestroyAutoHideContainer(AControl);
+  Buttons.RemoveDockControl(AControl);
+  if DockControlCount = 0 then
+    Owner.NCChanged(True);
+end;
+
+function TdxDockSiteHideBar.GetControlAtPos(
+  const P: TPoint; var ASubControl: TdxCustomDockControl): TdxCustomDockControl;
+var
+  I: Integer;
+begin
+  Result := nil;
+  if PtInRect(ButtonsVisibleRect, P) then
+  begin
+    for I := 0 to Buttons.Count - 1 do
+      if Buttons[I].HitTest(P, ASubControl) then
+      begin
+        Result := Buttons[I].DockControl;
+        if Result = ASubControl then
+          ASubControl := nil;
+        Break;
+      end;
+  end;
+end;
+
+function TdxDockSiteHideBar.GetHideBarHorzInterval: Integer;
+begin
+  Result := Painter.GetHideBarHorizInterval;
+end;
+
+function TdxDockSiteHideBar.GetHideBarVertInterval: Integer;
+begin
+  Result := Painter.GetHideBarVertInterval;
+end;
+
+function TdxDockSiteHideBar.GetButtonSectionSize(
+  ADockControl: TdxCustomDockControl; AExpanded: Boolean = True): Integer;
+var
+  ADockSite: TdxTabContainerDockSite;
+  AIndent: Integer;
+  ATabWidth: Integer;
+  I: Integer;
+begin
+  AIndent := 2 * GetHideBarHorzInterval;
+  if ADockControl is TdxTabContainerDockSite then
+  begin
+    ADockSite := TdxTabContainerDockSite(ADockControl);
+    Result := GetDefaultImageSize;
+    if AExpanded then
+    begin
+      for I := 0 to ADockSite.ChildCount - 1 do
+        if ADockSite.IsValidChild(ADockSite.Children[I]) then
+        begin
+          ATabWidth := Owner.Canvas.TextWidth(ADockSite.Children[I].Caption);
+          if Painter.IsValidImageIndex(ADockSite.Children[I].ImageIndex) then
+            Inc(ATabWidth, GetDefaultImageSize + AIndent);
+          Result := Max(Result, ATabWidth);
+        end;
+    end;
+    Inc(Result, AIndent);
+  end
+  else
+  begin
+    Result := Owner.Canvas.TextWidth(ADockControl.Caption) + AIndent;
+    if GetImageSize > 0 then
+      Inc(Result, GetImageSize + AIndent)
+    else
+      Inc(Result, GetHideBarHorzInterval);
+  end;
+end;
+
+function TdxDockSiteHideBar.GetButtonRectCount: Integer;
+begin
+  Result := Buttons.Count;
+end;
+
+function TdxDockSiteHideBar.GetButtonRect(Index: Integer): TRect;
+begin
+  Result := Buttons[Index].Bounds;
+end;
+
+function TdxDockSiteHideBar.GetContentRect: TRect;
+begin
+  Result := cxRectContent(Bounds, GetContentOffsets);
+end;
+
+function TdxDockSiteHideBar.GetDefaultImageSize: Integer;
+begin
+  Result := Painter.GetDefaultImageSize(Position);
+end;
+
+function TdxDockSiteHideBar.GetDockControl(Index: Integer): TdxCustomDockControl;
+begin
+  Result := Buttons[Index].DockControl;
+end;
+
+function TdxDockSiteHideBar.GetDockControlCount: Integer;
+begin
+  Result := Buttons.Count;
+end;
+
+function TdxDockSiteHideBar.GetPainter: TdxDockControlPainter;
+begin
+  Result := Owner.Painter;
+end;
+
+function TdxDockSiteHideBar.GetVisible: Boolean;
+begin
+  Result := DockControlCount > 0;
+end;
+
+procedure TdxDockSiteHideBar.SetButtonSectionTopIndex(AValue: Integer);
+begin
+  AValue := Min(Max(AValue, 0), ButtonSectionMaxTopIndex);
+  if AValue <> ButtonSectionTopIndex then
+  begin
+    FButtonSectionTopIndex := AValue;
+    Owner.NCChanged;
+  end;
+end;
+
+{ TdxDockSiteHideBarButton }
+
+constructor TdxDockSiteHideBarButton.Create(ADockControl: TdxCustomDockControl);
+begin
+  inherited Create;
+  FDockControl := ADockControl;
+  FSections := TdxDockSiteHideBarButtonSectionList.Create;
+end;
+
+destructor TdxDockSiteHideBarButton.Destroy;
+begin
+  FreeAndNil(FSections);
+  inherited Destroy;
+end;
+
+procedure TdxDockSiteHideBarButton.AddSection(const ABounds: TRect;
+  ADockControl: TdxCustomDockControl; AExpanded: Boolean = True);
+var
+  ASection: TdxDockSiteHideBarButtonSection;
+begin
+  ASection := TdxDockSiteHideBarButtonSection.Create;
+  ASection.FBounds := ABounds;
+  ASection.FDockControl := ADockControl;
+  ASection.FExpanded := AExpanded;
+  FSections.Add(ASection);
+end;
+
+procedure TdxDockSiteHideBarButton.ClearSections;
+begin
+  FSections.Clear;
+end;
+
+function TdxDockSiteHideBarButton.HitTest(
+  const P: TPoint; out ADockControl: TdxCustomDockControl): Boolean;
+var
+  I: Integer;
+begin
+  Result := PtInRect(Bounds, P);
+  if Result then
+  begin
+    ADockControl := DockControl;
+    for I := 0 to Sections.Count - 1 do
+      if PtInRect(Sections[I].Bounds, P) then
+      begin
+        ADockControl := Sections[I].DockControl;
+        Break;
+      end;
+  end;
+end;
+
+procedure TdxDockSiteHideBarButton.Scroll(dX, dY: Integer);
+var
+  I: Integer;
+begin
+  for I := 0 to Sections.Count - 1 do
+    OffsetRect(Sections[I].FBounds, dX, dY);
+end;
+
+function TdxDockSiteHideBarButton.GetBounds: TRect;
+begin
+  if Sections.Count > 0 then
+    Result := cxRectUnion(Sections[0].Bounds, Sections[Sections.Count - 1].Bounds)
+  else
+    Result := cxNullRect
+end;
+
+{ TdxDockSiteHideBarButtonsList }
+
+function TdxDockSiteHideBarButtonsList.Add(
+  ADockControl: TdxCustomDockControl): TdxDockSiteHideBarButton;
+begin
+  Result := TdxDockSiteHideBarButton.Create(ADockControl);
+  inherited Add(Result);
+end;
+
+function TdxDockSiteHideBarButtonsList.IndexOfDockControl(ADockControl: TdxCustomDockControl): Integer;
+var
+  I: Integer;
+begin
+  Result := -1;
+  for I := 0 to Count - 1 do
+    if Items[I].DockControl = ADockControl then
+    begin
+      Result := I;
+      Break;
+    end;
+end;
+
+function TdxDockSiteHideBarButtonsList.GetSections: TdxDockSiteHideBarButtonSectionList;
+
+  procedure DoAddSections(AList: TdxDockSiteHideBarButtonSectionList; AButton: TdxDockSiteHideBarButton);
+  var
+    I: Integer;
+  begin
+    AList.Capacity := Max(AList.Capacity, AList.Count + AButton.Sections.Count);
+    for I := 0 to AButton.Sections.Count - 1 do
+      AList.Add(AButton.Sections[I]);
+  end;
+
+var
+  I: Integer;
+begin
+  Result := TdxDockSiteHideBarButtonSectionList.Create(False);
+  for I := 0 to Count - 1 do
+    DoAddSections(Result, Items[I]);
+end;
+
+function TdxDockSiteHideBarButtonsList.RemoveDockControl(
+  ADockControl: TdxCustomDockControl): Integer;
+begin
+  Result := IndexOfDockControl(ADockControl);
+  if Result >= 0 then
+    FreeAndDelete(Result);
+end;
+
+procedure TdxDockSiteHideBarButtonsList.Scroll(dX, dY: Integer);
+var
+  I: Integer;
+begin
+  if (dX <> 0) or (dY <> 0) then
+  begin
+    for I := 0 to Count - 1 do
+      Items[I].Scroll(dX, dY);
+  end;
+end;
+
+function TdxDockSiteHideBarButtonsList.GetItem(AIndex: Integer): TdxDockSiteHideBarButton;
+begin
+  Result := TdxDockSiteHideBarButton(inherited Items[AIndex]);
+end;
+
+{ TdxDockSiteHideBarButtonSectionList }
+
+function TdxDockSiteHideBarButtonSectionList.First: TdxDockSiteHideBarButtonSection;
+begin
+  Result := Items[0];
+end;
+
+function TdxDockSiteHideBarButtonSectionList.Last: TdxDockSiteHideBarButtonSection;
+begin
+  Result := Items[Count - 1];
+end;
+
+function TdxDockSiteHideBarButtonSectionList.GetItem(Index: Integer): TdxDockSiteHideBarButtonSection;
+begin
+  Result := TdxDockSiteHideBarButtonSection(inherited Items[Index]);
+end;
+
+{ TdxDockSiteHideBarScrollButton }
+
+procedure TdxDockSiteHideBarScrollButton.MouseDown(const P: TPoint);
+begin
+  StartScrollingTimer;
+  Click;
+end;
+
+procedure TdxDockSiteHideBarScrollButton.MouseUp(const P: TPoint);
+begin
+  StopScrollingTimer;
+end;
+
+procedure TdxDockSiteHideBarScrollButton.ScrollingTimerHandler(Sender: TObject);
+begin
+  FScrollTimer.Interval := TabScrollingDelay;
+  if State = cxbsPressed then
+    Click;
+end;
+
+procedure TdxDockSiteHideBarScrollButton.StartScrollingTimer;
+begin
+  FScrollTimer := cxCreateTimer(ScrollingTimerHandler, TabScrollingStartDelay);
+end;
+
+procedure TdxDockSiteHideBarScrollButton.StopScrollingTimer;
+begin
+  FreeAndNil(FScrollTimer);
+end;
+
+{ TdxDockControlPainter }
+
+constructor TdxDockControlPainter.Create(ADockControl: TdxCustomDockControl);
+begin
+  FDockControl := ADockControl;
+end;
+
+class function TdxDockControlPainter.GetTabsPainter(ATabsStyle: TcxPCStyleID): TcxPCPainterClass;
+begin
+  Result := nil;
+end;
+
+class function TdxDockControlPainter.HasLookAndFeelStyle(AStyle: TcxLookAndFeelStyle): Boolean;
+begin
+  Result := AStyle = lfsStandard;
+end;
+
+function TdxDockControlPainter.CanVerticalCaption: Boolean;
+begin
+  Result := True;
+end;
+
+function TdxDockControlPainter.GetBorderWidths: TRect;
+begin
+  Result := Rect(2, 2, 2, 2);
+end;
+
+function TdxDockControlPainter.GetCaptionButtonSize: TSize;
+begin
+  Result := cxSize(12, 12);
+end;
+
+function TdxDockControlPainter.GetCaptionHeight: Integer;
+begin
+  Result := 16;
+end;
+
+function TdxDockControlPainter.GetCaptionSeparatorSize: Integer;
+begin
+  Result := GetBorderWidths.Top;
+end;
+
+function TdxDockControlPainter.GetDefaultImageHeight: Integer;
+begin
+  if DockControl.Images <> nil then
+    Result := DockControl.Images.Height
+  else
+    Result := dxDefaultImageHeight;
+end;
+
+function TdxDockControlPainter.GetDefaultImageSize(APosition: TdxAutoHidePosition): Integer;
+begin
+  if APosition in [ahpLeft, ahpRight] then
+    Result := GetDefaultImageHeight
+  else
+    Result := GetDefaultImageWidth;
+end;
+
+function TdxDockControlPainter.GetDefaultImageWidth: Integer;
+begin
+  if DockControl.Images <> nil then
+    Result := DockControl.Images.Width
+  else
+    Result := dxDefaultImageWidth;
+end;
+
+function TdxDockControlPainter.GetImageHeight: Integer;
+begin
+  if DockControl.Images <> nil then
+    Result := DockControl.Images.Height
+  else Result := 0;
+end;
+
+function TdxDockControlPainter.GetImageWidth: Integer;
+begin
+  if DockControl.Images <> nil then
+    Result := DockControl.Images.Width
+  else
+    Result := 0;
+end;
+
+function TdxDockControlPainter.GetSpaceBetweenCaptionButtons: Integer;
+begin
+  Result := 2;
+end;
+
+function TdxDockControlPainter.IsValidImageIndex(AIndex: Integer): Boolean;
+begin
+  Result := IsImageAssigned(DockControl.Images, AIndex);
+end;
+
+function TdxDockControlPainter.GetHideBarHeight: Integer;
+begin
+  Result := 10 + GetFont.Size + 10;
+  if Result < GetHideBarVertInterval + 2 + GetImageHeight + 2 + GetHideBarVertInterval then
+    Result := GetHideBarVertInterval + 2 + GetImageHeight + 2 + GetHideBarVertInterval;
+end;
+
+function TdxDockControlPainter.GetHideBarWidth: Integer;
+begin
+  Result := 10 + GetFont.Size + 10;
+  if Result < GetHideBarVertInterval + 2 + GetImageWidth + 2 + GetHideBarVertInterval then
+    Result := GetHideBarVertInterval + 2 + GetImageWidth + 2 + GetHideBarVertInterval;
+end;
+
+function TdxDockControlPainter.GetHideBarVertInterval: Integer;
+begin
+  Result := 2;
+end;
+
+function TdxDockControlPainter.GetHideBarHorizInterval: Integer;
+begin
+  Result := 4;
+end;
+
+function TdxDockControlPainter.GetHideBarScrollButtonSize: TSize;
+begin
+  Result := cxSize(16, 16);
+end;
+
+procedure TdxDockControlPainter.DrawBorder(ACanvas: TcxCanvas; ARect: TRect);
+var
+  ABorders: TRect;
+begin
+  ACanvas.Brush.Color := ColorToRGB(GetBorderColor);
+  ACanvas.Brush.Style := bsSolid;
+  with ARect do
+  begin
+    ABorders := GetBorderWidths;
+    ACanvas.FillRect(Rect(Left, Top, Left + ABorders.Left, Bottom));
+    ACanvas.FillRect(Rect(Left, Bottom - ABorders.Bottom, Right, Bottom));
+    ACanvas.FillRect(Rect(Right - ABorders.Right, Top, Left + Right, Bottom));
+    ACanvas.FillRect(Rect(Left, Top, Right, Top + ABorders.Top));
+  end;
+  DrawColorEdge(ACanvas, ARect, GetColor, etRaisedOuter, [epTopLeft]);
+  DrawColorEdge(ACanvas, ARect, GetColor, etRaisedInner, [epBottomRight]);
+end;
+
+procedure TdxDockControlPainter.DrawHideBar(
+  ACanvas: TcxCanvas; ARect: TRect; APosition: TdxAutoHidePosition);
+begin
+  ACanvas.FillRect(ARect, ColorToRGB(GetHideBarColor));
+end;
+
+procedure TdxDockControlPainter.DrawCaption(
+  ACanvas: TcxCanvas; ARect: TRect; IsActive: Boolean);
+begin
+  ACanvas.FillRect(ARect, ColorToRGB(GetCaptionColor(IsActive)));
+end;
+
+procedure TdxDockControlPainter.DrawCaptionSeparator(ACanvas: TcxCanvas; ARect: TRect);
+begin
+  ACanvas.FillRect(ARect, ColorToRGB(GetBorderColor));
+end;
+
+procedure TdxDockControlPainter.DrawCaptionText(ACanvas: TcxCanvas; ARect: TRect; IsActive: Boolean);
+var
+  R: TRect;
+begin
+  R := ARect;
+  if DockControl.IsCaptionVertical then
+  begin
+    if ARect.Top < ARect.Bottom then
+    begin
+      R.Right := ARect.Left + (ARect.Right - ARect.Left) div 2 - 1;
+      R.Left := R.Right - 3;
+      DrawColorEdge(ACanvas, R, GetCaptionColor(IsActive), etRaisedOuter, [epTopLeft]);
+      DrawColorEdge(ACanvas, R, GetCaptionColor(IsActive), etRaisedInner, [epBottomRight]);
+      R.Left := ARect.Left + (ARect.Right - ARect.Left) div 2;
+      R.Right := R.Left + 3;
+      DrawColorEdge(ACanvas, R, GetCaptionColor(IsActive), etRaisedOuter, [epTopLeft]);
+      DrawColorEdge(ACanvas, R, GetCaptionColor(IsActive), etRaisedInner, [epBottomRight]);
+    end;
+  end
+  else
+  begin
+    if ARect.Left < ARect.Right then
+    begin
+      R.Bottom := ARect.Top + (ARect.Bottom - ARect.Top) div 2 - 1;
+      R.Top := R.Bottom - 3;
+      DrawColorEdge(ACanvas, R, GetCaptionColor(IsActive), etRaisedOuter, [epTopLeft]);
+      DrawColorEdge(ACanvas, R, GetCaptionColor(IsActive), etRaisedInner, [epBottomRight]);
+      R.Top := ARect.Top + (ARect.Bottom - ARect.Top) div 2;
+      R.Bottom := R.Top + 3;
+      DrawColorEdge(ACanvas, R, GetCaptionColor(IsActive), etRaisedOuter, [epTopLeft]);
+      DrawColorEdge(ACanvas, R, GetCaptionColor(IsActive), etRaisedInner, [epBottomRight]);
+    end;
+  end;
+end;
+
+procedure TdxDockControlPainter.DrawCaptionButtonSelection(
+  ACanvas: TcxCanvas; ARect: TRect; AIsActive: Boolean; AState: TcxButtonState);
+begin
+  if AState = cxbsPressed then
+  begin
+    DrawColorEdge(ACanvas, ARect, GetCaptionColor(AIsActive), etSunkenOuter, [epRect]);
+    InflateRect(ARect, -1, -1);
+    DrawColorEdge(ACanvas, ARect, GetCaptionColor(AIsActive), etSunkenInner, [epTopLeft]);
+  end
+  else
+  begin
+    DrawColorEdge(ACanvas, ARect, GetCaptionColor(AIsActive), etRaisedOuter, [epRect]);
+    InflateRect(ARect, -1, -1);
+    DrawColorEdge(ACanvas, ARect, GetCaptionColor(AIsActive), etRaisedInner, [epBottomRight]);
+  end;
+end;
+
+procedure TdxDockControlPainter.DrawCaptionCloseButton(
+  ACanvas: TcxCanvas; ARect: TRect; AIsActive: Boolean; AState: TcxButtonState);
+begin
+  DrawCaptionButtonSelection(ACanvas, ARect, AIsActive, AState);
+  if AState = cxbsPressed then
+    OffsetRect(ARect, 1, 1);
+  ACanvas.Pen.Style := psSolid;
+  ACanvas.Pen.Width := 1;
+  ACanvas.Pen.Color := ColorToRGB(GetCaptionSignColor(AIsActive, AState));
+  ACanvas.MoveTo(ARect.Left + 2, ARect.Top + 2);
+  ACanvas.LineTo(ARect.Right - 3, ARect.Bottom - 3);
+  ACanvas.MoveTo(ARect.Right - 4, ARect.Top + 2);
+  ACanvas.LineTo(ARect.Left + 1, ARect.Bottom - 3);
+end;
+
+procedure TdxDockControlPainter.DrawCaptionHideButton(ACanvas: TcxCanvas;
+  ARect: TRect; IsActive, IsSwitched: Boolean; AState: TcxButtonState);
+begin
+  DrawCaptionButtonSelection(ACanvas, ARect, IsActive, AState);
+  if AState = cxbsPressed then
+    OffsetRect(ARect, 1, 1);
+  ACanvas.Pen.Style := psSolid;
+  ACanvas.Pen.Width := 1;
+  ACanvas.Pen.Color := ColorToRGB(GetCaptionSignColor(IsActive, AState));
+  ACanvas.Brush.Style := bsClear;
+  if IsSwitched then
+  begin
+    ACanvas.Rectangle(ARect.Left + 4, ARect.Top + 3, ARect.Right - 3, ARect.Bottom - 4);
+    ACanvas.MoveTo(ARect.Left + 4, ARect.Top + 2);
+    ACanvas.LineTo(ARect.Left + 4, ARect.Bottom - 3);
+    ACanvas.MoveTo(ARect.Left + 4, ARect.Bottom - 6);
+    ACanvas.LineTo(ARect.Right - 3, ARect.Bottom - 6);
+    ACanvas.MoveTo(ARect.Left + 2, ARect.Top + 5);
+    ACanvas.LineTo(ARect.Left + 4, ARect.Top + 5);
+  end
+  else
+  begin
+    ACanvas.Rectangle(ARect.Left + 3, ARect.Top + 2, ARect.Right - 4, ARect.Bottom - 5);
+    ACanvas.MoveTo(ARect.Left + 2, ARect.Bottom - 6);
+    ACanvas.LineTo(ARect.Right - 3, ARect.Bottom - 6);
+    ACanvas.MoveTo(ARect.Right - 6, ARect.Top + 2);
+    ACanvas.LineTo(ARect.Right - 6, ARect.Bottom - 5);
+    ACanvas.MoveTo(ARect.Left + 5, ARect.Bottom - 5);
+    ACanvas.LineTo(ARect.Left + 5, ARect.Bottom - 3);
+  end;
+  ACanvas.Brush.Style := bsSolid;
+end;
+
+procedure TdxDockControlPainter.DrawCaptionMaximizeButton(ACanvas: TcxCanvas;
+  ARect: TRect; IsActive, IsSwitched: Boolean; AState: TcxButtonState);
+var
+  pts: array[0..2] of TPoint;
+begin
+  DrawCaptionButtonSelection(ACanvas, ARect, IsActive, AState);
+  if AState = cxbsPressed then
+    OffsetRect(ARect, 1, 1);
+  ACanvas.Pen.Style := psSolid;
+  ACanvas.Pen.Width := 1;
+  ACanvas.Pen.Color := ColorToRGB(GetCaptionSignColor(IsActive, AState));
+  ACanvas.Brush.Style := bsSolid;
+  ACanvas.Brush.Color := ColorToRGB(GetCaptionSignColor(IsActive, AState));
+  if DockControl.SideContainer is TdxVertContainerDockSite then
+    if IsSwitched then
+    begin
+      pts[0] := Point(ARect.Right - 4, ARect.Top + 2);
+      pts[1] := Point(ARect.Left + 2, ARect.Top + 2);
+    end
+    else
+    begin
+      pts[0] := Point(ARect.Right - 4, ARect.Bottom - 4);
+      pts[1] := Point(ARect.Left + 2, ARect.Bottom - 4);
+    end
+  else
+    if IsSwitched then
+    begin
+      pts[0] := Point(ARect.Left + 2, ARect.Top + 2);
+      pts[1] := Point(ARect.Left + 2, ARect.Bottom - 4);
+    end
+    else
+    begin
+      pts[0] := Point(ARect.Right - 4, ARect.Top + 2);
+      pts[1] := Point(ARect.Right - 4, ARect.Bottom - 4);
+    end;
+  pts[2] := Point(ARect.Left + 5, ARect.Top + 5);
+  ACanvas.Polygon(pts);
+end;
+
+procedure TdxDockControlPainter.DrawClient(ACanvas: TcxCanvas; ARect: TRect);
+begin
+  ACanvas.FillRect(ARect, ColorToRGB(GetColor));
+end;
+
+procedure TdxDockControlPainter.DrawHideBarButtonBackground(
+  ACanvas: TcxCanvas; AButton: TdxDockSiteHideBarButton; APosition: TdxAutoHidePosition);
+const
+  TopEdges: array[TdxAutoHidePosition] of TdxEdgePositions =
+    ([epTop], [epLeft], [epTopLeft], [epTopLeft], []);
+  BottomEdges: array[TdxAutoHidePosition] of TdxEdgePositions =
+    ([epBottomRight], [epBottomRight], [epBottom], [epRight], []);
+begin
+  DrawColorEdge(ACanvas, AButton.Bounds, GetHideBarButtonColor, etRaisedOuter, TopEdges[APosition]);
+  DrawColorEdge(ACanvas, AButton.Bounds, GetHideBarButtonColor, etRaisedInner, BottomEdges[APosition]);
+end;
+
+procedure TdxDockControlPainter.DrawHideBarButtonSection(ACanvas: TcxCanvas;
+  AButtonSection: TdxDockSiteHideBarButtonSection; APosition: TdxAutoHidePosition);
+
+  procedure DrawHideBarButtonSectionImage(
+    var R: TRect; ASection: TdxDockSiteHideBarButtonSection);
+  var
+    AImageRect: TRect;
+    AImageSize: Integer;
+  begin
+    if IsValidImageIndex(ASection.DockControl.ImageIndex) then
+    begin
+      AImageSize := GetDefaultImageSize(APosition) + 2 * GetHideBarHorizInterval;
+      if APosition in [ahpLeft, ahpRight] then
+      begin
+        AImageRect := cxRectSetHeight(R, AImageSize);
+        R.Top := AImageRect.Bottom;
+      end
+      else
+      begin
+        AImageRect := cxRectSetWidth(R, AImageSize);
+        R.Left := AImageRect.Right;
+      end;
+      DrawHideBarButtonImage(ACanvas, ASection.DockControl, AImageRect);
+    end;
+  end;
+
+var
+  ARect: TRect;
+begin
+  ARect := AButtonSection.Bounds;
+  if not cxRectIsEmpty(ARect) then
+    DrawHideBarButtonSectionImage(ARect, AButtonSection);
+  if not cxRectIsEmpty(ARect) then
+    DrawHideBarButtonText(ACanvas, AButtonSection.DockControl, ARect, APosition);
+end;
+
+procedure TdxDockControlPainter.DrawHideBarButtonSections(
+  ACanvas: TcxCanvas; AButton: TdxDockSiteHideBarButton; APosition: TdxAutoHidePosition);
+var
+  I: Integer;
+begin
+  for I := 0 to AButton.Sections.Count - 1 do
+  begin
+    DrawHideBarButtonSection(ACanvas, AButton.Sections[I], APosition);
+    if I + 1 < AButton.Sections.Count then
+      DrawHideBarButtonSectionSeparator(ACanvas, AButton.Sections[I], APosition);
+  end;
+end;
+
+procedure TdxDockControlPainter.DrawHideBarButtonSectionSeparator(ACanvas: TcxCanvas;
+  AButtonSection: TdxDockSiteHideBarButtonSection; APosition: TdxAutoHidePosition);
+const
+  SeparatorEdges: array[TdxAutoHidePosition] of TdxEdgePositions =
+    ([epBottom], [epRight], [epBottom], [epRight], []);
+begin
+  DrawColorEdge(ACanvas, AButtonSection.Bounds,
+    GetHideBarButtonColor, etRaisedInner, SeparatorEdges[APosition]);
+end;
+
+procedure TdxDockControlPainter.DrawHideBarButton(ACanvas: TcxCanvas;
+  AButton: TdxDockSiteHideBarButton; APosition: TdxAutoHidePosition);
+begin
+  DrawHideBarButtonBackground(ACanvas, AButton, APosition);
+  DrawHideBarButtonSections(ACanvas, AButton, APosition);
+end;
+
+procedure TdxDockControlPainter.DrawHideBarButtonImage(
+  ACanvas: TcxCanvas; AControl: TdxCustomDockControl; ARect: TRect);
+var
+  R: TRect;
+begin
+  if IsValidImageIndex(AControl.ImageIndex) then
+  begin
+    R.Left := ARect.Left + (ARect.Right - ARect.Left - GetImageWidth) div 2;
+    R.Top := ARect.Top + (ARect.Bottom - ARect.Top - GetImageHeight) div 2;
+    R.Right := R.Left + GetImageWidth;
+    R.Bottom := R.Top + GetImageHeight;
+    DrawImage(ACanvas, AControl.Images, AControl.ImageIndex, R);
+  end;
+end;
+
+procedure TdxDockControlPainter.DrawHideBarButtonText(ACanvas: TcxCanvas;
+  AControl: TdxCustomDockControl; ARect: TRect; APosition: TdxAutoHidePosition);
+
+  procedure DoDrawText(ACanvas: TCanvas; R: TRect);
+  begin
+    ACanvas.Brush.Style := bsClear;
+    ACanvas.Font := GetHideBarButtonFont;
+    ACanvas.Font.Color := ColorToRGB(GetHideBarButtonFontColor);
+    cxDrawText(ACanvas.Handle, AControl.Caption, R,
+      DT_SINGLELINE or DT_LEFT or DT_VCENTER or DT_END_ELLIPSIS);
+  end;
+
+var
+  ABitmap: TcxBitmap;
+begin
+  InflateRect(ARect, -2, -2);
+  case APosition of
+    ahpTop, ahpBottom:
+      DoDrawText(ACanvas.Canvas, ARect);
+    ahpLeft, ahpRight:
+      begin
+        ABitmap := TcxBitmap.CreateSize(ARect, pf32bit);
+        try
+          cxBitBlt(ABitmap.Canvas.Handle, ACanvas.Handle, ABitmap.ClientRect, ARect.TopLeft, SRCCOPY);
+          ABitmap.Rotate(raPlus90);
+          DoDrawText(ABitmap.Canvas, ABitmap.ClientRect);
+          ABitmap.Rotate(raMinus90);
+          ACanvas.Draw(ARect.Left, ARect.Top, ABitmap);
+        finally
+          ABitmap.Free;
+        end;
+      end;
+  end;
+end;
+
+procedure TdxDockControlPainter.DrawHideBarScrollButton(ACanvas: TcxCanvas;
+  const ARect: TRect; AState: TcxButtonState; AArrow: TcxArrowDirection);
+begin
+  cxLookAndFeelPaintersManager.GetPainter(lfsFlat).DrawArrow(ACanvas, ARect, AState, AArrow);
+end;
+
+class procedure TdxDockControlPainter.CreateColors;
+begin
+end;
+
+class procedure TdxDockControlPainter.RefreshColors;
+begin
+end;
+
+class procedure TdxDockControlPainter.ReleaseColors;
+begin
+end;
+
+class function TdxDockControlPainter.LightColor(AColor: TColor): TColor;
+begin
+  Result := Light(AColor, 60);
+end;
+
+class function TdxDockControlPainter.LightLightColor(AColor: TColor): TColor;
+begin
+  Result := Light(AColor, 20);
+end;
+
+class function TdxDockControlPainter.DarkColor(AColor: TColor): TColor;
+begin
+  Result := Dark(AColor, 60);
+end;
+
+class function TdxDockControlPainter.DarkDarkColor(AColor: TColor): TColor;
+begin
+  Result := Dark(AColor, 20);
+end;
+
+class procedure TdxDockControlPainter.DrawColorEdge(ACanvas: TcxCanvas;
+  ARect: TRect; AColor: TColor; AEdgesType: TdxEdgesType; AEdgePositios: TdxEdgePositions);
+var
+  LTCol, RBCol: TColor;
+begin
+  case AEdgesType of
+    etFlat: begin
+      LTCol := DarkColor(AColor);
+      RBCol := DarkColor(AColor);
+    end;
+    etRaisedOuter: begin
+      LTCol := LightLightColor(AColor);
+      RBCol := DarkDarkColor(AColor);
+    end;
+    etRaisedInner: begin
+      LTCol := LightColor(AColor);
+      RBCol := DarkColor(AColor);
+    end;
+    etSunkenOuter: begin
+      LTCol := DarkDarkColor(AColor);
+      RBCol := LightLightColor(AColor);
+    end;
+    etSunkenInner: begin
+      LTCol := DarkColor(AColor);
+      RBCol := LightColor(AColor);
+    end;
+  else
+    LTCol := ColorToRGB(AColor);
+    RBCol := ColorToRGB(AColor);
+  end;
+  ACanvas.Pen.Style := psSolid;
+  ACanvas.Pen.Width := 1;
+  ACanvas.MoveTo(ARect.Left, ARect.Bottom - 1);
+  ACanvas.Pen.Color := LTCol;
+  if (epLeft in AEdgePositios) or (epTopLeft in AEdgePositios) or (epRect in AEdgePositios) then
+    ACanvas.LineTo(ARect.Left, ARect.Top - 1);
+  ACanvas.MoveTo(ARect.Left, ARect.Top);
+  if (epTop in AEdgePositios) or (epTopLeft in AEdgePositios) or (epRect in AEdgePositios) then
+    ACanvas.LineTo(ARect.Right, ARect.Top);
+  ACanvas.MoveTo(ARect.Right - 1, ARect.Top);
+  ACanvas.Pen.Color := RBCol;
+  if (epRight in AEdgePositios) or (epBottomRight in AEdgePositios) or (epRect in AEdgePositios) then
+    ACanvas.LineTo(ARect.Right - 1, ARect.Bottom);
+  ACanvas.MoveTo(ARect.Right - 1, ARect.Bottom - 1);
+  if (epBottom in AEdgePositios) or (epBottomRight in AEdgePositios) or (epRect in AEdgePositios) then
+    ACanvas.LineTo(ARect.Left - 1, ARect.Bottom - 1)
+end;
+
+class procedure TdxDockControlPainter.DrawImage(ACanvas: TcxCanvas;
+  AImageList: TCustomImageList; AImageIndex: Integer; R: TRect);
+begin
+  AImageList.Draw(ACanvas.Canvas, R.Left, R.Top, AImageIndex);
+end;
+
+class function TdxDockControlPainter.RectInRect(R1, R2: TRect): Boolean;
+begin
+  Result := PtInRect(R2, R1.TopLeft) and PtInRect(R2, R1.BottomRight);
+end;
+
+function TdxDockControlPainter.GetCaptionRect(const ARect: TRect; AIsVertical: Boolean): TRect;
+begin
+  Result := ARect;
+  if AIsVertical then
+    Result.Right := Result.Left + GetCaptionAreaHeight
+  else
+    Result.Bottom := Result.Top + GetCaptionAreaHeight;
+end;
+
+function TdxDockControlPainter.GetCaptionContentOffsets(AIsVertical: Boolean): TRect;
+begin
+  if AIsVertical then
+    Result := cxRect(0, 4, 0, 4)
+  else
+    Result := cxRect(4, 0, 4, 0);
+end;
+
+function TdxDockControlPainter.GetColor: TColor;
+begin
+  Result := DockControl.Color;
+end;
+
+function TdxDockControlPainter.GetFont: TFont;
+begin
+  Result := DockControl.Font;
+end;
+
+function TdxDockControlPainter.GetBorderColor: TColor;
+begin
+  Result := GetColor;
+end;
+
+function TdxDockControlPainter.GetCaptionAreaHeight: Integer;
+begin
+  Result := Max(GetCaptionHeight, GetCaptionButtonSize.cy);
+end;
+
+function TdxDockControlPainter.GetCaptionColor(IsActive: Boolean): TColor;
+begin
+  Result := GetColor;
+end;
+
+function TdxDockControlPainter.GetCaptionFont(IsActive: Boolean): TFont;
+begin
+  Result := GetFont;
+end;
+
+function TdxDockControlPainter.GetCaptionFontColor(IsActive: Boolean): TColor;
+begin
+  Result := GetCaptionFont(IsActive).Color;
+end;
+
+function TdxDockControlPainter.GetCaptionSignColor(IsActive: Boolean; AState: TcxButtonState): TColor;
+begin
+  Result := GetCaptionFontColor(IsActive);
+end;
+
+function TdxDockControlPainter.GetHideBarColor: TColor;
+begin
+  Result := GetColor;
+end;
+
+function TdxDockControlPainter.IsHideBarButtonHotTrackSupports: Boolean; 
+begin
+  Result := False;
+end;
+
+function TdxDockControlPainter.GetHideBarButtonColor: TColor;
+begin
+  Result := GetColor;
+end;
+
+function TdxDockControlPainter.GetHideBarButtonFont: TFont;
+begin
+  Result := GetFont;
+end;
+
+function TdxDockControlPainter.GetHideBarButtonFontColor: TColor;
+begin
+  Result := GetHideBarButtonFont.Color;
+end;
+
+function TdxDockControlPainter.GetLookAndFeelPainter: TcxCustomLookAndFeelPainter;
+begin
+  Result := DockControl.ControllerLookAndFeel.Painter;
+end;
+
+function TdxDockControlPainter.DrawCaptionFirst: Boolean;
+begin
+  Result := False;
+end;
+
+function TdxDockControlPainter.NeedRedrawOnResize: Boolean;
+begin
+  Result := False;
+end;
+
+{ TdxZoneList }
+
+function TdxZoneList.FindZone(AOwnerControl: TdxCustomDockControl; AType: TdxDockingType): TdxZone;
+var
+  AZone: TdxZone;
+  I: Integer;
+begin
+  Result := nil;
+  for I := 0 to Count - 1 do
+  begin
+    AZone := Items[I];
+    if (AZone.DockType = AType) and (AZone.Owner = AOwnerControl) then
+    begin
+      Result := AZone;
+      Break;
+    end;
+  end;
+end;
+
+function TdxZoneList.RegisterDockZone(
+  AOwnerControl, AControl: TdxCustomDockControl;
+  AZoneClass: TdxZoneClass; AZoneWidth: Integer): Boolean;
+begin
+  Result := AZoneClass.ValidateDockZone(AOwnerControl, AControl);
+  if Result then
+    RegisterZone(AZoneClass.Create(AOwnerControl, AZoneWidth, zkDocking));
+end;
+
+function TdxZoneList.RegisterResizeZone(
+  AOwnerControl, AControl: TdxCustomDockControl;
+  AZoneClass: TdxZoneClass; AZoneWidth: Integer): Boolean;
+begin
+  Result := AZoneClass.ValidateResizeZone(AOwnerControl, AControl);
+  if Result then
+    RegisterZone(AZoneClass.Create(AOwnerControl, AZoneWidth, zkResizing));
+end;
+
+procedure TdxZoneList.RegisterZone(AZone: TdxZone);
+begin
+  Insert(0, AZone);
+end;
+
+function TdxZoneList.GetItem(Index: Integer): TdxZone;
+begin
+  Result := TdxZone(inherited Items[Index]);
+end;
+
+{ TdxDockSiteRightHideBar }
+
+procedure TdxDockSiteRightHideBar.CalculateBounds(const R: TRect);
+begin
+  FBounds := cxRectSetRight(R, R.Right, GetHideBarSize);
+end;
+
+function TdxDockSiteRightHideBar.GetContainersAnchors: TAnchors;
+begin
+  Result := Owner.Anchors;
+  if akRight in Result then
+    Exclude(Result, akLeft);
+end;
+
+function TdxDockSiteRightHideBar.GetControlsAlign: TAlign;
+begin
+  Result := alLeft;
+end;
+
+function TdxDockSiteRightHideBar.GetPosition: TdxAutoHidePosition;
+begin
+  Result := ahpRight;
+end;
+
+procedure TdxDockSiteRightHideBar.SetFinalPosition(AControl: TdxCustomDockControl);
+begin
+  AControl.AutoHideContainer.SetBounds(Owner.GetClientLeft + Owner.GetClientWidth - AControl.OriginalWidth,
+    Owner.GetClientTop, AControl.OriginalWidth, Owner.GetClientHeight);
+end;
+
+procedure TdxDockSiteRightHideBar.SetInitialPosition(AControl: TdxCustomDockControl);
+begin
+  AControl.AutoHideContainer.SetBounds(Owner.GetClientLeft + Owner.GetClientWidth,
+    Owner.GetClientTop, 0, Owner.GetClientHeight);
+end;
+
+procedure TdxDockSiteRightHideBar.UpdatePosition(ADelta: Integer);
+begin
+  if (ADelta > 0) and (Owner.MovingContainer.Width + ADelta > Owner.MovingControl.OriginalWidth) then
+    SetFinalPosition(Owner.MovingControl)
+  else if (ADelta < 0) and (Owner.MovingContainer.Width + ADelta < 0) then
+    SetInitialPosition(Owner.MovingControl)
+  else Owner.MovingContainer.SetBounds(Owner.MovingContainer.Left - ADelta, Owner.MovingContainer.Top,
+    Owner.MovingContainer.Width + ADelta, Owner.MovingContainer.Height);
+end;
+
+{ TdxFloatDockSite }
+
+constructor TdxFloatDockSite.Create(AOwner: TComponent);
+begin
+  inherited;
+  CreateFloatForm;
+end;
+
+destructor TdxFloatDockSite.Destroy;
+begin
+  DestroyFloatForm;
+  inherited;
+end;
+
+procedure TdxFloatDockSite.BeforeDestruction;
+begin
+  if not CanDestroy then
+    raise EdxException.Create(sdxInvalidFloatSiteDeleting);
+  inherited;
+end;
+
+procedure TdxFloatDockSite.HideFloatForm;
+begin
+  if FloatForm <> nil then
+  begin
+    FloatForm.Hide;
+    FloatForm.SetDesigning(False);
+  end;
+end;
+
+procedure TdxFloatDockSite.ShowFloatForm;
+begin                                        
+  if (FloatForm <> nil) and Visible and (ParentFormVisible or IsDesigning) then
+  begin
+    FloatForm.Show;
+    FloatForm.SetDesigning(IsDesigning);
+    FFloatLeft := FloatForm.Left;
+    FFloatTop := FloatForm.Top;
+  end;
+end;
+
+procedure TdxFloatDockSite.SetFloatFormPosition(ALeft, ATop: Integer);
+var
+  R: TRect;
+begin
+  if FloatForm = nil then Exit;
+  // check work area
+  R := GetDesktopWorkArea(Point(ALeft, ATop));
+  if ALeft < R.Left then ALeft := R.Left;
+  if ALeft >= R.Right then ALeft := R.Right - FloatForm.Width;
+  if ATop < R.Top then ATop := R.Top;
+  if ATop >= R.Bottom then ATop := R.Bottom - FloatForm.Height;
+  FloatForm.SetBounds(ALeft, ATop, FloatForm.Width, FloatForm.Height);
+end;
+
+procedure TdxFloatDockSite.SetFloatFormSize(AWidth, AHeight: Integer);
+begin
+  if FloatForm = nil then exit;
+  if FloatForm.HandleAllocated then
+  begin
+    FloatForm.ClientWidth := AWidth;
+    FloatForm.ClientHeight := AHeight;
+  end
+  else
+  begin
+    FloatForm.FClientHeight := AHeight;
+    FloatForm.FClientWidth := AWidth;
+  end;  
+end;
+
+function TdxFloatDockSite.HasParent: Boolean;
+begin
+  Result := False;
+end;
+
+procedure TdxFloatDockSite.Loaded;
+begin
+  inherited;
+  CreateFloatForm;
+  UpdateCaption;
+  ShowFloatForm;
+
+  if IsDesigning and IsLoadingFromForm then // Anchors bug - see TdxFloatForm.InsertDockSite
+    SetDockType(dtClient);
+
+  SetFloatFormSize(OriginalWidth, OriginalHeight);
+end;
+
+function TdxFloatDockSite.GetDesignRect: TRect;
+begin
+  Result := cxNullRect;
+end;
+
+procedure TdxFloatDockSite.SetParent(AParent: TWinControl);
+begin
+  if not IsUpdateLayoutLocked and not IsDestroying and
+    ((AParent = nil) or not (csLoading in AParent.ComponentState)) then
+    raise EdxException.Create(sdxInvalidParentAssigning)
+  else if (AParent <> nil) and not (AParent is TCustomForm) then
+    raise EdxException.Create(sdxInvalidFloatSiteParent)
+  else inherited SetParent(AParent);
+end;
+
+function TdxFloatDockSite.IsLoadingFromForm: Boolean;
+begin
+  Result := csLoading in Owner.ComponentState; // Anchors bug - see TdxFloatForm.InsertDockSite
+end;
+
+function TdxFloatDockSite.CanUndock(AControl: TdxCustomDockControl): Boolean;
+begin
+  Result := ValidChildCount > 1;
+end;
+
+procedure TdxFloatDockSite.StartDocking(const pt: TPoint);
+begin
+  if Child <> nil then
+    Child.StartDocking(pt);
+end;
+
+procedure TdxFloatDockSite.CheckDockClientsRules;
+begin
+end;
+
+procedure TdxFloatDockSite.UpdateControlDockZones(AControl: TdxCustomDockControl; AZoneWidth: Integer);
+begin
+  if doUseCaptionAreaToClientDocking in ControllerOptions then
+  begin
+    if TdxFloatZone.ValidateDockZone(Self, AControl) then
+      AControl.DockZones.RegisterZone(TdxFloatZone.Create(Self));
+  end;
+end;
+
+procedure TdxFloatDockSite.AdjustControlBounds(AControl: TdxCustomDockControl);
+begin
+  if FloatForm <> nil then
+    SetFloatFormSize(AControl.OriginalWidth, AControl.OriginalHeight)
+  else
+    inherited AdjustControlBounds(AControl);
+end;
+
+procedure TdxFloatDockSite.UpdateControlOriginalSize(AControl: TdxCustomDockControl);
+begin
+  if not FloatFormVisible then exit;
+  AControl.FOriginalHeight := Height;
+  AControl.FOriginalWidth := Width;
+end;
+
+procedure TdxFloatDockSite.UpdateFloatPosition;
+begin
+  if FloatFormVisible then
+  begin
+    FFloatLeft := FloatForm.Left;
+    FFloatTop := FloatForm.Top;
+    Modified;
+  end;
+end;
+
+procedure TdxFloatDockSite.ChildVisibilityChanged(Sender: TdxCustomDockControl);
+begin
+  if Sender = Child then
+  begin
+    Visible := Sender.Visible;
+    FloatForm.Visible := Sender.Visible and ParentFormVisible;
+  end;
+end;
+
+procedure TdxFloatDockSite.Activate;
+begin
+  if GetDockPanel <> nil then
+    GetDockPanel.Activate
+  else
+  begin // old code
+    if Child <> nil then
+      Child.Activate;
+  end;    
+end;
+
+procedure TdxFloatDockSite.DoClose;
+begin
+  if Child <> nil then
+    Child.DoClose;
+end;
+
+function TdxFloatDockSite.CanDestroy: Boolean;
+begin
+  Result := (Child = nil) or Child.IsDestroying;
+end;
+
+function TdxFloatDockSite.CanDockHost(AControl: TdxCustomDockControl; AType: TdxDockingType): Boolean;
+begin
+  Result := False;
+end;
+
+function TdxFloatDockSite.GetDockPanel: TdxCustomDockControl;
+begin
+  Result := Child;
+  if not (Result is TdxDockPanel) then
+  begin
+    if Result is TdxSideContainerDockSite then
+    begin
+      if (Result as TdxSideContainerDockSite).ActiveChild <> nil then
+        Result := (Result as TdxSideContainerDockSite).ActiveChild
+      else
+        if (Result as TdxSideContainerDockSite).ValidChildCount > 0 then
+          Result := (Result as TdxSideContainerDockSite).ValidChildren[0]
+        else
+          Result := nil; 
+    end
+    else
+    begin
+      if Result is TdxContainerDockSite then
+        Result := (Result as TdxContainerDockSite).ActiveChild
+      else
+        Result := nil;
+    end;
+  end;
+end;
+
+procedure TdxFloatDockSite.CreateLayout(AControl: TdxCustomDockControl;
+  AType: TdxDockingType; Index: Integer);
+begin
+  Assert(ChildCount = 0, Format(sdxInternalErrorCreateLayout, [ClassName]));
+  AControl.IncludeToDock(Self, AType, 0);
+end;
+
+procedure TdxFloatDockSite.DestroyLayout(AControl: TdxCustomDockControl);
+begin
+  Assert(ChildCount = 1, Format(sdxInternalErrorDestroyLayout, [ClassName]));
+  Include(FInternalState, dcisDestroying);
+  AControl.ExcludeFromDock;
+  if not IsDestroying then DoDestroy;
+end;
+
+procedure TdxFloatDockSite.LoadLayoutFromCustomIni(AIniFile: TCustomIniFile;
+  AParentForm: TCustomForm; AParentControl: TdxCustomDockControl; ASection: string);
+begin
+  inherited;
+  with AIniFile do
+  begin
+    FloatLeft := ReadInteger(ASection, 'FloatLeft', FloatLeft);
+    FloatTop := ReadInteger(ASection, 'FloatTop', FloatTop);
+    FOriginalWidth := ReadInteger(ASection, 'Width', Width);
+    FOriginalHeight := ReadInteger(ASection, 'Height', Height);
+  end;
+  CreateFloatForm;
+  UpdateCaption;
+  ShowFloatForm;
+  SetFloatFormSize(OriginalWidth, OriginalHeight);
+  // To fix bad layouts
+  if ChildCount <> 1 then DoDestroy;
+end;
+
+procedure TdxFloatDockSite.SaveLayoutToCustomIni(AIniFile: TCustomIniFile;
+  ASection: string);
+begin
+  inherited;
+  with AIniFile do
+  begin
+    WriteInteger(ASection, 'FloatLeft', FloatLeft);
+    WriteInteger(ASection, 'FloatTop', FloatTop);
+  end;
+end;
+
+procedure TdxFloatDockSite.DoSetFloatFormCaption;
+begin
+  if Assigned(FOnSetFloatFormCaption) then
+    FOnSetFloatFormCaption(Self, FloatForm);
+  Controller.DoSetFloatFormCaption(Self, FloatForm);
+end;
+
+procedure TdxFloatDockSite.UpdateCaption;
+begin
+  if (Child <> nil) and (FloatForm <> nil) then
+    FloatForm.Caption := RemoveAccelChars(Child.Caption, False);
+  DoSetFloatFormCaption;
+end;
+
+function TdxFloatDockSite.GetFloatForm: TdxFloatForm;
+begin
+  Result := FFloatForm as TdxFloatForm;
+end;
+
+procedure TdxFloatDockSite.RestoreDockPosition(pt: TPoint);
+begin
+  if (Child <> nil) and Child.Dockable then
+    Child.RestoreDockPosition(pt);
+end;
+
+function TdxFloatDockSite.GetFloatFormClass: TdxFloatFormClass;
+begin
+  Result := TdxFloatForm;
+end;
+
+procedure TdxFloatDockSite.CreateFloatForm;
+var
+  AWidth, AHeight: Integer;
+begin
+  BeginUpdateLayout;
+  try
+    AWidth := OriginalWidth;
+    AHeight := OriginalHeight;
+    if FFloatForm = nil then
+      if IsDesigning then
+        FFloatForm := GetFloatFormClass.Create(Application)
+      else
+        FFloatForm := GetFloatFormClass.Create(Owner);
+    FloatForm.InsertDockSite(Self);
+    SetFloatFormPosition(FloatLeft, FloatTop);
+    SetFloatFormSize(AWidth, AHeight);
+    if (doFloatingOnTop in ControllerOptions) or IsDesigning then
+      FloatForm.BringToFront(True);
+  finally
+    EndUpdateLayout;
+  end;
+end;
+
+procedure TdxFloatDockSite.DestroyFloatForm;
+begin
+  if FFloatForm = nil then exit;
+  BeginUpdateLayout;
+  try
+    if not FloatForm.IsDestroying then
+      FreeAndNil(FFloatForm);
+  finally
+    EndUpdateLayout;
+  end;
+end;
+
+function TdxFloatDockSite.GetChild: TdxCustomDockControl;
+begin
+  if ChildCount = 1 then
+    Result := Children[0]
+  else
+    Result := nil;
+end;
+
+function TdxFloatDockSite.GetFloatLeft: Integer;
+begin
+  if FloatForm <> nil then
+    Result := FloatForm.Left
+  else
+    Result := FFloatLeft;
+end;
+
+function TdxFloatDockSite.GetFloatTop: Integer;
+begin
+  if FloatForm <> nil then
+    Result := FloatForm.Top
+  else
+    Result := FFloatTop;
+end;
+
+function TdxFloatDockSite.GetFloatWidth: Integer;
+begin
+  if FloatForm <> nil then
+  begin
+    if FloatForm.HandleAllocated then
+      Result := FloatForm.ClientWidth
+    else
+      Result := FloatForm.FClientWidth;
+  end
+  else Result := FFloatWidth;
+end;
+
+function TdxFloatDockSite.GetFloatHeight: Integer;
+begin
+  if FloatForm <> nil then
+  begin
+    if FloatForm.HandleAllocated then
+      Result := FloatForm.ClientHeight
+    else
+      Result := FloatForm.FClientHeight;
+  end
+  else
+    Result := FFloatHeight;
+end;
+
+procedure TdxFloatDockSite.SetFloatLeft(const Value: Integer);
+begin
+  FFloatLeft := Value;
+  if FloatForm <> nil then
+    FloatForm.Left := Value;
+end;
+
+procedure TdxFloatDockSite.SetFloatTop(const Value: Integer);
+begin
+  FFloatTop := Value;
+  if FloatForm <> nil then
+    FloatForm.Top := Value;
+end;
+
+procedure TdxFloatDockSite.SetFloatWidth(const Value: Integer);
+begin
+  FFloatWidth := Value;
+  SetFloatFormSize(Value, FloatHeight);
+end;
+
+procedure TdxFloatDockSite.SetFloatHeight(const Value: Integer);
+begin
+  FFloatHeight := Value;
+  SetFloatFormSize(FloatWidth, Value);
+end;
+
+procedure TdxFloatDockSite.WMNCHitTest(var Message: TWMNCHitTest);
+begin
+  Message.Result := HTTRANSPARENT;
+end;
+
+
+{ TdxDockControlButtonsController }
+
+constructor TdxDockControlButtonsController.Create(ADockControl: TdxCustomDockControl);
+begin
+  inherited Create;
+  FDockControl := ADockControl;
+  FButtonsList := TcxObjectList.Create;
+end;
+
+destructor TdxDockControlButtonsController.Destroy;
+begin
+  FreeAndNil(FButtonsList);
+  inherited Destroy;
+end;
+
+procedure TdxDockControlButtonsController.Changed;
+begin
+  DockControl.InvalidateCaptionArea;
+end;
+
+function TdxDockControlButtonsController.HitTest(const P: TPoint): TdxDockControlButton;
+var
+  I: Integer;
+begin
+  Result := nil;
+  for I := 0 to ButtonsCount - 1 do
+    if Buttons[I].HitTest(P) then
+    begin
+      Result := Buttons[I];
+      Break;
+    end;
+end;
+
+procedure TdxDockControlButtonsController.MouseLeave;
+begin
+  HotButton := nil;
+end;
+
+procedure TdxDockControlButtonsController.MouseMove(const P: TPoint);
+begin
+  HotButton := HitTest(P);
+end;
+
+procedure TdxDockControlButtonsController.MouseDown(const P: TPoint);
+begin
+  PressedButton := HitTest(P);
+  if PressedButton <> nil then
+    PressedButton.MouseDown(P);
+end;
+
+procedure TdxDockControlButtonsController.MouseUp(const P: TPoint);
+begin
+  if PressedButton <> nil then
+  begin
+    PressedButton.MouseUp(P);
+    PressedButton := nil;
+  end;
+end;
+
+procedure TdxDockControlButtonsController.RegisterButton(AButton: TdxDockControlButton);
+begin
+  FButtonsList.Add(AButton);
+end;
+
+procedure TdxDockControlButtonsController.UnregisterButton(AButton: TdxDockControlButton);
+begin
+  FButtonsList.Remove(AButton);
+end;
+
+function TdxDockControlButtonsController.GetButton(Index: Integer): TdxDockControlButton;
+begin
+  Result := TdxDockControlButton(FButtonsList[Index]);
+end;
+
+function TdxDockControlButtonsController.GetButtonsCount: Integer;
+begin
+  Result := FButtonsList.Count;
+end;
+
+procedure TdxDockControlButtonsController.SetHotButton(AValue: TdxDockControlButton);
+begin
+  if AValue <> FHotButton then
+  begin
+    FHotButton := AValue;
+    Changed;
+  end;
+end;
+
+procedure TdxDockControlButtonsController.SetPressedButton(AValue: TdxDockControlButton);
+begin
+  if AValue <> FPressedButton then
+  begin
+    FPressedButton := AValue;
+    Changed;
+  end;
+end;
+
+{ TdxDockSite }
+
+constructor TdxDockSite.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FHideBars := TObjectList.Create;
+  CreateHideBars;
+  FHidingTimerID := -1;
+  FMovingTimerID := -1;
+  FShowingTimerID := -1;
+  UseDoubleBuffer := True;
+  UpdateDockZones;
+end;
+
+destructor TdxDockSite.Destroy;
+begin
+  if not (dcisCreating in FInternalState) then
+  begin
+    DestroyHideBars;
+    FreeAndNil(FHideBars);
+  end;
+  inherited;
+end;
+
+function TdxDockSite.GetHideBarByControl(AControl: TdxCustomDockControl): TdxDockSiteHideBar;
+var
+  I: Integer;
+begin
+  Result := nil;
+  for I := 0 to HideBarCount - 1 do
+    if (HideBars[I].IndexOfDockControl(AControl) > -1) then
+    begin
+      Result := HideBars[I];
+      Break;
+    end;
+end;
+
+function TdxDockSite.GetHideBarByPosition(APosition: TdxAutoHidePosition): TdxDockSiteHideBar;
+var
+  I: Integer;
+begin
+  Result := nil;
+  for I := 0 to HideBarCount - 1 do
+    if (HideBars[I].Position = APosition) then
+    begin
+      Result := HideBars[I];
+      Break;
+    end;
+end;
+
+procedure TdxDockSite.CreateHideBars;
+begin
+  FHideBars.Add(TdxDockSiteTopHideBar.Create(Self));
+  FHideBars.Add(TdxDockSiteBottomHideBar.Create(Self));
+  FHideBars.Add(TdxDockSiteLeftHideBar.Create(Self));
+  FHideBars.Add(TdxDockSiteRightHideBar.Create(Self));
+end;
+
+procedure TdxDockSite.DestroyHideBars;
+begin
+  FHideBars.Clear;
+end;
+
+function TdxDockSite.CanDockHost(AControl: TdxCustomDockControl; AType: TdxDockingType): Boolean;
+begin
+  Result := inherited CanDockHost(AControl, AType);
+  Result := Result and ((AType in [dtLeft, dtRight, dtTop, dtBottom]) or
+    ((Atype in [dtClient]) and (ChildCount = 0)));
+  Result := Result and (not AutoSize or ((AutoSizeClientControl = nil) and (AType = dtClient)));
+end;
+
+function TdxDockSite.GetPositionByControl(AControl: TdxCustomDockControl): TdxAutoHidePosition;
+var
+  AHideBar: TdxDockSiteHideBar;
+begin
+  AHideBar := GetHideBarByControl(AControl);
+  if AHideBar <> nil then
+    Result := AHideBar.Position
+  else
+    Result := ahpLeft;
+end;
+
+function TdxDockSite.HasAutoHideControls: Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 0 to HideBarCount - 1 do
+    if HideBars[I].DockControlCount > 0 then
+    begin
+      Result := True;
+      Break;
+    end;
+end;
+
+function TdxDockSite.GetControlAtPos(pt: TPoint; var SubControl: TdxCustomDockControl): TdxCustomDockControl;
+var
+  I: Integer;
+begin
+  Result := nil;
+  pt := ClientToWindow(pt);
+  for I := 0 to HideBarCount - 1 do
+  begin
+    Result := HideBars[I].GetControlAtPos(pt, SubControl);
+    if Result <> nil then
+      Break;
+  end;
+end;
+
+function TdxDockSite.GetHideBarAtPos(pt: TPoint): TdxDockSiteHideBar;
+var
+  I: Integer;
+begin
+  Result := nil;
+  pt := ClientToWindow(pt);
+  for I := 0 to HideBarCount - 1 do
+    if HideBars[I].Visible and ptInRect(HideBars[I].Bounds, pt) then
+    begin
+      Result := HideBars[I];
+      Break;
+    end;
+end;
+
+function TdxDockSite.GetControlAutoHidePosition(AControl: TdxCustomDockControl): TdxAutoHidePosition;
+begin
+  if AutoSize then
+  begin
+    case Align of
+      alTop: Result := ahpTop;
+      alBottom: Result := ahpBottom;
+      alLeft: Result := ahpLeft;
+      alRight: Result := ahpRight;
+    else
+      if AControl.Width > AControl.Height then
+        Result := ahpTop
+      else
+        Result := ahpLeft;
+    end;
+  end
+  else
+    Result := inherited GetControlAutoHidePosition(AControl);
+end;
+
+procedure TdxDockSite.RegisterAutoHideDockControl(AControl: TdxCustomDockControl;
+  APosition: TdxAutoHidePosition);
+var
+  AHideBar: TdxDockSiteHideBar;
+begin
+  NCChanged;
+  ImmediatelyHide;
+  AHideBar := GetHideBarByPosition(APosition);
+  if AHideBar <> nil then
+  begin
+    AControl.FAutoHidePosition := APosition;
+    FMovingControlHideBar := AHideBar;
+    FMovingControl := AControl;
+    try
+      AHideBar.RegisterDockControl(AControl);
+      if Controller.ActiveDockControl = AControl then
+        Controller.ActiveDockControl := nil;
+    finally
+      FMovingControl := nil;
+      FMovingControlHideBar := nil;
+    end;
+  end;
+end;
+
+procedure TdxDockSite.UnregisterAutoHideDockControl(AControl: TdxCustomDockControl);
+var
+  AHideBar: TdxDockSiteHideBar;
+begin
+  NCChanged;
+  ImmediatelyHide(True);
+  AHideBar := GetHideBarByControl(AControl);
+  if AHideBar <> nil then
+  begin
+    FMovingControlHideBar := AHideBar;
+    FMovingControl := AControl;
+    Assert(MovingContainer <> nil, sdxInternalErrorAutoHide);
+    try
+      AHideBar.UnregisterDockControl(AControl);
+      if WorkingControl = AControl then
+        WorkingControl := nil;
+    finally
+      FMovingControl := nil;
+      FMovingControlHideBar := nil;
+    end;
+    AControl.FAutoHidePosition := ahpUndefined;
+  end;
+end;
+
+procedure TdxDockSite.AdjustAutoSizeBounds;
+begin
+  if IsDestroying or not AutoSize or (Align = alClient) then exit;
+  if ChildCount > 0 then
+    SetSize(FAutoSizeWidth, FAutoSizeHeight)
+  else
+    SetSize(FOriginalWidth, FOriginalHeight);
+  BringToFront;
+end;
+
+function TdxDockSite.CanAutoSizeChange: Boolean;
+begin
+  Result := FAutoSize or (ChildCount = 0) or IsLoading; // childCount = 1 TODO: !!!
+end;
+
+function TdxDockSite.CanResizing(NewWidth, NewHeight: Integer): Boolean;
+begin
+  Result := inherited CanResizing(NewWidth, NewHeight);
+  if AutoSizeClientControl <> nil then
+    Result := Result and AutoSizeClientControl.CanResizing(NewWidth, NewHeight);
+end;
+
+procedure TdxDockSite.CheckAutoSizeBounds;
+var
+  AContainer: TdxContainerDockSite;
+begin
+  // TODO: Is Simple + GetContainer
+  if AutoSize and (ChildCount = 2) and (ValidChildCount = 0) then
+  begin
+    if Children[0] is TdxContainerDockSite then
+      AContainer := Children[0] as TdxContainerDockSite
+    else
+      if Children[1] is TdxContainerDockSite then
+        AContainer := Children[1] as TdxContainerDockSite 
+      else
+        AContainer := nil; // error!
+    ChildVisibilityChanged(AContainer);
+  end;
+end;
+
+function TdxDockSite.GetAutoSizeClientControl: TdxCustomDockControl;
+begin
+  if AutoSize and (ChildCount > 1) and Children[0].CanDock then
+    Result := Children[0]
+  else
+    if AutoSize and (ChildCount > 1) and Children[1].CanDock then
+      Result := Children[1]
+    else
+      Result := nil;
+end;
+
+procedure TdxDockSite.UpdateAutoSizeBounds(AWidth, AHeight: Integer);
+begin                          
+  if not AutoSize then Exit;
+  FAutoSizeHeight := AHeight;
+  FAutoSizeWidth := AWidth;
+end;
+
+procedure TdxDockSite.DoHideControl(AControl: TdxCustomDockControl);
+begin
+  if Assigned(FOnHideControl) then
+    FOnHideControl(Self, AControl);
+end;
+
+procedure TdxDockSite.DoShowControl(AControl: TdxCustomDockControl);
+begin
+  if Assigned(FOnShowControl) then
+    FOnShowControl(Self, AControl);
+end;
+
+procedure ShowMovementTimerProc(Wnd: HWnd; Msg, TimerID, SysTime: Longint); stdcall;
+var
+  AControl: TdxDockSite;
+begin
+  AControl := TdxDockSite(FindControl(Wnd));
+  if AControl <> nil then
+    AControl.DoShowMovement;
+end;
+
+procedure TdxDockSite.DoShowMovement;
+
+  procedure TotalShowMovingControl;
+  begin
+    if FMovingTimerID > -1 then
+    begin
+      KillTimer(Handle, FMovingTimerID);
+      FMovingTimerID := -1;
+    end;
+    FMovingControlHideBar := nil;
+    FShowingControl := FMovingControl;
+    FMovingControl := nil;
+    InitializeHiding;
+  end;
+
+var
+  AAutoHideMovingSize: Integer;
+begin
+  AAutoHideMovingSize := IfThen(ControllerAutoHideMovingInterval = 0, MAXWORD, ControllerAutoHideMovingSize);
+  MovingControlHideBar.UpdatePosition(AAutoHideMovingSize);
+  if MovingControlHideBar.CheckShowingFinish then
+    TotalShowMovingControl
+  else
+    if FMovingTimerID < 0 then
+      FMovingTimerID := SetTimer(Handle, 1, ControllerAutoHideMovingInterval, @ShowMovementTimerProc);
+end;
+
+procedure HideMovementTimerProc(Wnd: HWnd; Msg, TimerID, SysTime: Longint); stdcall;
+var
+  AControl: TdxDockSite;
+begin
+  AControl := TdxDockSite(FindControl(Wnd));
+  if AControl <> nil then
+    AControl.DoHideMovement;
+end;
+
+procedure TdxDockSite.DoHideMovement;
+
+  procedure TotalHideMovingControl;
+  begin
+    DoHideControl(FMovingControl);
+    if FMovingTimerID > -1 then
+    begin
+      KillTimer(Handle, FMovingTimerID);
+      FMovingTimerID := -1;
+    end;
+    Assert(MovingContainer <> nil, sdxInternalErrorAutoHide);
+    MovingContainer.Visible := False;
+    MovingControl.SetVisibility(False);
+    FMovingControlHideBar := nil;
+    WorkingControl := nil;
+    FMovingControl := nil;
+    FShowingControl := nil;
+    FinalizeHiding;
+  end;
+
+var
+  AAutoHideMovingSize: Integer;
+begin
+  AAutoHideMovingSize := IfThen(ControllerAutoHideMovingInterval = 0, MAXWORD, ControllerAutoHideMovingSize);
+  MovingControlHideBar.UpdatePosition(-AAutoHideMovingSize);
+  if MovingControlHideBar.CheckHidingFinish then
+    TotalHideMovingControl
+  else
+    if FMovingTimerID < 0 then
+      FMovingTimerID := SetTimer(Handle, 1, ControllerAutoHideMovingInterval, @HideMovementTimerProc);
+end;
+
+procedure TdxDockSite.ImmediatelyHide(AFinalizing: Boolean = False);
+begin
+  if ShowingControl <> nil then
+  begin
+    DoHideControl(ShowingControl);
+    if not AFinalizing then
+      ShowingControl.AutoHideContainer.Visible := False;
+    ShowingControl.SetVisibility(False);
+    if (Controller.ActiveDockControl = ShowingControl) and
+      (Controller.ActiveDockControl <> Controller.FActivatingDockControl) then
+      Controller.ActiveDockControl := nil;
+    FShowingControl := nil;
+    FinalizeHiding;
+  end;
+  WorkingControl := nil;
+  FMovingControl := nil;
+  FMovingControlHideBar := nil;
+  if FMovingTimerID > -1 then
+  begin
+    KillTimer(Handle, FMovingTimerID);
+    FMovingTimerID := -1;
+  end;
+end;
+
+procedure TdxDockSite.ImmediatelyShow(AControl: TdxCustomDockControl);
+var
+  AHideBar: TdxDockSiteHideBar;
+begin
+  if MovingControl <> nil then exit;
+  if ShowingControl <> AControl then
+  begin
+    ImmediatelyHide;
+    AHideBar := GetHideBarByControl(AControl);
+    if AHideBar <> nil then
+    begin
+      WorkingControl := AControl;
+      FShowingControl := AControl;
+      AHideBar.SetFinalPosition(AControl);
+      AControl.AutoHideContainer.Visible := True;
+      AControl.SetVisibility(True);
+      AControl.AutoHideContainer.BringToFront;
+      DoShowControl(AControl);
+      InitializeHiding;
+    end;
+  end;
+end;
+
+procedure AutoHideTimerProc(Wnd: HWnd; Msg, TimerID, SysTime: Longint); stdcall;
+var
+  AControl: TdxDockSite;
+begin
+  AControl := TdxDockSite(FindControl(Wnd));
+  if (AControl <> nil) and (AControl.ShowingControl <> nil) then
+    AControl.FinalizeHiding
+  else
+    KillTimer(Wnd, TimerID);
+end;
+
+procedure TdxDockSite.InitializeHiding;
+begin
+  if FHidingTimerID > -1 then
+  begin
+    KillTimer(Handle, FHidingTimerID);
+    FHidingTimerID := -1;
+  end;
+  if not IsDestroying and (FHidingTimerID = -1) and (ShowingControl <> nil) then
+    FHidingTimerID := SetTimer(Handle, 2, ControllerAutoHideInterval, @AutoHideTimerProc)
+end;
+
+procedure AutoShowTimerProc(Wnd: HWnd; Msg, TimerID, SysTime: Longint); stdcall;
+var
+  AControl: TdxDockSite;
+begin
+  AControl := TdxDockSite(FindControl(Wnd));
+  if AControl <> nil then
+    AControl.FinalizeShowing
+  else
+    KillTimer(Wnd, TimerID);
+end;
+
+procedure TdxDockSite.InitializeShowing;
+begin
+  if not IsDestroying and (FShowingTimerID = -1) then
+    FShowingTimerID := SetTimer(Handle, 3, ControllerAutoShowInterval, @AutoShowTimerProc)
+end;
+
+procedure TdxDockSite.FinalizeHiding;
+var
+  pt: TPoint;
+  AControl: TdxCustomDockControl;
+begin
+  if Controller.IsDocking or Controller.IsResizing then Exit;
+  if MovingControl <> nil then Exit;
+  if ShowingControl <> nil then
+  begin
+    GetCursorPos(pt);
+    AControl := Controller.GetDockControlAtPos(pt);
+    if
+      not (((AControl = Self) and (GetHideBarAtPos(ScreenToClient(pt)) <> nil)) or
+        ((AControl <> nil) and (AControl.AutoHideControl = ShowingControl)) or
+        (not (doHideAutoHideIfActive in ControllerOptions) and (Controller.ActiveDockControl <> nil) and
+        (Controller.ActiveDockControl.AutoHideControl = ShowingControl))) then
+      ShowingControl := nil;
+  end
+  else
+    if FHidingTimerID > -1 then
+    begin
+      KillTimer(Handle, FHidingTimerID);
+      FHidingTimerID := -1;
+    end;
+end;
+
+procedure TdxDockSite.FinalizeShowing;
+var
+  pt: TPoint;
+  AControl, ASubControl: TdxCustomDockControl;
+begin
+  if FShowingTimerID > -1 then
+  begin
+    KillTimer(Handle, FShowingTimerID);
+    FShowingTimerID := -1;
+  end;
+  GetCursorPos(pt);
+  ASubControl := nil;
+  AControl := GetControlAtPos(ScreenToClient(pt), ASubControl);
+  if (FShowingControlCandidate <> nil) and (FShowingControlCandidate = AControl) and not (disContextMenu in Controller.FInternalState) then
+  begin
+    if (ASubControl <> nil) and (AControl is TdxTabContainerDockSite) then
+    begin
+      if ASubControl <> (AControl as TdxTabContainerDockSite).ActiveChild then
+      begin
+        ImmediatelyHide;
+        (AControl as TdxTabContainerDockSite).ActiveChild := ASubControl;
+      end;
+      ShowingControl := AControl;
+    end
+    else
+      if (AControl <> nil) then
+        ShowingControl := AControl;
+  end;
+end;
+
+procedure TdxDockSite.SetFinalPosition(AControl: TdxCustomDockControl);
+var
+  AHideBar: TdxDockSiteHideBar;
+begin
+  AHideBar := GetHideBarByControl(AControl);
+  if AHideBar <> nil then
+    AHideBar.SetFinalPosition(AControl);
+end;
+
+procedure TdxDockSite.SetInitialPosition(AControl: TdxCustomDockControl);
+var
+  AHideBar: TdxDockSiteHideBar;
+begin
+  AHideBar := GetHideBarByControl(AControl);
+  if AHideBar <> nil then
+    AHideBar.SetInitialPosition(AControl);
+end;
+
+function TdxDockSite.GetClientLeft: Integer;
+begin
+  Result := ClientOrigin.X - Parent.ClientOrigin.X;
+end;
+
+function TdxDockSite.GetClientTop: Integer;
+begin
+  Result := ClientOrigin.Y - Parent.ClientOrigin.Y;
+end;
+
+function TdxDockSite.GetClientWidth: Integer;
+begin
+  Result := ClientWidth;
+end;
+
+function TdxDockSite.GetClientHeight: Integer;
+begin
+  Result := ClientHeight;
+end;
+
+function TdxDockSite.GetDesignHitTest(const APoint: TPoint; AShift: TShiftState): Boolean;
+begin
+  Result := inherited GetDesignHitTest(APoint, AShift) or (GetHideBarAtPos(APoint) <> nil);
+end;
+
+procedure TdxDockSite.Loaded;
+begin
+  inherited Loaded;
+  CheckAutoSizeBounds;
+  UpdateDockZones;
+end;
+
+procedure TdxDockSite.MouseLeave;
+begin
+  inherited MouseLeave;
+  if ShowingControl <> nil then
+    InitializeHiding;
+end;
+
+procedure TdxDockSite.ReadState(Reader: TReader);
+begin
+  inherited ReadState(Reader);
+  UpdateLayout;
+end;
+
+procedure TdxDockSite.SetAutoSize(Value: Boolean);
+begin
+  if (FAutoSize <> Value) and CanAutoSizeChange then
+  begin
+    FAutoSize := Value;
+    if not IsLoading then
+    begin
+      AdjustAutoSizeBounds;
+      UpdateLayout;
+    end;
+  end;
+end;
+
+procedure TdxDockSite.SetParent(AParent: TWinControl);
+begin
+  if IsDesigning and not IsLoading and ParentIsDockControl(AParent) then
+    raise EdxException.Create(sdxInvalidDockSiteParent)
+  else
+    inherited SetParent(AParent);
+end;
+
+procedure TdxDockSite.ValidateInsert(AComponent: TComponent);
+begin
+  if not ((AComponent is TdxCustomDockControl) or (AComponent is TdxDockSiteAutoHideContainer)) then
+  begin
+    if AComponent is TControl then
+      (AComponent as TControl).Parent := ParentForm;
+    raise EdxException.CreateFmt(sdxInvalidSiteChild, [AComponent.ClassName]);
+  end;
+end;
+
+procedure TdxDockSite.UpdateControlResizeZones(AControl: TdxCustomDockControl);
+begin
+  if AutoSize and (AControl <> Self) then
+  begin
+    AControl.ResizeZones.RegisterResizeZone(Self, AControl, TdxAutoSizeRightZone, ControllerResizeZonesWidth);
+    AControl.ResizeZones.RegisterResizeZone(Self, AControl, TdxAutoSizeLeftZone, ControllerResizeZonesWidth);
+    AControl.ResizeZones.RegisterResizeZone(Self, AControl, TdxAutoSizeBottomZone, ControllerResizeZonesWidth);
+    AControl.ResizeZones.RegisterResizeZone(Self, AControl, TdxAutoSizeTopZone, ControllerResizeZonesWidth);
+  end
+  else
+    inherited UpdateControlResizeZones(AControl);
+end;
+
+procedure TdxDockSite.UpdateControlDockZones(AControl: TdxCustomDockControl; AZoneWidth: Integer);
+begin
+  if AutoSize then
+  begin
+    if not AControl.DockZones.RegisterDockZone(Self, AControl, TdxAutoSizeClientZone, AZoneWidth) then
+      AControl.DockZones.RegisterDockZone(Self, AControl, TdxInvisibleAutoSizeClientZone, AZoneWidth);
+  end
+  else
+  begin
+    if not AControl.DockZones.RegisterDockZone(Self, AControl, TdxClientZone, AZoneWidth) then
+      AControl.DockZones.RegisterDockZone(Self, AControl, TdxInvisibleClientZone, AZoneWidth);
+    inherited UpdateControlDockZones(AControl, AZoneWidth);
+  end;
+end;
+
+procedure TdxDockSite.CreateLayout(AControl: TdxCustomDockControl; AType: TdxDockingType;
+  Index: Integer);
+var
+  AWidth, AHeight: Integer;
+begin
+  AWidth := AControl.OriginalWidth;
+  AHeight := AControl.OriginalHeight;
+  inherited;
+  UpdateAutoSizeBounds(AWidth, AHeight);
+  AdjustAutoSizeBounds;
+end;
+
+procedure TdxDockSite.DestroyLayout(AControl: TdxCustomDockControl);
+begin
+  inherited;
+  AdjustAutoSizeBounds;
+end;
+
+procedure TdxDockSite.LoadLayoutFromCustomIni(AIniFile: TCustomIniFile;
+  AParentForm: TCustomForm; AParentControl: TdxCustomDockControl; ASection: string);
+var
+  I, AChildCount: Integer;
+  AChildSection: string;
+  ADockTypes: TdxDockingTypes;
+  AWidth, AHeight: Integer;
+begin
+  BeginUpdateLayout;
+  try
+    with AIniFile do
+    begin
+      ADockTypes := [];
+      if ReadBool(ASection, 'AllowDockClientsLeft', dtLeft in AllowDockClients) then
+        ADockTypes := ADockTypes + [dtLeft];
+      if ReadBool(ASection, 'AllowDockClientsTop', dtTop in AllowDockClients) then
+        ADockTypes := ADockTypes + [dtTop];
+      if ReadBool(ASection, 'AllowDockClientsRight', dtRight in AllowDockClients) then
+        ADockTypes := ADockTypes + [dtRight];
+      if ReadBool(ASection, 'AllowDockClientsBottom', dtBottom in AllowDockClients) then
+        ADockTypes := ADockTypes + [dtBottom];
+      if ReadBool(ASection, 'AllowDockClientsClient', dtClient in AllowDockClients) then
+        ADockTypes := ADockTypes + [dtClient];
+      AllowDockClients := ADockTypes;
+      Visible := ReadBool(ASection, 'Visible', Visible);
+      AChildCount := ReadInteger(ASection, 'ChildCount', 0);
+      for I := 0 to AChildCount - 1 do
+      begin
+        AChildSection := ReadString(ASection, 'Children' + IntToStr(I), '');
+        Controller.LoadControlFromCustomIni(AIniFile, AParentForm, Self, AChildSection);
+      end;
+      AWidth := ReadInteger(ASection, 'Width', Width);
+      AHeight := ReadInteger(ASection, 'Height', Height);
+      SetSize(AWidth, AHeight);
+      FOriginalWidth := ReadInteger(ASection, 'OriginalWidth', OriginalWidth);
+      FOriginalHeight := ReadInteger(ASection, 'OriginalHeight', OriginalHeight);
+      FAutoSize := ReadBool(ASection, 'AutoSize', AutoSize);
+      // TODO: !!!
+      AdjustAutoSizeBounds;
+    end;
+  finally
+    EndUpdateLayout;
+  end;
+end;
+
+procedure TdxDockSite.SaveLayoutToCustomIni(AIniFile: TCustomIniFile; ASection: string);
+var
+  I: Integer;
+begin
+  with AIniFile do
+  begin
+    WriteInteger(ASection, 'ChildCount', ChildCount);
+    for I := 0 to ChildCount - 1 do
+      WriteString(ASection, 'Children' + IntToStr(I), IntToStr(Controller.IndexOfDockControl(Children[I])));
+    WriteBool(ASection, 'AllowDockClientsLeft', dtLeft in AllowDockClients);
+    WriteBool(ASection, 'AllowDockClientsTop', dtTop in AllowDockClients);
+    WriteBool(ASection, 'AllowDockClientsRight', dtRight in AllowDockClients);
+    WriteBool(ASection, 'AllowDockClientsBottom', dtBottom in AllowDockClients);
+    WriteBool(ASection, 'AllowDockClientsClient', dtClient in AllowDockClients);
+    WriteInteger(ASection, 'Width', Width);
+    WriteInteger(ASection, 'Height', Height);
+    WriteInteger(ASection, 'OriginalWidth', OriginalWidth);
+    WriteInteger(ASection, 'OriginalHeight', OriginalHeight);
+    WriteBool(ASection, 'Visible', Visible);
+    WriteBool(ASection, 'AutoSize', AutoSize);
+  end;
+  for I := 0 to ChildCount - 1 do
+    Controller.SaveControlToCustomIni(AIniFile, Children[I]);
+end;
+
+procedure TdxDockSite.ChildVisibilityChanged(Sender: TdxCustomDockControl);
+var
+  AHideBar: TdxDockSiteHideBar;
+begin
+  // TODO: !!!
+  if AutoSize and (AutoSizeClientControl = Sender) then
+  begin
+    if Sender.Visible and not HasAutoHideControls then
+      UpdateAutoSizeBounds(Sender.OriginalWidth, Sender.OriginalHeight)
+    else
+      if not Sender.Visible and not HasAutoHideControls then
+        UpdateAutoSizeBounds(FOriginalWidth, FOriginalHeight)
+      else
+        if HasAutoHideControls then
+        begin
+          AHideBar := GetHideBarByPosition(GetControlAutoHidePosition(Sender));
+          if AHideBar <> nil then
+            AHideBar.UpdateOwnerAutoSizeBounds(Sender);
+        end;
+    AdjustAutoSizeBounds;
+  end;
+end;
+
+procedure TdxDockSite.UpdateControlOriginalSize(AControl: TdxCustomDockControl);
+begin
+  if not AutoSize and (AControl <> Self) then
+    inherited
+  else
+    if (AControl <> Self) and (AControl.UpdateVisibilityLock = 0) and
+      not AControl.IsUpdateLayoutLocked then
+    begin
+      case Align of
+        alLeft, alRight:
+          AControl.FOriginalWidth := Width;
+        alTop, alBottom:
+          AControl.FOriginalHeight := Height;
+      end;
+    end
+    else
+      if not AutoSize or (ChildCount = 0) then
+      begin
+        AControl.FOriginalWidth := Width;
+        AControl.FOriginalHeight := Height;
+      end;
+end;
+
+procedure TdxDockSite.CalculateNC(var ARect: TRect);
+var
+  I: Integer;
+begin
+  inherited CalculateNC(ARect);
+  for I := 0 to HideBarCount - 1 do
+    HideBars[I].Calculate(ARect);
+  Dec(ARect.Bottom, cxRectHeight(BottomHideBar.Bounds));
+  Dec(ARect.Right, cxRectWidth(RightHideBar.Bounds));
+  Inc(ARect.Left, cxRectWidth(LeftHideBar.Bounds));
+  Inc(ARect.Top, cxRectHeight(TopHideBar.Bounds));
+end;
+
+procedure TdxDockSite.NCPaint(ACanvas: TcxCanvas);
+var
+  I: Integer;
+begin
+  for I := 0 to HideBarCount - 1 do
+  begin
+    if HideBars[I].Visible then
+      HideBars[I].Draw(ACanvas);
+  end;
+end;
+
+procedure TdxDockSite.Recalculate;
+begin
+  CheckAutoSizeBounds;
+  inherited Recalculate;
+end;
+
+function TdxDockSite.GetHideBarCount: Integer;
+begin
+  Result := FHideBars.Count;
+end;
+
+function TdxDockSite.GetHideBar(Index: Integer): TdxDockSiteHideBar;
+begin
+  if (0 <= Index) and (Index < FHideBars.Count) then
+    Result := TdxDockSiteHideBar(FHideBars[Index])
+  else
+    Result := nil;
+end;
+
+function TdxDockSite.GetMovingContainer: TdxDockSiteAutoHideContainer;
+begin
+  if FMovingControl <> nil then
+    Result := FMovingControl.AutoHideContainer
+  else
+    Result := nil;
+end;
+
+procedure TdxDockSite.SetWorkingControl(AValue: TdxCustomDockControl);
+begin
+  if AValue <> FWorkingControl then
+  begin
+    FWorkingControl := AValue;
+    if Painter.IsHideBarButtonHotTrackSupports then
+      InvalidateNC(False);
+  end;
+end;
+
+procedure TdxDockSite.SetShowingControl(Value: TdxCustomDockControl);
+var
+  AHideBar: TdxDockSiteHideBar;
+begin
+  if (FShowingControl <> Value) and (MovingControl = nil) then
+  begin
+    if Value <> nil then
+    begin
+      ImmediatelyHide;
+      AHideBar := GetHideBarByControl(Value);
+      if AHideBar <> nil then
+      begin
+        FMovingControlHideBar := AHideBar;
+        FMovingControl := Value;
+        WorkingControl := Value;
+        Assert(MovingContainer <> nil, sdxInternalErrorAutoHide);
+        MovingControlHideBar.SetInitialPosition(Value);
+        MovingContainer.Visible := True;
+        MovingControl.SetVisibility(True);
+        MovingContainer.BringToFront;
+        DoShowControl(Value);
+        DoShowMovement;
+      end;
+    end
+    else
+    begin
+      AHideBar := GetHideBarByControl(FShowingControl);
+      if AHideBar <> nil then
+      begin
+        FMovingControlHideBar := AHideBar;
+        FMovingControl := FShowingControl;
+        WorkingControl := FShowingControl; 
+        Assert(MovingContainer <> nil, sdxInternalErrorAutoHide);
+        DoHideMovement;
+      end;
+    end;
+  end;
+end;
+
+procedure TdxDockSite.CMControlListChange(var Message: TMessage);
+begin
+  if IsDesigning and not IsLoading and Boolean(Message.LParam) {Inserting} and
+    IsControlContainsDockSite(TControl(Message.WParam)) then
+    raise EdxException.Create(sdxInvalidDockSiteParent);
+  inherited;
+end;
+
+procedure TdxDockSite.WMLButtonDown(var Message: TWMLButtonDown);
+var
+  AControl, ASubControl: TdxCustomDockControl;
+begin
+  inherited;
+  if Message.Result = 0 then
+  begin
+    AControl := GetControlAtPos(SourcePoint, ASubControl);
+    if AControl <> nil then
+    begin
+      Controller.ActiveDockControl := AControl;
+      Controller.FActivatingDockControl := AControl;
+      Message.Result := 1;
+    end;
+  end
+end;
+
+procedure TdxDockSite.WMMouseMove(var Message: TWMMouseMove);
+var
+  ASubControl: TdxCustomDockControl;
+begin
+  inherited;
+  if (Message.Result = 0) and (ParentFormActive or IsDesigning) then
+  begin
+    FShowingControlCandidate := GetControlAtPos(CursorPoint, ASubControl);
+    if FShowingControlCandidate <> nil then
+      InitializeShowing;
+    Message.Result := 1;
+  end;
+end;
+
+{ TdxTabContainerDockSiteProperties }
+
+constructor TdxTabContainerDockSiteProperties.Create(AOwner: TdxDockingManager);
+begin
+  inherited Create(AOwner);
+  FTabsProperties := TdxDockingTabControlProperties.Create(nil);
+end;
+
+destructor TdxTabContainerDockSiteProperties.Destroy;
+begin
+  FreeAndNil(FTabsProperties);
+  inherited Destroy;
+end;
+
+procedure TdxTabContainerDockSiteProperties.AssignTo(Dest: TPersistent);
+begin
+  if Dest is TdxTabContainerDockSite then
+    TdxTabContainerDockSite(Dest).TabsProperties.Assign(TabsProperties)
+  else
+    if Dest is TdxTabContainerDockSiteProperties then
+      TdxTabContainerDockSiteProperties(Dest).TabsProperties.Assign(TabsProperties);
+
+  inherited AssignTo(Dest);
+end;
+
+procedure TdxTabContainerDockSiteProperties.DefineProperties(Filer: TFiler);
+begin
+  inherited DefineProperties(Filer);
+  Filer.DefineProperty('TabsPosition', TabsProperties.ReadOldTabsPosition, nil, False);
+  Filer.DefineProperty('TabsScroll', TabsProperties.ReadOldTabsScroll, nil, False);
+end;
+
+procedure TdxTabContainerDockSiteProperties.SetTabsProperties(AValue: TdxDockingTabControlProperties);
+begin
+  FTabsProperties.Assign(AValue);
+end;
+
+{ TdxDockingController }
+
+procedure dxDockWndProcHook(ACode: Integer; wParam: WPARAM; lParam: LPARAM; var AHookResult: LRESULT);
+
+{$IFDEF DELPHI11}
+  function NeedAdditionalUpdateVisibilityFloatForms(AForm: TCustomForm): Boolean;
+  begin
+    Result := Application.MainFormOnTaskBar and (AForm = Application.MainForm) and
+      not (doFloatingOnTop in dxDockingController.Options(AForm));
+  end;
+{$ENDIF}
+
+var
+  AControl: TWinControl;
+  AParentDockControl, AActiveDockControl: TdxCustomDockControl;
+  AMsg: PCWPStruct;
+begin
+  AMsg := PCWPStruct(lParam);
+  AControl := FindControl(AMsg.hwnd);
+  if AControl is TdxFloatForm then
+    AControl := nil;
+  case AMsg.message of
+    WM_ACTIVATEAPP:
+      begin
+        if (AControl is TCustomForm) then
+        begin
+          if (csDesigning in AControl.ComponentState) then
+            dxDockingController.UpdateVisibilityFloatForms(nil, AMsg.wParam <> 0)
+          else
+          begin
+          {$IFDEF DELPHI11}
+            if NeedAdditionalUpdateVisibilityFloatForms(TCustomForm(AControl)) and (AMsg.wParam <> 0) then
+              dxDockingController.UpdateVisibilityFloatForms(Application.MainForm, AMsg.wParam <> 0);
+          {$ENDIF}
+          end;
+        end;
+        dxDockingController.ActiveAppChanged(AMsg.wParam <> 0);
+      end;
+    WM_ENABLE:
+      if (AControl is TCustomForm) then
+        dxDockingController.UpdateEnableStatusFloatForms(AControl as TCustomForm, AMsg.wParam <> 0);
+  {$IFDEF DELPHI11}
+    WM_SIZE:
+      if (AControl is TCustomForm) and
+        NeedAdditionalUpdateVisibilityFloatForms(TCustomForm(AControl)) then
+        case AMsg.wParam of
+          SIZE_MINIMIZED: dxDockingController.UpdateVisibilityFloatForms(Application.MainForm, False);
+          SIZE_RESTORED: dxDockingController.UpdateVisibilityFloatForms(Application.MainForm, True);
+        end;
+  {$ENDIF}
+    WM_WINDOWPOSCHANGED:
+    begin
+      if (AControl is TCustomForm) then
+      begin
+        if PWindowPos(AMsg.lParam).flags and SWP_SHOWWINDOW <> 0 then
+          dxDockingController.UpdateVisibilityFloatForms(AControl as TCustomForm, True)
+        else
+          if PWindowPos(AMsg.lParam).flags and SWP_HIDEWINDOW <> 0 then
+            dxDockingController.UpdateVisibilityFloatForms(AControl as TCustomForm, False);
+      end;
+    end;
+    WM_SETFOCUS:
+      begin
+        if dxDockingController.FActiveDockControlLockCount = 0 then
+        begin
+          AActiveDockControl := dxDockingController.GetDockControlForWindow(AMsg.hwnd);
+          if Application.Active and
+            (AActiveDockControl <> nil) and AActiveDockControl.HandleAllocated and
+            (AActiveDockControl <> dxDockingController.FActivatingDockControl) then
+            dxDockingController.ActiveDockControl := AActiveDockControl;
+        end;
+      end;
+    WM_KILLFOCUS:
+      begin
+        if dxDockingController.FActiveDockControlLockCount = 0 then
+        begin
+          AParentDockControl := dxDockingController.GetDockControlForWindow(AMsg.hwnd);
+          if Application.Active and (AParentDockControl <> nil) and
+            (dxDockingController.ActiveDockControl = AParentDockControl) and
+            (AParentDockControl <> dxDockingController.FActivatingDockControl) then
+          begin
+            AActiveDockControl := dxDockingController.GetDockControlForWindow(AMsg.wParam); // focused
+            if (AActiveDockControl = nil) or (AActiveDockControl <> AParentDockControl) then
+              dxDockingController.ActiveDockControl := nil;
+          end;
+        end;
+      end;
+  end;
+end;
+
+constructor TdxDockingController.Create;
+begin
+  inherited;
+  FDestroyedComponents := TcxComponentList.Create(True);
+  FLoadedForms := TList.Create;
+  FDockControls := TList.Create;
+  FDockManagers := TList.Create;
+  FFont := TFont.Create;
+  FInvalidNC := TList.Create;
+  FInvalidNCBounds := TList.Create;
+  FInvalidRedraw := TList.Create;
+  FSelectionBrush := TBrush.Create;
+  FSelectionBrush.Bitmap := AllocPatternBitmap(clBlack, clWhite);
+  dxSetHook(htWndProc, dxDockWndProcHook);
+  TdxDockControlPainter.CreateColors;
+  FAppEvents := TApplicationEvents.Create(nil);
+  FAppEvents.OnDeactivate := ApplicationDeactivated;
+  RootLookAndFeel.AddChangeListener(Self);
+end;
+
+destructor TdxDockingController.Destroy;
+begin
+  RootLookAndFeel.RemoveChangeListener(Self);
+  FreeAndNil(FAppEvents);
+  TdxDockControlPainter.ReleaseColors;
+  dxReleaseHook(dxDockWndProcHook);
+  FreeAndNil(FSelectionBrush);
+  FreeAndNil(FInvalidRedraw);
+  FreeAndNil(FInvalidNCBounds);
+  FreeAndNil(FInvalidNC);
+  FreeAndNil(FFont);
+  FreeAndNil(FDockManagers);
+  FreeAndNil(FDockControls);
+  FreeAndNil(FLoadedForms);
+  FreeAndNil(FDestroyedComponents);
+  ReleaseTempBitmap;
+  inherited;
+end;
+
+procedure TdxDockingController.ActiveAppChanged(AActive: Boolean);
+begin
+  if not AActive then
+  begin
+    FinishDocking;
+    FinishResizing;
+  end;
+
+  ApplicationActive := Application.Active;
+  if not AActive then
+    FApplicationDeactivating := True;
+end;
+
+function TdxDockingController.IsApplicationDeactivating: Boolean;
+begin
+  Result := FApplicationDeactivating;
+end;
+
+procedure TdxDockingController.BeginUpdate;
+begin
+  BeginUpdateNC;
+end;
+
+procedure TdxDockingController.EndUpdate;
+begin
+  EndUpdateNC;
+end;
+
+function TdxDockingController.GetDockControlAtPos(const P: TPoint): TdxCustomDockControl;
+begin
+  Result := GetDockControlForWindow(WindowFromPoint(P));
+end;
+
+function TdxDockingController.GetDockControlForWindow(AWnd: HWND; ADockWindow: HWND = 0): TdxCustomDockControl;
+var
+  AControl: TControl;
+  AFloatForm: TdxFloatForm;
+begin
+  Result := nil;
+  while AWnd <> 0 do
+  begin
+    if Assigned(cxControls.cxGetParentWndForDocking) then
+      AWnd := cxControls.cxGetParentWndForDocking(AWnd);
+
+    AControl := FindControl(AWnd);
+    if AControl is TdxCustomDockControl then
+    begin
+      Result := TdxCustomDockControl(AControl);
+      if (ADockWindow = 0) or (AWnd = ADockWindow) then
+        Break
+      else
+        Result := nil;
+    end;
+
+    if AControl is TdxFloatForm then
+    begin
+      AFloatForm := TdxFloatForm(AControl);
+      if AFloatForm.DockSite <> nil then
+        Result := AFloatForm.DockSite.GetDockPanel
+      else
+        Result := nil;
+      if (Result <> nil) and (ADockWindow <> 0) and (Result.Handle <> ADockWindow) then
+        Result := nil;
+      Break;
+    end;
+
+    AWnd := GetParent(AWnd);
+  end;
+end;
+
+function TdxDockingController.GetFloatDockSiteAtPos(const pt: TPoint): TdxCustomDockControl;
+var
+  AControl: TWinControl;
+  Message: TMessage;
+begin
+  Result := nil;
+  AControl := FindVCLWindow(pt);
+  if AControl is TdxFloatForm then
+  begin
+    Message.Msg := WM_NCHITTEST;
+    Message.LParamLo := pt.X;
+    Message.LParamHi := pt.Y;
+    Message.Result := 0;
+    AControl.WindowProc(Message);
+    if (Message.Result = HTCAPTION) then
+      Result := (AControl as TdxFloatForm).DockSite;
+  end;
+end;
+
+function TdxDockingController.GetNearestDockSiteAtPos(const pt: TPoint; ADockControl: TdxCustomDockControl = nil): TdxCustomDockControl;
+
+  function DoGetNearestDockSiteAtPos(const pt: TPoint; ADockControl: TdxCustomDockControl): TdxCustomDockControl;
+  var
+    I: Integer;
+    ADockSite: TdxDockSite;
+    R: TRect;
+  begin
+    Result := nil;
+    for I := 0 to DockControlCount - 1 do
+      if (DockControls[I] is TdxDockSite) then
+      begin
+        ADockSite := DockControls[I] as TdxDockSite;
+
+        if (ADockControl <> nil) and (ADockControl.ParentForm <> ADockSite.ParentForm) then Continue;
+        if not ADockSite.AutoSize then Continue;
+        if not (ADockSite.Align in [alLeft, alTop, alRight, alBottom]) then Continue;
+        if (ADockSite.Align in [alLeft, alRight]) and (ADockSite.Width > ADockSite.ControllerDockZonesWidth) then Continue;
+        if (ADockSite.Align in [alTop, alBottom]) and (ADockSite.Height > ADockSite.ControllerDockZonesWidth) then Continue;
+
+        R := cxGetWindowRect(ADockSite);
+        case ADockSite.Align of
+          alLeft:
+            R.Right := R.Left + ADockSite.ControllerDockZonesWidth;
+          alTop:
+            R.Bottom := R.Top + ADockSite.ControllerDockZonesWidth;
+          alRight:
+            R.Left := R.Right - ADockSite.ControllerDockZonesWidth;
+          alBottom:
+            R.Top := R.Bottom - ADockSite.ControllerDockZonesWidth;
+        end;
+        if PtInRect(R, pt) then
+        begin
+          Result := ADockSite;
+          break;
+        end;
+      end;
+  end;
+
+begin
+  Result := DoGetNearestDockSiteAtPos(pt, ADockControl);
+  if (Result = nil) and (ADockControl <> nil) then
+    Result := DoGetNearestDockSiteAtPos(pt, nil);
+end;
+
+function TdxDockingController.GetObject: TObject;
+begin
+  Result := Self;
+end;
+
+function TdxDockingController.IsDockControlFocusedEx(ADockControl: TdxCustomDockControl): Boolean;
+begin
+  Result := ADockControl.HandleAllocated and
+    (dxDockingController.GetDockControlForWindow(GetFocus, ADockControl.Handle) = ADockControl);
+end;
+
+function TdxDockingController.FindManager(AForm: TCustomForm): TdxDockingManager;
+begin
+  Result := FindFormManager(AForm);
+  if (Result = nil) and (DockManagerCount > 0) then
+    Result := DockManagers[0];
+end;
+
+function TdxDockingController.FindFormManager(AForm: TCustomForm): TdxDockingManager;
+var
+  I: Integer;
+  AManager: TdxDockingManager;
+begin
+  Result := nil;
+  if AForm <> nil then
+    for I := 0 to FDockManagers.Count - 1 do
+    begin
+      AManager := TdxDockingManager(FDockManagers[I]);
+      if AManager.ParentForm = AForm then
+      begin
+        Result := AManager;
+        break;
+      end;
+    end;
+end;
+
+procedure TdxDockingController.RegisterManager(AManager: TdxDockingManager);
+begin
+
+  if FindFormManager(AManager.ParentForm) <> nil then
+    raise EdxException.Create(sdxManagerError)
+  else
+  begin
+    FDockManagers.Add(AManager);
+    DoManagerChanged(AManager.ParentForm);
+  end;
+end;
+
+procedure TdxDockingController.UnregisterManager(AManager: TdxDockingManager);
+begin
+  if FDockManagers.Remove(AManager) >= 0 then
+    DoManagerChanged(nil);
+end;
+
+procedure TdxDockingController.DoActiveDockControlChanged(ASender: TdxCustomDockControl;
+  ACallEvent: Boolean);
+var
+  AManager: TdxDockingManager;
+begin
+  if ACallEvent and (ASender <> nil) then
+  begin
+    AManager := FindManager(ASender.ParentForm);
+    if (AManager <> nil) and Assigned(AManager.OnActiveDockControlChanged) then
+      AManager.OnActiveDockControlChanged(AManager);
+  end;
+end;
+
+procedure TdxDockingController.DoCreateFloatSite(ASender: TdxCustomDockControl; ASite: TdxFloatDockSite);
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(ASender.ParentForm);
+  if (AManager <> nil) and Assigned(AManager.OnCreateFloatSite) then
+    AManager.OnCreateFloatSite(ASender, ASite);
+end;
+
+procedure TdxDockingController.DoCreateLayoutSite(ASender: TdxCustomDockControl; ASite: TdxLayoutDockSite);
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(ASender.ParentForm);
+  if (AManager <> nil) and Assigned(AManager.OnCreateLayoutSite) then
+    AManager.OnCreateLayoutSite(ASender, ASite);
+end;
+
+procedure TdxDockingController.DoCreateSideContainerSite(ASender: TdxCustomDockControl;
+  ASite: TdxSideContainerDockSite);
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(ASender.ParentForm);
+  if (AManager <> nil) and Assigned(AManager.OnCreateSideContainer) then
+    AManager.OnCreateSideContainer(ASender, ASite);
+end;
+
+procedure TdxDockingController.DoCreateTabContainerSite(ASender: TdxCustomDockControl;
+  ASite: TdxTabContainerDockSite);
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(ASender.ParentForm);
+  if (AManager <> nil) and Assigned(AManager.OnCreateTabContainer) then
+    AManager.OnCreateTabContainer(ASender, ASite);
+end;
+
+function TdxDockingController.DoCustomDrawResizingSelection(ASender: TdxCustomDockControl;
+  DC: HDC; AZone: TdxZone; pt: TPoint; Erasing: Boolean): Boolean;
+var
+  AManager: TdxDockingManager;
+begin
+  Result := False;
+  if Assigned(ASender.OnCustomDrawResizingSelection) then
+    ASender.OnCustomDrawResizingSelection(ASender, DC, AZone, AZone.GetResizingSelection(pt), Erasing, Result);
+  if not Result then
+  begin
+    AManager := FindManager(ASender.ParentForm);
+    if (AManager <> nil) and Assigned(AManager.OnCustomDrawResizingSelection) then
+      AManager.OnCustomDrawResizingSelection(ASender, DC, AZone, AZone.GetResizingSelection(pt), Erasing, Result);
+  end;
+end;
+
+function TdxDockingController.DoCustomDrawDockingSelection(ASender: TdxCustomDockControl;
+  DC: HDC; AZone: TdxZone; R: TRect; Erasing: Boolean): Boolean;
+var
+  AManager: TdxDockingManager;
+begin
+  Result := False;
+  if Assigned(ASender.OnCustomDrawDockingSelection) then
+    ASender.OnCustomDrawDockingSelection(ASender, DC, AZone, R, Erasing, Result);
+  if not Result then
+  begin
+    AManager := FindManager(ASender.ParentForm);
+    if (AManager <> nil) and Assigned(AManager.OnCustomDrawDockingSelection) then
+      AManager.OnCustomDrawDockingSelection(ASender, DC, AZone, R, Erasing, Result);
+  end;
+end;
+
+procedure TdxDockingController.DoSetFloatFormCaption(ASender: TdxCustomDockControl;
+  AFloatForm: TdxFloatForm);
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(ASender.ParentForm);
+  if (AManager <> nil) and Assigned(AManager.OnSetFloatFormCaption) then
+    AManager.OnSetFloatFormCaption(ASender, AFloatForm);
+end;
+
+function TdxDockingController.LookAndFeel(AForm: TCustomForm): TcxLookAndFeel;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if AManager <> nil then
+    Result := AManager.LookAndFeel
+  else
+    Result := RootLookAndFeel;
+end;
+
+procedure TdxDockingController.MasterLookAndFeelChanged(
+  Sender: TcxLookAndFeel; AChangedValues: TcxLookAndFeelValues);
+begin
+  if DockManagerCount = 0 then
+    DoPainterChanged(nil, False);
+end;
+
+procedure TdxDockingController.MasterLookAndFeelDestroying(Sender: TcxLookAndFeel);
+begin
+  // do nothing
+end;
+
+function TdxDockingController.DefaultLayoutSiteProperties(AForm: TCustomForm): TdxLayoutDockSiteProperties;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if (AManager <> nil) and AManager.UseDefaultSitesProperties then
+    Result := AManager.DefaultLayoutSiteProperties
+  else
+    Result := nil;
+end;
+
+function TdxDockingController.DefaultFloatSiteProperties(AForm: TCustomForm): TdxFloatDockSiteProperties;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if (AManager <> nil) and AManager.UseDefaultSitesProperties then
+    Result := AManager.DefaultFloatSiteProperties
+  else Result := nil;
+end;
+
+function TdxDockingController.DefaultHorizContainerSiteProperties(AForm: TCustomForm): TdxSideContainerDockSiteProperties;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if (AManager <> nil) and AManager.UseDefaultSitesProperties then
+    Result := AManager.DefaultHorizContainerSiteProperties
+  else Result := nil;
+end;
+
+function TdxDockingController.DefaultVertContainerSiteProperties(AForm: TCustomForm): TdxSideContainerDockSiteProperties;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if (AManager <> nil) and AManager.UseDefaultSitesProperties then
+    Result := AManager.DefaultVertContainerSiteProperties
+  else Result := nil;
+end;
+
+function TdxDockingController.DefaultTabContainerSiteProperties(AForm: TCustomForm): TdxTabContainerDockSiteProperties;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if (AManager <> nil) and AManager.UseDefaultSitesProperties then
+    Result := AManager.DefaultTabContainerSiteProperties
+  else Result := nil;
+end;
+
+procedure TdxDockingController.LoadLayoutFromIniFile(AFileName: string; AForm: TCustomForm = nil);
+var
+  AStream: TFileStream;
+begin
+  if ExtractFileExt(AFileName) = '' then
+    AFileName := ChangeFileExt(AFileName, '.ini');
+  if not FileExists(AFileName) then Exit;
+  AStream := TFileStream.Create(AFileName, fmOpenRead, fmShareDenyWrite);
+  try
+    LoadLayoutFromStream(AStream, AForm);
+  finally
+    AStream.Free;
+  end;
+end;
+
+procedure TdxDockingController.LoadLayoutFromRegistry(ARegistryPath: string; AForm: TCustomForm = nil);
+var
+  Storage: TRegistryIniFile;
+begin
+  Storage := TRegistryIniFile.Create(ARegistryPath);
+  try
+    LoadLayoutFromCustomIni(Storage, AForm);
+  finally
+    Storage.Free;
+  end;
+end;
+
+procedure TdxDockingController.LoadLayoutFromStream(AStream: TStream; AForm: TCustomForm = nil);
+var
+  Storage: TMemIniFile;
+  AStrings: TStringList;
+begin
+  Storage := TMemIniFile.Create('');
+  AStrings := TStringList.Create;
+  try
+    AStrings.LoadFromStream(AStream);
+    Storage.SetStrings(AStrings);
+    LoadLayoutFromCustomIni(Storage, AForm);
+  finally
+    AStrings.Free;
+    Storage.Free;
+  end;
+end;
+
+procedure TdxDockingController.SaveLayoutToIniFile(AFileName: string; AForm: TCustomForm = nil);
+var
+  AStream: TFileStream;
+begin
+  if AFileName = '' then exit;
+  if ExtractFileExt(AFileName) = '' then
+    AFileName := ChangeFileExt(AFileName, '.ini');
+  AStream := TFileStream.Create(AFileName, fmCreate, fmShareExclusive);
+  try
+    SaveLayoutToStream(AStream, AForm);
+  finally
+    AStream.Free;
+  end;
+end;
+
+procedure TdxDockingController.SaveLayoutToRegistry(ARegistryPath: string; AForm: TCustomForm = nil);
+var
+  Storage: TRegistryIniFile;
+begin
+  if ARegistryPath = '' then exit;
+  Storage := TRegistryIniFile.Create(ARegistryPath);
+  try
+    SaveLayoutToCustomIni(Storage, AForm);
+  finally
+    Storage.Free;
+  end;
+end;
+
+procedure TdxDockingController.SaveLayoutToStream(AStream: TStream; AForm: TCustomForm = nil);
+var
+  Storage: TMemIniFile;
+  AStrings: TStringList;
+begin
+  Storage := TMemIniFile.Create('');
+  AStrings := TStringList.Create;
+  try
+    SaveLayoutToCustomIni(Storage, AForm);
+    Storage.GetStrings(AStrings);
+    AStrings.SaveToStream(AStream);
+  finally
+    AStrings.Free;
+    Storage.Free;
+  end;
+end;
+
+function TdxDockingController.AutoHideInterval(AForm: TCustomForm): Integer;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if AManager <> nil then
+    Result := AManager.AutoHideInterval
+  else Result := dxAutoHideInterval;
+end;
+
+function TdxDockingController.AutoHideMovingInterval(AForm: TCustomForm): Integer;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if AManager <> nil then
+    Result := AManager.AutoHideMovingInterval
+  else Result := dxAutoHideMovingInterval;
+end;
+
+function TdxDockingController.AutoHideMovingSize(AForm: TCustomForm): Integer;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if AManager <> nil then
+    Result := AManager.AutoHideMovingSize
+  else Result := dxAutoHideMovingSize;
+end;
+
+function TdxDockingController.AutoShowInterval(AForm: TCustomForm): Integer;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if AManager <> nil then
+    Result := AManager.AutoShowInterval
+  else Result := dxAutoShowInterval;
+end;
+
+function TdxDockingController.Color(AForm: TCustomForm): TColor;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if AManager <> nil then
+    Result := AManager.Color
+  else
+    Result := clBtnFace;
+end;
+
+function TdxDockingController.DockStyle(AForm: TCustomForm): TdxDockStyle;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if AManager <> nil then
+    Result := AManager.DockStyle
+  else
+    Result := dxDefaultDockStyle;
+end;
+
+function TdxDockingController.DockZonesWidth(AForm: TCustomForm): Integer;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if AManager <> nil then
+    Result := AManager.DockZonesWidth
+  else
+    Result := dxDockZonesWidth;
+end;
+
+function TdxDockingController.GetFont(AForm: TCustomForm): TFont;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if AManager <> nil then
+    Result := AManager.Font
+  else
+    Result := FFont;
+end;
+
+function TdxDockingController.Images(AForm: TCustomForm): TCustomImageList;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if AManager <> nil then
+    Result := AManager.Images
+  else Result := nil;
+end;
+
+function TdxDockingController.Options(AForm: TCustomForm): TdxDockingOptions;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if AManager <> nil then
+    Result := AManager.Options
+  else
+    Result := dxDockingDefaultOptions;
+end;
+
+function TdxDockingController.ResizeZonesWidth(AForm: TCustomForm): Integer;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if AManager <> nil then
+    Result := AManager.ResizeZonesWidth
+  else
+    Result := dxResizeZonesWidth;
+end;
+
+function TdxDockingController.SelectionFrameWidth(AForm: TCustomForm): Integer;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if AManager <> nil then
+    Result := AManager.SelectionFrameWidth
+  else Result := dxSelectionFrameWidth;
+end;
+
+function TdxDockingController.TabsScrollInterval(AForm: TCustomForm): Integer;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if AManager <> nil then
+    Result := AManager.TabsScrollInterval
+  else Result := dxTabsScrollInterval;
+end;
+
+procedure TdxDockingController.DoColorChanged(AForm: TCustomForm);
+var
+  I: Integer;
+begin
+  BeginUpdateNC;
+  try
+    for I := 0 to DockControlCount - 1 do
+      if ControlNeedUpdate(DockControls[I], AForm) and DockControls[I].ManagerColor then
+      begin
+        DockControls[I].Color := Color(DockControls[I].ParentForm);
+        DockControls[I].FManagerColor := True;
+      end;
+    InvalidateControls(AForm, False);
+  finally
+    EndUpdateNC;
+  end;
+end;
+
+procedure TdxDockingController.DoImagesChanged(AForm: TCustomForm);
+begin
+  CalculateControls(AForm);
+end;
+
+procedure TdxDockingController.DoLayoutLoaded(AForm: TCustomForm);
+var
+  I: Integer;
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if (AManager <> nil) then
+  begin
+    if Assigned(AManager.OnLayoutChanged) then
+      AManager.OnLayoutChanged(nil);
+  end
+  else for I := 0 to DockManagerCount - 1 do
+  begin
+    if Assigned(DockManagers[I].OnLayoutChanged) then
+      DockManagers[I].OnLayoutChanged(nil);
+  end;
+end;
+
+procedure TdxDockingController.DoFontChanged(AForm: TCustomForm);
+var
+  I: Integer;
+begin
+  BeginUpdateNC;
+  try
+    for I := 0 to DockControlCount - 1 do
+      if ControlNeedUpdate(DockControls[I], AForm) and DockControls[I].ManagerFont then
+      begin
+        if not DockControls[I].IsDestroying then // !!!
+        begin
+          DockControls[I].Font := GetFont(DockControls[I].ParentForm);
+          DockControls[I].FManagerFont := True;
+        end;
+      end;
+    CalculateControls(AForm);
+  finally
+    EndUpdateNC;
+  end;
+end;
+
+procedure TdxDockingController.DoLayoutChanged(ASender: TdxCustomDockControl);
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(ASender.ParentForm);
+  if (AManager <> nil) and Assigned(AManager.OnLayoutChanged) then
+    AManager.OnLayoutChanged(ASender);
+end;
+
+procedure TdxDockingController.DoManagerChanged(AForm: TCustomForm);
+begin
+  BeginUpdateNC;
+  Include(FInternalState, disManagerChanged);
+  try
+    DoColorChanged(AForm);
+    DoImagesChanged(AForm);
+    DoFontChanged(AForm);
+    DoOptionsChanged(AForm);
+    DoPainterChanged(AForm, False);
+  finally
+    Exclude(FInternalState, disManagerChanged);
+    EndUpdateNC;
+  end;
+end;
+
+procedure TdxDockingController.DoOptionsChanged(AForm: TCustomForm);
+begin
+  BringToFrontFloatForms(nil, doFloatingOnTop in Options(AForm));
+  UpdateLayout(AForm);
+  CalculateControls(AForm);
+end;
+
+procedure TdxDockingController.DoPainterChanged(AForm: TCustomForm; AssignDefaultStyle: Boolean);
+var
+  I: Integer;
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  BeginUpdateNC;
+  try
+    if AManager <> nil then
+      AManager.ReleasePainterClass
+    else
+      for I := 0 to DockManagerCount - 1 do
+        DockManagers[I].ReleasePainterClass;
+    for I := 0 to DockControlCount - 1 do
+    begin
+      if ControlNeedUpdate(DockControls[I], AForm) then
+      begin
+        DockControls[I].FPainter.Free;
+        DockControls[I].FPainter := nil;
+      end;
+    end;
+    if AManager <> nil then
+      AManager.CreatePainterClass(AssignDefaultStyle)
+    else
+      for I := 0 to DockManagerCount - 1 do
+        DockManagers[I].CreatePainterClass(AssignDefaultStyle);
+    CalculateControls(AForm);
+  finally
+    EndUpdateNC;
+  end;
+end;
+
+procedure TdxDockingController.DoZonesWidthChanged(AForm: TCustomForm);
+begin
+  UpdateLayout(AForm);
+end;
+
+procedure TdxDockingController.DoUpdateDockZones(ASender: TdxCustomDockControl);
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(ASender.ParentForm);
+  if (AManager <> nil) and Assigned(AManager.OnUpdateDockZones) then
+    AManager.OnUpdateDockZones(ASender, ASender.DockZones);
+end;
+
+procedure TdxDockingController.DoUpdateResizeZones(ASender: TdxCustomDockControl);
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(ASender.ParentForm);
+  if (AManager <> nil) and Assigned(AManager.OnUpdateResizeZones) then
+    AManager.OnUpdateResizeZones(ASender, ASender.ResizeZones);
+end;
+
+procedure TdxDockingController.ClearLayout(AForm: TCustomForm);
+var
+  I: Integer;
+begin
+  I := 0;
+  while I < DockControlCount do
+  begin
+    if ((DockControls[I].ParentForm = AForm) or (AForm = nil)) and
+      (DockControls[I] is TdxDockPanel) and (DockControls[I].ParentDockControl <> nil) then
+    begin
+      DockControls[I].UnDock;
+      I := 0;
+    end
+    else Inc(I);
+  end;
+  SendMessage(Handle, DXM_DOCK_DESTROYCONTROLS, 0, 0);
+end;
+
+procedure TdxDockingController.LoadLayoutFromCustomIni(AIniFile: TCustomIniFile; AForm: TCustomForm);
+var
+  I, ADockControlCount: Integer;
+  ASections: TStringList;
+  AControlClass: TdxCustomDockControlClass;
+  AParentForm: TCustomForm;
+  ASectionName: string;
+begin
+  BeginUpdateNC;
+  Include(FInternalState, disLoading);
+  try
+    ASections := TStringList.Create;
+    with AIniFile do
+      try
+        ReadSections(ASections);
+        ADockControlCount := ReadInteger('Root', 'DockControlCount', ASections.Count);
+        if ASections.Count > 0 then
+          ClearLayout(AForm);
+        for I := 0 to ADockControlCount - 1 do
+        begin
+          ASectionName := IntToStr(I);
+          if SectionExists(ASectionName) then
+          begin
+            AControlClass := TdxCustomDockControlClass(FindClass(ReadString(ASectionName, 'ClassName', '')));
+            if (AControlClass = TdxDockSite) or (AControlClass = TdxFloatDockSite) then
+            begin
+              AParentForm := FindGlobalComponent(ReadString(ASectionName, 'ParentForm', '')) as TCustomForm;
+              if (AParentForm <> nil) and ((AParentForm = AForm) or (AForm = nil)) then
+                LoadControlFromCustomIni(AIniFile, AForm, nil, ASectionName);
+            end;
+          end;
+        end;
+      finally
+        ASections.Free;
+      end;
+  finally
+    Exclude(FInternalState, disLoading);
+    EndUpdateNC;
+  end;
+  DoLayoutLoaded(nil);
+end;
+
+procedure TdxDockingController.LoadControlFromCustomIni(AIniFile: TCustomIniFile;
+  AParentForm: TCustomForm; AParentControl: TdxCustomDockControl; ASection: string);
+var
+  AControl: TdxCustomDockControl;
+  AControlClass: TdxCustomDockControlClass;
+begin
+  with AIniFile do
+  begin
+    if AParentForm = nil then
+      AParentForm := FindGlobalComponent(ReadString(ASection, 'ParentForm', '')) as TCustomForm;
+    if AParentForm <> nil then
+    begin
+      AControl := AParentForm.FindComponent(ReadString(ASection, 'Name', '')) as TdxCustomDockControl;
+      if AControl = nil then
+      begin
+        AControlClass := TdxCustomDockControlClass(FindClass(ReadString(ASection, 'ClassName', '')));
+        if (AControlClass <> nil) then
+        begin
+          AControl := AControlClass.Create(AParentForm);
+          AControl.Name := ReadString(ASection, 'Name', '');
+        end;
+      end;
+      if AControl <> nil then
+        AControl.LoadLayoutFromCustomIni(AIniFile, AParentForm, AParentControl, ASection);
+    end;
+  end;
+end;
+
+procedure TdxDockingController.SaveLayoutToCustomIni(AIniFile: TCustomIniFile; AForm: TCustomForm);
+var
+  I, AOldCount: Integer;
+begin
+  SendMessage(Handle, DXM_DOCK_DESTROYCONTROLS, 0, 0);
+  // Erase old section
+  AOldCount := AIniFile.ReadInteger('Root', 'DockControlCount', 0);
+  for I := AOldCount - 1 downto 0 do
+    AIniFile.EraseSection(IntToStr(I));
+  AIniFile.WriteInteger('Root', 'DockControlCount', DockControlCount);
+  for I := 0 to DockControlCount - 1 do
+  begin
+    if DockControls[I].DockState = dsDestroyed then continue;
+    if ((DockControls[I].ParentForm = AForm) or (AForm = nil)) and
+      ((DockControls[I] is TdxDockSite) or (DockControls[I] is TdxFloatDockSite)) then
+      SaveControlToCustomIni(AIniFile, DockControls[I]);
+  end;
+end;
+
+procedure TdxDockingController.SaveControlToCustomIni(AIniFile: TCustomIniFile;
+  AControl: TdxCustomDockControl);
+var
+  ASection: string;
+begin
+  with AIniFile do
+  begin
+    ASection := IntToStr(IndexOfDockControl(AControl));
+    WriteString(ASection, 'ClassName', AControl.ClassName);
+    WriteString(ASection, 'Name', AControl.Name);
+    WriteString(ASection, 'ParentForm', AControl.ParentForm.Name);
+    AControl.SaveLayoutToCustomIni(AIniFile, ASection);
+  end;
+end;
+
+procedure TdxDockingController.UpdateLayout(AForm: TCustomForm);
+var
+  I: Integer;
+begin
+  for I := 0 to DockControlCount - 1 do
+  begin
+    if DockControls[I].IsDestroying or DockControls[I].IsUpdateLayoutLocked then
+      continue;
+    if ControlNeedUpdate(DockControls[I], AForm) then
+      DockControls[I].UpdateLayout;
+  end;
+end;
+
+procedure TdxDockingController.BeginUpdateNC(ALockRedraw: Boolean);
+begin
+  if FCalculatingControl <> nil then exit;
+  if (FUpdateNCLock = 0) and ALockRedraw then
+    Include(FInternalState, disRedrawLocked);
+  Inc(FUpdateNCLock);
+end;
+
+procedure TdxDockingController.EndUpdateNC;
+begin
+  if FCalculatingControl <> nil then exit;
+  Dec(FUpdateNCLock);
+  if FUpdateNCLock = 0 then
+  begin
+    UpdateInvalidControlsNC;
+    Exclude(FInternalState, disRedrawLocked);
+  end;
+end;
+
+procedure TdxDockingController.ApplicationDeactivated(Sender: TObject);
+begin
+  FApplicationDeactivating := False;
+end;
+
+function TdxDockingController.ControlNeedUpdate(AControl: TdxCustomDockControl; AForm: TCustomForm): Boolean;
+begin
+  Result := FindManager(AControl.ParentForm) = FindManager(AForm);
+end;
+
+procedure TdxDockingController.DestroyControls;
+begin
+  dxMessagesController.KillMessages(Handle, DXM_DOCK_DESTROYCONTROLS);
+  FDestroyedComponents.Clear;
+end;
+
+procedure TdxDockingController.FinishDocking;
+begin
+  if DockingDockControl <> nil then
+    DockingDockControl.EndDocking(Point(0, 0), True);
+end;
+
+procedure TdxDockingController.FinishResizing;
+begin
+  if ResizingDockControl <> nil then
+    ResizingDockControl.EndResize(Point(0, 0), True);
+end;
+
+function CompareDocks(Item1, Item2: Pointer): Integer;
+var
+  AControl1, AControl2: TdxCustomDockControl;
+begin
+  AControl1 := TdxCustomDockControl(Item1);
+  AControl2 := TdxCustomDockControl(Item2);
+  Result := AControl1.DockLevel - AControl2.DockLevel;
+  if Result = 0 then
+    Result := AControl1.DockIndex - AControl2.DockIndex;
+  if AControl2.AutoHide and not AControl1.AutoHide then
+    Result := -1
+  else if AControl2.AutoHide and not AControl1.AutoHide then
+    Result := 1;
+end;
+
+procedure TdxDockingController.UpdateInvalidControlsNC;
+
+  function NeedRedrawDockSitesParent(ADockSite: TdxDockSite): Boolean;
+  begin
+    Result := ADockSite.NeedRedrawOnResize or not ADockSite.Visible;
+  end;
+
+var
+  AControl: TdxCustomDockControl;
+  I: Integer;
+begin
+  if FCalculatingControl <> nil then exit;
+
+  while FInvalidNCBounds.Count > 0 do
+  begin
+    FInvalidNCBounds.Sort(CompareDocks);
+    FCalculatingControl := TdxCustomDockControl(FInvalidNCBounds[0]);
+    try
+      FCalculatingControl.NCChanged;
+      FCalculatingControl.Realign;
+      FInvalidNCBounds.Remove(FCalculatingControl);
+    finally
+      FCalculatingControl := nil;
+    end;
+  end;
+
+  FInvalidNC.Sort(CompareDocks);
+  for I := 0 to FInvalidNC.Count - 1 do
+  begin
+    AControl := TdxCustomDockControl(FInvalidNC.Items[I]);
+    if FInvalidRedraw.IndexOf(AControl) > -1 then
+    begin
+      if AControl.Visible then
+      begin
+        if disRedrawLocked in FInternalState then
+        begin
+          AControl.Perform(WM_SETREDRAW, Integer(True), 0);
+          AControl.Redraw(True);
+        end
+        else
+          AControl.Redraw(False);
+      end;
+
+      if AControl.HandleAllocated and (AControl is TdxDockSite) and (AControl.Parent <> nil) then
+      begin
+        if NeedRedrawDockSitesParent(TdxDockSite(AControl)) then
+          RedrawWindow(AControl.Parent.Handle, nil, 0, RDW_INVALIDATE or RDW_ERASE or RDW_ALLCHILDREN);
+      end;
+    end
+    else
+      if AControl.Visible then
+        AControl.InvalidateNC(True);
+  end;
+  FInvalidNC.Clear;
+  FInvalidRedraw.Clear;
+end;
+
+procedure TdxDockingController.WndProc(var Message: TMessage);
+begin
+  case Message.Msg of
+    DXM_DOCK_DESTROYCONTROLS:
+      DestroyControls;
+    WM_SYSCOLORCHANGE:
+      DoPainterChanged(nil, True);
+  end;
+  inherited;
+end;
+
+function TdxDockingController.CanUpdateNC(AControl: TdxCustomDockControl): Boolean;
+begin
+  Result := (FUpdateNCLock = 0) and (FCalculatingControl = nil);
+  if not Result then
+  begin
+    if FInvalidNC.IndexOf(AControl) = -1 then
+      FInvalidNC.Add(AControl);
+  end;
+end;
+
+function TdxDockingController.CanCalculateNC(AControl: TdxCustomDockControl): Boolean;
+begin
+  Result := (FUpdateNCLock = 0);
+  if not Result then
+  begin
+    if FInvalidRedraw.IndexOf(AControl) = -1 then
+    begin
+      if disRedrawLocked in FInternalState then
+        AControl.Perform(WM_SETREDRAW, Integer(False), 0);
+//      SendMessage(AControl.Handle, WM_SETREDRAW, Integer(False), 0);
+      FInvalidRedraw.Add(AControl);
+    end;
+    if FInvalidNCBounds.IndexOf(AControl) = -1 then
+      FInvalidNCBounds.Add(AControl);
+    if FInvalidNC.IndexOf(AControl) = -1 then
+      FInvalidNC.Add(AControl);
+  end;
+end;
+
+procedure TdxDockingController.DrawDockingSelection(ADockControl: TdxCustomDockControl;
+  AZone: TdxZone; const APoint: TPoint; AErasing: Boolean);
+var
+  R, ARegionRect: TRect;
+  AHandled: Boolean;
+  ARegion: TcxRegion;
+begin
+  if (AZone <> nil) or ADockControl.AllowFloating then
+  begin
+    if AZone <> nil then
+      R := AZone.GetDockingSelection(ADockControl)
+    else
+      R := ADockControl.GetFloatDockRect(APoint);
+
+    AHandled := DoCustomDrawDockingSelection(ADockControl, cxScreenCanvas.Handle, AZone, R, AErasing);
+
+    if not AHandled then
+    begin
+      ARegion := TcxRegion.Create;
+      try
+        ARegionRect := Rect(0, 0, cxRectWidth(R), cxRectHeight(R));
+        if AZone <> nil then
+          AZone.PrepareSelectionRegion(ARegion, ADockControl, ARegionRect)
+        else
+          ADockControl.PrepareSelectionRegion(ARegion, ARegionRect);
+        DockingControllerHelper.DragImage.DrawSizeFrame(R, ARegion);
+      finally
+        ARegion.Free;
+      end;
+    end;
+  end;
+end;
+
+procedure TdxDockingController.DrawResizingSelection(ADockControl: TdxCustomDockControl;
+  AZone: TdxZone; const APoint: TPoint; AErasing: Boolean);
+var
+  AWindow: HWND;
+  ADC: HDC;
+  AOldBrush: HBrush;
+  AHandled: Boolean;
+  AParentForm: TCustomForm;
+  AClientRect: TRect;
+begin
+  AParentForm := GetParentForm(ADockControl);
+  AWindow := AParentForm.Handle;
+  ADC := GetWindowDC(AWindow);
+  try
+    AClientRect := dxMapWindowRect(AWindow, 0, AParentForm.ClientRect, False);
+    SetWindowOrgEx(ADC, AClientRect.Left, AClientRect.top, nil);
+    AHandled := DoCustomDrawResizingSelection(ADockControl, ADC, AZone, APoint, AErasing);
+    if not AHandled then
+    begin
+      AOldBrush := SelectObject(ADC, SelectionBrush.Handle);
+      AZone.DrawResizingSelection(ADC, APoint);
+      SelectObject(ADC, AOldBrush);
+    end;
+  finally
+    ReleaseDC(AWindow, ADC);
+  end;
+end;
+
+function TdxDockingController.PainterClass(AForm: TCustomForm): TdxDockControlPainterClass;
+var
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if AManager <> nil then
+    Result := AManager.PainterClass
+  else
+    Result := dxDockingPaintersManager.GetAvailablePainterClass(LookAndFeel(AForm));
+end;
+
+procedure TdxDockingController.CalculateControls(AForm: TCustomForm);
+var
+  I: Integer;
+begin
+  BeginUpdateNC;
+  try
+    for I := 0 to DockControlCount - 1 do
+      if ControlNeedUpdate(DockControls[I], AForm) then
+        DockControls[I].Recalculate;
+  finally
+    EndUpdateNC;
+  end;
+end;
+
+procedure TdxDockingController.InvalidateActiveDockControl;
+begin
+  if ActiveDockControl <> nil then
+  begin
+    // InvalidateCaptionArea
+    ActiveDockControl.InvalidateCaptionArea;
+    if ActiveDockControl.Container <> nil then
+      ActiveDockControl.Container.InvalidateCaptionArea;
+  end;
+end;
+
+procedure TdxDockingController.InvalidateControls(AForm: TCustomForm; ANeedRecalculate: Boolean);
+var
+  I: Integer;
+begin
+  BeginUpdateNC;
+  try
+    for I := 0 to DockControlCount - 1 do
+      if ControlNeedUpdate(DockControls[I], AForm) then
+         DockControls[I].InvalidateNC(ANeedRecalculate);
+  finally
+    EndUpdateNC;
+  end;
+end;
+
+procedure TdxDockingController.CreatePainterColors(AForm: TCustomForm);
+var
+  I: Integer;
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if AManager <> nil then
+    AManager.PainterClass.CreateColors
+  else for I := 0 to DockManagerCount - 1 do
+    DockManagers[I].PainterClass.CreateColors;
+end;
+
+procedure TdxDockingController.RefreshPainterColors(AForm: TCustomForm);
+var
+  I: Integer;
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if AManager <> nil then
+  begin
+    if AManager.FPainterClass <> nil then
+      AManager.FPainterClass.RefreshColors;
+  end
+  else for I := 0 to DockManagerCount - 1 do
+    if DockManagers[I].FPainterClass <> nil then
+      DockManagers[I].FPainterClass.RefreshColors;
+end;
+
+procedure TdxDockingController.ReleasePainterColors(AForm: TCustomForm);
+var
+  I: Integer;
+  AManager: TdxDockingManager;
+begin
+  AManager := FindManager(AForm);
+  if AManager <> nil then
+  begin
+    if AManager.FPainterClass <> nil then
+      AManager.FPainterClass.ReleaseColors;
+  end
+  else for I := 0 to DockManagerCount - 1 do
+    if DockManagers[I].FPainterClass <> nil then
+      DockManagers[I].FPainterClass.ReleaseColors;
+end;
+
+function TdxDockingController.IsUpdateNCLocked: Boolean;
+begin
+  Result := FUpdateNCLock > 0;
+end;
+
+procedure TdxDockingController.CheckTempBitmap(ARect: TRect);
+const
+  BitmapReserve = 10;
+begin
+  if FTempBitmap = nil then
+    FTempBitmap := TcxBitmap.CreateSize(0, 0, cxDoubleBufferedBitmapPixelFormat);
+  if FTempBitmap.Width < cxRectWidth(ARect) then
+    FTempBitmap.Width := cxRectWidth(ARect) + BitmapReserve;
+  if FTempBitmap.Height < cxRectHeight(ARect) then
+    FTempBitmap.Height := cxRectHeight(ARect) + BitmapReserve;
+end;
+
+procedure TdxDockingController.ReleaseTempBitmap;
+begin
+  FreeAndNil(FTempBitmap);
+end;
+
+function TdxDockingController.GetIsDocking: Boolean;
+begin
+  Result := DockingDockControl <> nil;
+end;
+
+function TdxDockingController.GetDockControl(Index: Integer): TdxCustomDockControl;
+begin
+  Result := TdxCustomDockControl(FDockControls.Items[Index]);
+end;
+
+function TdxDockingController.GetDockControlCount: Integer;
+begin
+  Result := FDockControls.Count;
+end;
+
+function TdxDockingController.GetDockManager(Index: Integer): TdxDockingManager;
+begin
+  Result := TdxDockingManager(FDockManagers.Items[Index]);
+end;
+
+function TdxDockingController.GetDockManagerCount: Integer;
+begin
+  Result := FDockManagers.Count;
+end;
+
+function TdxDockingController.GetIsResizing: Boolean;
+begin
+  Result := ResizingDockControl <> nil;
+end;
+
+procedure TdxDockingController.SetActiveDockControl(Value: TdxCustomDockControl);
+
+  procedure ActivateParent(AControl: TdxCustomDockControl);
+  begin
+    // SetActiveDockControl call recursive
+    if (AControl <> nil) and not (AControl is TdxDockSite) then
+      ActiveDockControl := AControl;
+  end;
+
+var
+  AOldActiveSite: TdxCustomDockControl;
+  ACallEvent: Boolean;
+begin
+  if FActiveDockControl <> Value then
+  begin
+    Inc(FActiveDockControlLockCount);
+    try
+      AOldActiveSite := FActiveDockControl;
+
+      if Value <> nil then
+        ActivateParent(Value.ParentDockControl);
+
+      if (Value = nil) or Value.CanActive then
+      begin
+        FActiveDockControl := Value;
+        dxMessagesController.KillMessages(0, DXM_DOCK_CHECKACTIVEDOCKCONTROL);
+
+        ACallEvent := FActiveDockControlLockCount = 1;
+        if AOldActiveSite <> nil then
+          AOldActiveSite.DoActiveChanged(False, ACallEvent);
+        if FActiveDockControl <> nil then
+          FActiveDockControl.DoActiveChanged(True, ACallEvent);
+        if AOldActiveSite <> FActiveDockControl then
+          DoActiveDockControlChanged(FActiveDockControl, ACallEvent);
+      end;
+      FActivatingDockControl := nil;
+    finally
+      Dec(FActiveDockControlLockCount);
+    end;
+  end;
+end;
+
+function TdxDockingController.IsParentForFloatDockSite(AParentForm: TCustomForm;
+  AFloatDockSite: TdxFloatDockSite): Boolean;
+begin
+  Result := (AParentForm = nil) or (AParentForm = AFloatDockSite.ParentForm) or
+    IsMDIForm(AParentForm) and IsMDIChild(AFloatDockSite.ParentForm);
+end;
+
+procedure TdxDockingController.BringToFrontFloatForms(AParentForm: TCustomForm; ATopMost: Boolean);
+var
+  I: Integer;
+  AControl: TdxFloatDockSite;
+begin
+  for I := 0 to DockControlCount - 1 do
+  begin
+    if DockControls[I].IsDesigning then continue;
+    if DockControls[I].IsDestroying then continue;
+    if DockControls[I] is TdxFloatDockSite then
+    begin
+      AControl := DockControls[I] as TdxFloatDockSite;
+      if (AParentForm = nil) or (AParentForm = AControl.ParentForm) then
+        AControl.FloatForm.BringToFront(ATopMost);
+    end;
+  end;
+end;
+
+procedure TdxDockingController.UpdateVisibilityFloatForms(AParentForm: TCustomForm; AShow: Boolean);
+
+  procedure FloatFormsHide;
+  var
+    I: Integer;
+    AControl: TdxFloatDockSite;
+  begin
+    for I := 0 to DockControlCount - 1 do
+    begin
+      if DockControls[I] is TdxFloatDockSite then
+      begin
+        AControl := DockControls[I] as TdxFloatDockSite;
+        if IsParentForFloatDockSite(AParentForm, AControl) and (AControl.FloatForm <> nil) {bug in Delphi 2005} then
+          AControl.FloatForm.HideWindow;
+      end;
+    end;
+  end;
+
+  procedure FloatFormsShow;
+  var
+    I: Integer;
+    AControl: TdxFloatDockSite;
+  begin
+    for I := 0 to DockControlCount - 1 do
+    begin
+      if DockControls[I] is TdxFloatDockSite then
+      begin
+        AControl := DockControls[I] as TdxFloatDockSite;
+        if AControl.Visible and IsParentForFloatDockSite(AParentForm, AControl) and (AControl.FloatForm <> nil) then
+          AControl.FloatForm.ShowWindow;
+      end;
+    end;
+  end;
+
+begin
+  if AShow then
+    FloatFormsShow
+  else
+    FloatFormsHide;
+end;
+
+procedure TdxDockingController.UpdateEnableStatusFloatForms(AParentForm: TCustomForm; AEnable: Boolean);
+var
+  I: Integer;
+  AControl: TdxFloatDockSite;
+begin
+  for I := 0 to DockControlCount - 1 do
+  begin
+    if DockControls[I] is TdxFloatDockSite then
+    begin
+      AControl := DockControls[I] as TdxFloatDockSite;
+      if IsParentForFloatDockSite(AParentForm, AControl) and (AControl.FloatForm <> nil) {bug in Delphi 2005} then
+        EnableWindow(AControl.FloatForm.Handle, AEnable);
+    end;
+  end;
+end;
+
+function TdxDockingController.CreateDockingControllerHelper(
+  ADockStyle: TdxDockStyle): TdxDockingControllerHelper;
+const
+  HelperClassMap: array[TdxDockStyle] of TdxDockingControllerHelperClass =
+    (TdxDockingControllerHelper, TdxDockingControllerVS2005Helper);
+begin
+  Result := HelperClassMap[ADockStyle].Create;
+end;
+
+procedure TdxDockingController.StartDocking(AControl: TdxCustomDockControl; const APoint: TPoint);
+begin
+  FDockingControllerHelper := CreateDockingControllerHelper(DockStyle(AControl.ParentForm));
+  FDockingControllerHelper.DockingStart(AControl, APoint);
+end;
+
+procedure TdxDockingController.Docking(AControl: TdxCustomDockControl; const APoint: TPoint);
+begin
+  if GetKeyState(VK_CONTROL) < 0 then
+    AControl.SetDockingParams(nil, APoint)
+  else
+    DockingControllerHelper.DockingMove(AControl, APoint);
+end;
+
+procedure TdxDockingController.EndDocking(AControl: TdxCustomDockControl; const APoint: TPoint);
+begin
+  DockingControllerHelper.DockingFinish(AControl, APoint);
+  FreeAndNil(FDockingControllerHelper);
+end;
+
+procedure TdxDockingController.DockControlLoaded(AControl: TdxCustomDockControl);
+begin
+  if FLoadedForms.IndexOf(AControl.ParentForm) = -1 then
+    FLoadedForms.Add(AControl.ParentForm);
+end;
+
+procedure TdxDockingController.DockManagerLoaded(AParentForm: TCustomForm);
+begin
+  FLoadedForms.Remove(AParentForm);
+end;
+
+function TdxDockingController.IndexOfDockControl(AControl: TdxCustomDockControl): Integer;
+begin
+  Result := FDockControls.IndexOf(AControl);
+end;
+
+procedure TdxDockingController.PostponedDestroyDockControl(AControl: TdxCustomDockControl);
+begin
+  PostponedDestroyComponent(AControl);
+end;
+
+procedure TdxDockingController.PostponedDestroyComponent(AComponent: TComponent);
+begin
+  FDestroyedComponents.Add(AComponent);
+  PostMessage(Handle, DXM_DOCK_DESTROYCONTROLS, 0, 0);
+end;
+
+procedure TdxDockingController.RegisterDockControl(AControl: TdxCustomDockControl);
+begin
+  FDockControls.Add(AControl);
+  if Assigned(FOnRegisterDockControl) then
+    FOnRegisterDockControl(AControl);
+end;
+
+procedure TdxDockingController.UnregisterDockControl(AControl: TdxCustomDockControl);
+begin
+  if Assigned(FOnUnregisterDockControl) then
+    FOnUnregisterDockControl(AControl);
+  if AControl = FActivatingDockControl then
+    FActivatingDockControl := nil;
+  if AControl = FDockingDockControl then
+    FDockingDockControl := nil;
+  if AControl = FResizingDockControl then
+    FResizingDockControl := nil;
+  FDockControls.Remove(AControl);
+  FInvalidRedraw.Remove(AControl);
+  FInvalidNC.Remove(AControl);
+  FInvalidNCBounds.Remove(AControl);
+  if FActiveDockControl = AControl then
+    FActiveDockControl := nil;
+end;
+
+procedure TdxDockingController.SetApplicationActive(AValue: Boolean);
+begin
+  if AValue <> FApplicationActive then
+  begin
+    FApplicationActive := AValue;
+    InvalidateActiveDockControl;
+  end;
+end;
+
+procedure TdxDockingController.SetSelectionBrush(Value: TBrush);
+begin
+  FSelectionBrush.Assign(Value);
+end;
+
+{ TdxDockingControllerHelper }
+
+function TdxDockingControllerHelper.CanDocking(
+  AControl, ATargetControl: TdxCustomDockControl;
+  ATargetZone: TdxZone; const APoint: TPoint): Boolean;
+begin
+  Result := ATargetControl <> nil;
+  if Result then
+  begin
+    AControl.DoDocking(APoint, ATargetZone, Result);
+    if (ATargetZone <> nil) and (ATargetZone.Owner <> nil) then
+      ATargetZone.Owner.DoCanDocking(AControl, APoint, ATargetZone, Result);
+  end;
+end;
+
+procedure TdxDockingControllerHelper.CreateSelectionDragImage(AControl: TdxCustomDockControl);
+begin
+  FDragImage := TdxDockingDragImage.Create(AControl.ControllerSelectionFrameWidth);
+  FDragImage.FillSelection := doFillDockingSelection in AControl.ControllerOptions;
+  FDragImage.PopupParent := AControl.PopupParent;
+  if doFillDockingSelection in AControl.ControllerOptions then
+  begin
+    DragImage.AlphaBlend := True;
+    DragImage.AlphaBlendValue := 100;
+    DragImage.Canvas.Brush.Color := clHighlight
+  end
+  else
+  begin
+    DragImage.AlphaBlend := False;
+    DragImage.Canvas.Brush := dxDockingController.SelectionBrush;
+  end;
+end;
+
+procedure TdxDockingControllerHelper.DockingStart(AControl: TdxCustomDockControl; const APoint: TPoint);
+begin
+  CreateSelectionDragImage(AControl);
+  DragImage.Show;
+end;
+
+procedure TdxDockingControllerHelper.DockingMove(AControl: TdxCustomDockControl; const APoint: TPoint);
+var
+  ATargetControl: TdxCustomDockControl;
+  ATargetZone: TdxZone;
+begin
+  ATargetControl := AControl.GetDockingTargetControlAtPos(APoint);
+  if ATargetControl <> nil then
+    ATargetZone := ATargetControl.GetDockZoneAtPos(AControl, APoint)
+  else
+    ATargetZone := nil;
+
+  if not CanDocking(AControl, ATargetControl, ATargetZone, APoint) then
+    ATargetZone := nil;
+  AControl.SetDockingParams(ATargetZone, APoint);
+end;
+
+procedure TdxDockingControllerHelper.DockingFinish(AControl: TdxCustomDockControl; const APoint: TPoint);
+begin
+  FreeAndNil(FDragImage);
+end;
+
 { TdxZone }
 
 constructor TdxZone.Create(AOwner: TdxCustomDockControl; AWidth: Integer; AKind: TdxZoneKind);
@@ -2607,305 +7815,1639 @@ begin
   AControl.PrepareSelectionRegion(ARegion, ARect);
 end;
 
-{ TdxZoneList }
+{ TdxDockSiteAutoHideContainer }
 
-function TdxZoneList.FindZone(AOwnerControl: TdxCustomDockControl; AType: TdxDockingType): TdxZone;
-var
-  AZone: TdxZone;
-  I: Integer;
+constructor TdxDockSiteAutoHideContainer.Create(AOwner: TComponent);
 begin
-  Result := nil;
-  for I := 0 to Count - 1 do
+  inherited;
+  Visible := False;
+  ControlStyle := [csNoDesignVisible];
+end;
+
+procedure TdxDockSiteAutoHideContainer.CreateParams(var Params: TCreateParams);
+begin
+  inherited CreateParams(Params);
+  Params.Style := Params.Style or WS_CLIPCHILDREN;
+end;
+
+procedure TdxDockSiteAutoHideContainer.AlignControls(AControl: TControl; var Rect: TRect);
+
+  procedure DoAlignChild(AControl: TControl);
   begin
-    AZone := Items[I];
-    if (AZone.DockType = AType) and (AZone.Owner = AOwnerControl) then
-    begin
-      Result := AZone;
-      Break;
+    case AControl.Align of
+      alTop:
+        Rect.Bottom := Rect.Top + AControl.Height;
+      alBottom:
+        Rect.Top := Rect.Bottom - AControl.Height;
+      alLeft:
+        Rect.Right := Rect.Left + AControl.Width;
+      alRight:
+        Rect.Left := Rect.Right - AControl.Width;
+      alClient:
+        ;
+      else
+        Exit;
     end;
+    AControl.BoundsRect := Rect;
+  end;
+
+begin
+  dxTestCheck(ControlCount <= 1, 'TdxDockSiteAutoHideContainer.ControlCount > 1');
+  if ControlCount > 0 then
+  begin
+    DoAlignChild(Controls[0]);
+    Rect:= cxNullRect;
+    if Showing then
+      AdjustSize;
   end;
 end;
 
-function TdxZoneList.RegisterDockZone(
-  AOwnerControl, AControl: TdxCustomDockControl;
-  AZoneClass: TdxZoneClass; AZoneWidth: Integer): Boolean;
+procedure TdxDockSiteAutoHideContainer.CMControlListChange(var Message: TMessage);
 begin
-  Result := AZoneClass.ValidateDockZone(AOwnerControl, AControl);
-  if Result then
-    RegisterZone(AZoneClass.Create(AOwnerControl, AZoneWidth, zkDocking));
-end;
-
-function TdxZoneList.RegisterResizeZone(
-  AOwnerControl, AControl: TdxCustomDockControl;
-  AZoneClass: TdxZoneClass; AZoneWidth: Integer): Boolean;
-begin
-  Result := AZoneClass.ValidateResizeZone(AOwnerControl, AControl);
-  if Result then
-    RegisterZone(AZoneClass.Create(AOwnerControl, AZoneWidth, zkResizing));
-end;
-
-procedure TdxZoneList.RegisterZone(AZone: TdxZone);
-begin
-  Insert(0, AZone);
-end;
-
-function TdxZoneList.GetItem(Index: Integer): TdxZone;
-begin
-  Result := TdxZone(inherited Items[Index]);
-end;
-
-{ TdxFloatForm }
-
-constructor TdxFloatForm.Create(AOwner: TComponent);
-begin
-  CreateNew(AOwner);
-{$IFDEF DELPHI9}
-  Position := poDesigned;
-  PopupMode := pmExplicit;
-{$ENDIF}
-  FClientHeight := -1;
-  FClientWidth := -1;
-  AutoScroll := False;
-  BorderStyle := bsSizeToolWin;
-  DefaultMonitor := dmDesktop;
-  Visible := False;
-end;
-
-destructor TdxFloatForm.Destroy;
-begin
-  RemoveDockSite;
+  if (csDesigning in ComponentState) and not (csLoading in ComponentState) and
+    Boolean(Message.LParam) {Inserting} and
+    IsControlContainsDockSite(TControl(Message.WParam))
+  then
+    raise EdxException.Create(sdxInvalidDockSiteParent);
   inherited;
 end;
 
-procedure TdxFloatForm.InsertDockSite(ADockSite: TdxFloatDockSite);
+{ TdxDockingManager }
+
+constructor TdxDockingManager.Create(AOwner: TComponent);
 begin
-  FDockSite := ADockSite;
-  if not (FDockSite.IsDesigning and FDockSite.IsLoadingFromForm) then // Anchors bug - see TdxFloatDockSite.Loaded
-    FDockSite.SetDockType(dtClient);
-  FDockSite.Parent := Self;
-  FCanDesigning := True;
+  inherited Create(AOwner);
+  FAutoHideInterval := dxAutoHideInterval;
+  FAutoHideMovingInterval := dxAutoHideMovingInterval;
+  FAutoHideMovingSize := dxAutoHideMovingSize;
+  FAutoShowInterval := dxAutoShowInterval;
+  FChangeLink := TChangeLink.Create;
+  FChangeLink.OnChange := DoOnImagesChanged;
+  FColor := clBtnFace;
+  FDefaultSitesPropertiesList := TObjectList.Create;
+  FDockZonesWidth := dxDockZonesWidth;
+  CreateDefaultSitesProperties;
+  FFont := TFont.Create;
+  FFont.OnChange := DoOnFontChanged;
+  FLookAndFeel := TcxLookAndFeel.Create(Self);
+  FLookAndFeel.OnChanged := DoOnLFChanged;
+  FOptions := dxDockingDefaultOptions;
+  FResizeZonesWidth := dxResizeZonesWidth;
+  FSelectionFrameWidth := dxSelectionFrameWidth;
+  FTabsScrollInterval := dxTabsScrollInterval;
+  FUseDefaultSitesProperties := True;
+  FDockStyle := dxDefaultDockStyle;
+  dxDockingController.RegisterManager(Self);
 end;
 
-procedure TdxFloatForm.RemoveDockSite;
+destructor TdxDockingManager.Destroy;
 begin
-  FCanDesigning := False;
-  if FDockSite <> nil then
+  dxDockingController.UnregisterManager(Self);
+  FreeAndNil(FLookAndFeel);
+  FreeAndNil(FFont);
+  DestroyDefaultSitesProperties;
+  FreeAndNil(FDefaultSitesPropertiesList);
+  FreeAndNil(FChangeLink);
+  inherited Destroy;
+end;
+
+procedure TdxDockingManager.LoadLayoutFromIniFile(AFileName: string);
+begin
+  dxDockingController.LoadLayoutFromIniFile(AFileName, ParentForm);
+end;
+
+procedure TdxDockingManager.LoadLayoutFromRegistry(ARegistryPath: string);
+begin
+  dxDockingController.LoadLayoutFromRegistry(ARegistryPath, ParentForm);
+end;
+
+procedure TdxDockingManager.LoadLayoutFromStream(AStream: TStream);
+begin
+  dxDockingController.LoadLayoutFromStream(AStream, ParentForm);
+end;
+
+procedure TdxDockingManager.SaveLayoutToIniFile(AFileName: string);
+begin
+  dxDockingController.SaveLayoutToIniFile(AFileName, ParentForm);
+end;
+
+procedure TdxDockingManager.SaveLayoutToRegistry(ARegistryPath: string);
+begin
+  dxDockingController.SaveLayoutToRegistry(ARegistryPath, ParentForm);
+end;
+
+procedure TdxDockingManager.SaveLayoutToStream(AStream: TStream);
+begin
+  dxDockingController.SaveLayoutToStream(AStream, ParentForm);
+end;
+
+procedure TdxDockingManager.DefineProperties(Filer: TFiler);
+begin
+  inherited DefineProperties(Filer);
+  Filer.DefineProperty('ViewStyle', ReadViewStyle, nil, False);
+end;
+
+procedure TdxDockingManager.Notification(AComponent: TComponent; Operation: TOperation);
+var
+  I: Integer;
+begin
+  inherited;
+  if (Operation = opRemove) and not IsDestroying then
   begin
-    FDockSite.Parent := nil;
-    FDockSite.FFloatForm := nil;
-    FDockSite := nil;
+    if AComponent = Images then
+      Images := nil;
+    for I := 0 to DefaultSitesPropertiesCount - 1 do
+      if AComponent = DefaultSitesProperties[I].PopupMenu then
+        DefaultSitesProperties[I].PopupMenu := nil;
   end;
 end;
 
-procedure TdxFloatForm.BringToFront(ATopMost: Boolean);
+procedure TdxDockingManager.Loaded;
 begin
-  if FOnTopMost <> ATopMost then
-  begin
-    FOnTopMost := ATopMost;
-    RecreateWnd;
-  end;
+  inherited;
+  UpdateDefaultSitesPropertiesColor;
+  UpdateDefaultSitesPropertiesFont;
+  dxDockingController.DockManagerLoaded(ParentForm);
+  dxDockingController.DoManagerChanged(ParentForm);
 end;
 
-function TdxFloatForm.CanDesigning: Boolean;
+procedure TdxDockingManager.ChangeScale(M, D: Integer);
 begin
-  Result := FCanDesigning and IsDesigning and not IsDestroying and
-    (ParentForm <> nil) and (ParentForm.Designer <> nil) and
-    not dxDockingController.IsDocking;
+  FFont.Height := MulDiv(FFont.Height, M, D);
 end;
 
-function TdxFloatForm.IsDesigning: Boolean;
+function TdxDockingManager.IsLoading: Boolean;
 begin
-  Result := csDesigning in ComponentState;
+  Result := csLoading in ComponentState;
 end;
 
-function TdxFloatForm.IsDestroying: Boolean;
+function TdxDockingManager.IsDestroying: Boolean;
 begin
   Result := csDestroying in ComponentState;
 end;
 
-procedure TdxFloatForm.CreateParams(var Params: TCreateParams);
+procedure TdxDockingManager.DoColorChanged;
 begin
-{$IFDEF DELPHI9}
-  PopupParent := ParentForm;
-{$ENDIF}
-  inherited CreateParams(Params);
-  with Params do
-    if FOnTopMost and (ParentForm <> nil) then
+  UpdateDefaultSitesPropertiesColor;
+  dxDockingController.DoColorChanged(ParentForm);
+end;
+
+procedure TdxDockingManager.DoFontChanged;
+begin
+  UpdateDefaultSitesPropertiesFont;
+  dxDockingController.DoFontChanged(ParentForm);
+end;
+
+procedure TdxDockingManager.CreatePainterClass(AssignDefaultStyle: Boolean);
+begin
+  PainterClass.CreateColors;
+end;
+
+function TdxDockingManager.GetLookAndFeel: TcxLookAndFeel;
+begin
+  Result := FLookAndFeel;
+end;
+
+function TdxDockingManager.GetActualPainterClass: TdxDockControlPainterClass;
+begin
+  Result := dxDockingPaintersManager.GetAvailablePainterClass(LookAndFeel);
+end;
+
+function TdxDockingManager.GetPainterClass: TdxDockControlPainterClass;
+begin
+  if FPainterClass = nil then
+    FPainterClass := GetActualPainterClass;
+  Result := FPainterClass;
+end;
+
+procedure TdxDockingManager.ReleasePainterClass;
+begin
+  if FPainterClass <> nil then
+  begin
+    FPainterClass.ReleaseColors;
+    FPainterClass := nil;
+  end;
+end;
+
+procedure TdxDockingManager.CreateDefaultSitesProperties;
+begin
+  FDefaultSitesPropertiesList.Add(TdxLayoutDockSiteProperties.Create(Self));
+  FDefaultSitesPropertiesList.Add(TdxFloatDockSiteProperties.Create(Self));
+  FDefaultSitesPropertiesList.Add(TdxSideContainerDockSiteProperties.Create(Self));
+  FDefaultSitesPropertiesList.Add(TdxSideContainerDockSiteProperties.Create(Self));
+  FDefaultSitesPropertiesList.Add(TdxTabContainerDockSiteProperties.Create(Self));
+end;
+
+procedure TdxDockingManager.DestroyDefaultSitesProperties;
+begin
+  FDefaultSitesPropertiesList.Clear;
+end;
+
+procedure TdxDockingManager.ReadViewStyle(AReader: TReader);
+
+  procedure SetLookAndFeelKind(AKind: TcxLookAndFeelKind);
+  begin
+    LookAndFeel.NativeStyle := False;
+    LookAndFeel.Kind := AKind;
+  end;
+
+var
+  AValue: string;
+begin
+  AValue := AReader.ReadIdent;
+  if SameText(AValue, 'vsStandard') then
+    SetLookAndFeelKind(lfStandard);
+  if SameText(AValue, 'vsNET') then
+    SetLookAndFeelKind(lfUltraFlat);
+  if SameText(AValue, 'vsOffice11') then
+    SetLookAndFeelKind(lfOffice11);
+  if SameText(AValue, 'vsXP') then
+    LookAndFeel.NativeStyle := True;
+end;
+
+procedure TdxDockingManager.UpdateDefaultSitesPropertiesColor;
+var
+  I: Integer;
+begin
+  for I := 0 to DefaultSitesPropertiesCount - 1 do
+    if DefaultSitesProperties[I].ManagerColor then
     begin
-      Style := Style or WS_POPUPWINDOW;
-      WndParent := ParentForm.Handle;
-    end
-    else
-    begin
-    {$IFDEF DELPHI11}
-      if Application.MainFormOnTaskBar and (ParentForm <> Application.MainForm) then
-        WndParent := Application.MainFormHandle
-      else
-    {$ENDIF}
-        WndParent := Application.Handle;
+      DefaultSitesProperties[I].Color := Color;
+      DefaultSitesProperties[I].FManagerColor := True;
     end;
 end;
 
-procedure TdxFloatForm.CreateWnd;
+procedure TdxDockingManager.UpdateDefaultSitesPropertiesFont;
+var
+  I: Integer;
 begin
-  inherited;
-  if (FClientWidth <> -1) and (FClientHeight <> -1) then
+  for I := 0 to DefaultSitesPropertiesCount - 1 do
+    if DefaultSitesProperties[I].ManagerFont then
+    begin
+      DefaultSitesProperties[I].Font := Font;
+      DefaultSitesProperties[I].FManagerFont := True;
+    end;
+end;
+
+procedure TdxDockingManager.DoOnImagesChanged(Sender: TObject);
+begin
+  if not IsLoading then
+    dxDockingController.DoImagesChanged(ParentForm);
+end;
+
+procedure TdxDockingManager.DoOnFontChanged(Sender: TObject);
+begin
+  if not IsLoading then
+    DoFontChanged;
+end;
+
+procedure TdxDockingManager.DoOnLFChanged(Sender: TcxLookAndFeel; AChangedValues: TcxLookAndFeelValues);
+begin
+  if not IsLoading then
   begin
-    ClientWidth := FClientWidth;
-    ClientHeight := FClientHeight;
-    FClientWidth := -1;
-    FClientHeight := -1;
+    dxDockingController.DoPainterChanged(ParentForm, True);
+    DoViewChanged;
   end;
 end;
 
-function TdxFloatForm.IsShortCut(var Message: TWMKey): Boolean;
+procedure TdxDockingManager.DoViewChanged;
 begin
-  Result := inherited IsShortCut(Message);
-  if not Result and (ParentForm <> nil) then
-    Result := ParentForm.IsShortCut(Message);
+  if Assigned(FOnViewChanged) then
+    FOnViewChanged(Self);
 end;
 
-procedure TdxFloatForm.ShowWindow;
+function TdxDockingManager.IsDefaultSitePropertiesStored: Boolean;
 begin
-  if not Visible then
-    Show
+  Result := FUseDefaultSitesProperties;
+end;
+
+function TdxDockingManager.GetDefaultSiteProperties(Index: Integer): TdxCustomDockControlProperties;
+begin
+  if (0 <= Index) and (Index < FDefaultSitesPropertiesList.Count) then
+    Result := TdxCustomDockControlProperties(FDefaultSitesPropertiesList[Index])
   else
-    if IsWindowVisible(Handle) then
-      SetWindowPos(Handle, ParentForm.Handle, 0, 0, 0, 0, SWP_NOSIZE or SWP_NOMOVE or SWP_NOACTIVATE)
-    else
-      Windows.ShowWindow(Handle, SW_SHOWNA);
+    Result := nil;
 end;
 
-procedure TdxFloatForm.HideWindow;
+function TdxDockingManager.GetDefaultSitesPropertiesCount: Integer;
 begin
-  if HandleAllocated then
-    Windows.ShowWindow(Handle, SW_HIDE);
+  Result := FDefaultSitesPropertiesList.Count;
 end;
 
-procedure dxIllegalSetParentField(AHackedControl: TWinControl; ANewParent: TObject);
-var
-  PParent: PInteger;
+function TdxDockingManager.GetDefaultLayoutSiteProperties: TdxLayoutDockSiteProperties;
 begin
-  PParent := @AHackedControl.Parent;
-  PParent^ := Integer(ANewParent);
+  Result := DefaultSitesProperties[0] as TdxLayoutDockSiteProperties;
 end;
 
-procedure TdxFloatForm.WndProc(var Message: TMessage);
-var
-  ADesigner: IDesignerHook;
+function TdxDockingManager.GetDefaultFloatSiteProperties: TdxFloatDockSiteProperties;
 begin
-  if IsDesigning then
+  Result := DefaultSitesProperties[1] as TdxFloatDockSiteProperties;
+end;
+
+function TdxDockingManager.GetDefaultHorizContainerSiteProperties: TdxSideContainerDockSiteProperties;
+begin
+  Result := DefaultSitesProperties[2] as TdxSideContainerDockSiteProperties;
+end;
+
+function TdxDockingManager.GetDefaultVertContainerSiteProperties: TdxSideContainerDockSiteProperties;
+begin
+  Result := DefaultSitesProperties[3] as TdxSideContainerDockSiteProperties;
+end;
+
+function TdxDockingManager.GetDefaultTabContainerSiteProperties: TdxTabContainerDockSiteProperties;
+begin
+  Result := DefaultSitesProperties[4] as TdxTabContainerDockSiteProperties;
+end;
+
+function TdxDockingManager.GetParentForm: TCustomForm;
+begin
+  if Owner is TCustomForm then
+    Result := Owner as TCustomForm
+  else
+    Result := nil;
+end;
+
+procedure TdxDockingManager.SetColor(const Value: TColor);
+begin
+  if FColor <> Value then
   begin
-    if Designer <> nil then
-      ADesigner := Designer
-    else
-      if CanDesigning then
-        ADesigner := ParentForm.Designer
-      else
-        ADesigner := nil;
-    if Designer <> nil then
-      Designer := nil;
-    inherited WndProc(Message);
-    if (ADesigner <> nil) and CanDesigning then
-      Designer := ADesigner;
-
-  {$IFDEF DELPHI10}
-    // A1439
-    if Message.Msg = DXM_DOCK_PURGEPARENT then
-      dxIllegalSetParentField(Self, nil);
-  {$ENDIF}
-  end
-  else
-    inherited WndProc(Message);
+    FColor := Value;
+    if not IsLoading then
+      DoColorChanged;
+  end;
 end;
 
-function TdxFloatForm.GetParentForm: TCustomForm;
+procedure TdxDockingManager.SetDefaultLayoutSiteProperties(Value: TdxLayoutDockSiteProperties);
 begin
-  if (FDockSite <> nil) and not FDockSite.IsDestroying then
-    Result := FDockSite.ParentForm
+  (DefaultSitesProperties[0] as TdxLayoutDockSiteProperties).Assign(Value);
+end;
+
+procedure TdxDockingManager.SetDefaultFloatSiteProperties(Value: TdxFloatDockSiteProperties);
+begin
+  (DefaultSitesProperties[1] as TdxFloatDockSiteProperties).Assign(Value);
+end;
+
+procedure TdxDockingManager.SetDefaultHorizContainerSiteProperties(Value: TdxSideContainerDockSiteProperties);
+begin
+  (DefaultSitesProperties[2] as TdxSideContainerDockSiteProperties).Assign(Value);
+end;
+
+procedure TdxDockingManager.SetDefaultVertContainerSiteProperties(Value: TdxSideContainerDockSiteProperties);
+begin
+  (DefaultSitesProperties[3] as TdxSideContainerDockSiteProperties).Assign(Value);
+end;
+
+procedure TdxDockingManager.SetDefaultTabContainerSiteProperties(Value: TdxTabContainerDockSiteProperties);
+begin
+  (DefaultSitesProperties[3] as TdxTabContainerDockSiteProperties).Assign(Value);
+end;
+
+procedure TdxDockingManager.SetDockStyle(AValue: TdxDockStyle);
+begin
+  if AValue <> FDockStyle then
+  begin
+    FDockStyle := AValue;
+    dxDockingController.UpdateLayout(ParentForm);
+  end;
+end;
+
+procedure TdxDockingManager.SetDockZonesWidth(const Value: Integer);
+begin
+  if FDockZonesWidth <> Value then
+  begin
+    FDockZonesWidth := Value;
+    dxDockingController.DoZonesWidthChanged(ParentForm);
+  end;
+end;
+
+procedure TdxDockingManager.SetFont(const Value: TFont);
+begin
+  FFont.Assign(Value);
+end;
+
+procedure TdxDockingManager.SetImages(const Value: TCustomImageList);
+begin
+  cxSetImageList(Value, FImages, FChangeLink, Self);
+end;
+
+procedure TdxDockingManager.SetLookAndFeel(Value: TcxLookAndFeel);
+begin
+  FLookAndFeel.Assign(Value);
+end;
+
+procedure TdxDockingManager.SetOptions(const Value: TdxDockingOptions);
+begin
+  if FOptions <> Value then
+  begin
+    FOptions := Value;
+    if not IsLoading then
+      dxDockingController.DoOptionsChanged(ParentForm);
+  end;
+end;
+
+procedure TdxDockingManager.SetResizeZonesWidth(const Value: Integer);
+begin
+  if FResizeZonesWidth <> Value then
+  begin
+    FResizeZonesWidth := Value;
+    dxDockingController.DoZonesWidthChanged(ParentForm);
+  end;
+end;
+
+
+{ TdxLayoutDockSite }
+
+constructor TdxLayoutDockSite.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  ControlStyle := ControlStyle + [csDesignInteractive];
+end;
+
+procedure TdxLayoutDockSite.BeforeDestruction;
+begin
+  if not CanDestroy then
+    raise EdxException.Create(sdxInvalidLayoutSiteDeleting);
+  inherited;
+end;
+
+function TdxLayoutDockSite.CanDockHost(AControl: TdxCustomDockControl; AType: TdxDockingType): Boolean;
+begin
+  Result := inherited CanDockHost(AControl, AType);
+  Result := Result and ((AType in [dtLeft, dtRight, dtTop, dtBottom]) or
+    ((Atype in [dtClient]) and (ChildCount = 0)));
+end;
+
+procedure TdxLayoutDockSite.SetParent(AParent: TWinControl);
+begin
+  if not IsUpdateLayoutLocked and not IsDestroying and
+    ((AParent = nil) or not (csLoading in AParent.ComponentState)) then
+    raise EdxException.Create(sdxInvalidParentAssigning)
+  else if (AParent <> nil) and not (AParent is TdxCustomDockControl) then
+    raise EdxException.CreateFmt(sdxInvalidParent, [ClassName])
+  else inherited SetParent(AParent);
+end;
+
+procedure TdxLayoutDockSite.UpdateControlDockZones(AControl: TdxCustomDockControl; AZoneWidth: Integer);
+begin
+  if (SiblingDockControl = nil) or (SiblingDockControl.DockType <> dtClient) then
+  begin
+    if not AControl.DockZones.RegisterDockZone(Self, AControl, TdxClientZone, AZoneWidth) then
+      AControl.DockZones.RegisterDockZone(Self, AControl, TdxInvisibleClientZone, AZoneWidth);
+    inherited UpdateControlDockZones(AControl, AZoneWidth);
+  end;
+end;
+
+procedure TdxLayoutDockSite.CreateLayout(AControl: TdxCustomDockControl; AType: TdxDockingType;
+  Index: Integer);
+begin
+  inherited;
+  if SiblingDockControl <> nil then
+    SiblingDockControl.UpdateRelatedControlsVisibility;
+end;
+
+procedure TdxLayoutDockSite.DestroyLayout(AControl: TdxCustomDockControl);
+begin
+  inherited;
+  if SiblingDockControl <> nil then
+    SiblingDockControl.UpdateRelatedControlsVisibility;
+end;
+
+function TdxLayoutDockSite.GetSiblingDockControl: TdxCustomDockControl;
+begin
+  if (ParentDockControl <> nil) and (ParentDockControl.ChildCount = 2) then
+    Result := ParentDockControl.Children[1 - DockIndex]
   else Result := nil;
 end;
 
-procedure TdxFloatForm.WMClose(var Message: TWMClose);
+function TdxLayoutDockSite.CanDestroy: Boolean;
 begin
-  if (DockSite <> nil) and not DockSite.IsDesigning then
-    DockSite.DoClose;
+  Result := ((ParentDockControl = nil) or ParentDockControl.IsDestroying) or
+    ((ChildCount = 0) and (ParentDockControl.ChildCount = 1));
 end;
 
-procedure TdxFloatForm.WMMove(var Message: TWMMove);
+procedure TdxLayoutDockSite.WMNCHitTest(var Message: TWMNCHitTest);
 begin
-  inherited;
-  if DockSite <> nil then
-    DockSite.UpdateFloatPosition;
+  if not Visible or (IsDesigning and not Controller.IsDocking) then
+    Message.Result := HTTRANSPARENT
+  else
+    inherited;
 end;
 
-procedure TdxFloatForm.WMSize(var Message: TWMSize);
+{ TdxTabContainerDockSite }
+
+constructor TdxTabContainerDockSite.Create(AOwner: TComponent);
 begin
-  inherited;
-  if DockSite <> nil then
-    DockSite.Modified;
+  inherited Create(AOwner);
+  FTabsProperties := TdxTabContainerDockSiteTabControlProperties.Create(Self);
+  FTabsController := TdxTabContainerDockSiteTabControlController.Create(Self);
+  FTabControlViewInfo := TdxDockingTabControlViewInfo.Create(Self);
 end;
 
-procedure TdxFloatForm.WMWindowPosChanging(var Message: TWMWindowPosChanging);
+destructor TdxTabContainerDockSite.Destroy;
+begin
+  FreeAndNil(FTabControlViewInfo);
+  FreeAndNil(FTabsController);
+  FreeAndNil(FTabsProperties);
+  inherited Destroy;
+end;
+
+procedure TdxTabContainerDockSite.Assign(Source: TPersistent);
+begin
+  if Source is TdxTabContainerDockSite then
+    TabsProperties.Assign(TdxTabContainerDockSite(Source).TabsProperties);
+  inherited Assign(Source);
+end;
+
+function TdxTabContainerDockSite.CanDrawParentBackground: Boolean;
+begin
+  Result := False;
+end;
+
+function TdxTabContainerDockSite.GetBoundsRect: TRect;
+begin
+  Result := FTabControlSuggestedBounds;
+end;
+
+function TdxTabContainerDockSite.GetCanvas: TcxCanvas;
+begin
+  Result := Canvas;
+end;
+
+function TdxTabContainerDockSite.GetColor: TColor;
+begin
+  Result := Color;
+end;
+
+function TdxTabContainerDockSite.GetControl: TWinControl;
+begin
+  Result := Self;
+end;
+
+function TdxTabContainerDockSite.GetController: TcxCustomTabControlController;
+begin
+  Result := TabsController;
+end;
+
+function TdxTabContainerDockSite.GetDragAndDropObject: TcxDragAndDropObject;
+begin
+  Result := nil;
+end;
+
+function TdxTabContainerDockSite.GetDragAndDropState: TcxDragAndDropState;
+begin
+  Result := ddsNone;
+end;
+
+function TdxTabContainerDockSite.GetFont: TFont;
+begin
+  Result := Font;
+end;
+
+function TdxTabContainerDockSite.GetLookAndFeel: TcxLookAndFeel;
+begin
+  Result := Controller.LookAndFeel(ParentForm);
+end;
+
+function TdxTabContainerDockSite.GetPainter: TcxPCCustomPainter;
+begin
+  Result := TabControlViewInfo.Painter;
+end;
+
+function TdxTabContainerDockSite.GetProperties: TcxCustomTabControlProperties;
+begin
+  Result := TabsProperties;
+end;
+
+function TdxTabContainerDockSite.GetViewInfo: TcxCustomTabControlViewInfo;
+begin
+  Result := TabControlViewInfo;
+end;
+
+procedure TdxTabContainerDockSite.InvalidateRect(const R: TRect; AEraseBackground: Boolean);
+begin
+  RedrawWindow(Handle, nil, 0, RDW_FRAME or RDW_INVALIDATE);
+end;
+
+function TdxTabContainerDockSite.IsEnabled: Boolean;
+begin
+  Result := Enabled;
+end;
+
+function TdxTabContainerDockSite.IsFocused: Boolean;
+begin
+  Result := Focused;
+end;
+
+function TdxTabContainerDockSite.IsParentBackground: Boolean;
+begin
+  Result := False;
+end;
+
+procedure TdxTabContainerDockSite.RequestLayout;
+begin
+  if not TabsController.IsUpdating then
+    NCChanged(True);
+end;
+
+procedure TdxTabContainerDockSite.SetModified;
+begin
+  Modified;
+end;
+
+procedure TdxTabContainerDockSite.ActivateChild(AChild: TdxCustomDockControl);
+begin
+  ActiveChild := AChild;
+  if ActiveChild = AChild then
+    Modified;
+end;
+
+procedure TdxTabContainerDockSite.ChildChanged(AChild: TdxCustomDockControl);
+begin
+  TabsController.TabInfoChanged(AChild);
+  inherited ChildChanged(AChild);
+end;
+
+procedure TdxTabContainerDockSite.DoActiveChildChanged(APrevActiveChild: TdxCustomDockControl);
 var
-  AWindowPos: PWindowPos;
+  AParentForm: TCustomForm;
+  AWasActive: Boolean;
 begin
-  if dxDockingController.IsApplicationDeactivating and FOnTopMost then
+  inherited DoActiveChildChanged(APrevActiveChild);
+  AParentForm := Forms.GetParentForm(Self);
+  AWasActive := (AParentForm <> nil) and (APrevActiveChild <> nil) and
+    APrevActiveChild.ContainsControl(AParentForm.ActiveControl);
+
+  if ActiveChild <> nil then
+    ActiveChild.BringToFront;
+  if (AutoHideControl = Self) and (AutoHideHostSite <> nil) then
+    AutoHideHostSite.InvalidateNC(False);
+  TabsController.UpdateActiveTabIndex;
+  InvalidateNC(False);
+  UpdateChildrenState;
+
+  if AWasActive then
   begin
-    AWindowPos := Message.WindowPos;
-    if (AWindowPos.flags and SWP_NOZORDER) = 0 then
-      AWindowPos.flags := AWindowPos.flags or SWP_NOZORDER;
+    if ActiveChild <> nil then
+      ActiveChild.DoActivate
+    else
+      AParentForm.ActiveControl := Self;
   end;
-  inherited;
 end;
 
-procedure TdxFloatForm.WMMouseActivate(var Message: TWMMouseActivate);
+procedure TdxTabContainerDockSite.UpdateActiveTab;
 begin
-  inherited;
-  if DockSite <> nil then
-    DockSite.Activate;
+  if ActiveChild <> nil then
+    Controller.ActiveDockControl := ActiveChild;
 end;
 
-procedure TdxFloatForm.WMNCLButtonDown(var Message: TWMNCLButtonDown);
+procedure TdxTabContainerDockSite.UpdateChildrenState;
+var
+  I: Integer;
 begin
-  if (Message.HitTest = HTCAPTION) and not IsIconic(Handle) and (DockSite <> nil) then
+  for I := 0 to ChildCount - 1 do
+    Children[I].UpdateState;
+end;
+
+procedure TdxTabContainerDockSite.ValidateActiveChild(AIndex: Integer);
+var
+  AActiveChild: TdxCustomDockControl;
+begin
+  if not IsValidChild(ActiveChild) then
   begin
-    SendMessage(DockSite.Handle, WM_MOUSEACTIVATE, 0, 0);
-    SetWindowPos(Handle, 0, 0, 0, 0, 0, SWP_NOZORDER or SWP_NOMOVE or SWP_NOSIZE);
-    SendMessage(Handle, WM_NCLBUTTONUP, TMessage(Message).WParam, TMessage(Message).LParam);
-    FCaptionIsDown := True;
-    FCaptionPoint := Point(Message.XCursor, Message.YCursor);
-  end
-  else inherited;
+    if (ActiveChild <> nil) and IsValidChild(ActiveChild.Container) then
+      ActiveChild := ActiveChild.Container
+    else
+      if AIndex = -1 then
+        ActiveChild := GetFirstValidChild
+      else
+      begin
+        if (AIndex >= 0) and (AIndex < ChildCount) then
+          AActiveChild := Children[AIndex]
+        else
+          AActiveChild := nil;
+
+        if not IsValidChild(AActiveChild) then
+        begin
+          AActiveChild := GetNextValidChild(AIndex);
+          if AActiveChild = nil then
+            AActiveChild := GetPrevValidChild(AIndex);
+        end;
+        ActiveChild := AActiveChild;
+      end;
+  end;
 end;
 
-procedure TdxFloatForm.WMNCLButtonUp(var Message: TWMNCLButtonUp);
+procedure TdxTabContainerDockSite.CalculateNC(var ARect: TRect);
 begin
-  FCaptionIsDown := False;
-  inherited;
+  inherited CalculateNC(ARect);
+  FTabControlSuggestedBounds := ARect;
+  TabsController.RefreshImageList;
+  TabControlViewInfo.Calculate;
+  if HasTabs then
+    ARect := TabControlViewInfo.PageClientBounds;
 end;
 
-procedure TdxFloatForm.WMNCLButtonDblClk(var Message: TWMNCMButtonDblClk);
+procedure TdxTabContainerDockSite.MouseLeave;
 begin
-  if not IsDesigning and (Message.HitTest = HTCAPTION) and not IsIconic(Handle) and
-    (DockSite <> nil) and (doDblClickDocking in DockSite.ControllerOptions)
-  then
-    DockSite.RestoreDockPosition(Point(Message.XCursor, Message.YCursor))
-  else
-    inherited;
+  inherited MouseLeave;
+  TabsController.MouseLeave;
 end;
 
-procedure TdxFloatForm.WMNCMouseMove(var Message: TWMNCMouseMove);
+procedure TdxTabContainerDockSite.NCPaint(ACanvas: TcxCanvas);
 begin
-  if FCaptionIsDown and ((FCaptionPoint.X <> Message.XCursor) or
-    (FCaptionPoint.Y <> Message.YCursor)) then
+  inherited NCPaint(ACanvas);
+  if HasTabs then
+    TabControlViewInfo.Draw(ACanvas);
+end;
+
+procedure TdxTabContainerDockSite.RefreshTabsList;
+var
+  I: Integer;
+begin
+  TabsController.BeginUpdate;
+  try
+    TabsController.Tabs.Clear;
+    for I := 0 to ChildCount - 1 do
+      TabsController.AddTab(Children[I], IsValidChild(Children[I]));
+    TabsController.UpdateActiveTabIndex;
+  finally
+    TabsController.EndUpdate;
+    NCChanged;
+  end;
+end;
+
+function TdxTabContainerDockSite.HasBorder: Boolean;
+begin
+  Result := (FloatDockSite = nil) and ((ValidChildCount > 1) or AutoHide);
+end;
+
+function TdxTabContainerDockSite.HasCaption: Boolean;
+begin
+  Result := (doTabContainerHasCaption in ControllerOptions) and ShowCaption and HasBorder;
+end;
+
+function TdxTabContainerDockSite.HasTabs: Boolean;
+begin
+  Result := not AutoHide and (ValidChildCount > 1);
+end;
+
+function TdxTabContainerDockSite.IsCaptionActive: Boolean;
+begin
+  Result := inherited IsCaptionActive or ((Controller.ActiveDockControl <> nil) and
+    (Controller.ActiveDockControl.Container = Self) and Application.Active);
+end;
+
+function TdxTabContainerDockSite.CanActive: Boolean;
+begin
+  Result := True;
+end;
+
+function TdxTabContainerDockSite.CanAutoHide: Boolean;
+begin
+  Result := IsLoading or ((AutoHideHostSite <> nil) and
+    ((AutoHideControl = nil) or (AutoHideControl = Self)));
+end;
+
+function TdxTabContainerDockSite.CanDockHost(AControl: TdxCustomDockControl; AType: TdxDockingType): Boolean;
+var
+  ACanDockHost: Boolean;
+begin
+  ACanDockHost := CanContainerDockHost(AType);
+  if Container is TdxSideContainerDockSite then
   begin
-    FCaptionIsDown := False;
-    DockSite.StartDocking(Point(Message.XCursor, Message.YCursor));
+    ACanDockHost := ACanDockHost or Container.CanContainerDockHost(AType);
+    if doSideContainerCanInSideContainer in ControllerOptions then
+      ACanDockHost := ACanDockHost or (AType in [dtLeft, dtRight, dtTop, dtBottom]);
   end
   else
-    inherited;
+    if doTabContainerCanInSideContainer in ControllerOptions then
+      ACanDockHost := ACanDockHost or (AType in [dtLeft, dtRight, dtTop, dtBottom]);
+  Result := inherited CanDockHost(AControl, AType) and ACanDockHost;
 end;
+
+function TdxTabContainerDockSite.CanMaximize: Boolean;
+begin
+  Result := not AutoHide and (SideContainer <> nil) and (SideContainer.ValidChildCount > 1);
+end;
+
+procedure TdxTabContainerDockSite.ActivateNextChild(AGoForward, AGoOnCycle: Boolean);
+var
+  AIndex, AnActiveChildIndex: Integer;
+begin
+  AnActiveChildIndex := ActiveChildIndex;
+  AIndex := AnActiveChildIndex;
+  if AIndex = -1 then
+    AIndex := 0
+  else
+    repeat
+      if AGoForward then
+      begin
+        if AIndex < ChildCount - 1 then
+          Inc(AIndex)
+        else
+          AIndex := IfThen(AGoOnCycle, 0, AnActiveChildIndex);
+      end
+      else
+      begin
+        if AIndex > 0 then
+          Dec(AIndex)
+        else
+          AIndex := IfThen(AGoOnCycle, ChildCount - 1, AnActiveChildIndex);
+      end;
+    until IsValidChild(Children[AIndex]) or (AIndex = AnActiveChildIndex);
+  ActiveChildIndex := AIndex;
+end;
+
+function TdxTabContainerDockSite.GetDesignHitTest(const APoint: TPoint; AShift: TShiftState): Boolean;
+begin
+  Result := inherited GetDesignHitTest(APoint, AShift) or PtInRect(TabsRect, ClientToWindow(APoint));
+end;
+
+function TdxTabContainerDockSite.CanResizeAtPos(pt: TPoint): Boolean;
+begin
+  Result := inherited CanResizeAtPos(pt) and (TabsController.GetTabIndexAtPoint(Pt) = -1);
+end;
+
+procedure TdxTabContainerDockSite.DefineProperties(Filer: TFiler);
+begin
+  inherited DefineProperties(Filer);
+  Filer.DefineProperty('TabsPosition', TabsProperties.ReadOldTabsPosition, nil, False);
+  Filer.DefineProperty('TabsScroll', TabsProperties.ReadOldTabsScroll, nil, False);
+end;
+
+procedure TdxTabContainerDockSite.Loaded;
+begin
+  inherited Loaded;
+  RefreshTabsList;
+end;
+
+procedure TdxTabContainerDockSite.UpdateControlDockZones(
+  AControl: TdxCustomDockControl; AZoneWidth: Integer);
+var
+  I: Integer;
+begin
+  if not (doUseCaptionAreaToClientDocking in ControllerOptions) then
+  begin
+    if TdxTabContainerZone.ValidateDockZone(Self, AControl) then
+      DockZones.RegisterZone(TdxTabContainerZone.Create(Self))
+  end;
+
+  inherited UpdateControlDockZones(AControl, AZoneWidth);
+
+  if TdxTabContainerTabZone.ValidateDockZone(Self, AControl) then
+  begin
+    if Controller.DockStyle(AControl.ParentForm) = dsVS2005 then
+      DockZones.RegisterZone(TdxTabContainerNewTabZone.Create(Self));
+    for I := 0 to ChildCount - 1 do
+    begin
+      if IsValidChild(Children[I]) then
+        DockZones.RegisterZone(TdxTabContainerTabZone.Create(Self, I));
+    end;
+  end;
+
+  if doUseCaptionAreaToClientDocking in ControllerOptions then
+  begin
+    if TdxTabContainerCaptionZone.ValidateDockZone(Self, AControl) then
+      DockZones.RegisterZone(TdxTabContainerCaptionZone.Create(Self));
+  end;
+end;
+
+procedure TdxTabContainerDockSite.CreateLayout(
+  AControl: TdxCustomDockControl; AType: TdxDockingType; Index: Integer);
+begin
+  if CanContainerDockHost(AType) then
+    inherited CreateLayout(AControl, AType, Index)
+  else
+    if (Container <> nil) and Container.CanContainerDockHost(AType) then
+      CreateContainerLayout(Container, AControl, AType, DockIndex)
+    else
+      case AType of
+        dtLeft, dtRight, dtTop, dtBottom:
+          CreateSideContainerLayout(AControl, AType, Index);
+        else
+          Assert(False, Format(sdxInternalErrorCreateLayout, [TdxTabContainerDockSite.ClassName]));
+      end;
+end;
+
+procedure TdxTabContainerDockSite.DestroyLayout(AControl: TdxCustomDockControl);
+var
+  AActiveIndex: Integer;
+begin
+  if ActiveChild <> nil then
+    AActiveIndex := ActiveChild.DockIndex
+  else
+    AActiveIndex := -1;
+
+  inherited DestroyLayout(AControl);
+  if (AControl = ActiveChild) and (ChildCount > 1) then
+    ValidateActiveChild(AActiveIndex);
+end;
+
+procedure TdxTabContainerDockSite.IncludeToDock(
+  AControl: TdxCustomDockControl; AType: TdxDockingType; Index: Integer);
+var
+  AChild: TdxCustomDockControl;
+begin
+  if AControl.CanAcceptTabContainerItems(Self) and (ChildCount > 0) then
+  begin
+    Include(FInternalState, dcisDestroying);
+    while ChildCount > 0 do
+    begin
+      AChild := Children[ChildCount - 1];
+      AChild.ExcludeFromDock;
+      AChild.IncludeToDock(AControl, AType, Index);
+    end;
+    DoDestroy;
+  end
+  else
+    inherited IncludeToDock(AControl, AType, Index);
+end;
+
+procedure TdxTabContainerDockSite.UpdateLayout;
+begin
+  inherited UpdateLayout;
+  if ActiveChild <> nil then
+    ActiveChild.BringToFront;
+  RefreshTabsList;
+end;
+
+procedure TdxTabContainerDockSite.LoadLayoutFromCustomIni(AIniFile: TCustomIniFile;
+  AParentForm: TCustomForm; AParentControl: TdxCustomDockControl; ASection: string);
+begin
+  inherited LoadLayoutFromCustomIni(AIniFile, AParentForm, AParentControl, ASection);
+  ShowCaption := AIniFile.ReadBool(ASection, 'ShowCaption', ShowCaption);
+  TabsProperties.LoadFromIniFile(AIniFile, ASection);
+end;
+
+procedure TdxTabContainerDockSite.SaveLayoutToCustomIni(AIniFile: TCustomIniFile; ASection: string);
+begin
+  inherited SaveLayoutToCustomIni(AIniFile, ASection);
+  AIniFile.WriteBool(ASection, 'ShowCaption', ShowCaption);
+  TabsProperties.SaveToIniFile(AIniFile, ASection);
+end;
+
+function TdxTabContainerDockSite.CanAcceptSideContainerItems(AContainer: TdxSideContainerDockSite): Boolean;
+begin
+  Result := not ((doSideContainerCanInTabContainer in ControllerOptions) or IsLoading);
+end;
+
+function TdxTabContainerDockSite.CanAcceptTabContainerItems(AContainer: TdxTabContainerDockSite): Boolean;
+begin
+  Result := True;
+end;
+
+procedure TdxTabContainerDockSite.ChangeAutoHide;
+begin
+  if AutoHide then
+    AutoHide := False
+  else
+    if doTabContainerCanAutoHide in ControllerOptions then
+      inherited ChangeAutoHide
+    else
+      if ActiveChild <> nil then
+        ActiveChild.ChangeAutoHide;
+end;
+
+procedure TdxTabContainerDockSite.UpdateCaption;
+var
+  ACaption: string;
+begin
+  if ActiveChild <> nil then
+    ACaption := ActiveChild.Caption
+  else
+    ACaption := '';
+
+  if Caption <> ACaption then
+    Caption := ACaption;
+  inherited UpdateCaption;
+end;
+
+procedure TdxTabContainerDockSite.DoClose;
+var
+  I: Integer;
+begin
+  if (doTabContainerCanClose in ControllerOptions) then
+  begin
+    BeginUpdateLayout;
+    try
+      for I := ChildCount - 1 downto 0 do
+      begin
+        if Children[I].Visible then
+          Children[I].DoClose;
+      end;    
+      if (AutoHideControl = Self) and (AutoHideHostSite <> nil) then
+        AutoHideHostSite.InvalidateNC(True);
+    finally
+      EndUpdateLayout;
+    end;
+  end
+  else
+    if ActiveChild <> nil then
+    begin
+      ActiveChild.DoClose;
+      if (AutoHideControl = Self) and (AutoHideHostSite <> nil) then
+        AutoHideHostSite.InvalidateNC(True);
+      UpdateActiveTab;
+    end;
+end;
+
+procedure TdxTabContainerDockSite.ChildVisibilityChanged(Sender: TdxCustomDockControl);
+begin
+  inherited ChildVisibilityChanged(Sender);
+  if (Sender = ActiveChild) and not IsValidChild(Sender) then
+    ValidateActiveChild(Sender.DockIndex);
+end;
+
+function TdxTabContainerDockSite.GetTabRectCount: Integer;
+begin
+  Result := TabControlViewInfo.Tabs.Count;
+end;
+
+function TdxTabContainerDockSite.GetTabRect(AIndex: Integer): TRect;
+begin
+  Result := TabControlViewInfo.TabBounds[AIndex];
+end;
+
+function TdxTabContainerDockSite.GetTabsRect: TRect;
+begin
+  Result := TabControlViewInfo.TabsAreaBounds;
+end;
+
+procedure TdxTabContainerDockSite.SetTabsProperties(
+  AValue: TdxTabContainerDockSiteTabControlProperties);
+begin
+  TabsProperties.Assign(AValue);
+end;
+
+procedure TdxTabContainerDockSite.WMLButtonDown(var Message: TWMLButtonDown);
+begin
+  inherited;
+  if HasTabs and (Message.Result = 0) then
+    TabsController.DoMouseDown(Message);
+end;
+
+procedure TdxTabContainerDockSite.WMLButtonUp(var Message: TWMLButtonUp);
+begin
+  inherited;
+  if HasTabs and (Message.Result = 0) then
+    TabsController.DoMouseUp(Message);
+end;
+
+procedure TdxTabContainerDockSite.WMLButtonDblClk(var Message: TWMLButtonDblClk);
+begin
+  inherited;
+  if HasTabs and (Message.Result = 0) then
+    TabsController.DoMouseDblClick(Message);
+end;
+
+procedure TdxTabContainerDockSite.WMMButtonDown(var Message: TWMMButtonDown);
+begin
+  inherited;
+  if HasTabs and (Message.Result = 0) then
+    TabsController.DoMouseDown(Message);
+end;
+
+procedure TdxTabContainerDockSite.WMMouseMove(var Message: TWMMouseMove);
+begin
+  inherited;
+  if HasTabs and (Message.Result = 0) then
+    TabsController.DoMouseMove(Message);
+end;
+
+{ TdxDockingTabControlProperties }
+
+constructor TdxDockingTabControlProperties.Create(AOwner: TPersistent);
+begin
+  inherited Create(AOwner);
+  TabPosition := tpBottom;
+end;
+
+procedure TdxDockingTabControlProperties.DoCloseTab(AIndex: Integer);
+begin
+  DoClose(AIndex);
+end;
+
+procedure TdxDockingTabControlProperties.ReadOldTabsPosition(AReader: TReader);
+const
+  TabPositionMap: array[Boolean] of TcxTabPosition = (tpBottom, tpTop);
+begin
+  TabPosition := TabPositionMap[SameText(AReader.ReadIdent, 'tctpTop')];
+end;
+
+procedure TdxDockingTabControlProperties.ReadOldTabsScroll(AReader: TReader);
+begin
+  TabsScroll := AReader.ReadBoolean;
+end;
+
+{ TdxDockingTabControlViewInfo }
+
+destructor TdxDockingTabControlViewInfo.Destroy;
+begin
+  FreeAndNil(FPainter);
+  inherited Destroy;
+end;
+
+function TdxDockingTabControlViewInfo.ClientToWindow(const P: TPoint): TPoint;
+begin
+  Result := cxPointOffset(P, BoundsRect.TopLeft);
+end;
+
+function TdxDockingTabControlViewInfo.ClientToWindowRect(const R: TRect): TRect;
+begin
+  Result := cxRectOffset(R, BoundsRect.TopLeft);
+end;
+
+function TdxDockingTabControlViewInfo.WindowToClient(const P: TPoint): TPoint;
+begin
+  Result := cxPointOffset(P, BoundsRect.TopLeft, False);
+end;
+
+function TdxDockingTabControlViewInfo.GetPainterClass: TcxPCPainterClass;
+begin
+  Result := Owner.Painter.GetTabsPainter(Properties.Style);
+  if Result = nil then
+    Result := inherited GetPainterClass;
+end;
+
+procedure TdxDockingTabControlViewInfo.Draw(ACanvas: TcxCanvas);
+var
+  APrevWindowOrg: TPoint;
+begin
+  APrevWindowOrg := ACanvas.WindowOrg;
+  try
+    ACanvas.WindowOrg := cxPointInvert(BoundsRect.TopLeft);
+    Painter.Paint(ACanvas);
+  finally
+    ACanvas.WindowOrg := APrevWindowOrg;
+  end;
+end;
+
+function TdxDockingTabControlViewInfo.HasBorders: Boolean;
+begin
+  Result := False;
+end;
+
+function TdxDockingTabControlViewInfo.GetOwner: TdxCustomDockControl;
+begin
+  Result := inherited Owner as TdxCustomDockControl;
+end;
+
+function TdxDockingTabControlViewInfo.GetPageClientBounds: TRect;
+begin
+  Result := ClientToWindowRect(PageClientRect);
+end;
+
+function TdxDockingTabControlViewInfo.GetPainter: TcxPCCustomPainter;
+var
+  ANewPainterClass: TcxPCPainterClass;
+begin
+  ANewPainterClass := GetPainterClass;
+  if (FPainter = nil) or (ANewPainterClass <> FPainter.ClassType) then
+  begin
+    FreeAndNil(FPainter);
+    FPainter := ANewPainterClass.Create(Self);
+  end;
+  Result := FPainter;
+end;
+
+function TdxDockingTabControlViewInfo.GetPopupOwner: TComponent;
+begin
+  Result := nil;
+end;
+
+function TdxDockingTabControlViewInfo.GetProperties: TdxDockingTabControlProperties;
+begin
+  Result := inherited Properties as TdxDockingTabControlProperties;
+end;
+
+function TdxDockingTabControlViewInfo.GetTabsAreaBounds: TRect;
+begin
+  Result := ClientToWindowRect(TabsAreaRect);
+end;
+
+function TdxDockingTabControlViewInfo.GetTabBounds(AIndex: Integer): TRect;
+begin
+  Result := ClientToWindowRect(Properties.Tabs[AIndex].VisibleRect);
+end;
+
+function TdxDockingTabControlViewInfo.GetTabs: TcxTabs;
+begin
+  Result := Properties.Tabs;
+end;
+
+{ TdxDockingTabControlController }
+
+constructor TdxDockingTabControlController.Create(AOwner: TObject);
+begin
+  inherited Create(AOwner);
+  Properties.OnChange := DoTabIndexChanged;
+  Properties.OnChanged := DoChanged;
+  Properties.OnClose := DoTabClose;
+  Properties.OnStyleChanged := DoStyleChanged;
+end;
+
+procedure TdxDockingTabControlController.AddTab(
+  ADockControl: TdxCustomDockControl; AVisible: Boolean);
+var
+  ATabIndex: Integer;
+begin
+  ATabIndex := Tabs.AddObject('', ADockControl);
+  RefreshTabInfo(Tabs[ATabIndex], ADockControl);
+  Tabs[ATabIndex].Visible := AVisible;
+end;
+
+procedure TdxDockingTabControlController.DoChanged(
+  Sender: TObject; AType: TcxCustomTabControlPropertiesChangedType);
+begin
+  if not IsUpdating then
+    Owner.NCChanged;
+end;
+
+procedure TdxDockingTabControlController.BeginProcessMouseEvent;
+begin
+  Inc(FProcessMouseEventCount);
+end;
+
+procedure TdxDockingTabControlController.BeginUpdate;
+begin
+  Inc(FUpdateCount);
+end;
+
+procedure TdxDockingTabControlController.EndProcessMouseEvent;
+begin
+  Dec(FProcessMouseEventCount);
+end;
+
+procedure TdxDockingTabControlController.EndUpdate;
+begin
+  Dec(FUpdateCount);
+end;
+
+procedure TdxDockingTabControlController.DoMouseDblClick(var Message: TWMLButtonDblClk);
+var
+  AControl: TdxCustomDockControl;
+  APoint: TPoint;
+  ATabIndex: Integer;
+begin
+  BeginProcessMouseEvent;
+  try
+    if (doDblClickDocking in Owner.ControllerOptions) and not (Owner.IsDesigning or Owner.AutoHide) then
+    begin
+      ATabIndex := GetTabIndexAtPoint(Owner.CursorPoint);
+      if ATabIndex >= 0 then
+      begin
+        AControl := DockControls[ATabIndex];
+        if IsDockable(AControl) then
+        begin
+          APoint := Owner.ClientToScreen(Owner.CursorPoint);
+          Owner.DoStartDocking(APoint);
+          DoUndock(APoint, AControl);
+          Owner.DoEndDocking(APoint);
+          Message.Result := 1;
+        end;
+      end;
+    end;
+  finally
+    EndProcessMouseEvent;
+  end;
+end;
+
+procedure TdxDockingTabControlController.DoMouseDown(var Message: TWMMouse);
+var
+  AButton: TMouseButton;
+  P: TPoint;
+begin
+  BeginProcessMouseEvent;
+  try
+    P := GetMappedToTabsSmallPoint(Message.Pos);
+    case Message.Msg of
+      WM_MBUTTONDOWN:
+        AButton := mbMiddle;
+      WM_RBUTTONDOWN:
+        AButton := mbRight;
+      else
+        AButton := mbLeft;
+    end;
+    MouseDown(AButton, KeysToShiftState(Message.Keys), P.X, P.Y);
+    Message.Result := 1;
+  finally
+    EndProcessMouseEvent;
+  end;
+end;
+
+procedure TdxDockingTabControlController.DoMouseMove(var Message: TWMMouseMove);
+
+  function CanStartDragDocking: Boolean;
+  begin
+    Result := (MouseDownTabVisibleIndex >= 0) and (Owner.IsDesigning and
+      (Owner.GetDraggingMouseShift > 3) or (Owner.GetDraggingMouseShift > 0) and
+      (MouseDownTabVisibleIndex <> GetVisibleTabIndexAtPoint(Owner.CursorPoint)));
+  end;
+
+var
+  AActiveChild: TdxCustomDockControl;
+  P: TPoint;
+begin
+  BeginProcessMouseEvent;
+  try
+    if Owner.FloatFormActive or Owner.ParentFormActive or Owner.IsDesigning then
+    begin
+      P := GetMappedToTabsSmallPoint(Message.Pos);
+      MouseMove(KeysToShiftState(Message.Keys), P.X, P.Y);
+      Message.Result := 1;
+
+      if CanStartDragDocking then
+      begin
+        AActiveChild := VisibleDockControls[MouseDownTabVisibleIndex];
+        MouseDownTabVisibleIndex := -1;
+        Owner.ReleaseMouse;
+        if AActiveChild <> nil then
+          AActiveChild.StartDocking(Owner.ClientToScreen(Owner.SourcePoint));
+      end;
+    end;
+  finally
+    EndProcessMouseEvent;
+  end;
+end;
+
+procedure TdxDockingTabControlController.DoMouseUp(var Message: TWMLButtonUp);
+var
+  P: TPoint;
+begin
+  BeginProcessMouseEvent;
+  try
+    P := GetMappedToTabsSmallPoint(Message.Pos);
+    MouseUp(mbLeft, KeysToShiftState(Message.Keys), P.X, P.Y);
+    Message.Result := 1;
+  finally
+    EndProcessMouseEvent;
+  end;
+end;
+
+procedure TdxDockingTabControlController.DoStyleChanged(Sender: TObject);
+begin
+  Owner.NCChanged;
+end;
+
+procedure TdxDockingTabControlController.DoTabClose(Sender: TObject; ATabIndex: Integer);
+begin
+  DockControls[ATabIndex].Close;
+end;
+
+procedure TdxDockingTabControlController.DoTabIndexChanged(Sender: TObject);
+begin
+end;
+
+procedure TdxDockingTabControlController.DoUndock(
+  const APoint: TPoint; ADockControl: TdxCustomDockControl);
+begin
+  ADockControl.MakeFloating;
+end;
+
+function TdxDockingTabControlController.IsDockable(AControl: TdxCustomDockControl): Boolean;
+begin
+  Result := (AControl <> nil) and AControl.Dockable;
+end;
+
+procedure TdxDockingTabControlController.RefreshImageList;
+begin
+  BeginUpdate;
+  try
+    Properties.Images := Owner.Controller.Images(Owner.ParentForm);
+  finally
+    EndUpdate;
+  end;
+end;
+
+procedure TdxDockingTabControlController.RefreshTabInfo(
+  ATab: TcxTab; ADockControl: TdxCustomDockControl);
+begin
+  ATab.ImageIndex := ADockControl.ImageIndex;
+  ATab.Caption := ADockControl.Caption;
+end;
+
+procedure TdxDockingTabControlController.TabDown(ATabVisibleIndex: Integer; AShift: TShiftState);
+begin
+  inherited TabDown(ATabVisibleIndex, AShift);
+  if ATabVisibleIndex >= 0 then
+    Owner.CaptureMouse;
+end;
+
+procedure TdxDockingTabControlController.TabInfoChanged(ADockControl: TdxCustomDockControl);
+var
+  AIndex: Integer;
+begin
+  AIndex := Tabs.IndexOfObject(ADockControl);
+  if AIndex >= 0 then
+    RefreshTabInfo(Tabs[AIndex], ADockControl);
+end;
+
+procedure TdxDockingTabControlController.TabUp(ATabVisibleIndex: Integer; AShift: TShiftState);
+begin
+  inherited TabUp(ATabVisibleIndex, AShift);
+  Owner.ReleaseMouse;
+end;
+
+function TdxDockingTabControlController.GetClientToScreen(const APoint: TPoint): TPoint;
+begin
+  Result := Owner.WindowToScreen(ViewInfo.ClientToWindow(APoint));
+end;
+
+function TdxDockingTabControlController.GetDockControl(Index: Integer): TdxCustomDockControl;
+begin
+  Result := Tabs.Objects[Index] as TdxCustomDockControl;
+end;
+
+function TdxDockingTabControlController.GetOwner: TdxCustomDockControl;
+begin
+  Result := inherited Owner as TdxCustomDockControl;
+end;
+
+function TdxDockingTabControlController.GetIsProcessingMouseEvent: Boolean;
+begin
+  Result := FProcessMouseEventCount > 0;
+end;
+
+function TdxDockingTabControlController.GetIsUpdating: Boolean;
+begin
+  Result := FUpdateCount > 0;
+end;
+
+function TdxDockingTabControlController.GetProperties: TdxDockingTabControlProperties;
+begin
+  Result := inherited Properties as TdxDockingTabControlProperties;
+end;
+
+function TdxDockingTabControlController.GetMappedToTabsPoint(const P: TPoint): TPoint;
+begin
+  Result := ViewInfo.WindowToClient(Owner.ClientToWindow(P));
+end;
+
+function TdxDockingTabControlController.GetMappedToTabsSmallPoint(const P: TSmallPoint): TPoint;
+begin
+  Result := GetMappedToTabsPoint(SmallPointToPoint(P));
+end;
+
+function TdxDockingTabControlController.GetScreenToClient(const APoint: TPoint): TPoint;
+begin
+  Result := ViewInfo.WindowToClient(Owner.ScreenToWindow(APoint));
+end;
+
+function TdxDockingTabControlController.GetTabIndexAtPoint(const P: TPoint): Integer;
+begin
+  Result := GetVisibleTabIndexAtPoint(P);
+  if Result >= 0 then
+    Result := Tabs.VisibleTabs[Result].Index;
+end;
+
+function TdxDockingTabControlController.GetTabs: TcxTabs;
+begin
+  Result := (Properties as TdxDockingTabControlProperties).Tabs;
+end;
+
+function TdxDockingTabControlController.GetViewInfo: TdxDockingTabControlViewInfo;
+begin
+  Result := inherited ViewInfo as TdxDockingTabControlViewInfo;
+end;
+
+function TdxDockingTabControlController.GetVisibleDockControl(Index: Integer): TdxCustomDockControl;
+begin
+  Result := Tabs.VisibleTabs[Index].Data as TdxCustomDockControl;
+end;
+
+function TdxDockingTabControlController.GetVisibleTabIndexAtPoint(const P: TPoint): Integer;
+begin
+  with GetMappedToTabsPoint(P) do
+    Result := ViewInfo.VisibleIndexOfTabAt(X, Y);
+end;
+
+{ TdxTabContainerDockSiteTabControlController }
+
+procedure TdxTabContainerDockSiteTabControlController.DoTabIndexChanged(Sender: TObject);
+begin
+  inherited DoTabIndexChanged(Sender);
+  if (Properties.TabIndex >= 0) and (Properties.TabIndex < Tabs.Count) then
+    ActiveChild := DockControls[Properties.TabIndex];
+end;
+
+procedure TdxTabContainerDockSiteTabControlController.UpdateActiveTabIndex;
+begin
+  ViewInfo.TabIndex := Tabs.IndexOfObject(Owner.ActiveChild);
+end;
+
+function TdxTabContainerDockSiteTabControlController.GetActiveChild: TdxCustomDockControl;
+begin
+  Result := Owner.ActiveChild;
+end;
+
+function TdxTabContainerDockSiteTabControlController.GetOwner: TdxTabContainerDockSite;
+begin
+  Result := inherited Owner as TdxTabContainerDockSite;
+end;
+
+procedure TdxTabContainerDockSiteTabControlController.SetActiveChild(AValue: TdxCustomDockControl);
+begin
+  if AValue <> ActiveChild then
+  begin
+    Owner.ActivateChild(AValue);
+    if ActiveChild = AValue then
+    begin
+      if IsProcessingMouseEvent then
+        Owner.Controller.ActiveDockControl := ActiveChild;
+    end;
+  end;
+end;
+
+{ TdxTabContainerDockSiteTabControlProperties }
+
+procedure TdxTabContainerDockSiteTabControlProperties.LoadFromIniFile(
+  AIniFile: TCustomIniFile; const ASection: string);
+begin
+  CloseButtonMode := TcxPCButtonMode(AIniFile.ReadInteger(ASection, 'CloseButtonMode', Ord(cbmNone)));
+  HotTrack := AIniFile.ReadBool(ASection, 'HotTrack', False);
+  ImageBorder := AIniFile.ReadInteger(ASection, 'ImageBorder', 0);
+  MultiLine := AIniFile.ReadBool(ASection, 'MultiLine', False);
+  NavigatorPosition := TcxPCNavigatorPosition(AIniFile.ReadInteger(ASection, 'NavigatorPosition', Ord(npRightTop)));
+  RaggedRight := AIniFile.ReadBool(ASection, 'RaggedRight', False);
+  Rotate := AIniFile.ReadBool(ASection, 'Rotate', False);
+  RotatedTabsMaxWidth := AIniFile.ReadInteger(ASection, 'RotatedTabsMaxWidth', 0);
+  Style := TcxPCStyleID(AIniFile.ReadInteger(ASection, 'Style', cxPCDefaultStyle));
+  TabCaptionAlignment := TAlignment(AIniFile.ReadInteger(ASection, 'TabCaptionAlignment', Ord(taCenter)));
+  TabHeight := AIniFile.ReadInteger(ASection, 'TabHeight', 0);
+  TabPosition := TcxTabPosition(AIniFile.ReadInteger(ASection, 'TabsPosition', Ord(tpBottom)));
+  TabsScroll := AIniFile.ReadBool(ASection, 'TabsScroll', True);
+  TabWidth := AIniFile.ReadInteger(ASection, 'TabWidth', 0);
+  LoadTabSlants(AIniFile, ASection);
+  LoadOptions(AIniFile, ASection);
+end;
+
+procedure TdxTabContainerDockSiteTabControlProperties.SaveToIniFile(
+  AIniFile: TCustomIniFile; const ASection: string);
+begin
+  AIniFile.WriteBool(ASection, 'HotTrack', HotTrack);
+  AIniFile.WriteBool(ASection, 'MultiLine', MultiLine);
+  AIniFile.WriteBool(ASection, 'RaggedRight', RaggedRight);
+  AIniFile.WriteBool(ASection, 'Rotate', Rotate);
+  AIniFile.WriteBool(ASection, 'TabsScroll', TabsScroll);
+  AIniFile.WriteInteger(ASection, 'CloseButtonMode', Ord(CloseButtonMode));
+  AIniFile.WriteInteger(ASection, 'ImageBorder', ImageBorder);
+  AIniFile.WriteInteger(ASection, 'NavigatorPosition', Ord(NavigatorPosition));
+  AIniFile.WriteInteger(ASection, 'RotatedTabsMaxWidth', RotatedTabsMaxWidth);
+  AIniFile.WriteInteger(ASection, 'Style', Style);
+  AIniFile.WriteInteger(ASection, 'TabCaptionAlignment', Ord(TabCaptionAlignment));
+  AIniFile.WriteInteger(ASection, 'TabHeight', TabHeight);
+  AIniFile.WriteInteger(ASection, 'TabsPosition', Ord(TabPosition));
+  AIniFile.WriteInteger(ASection, 'TabWidth', TabWidth);
+  SaveTabSlants(AIniFile, ASection);
+  SaveOptions(AIniFile, ASection);
+end;
+
+procedure TdxTabContainerDockSiteTabControlProperties.LoadOptions(
+  AIniFile: TCustomIniFile; const ASection: string);
+var
+  AOption: TcxPCOption;
+  AOptions: TcxPCOptions;
+begin
+  AOptions := [];
+  for AOption := Low(AOption) to High(AOption) do
+  begin
+    if AIniFile.ReadBool(ASection, 'Option' + dxPCOptionsNames[AOption], AOption in cxPCDefaultOptions) then
+      Include(AOptions, AOption);
+  end;
+  Options := AOptions;
+end;
+
+procedure TdxTabContainerDockSiteTabControlProperties.LoadTabSlants(
+  AIniFile: TCustomIniFile; const ASection: string);
+var
+  ATabSlantPositions: TcxTabSlantPositions;
+begin
+  ATabSlantPositions := [];
+  if AIniFile.ReadBool(ASection, 'TabSlantsLeft', spLeft in cxTabSlantDefaultPositions) then
+    Include(ATabSlantPositions, spLeft);
+  if AIniFile.ReadBool(ASection, 'TabSlantsRight', spRight in cxTabSlantDefaultPositions) then
+    Include(ATabSlantPositions, spRight);
+  TabSlants.Positions := ATabSlantPositions;
+  TabSlants.Kind := TcxTabSlantKind(AIniFile.ReadInteger(ASection, 'TabSlantsKind', Ord(skSlant)));
+end;
+
+procedure TdxTabContainerDockSiteTabControlProperties.SaveOptions(
+  AIniFile: TCustomIniFile; const ASection: string);
+var
+  AOption: TcxPCOption;
+begin
+  for AOption := Low(AOption) to High(AOption) do
+    AIniFile.WriteBool(ASection, 'Option' + dxPCOptionsNames[AOption], AOption in Options);
+end;
+
+procedure TdxTabContainerDockSiteTabControlProperties.SaveTabSlants(
+  AIniFile: TCustomIniFile; const ASection: string);
+begin
+  AIniFile.WriteBool(ASection, 'TabSlantsLeft', spLeft in TabSlants.Positions);
+  AIniFile.WriteBool(ASection, 'TabSlantsRight', spRight in TabSlants.Positions);
+  AIniFile.WriteInteger(ASection, 'TabSlantsKind', Integer(TabSlants.Kind));
+end;
+
 
 { TdxDockControlButton }
 
@@ -2966,102 +9508,167 @@ begin
       Result := cxbsNormal;
 end;
 
-{ TdxDockControlButtonsController }
 
-constructor TdxDockControlButtonsController.Create(ADockControl: TdxCustomDockControl);
+{ TdxDockingPaintersManager }
+
+constructor TdxDockingPaintersManager.Create;
 begin
   inherited Create;
-  FDockControl := ADockControl;
-  FButtonsList := TcxObjectList.Create;
+  FPainters := TList.Create;
 end;
 
-destructor TdxDockControlButtonsController.Destroy;
+destructor TdxDockingPaintersManager.Destroy;
 begin
-  FreeAndNil(FButtonsList);
+  FreeAndNil(FPainters);
   inherited Destroy;
 end;
 
-procedure TdxDockControlButtonsController.Changed;
+procedure TdxDockingPaintersManager.Changed;
 begin
-  DockControl.InvalidateCaptionArea;
+  dxDockingController.DoPainterChanged(nil, False);
 end;
 
-function TdxDockControlButtonsController.HitTest(const P: TPoint): TdxDockControlButton;
+function TdxDockingPaintersManager.Find(AStyle: TcxLookAndFeelStyle): TdxDockControlPainterClass;
 var
   I: Integer;
 begin
   Result := nil;
-  for I := 0 to ButtonsCount - 1 do
-    if Buttons[I].HitTest(P) then
+  for I := 0 to PainterClassCount - 1 do
+    if PainterClass[I].HasLookAndFeelStyle(AStyle) then
     begin
-      Result := Buttons[I];
+      Result := PainterClass[I];
       Break;
     end;
 end;
 
-procedure TdxDockControlButtonsController.MouseLeave;
+function TdxDockingPaintersManager.GetAvailablePainterClass(ALookAndFeel: TcxLookAndFeel): TdxDockControlPainterClass;
 begin
-  HotButton := nil;
+  if ALookAndFeel <> nil then
+    Result := Find(ALookAndFeel.ActiveStyle)
+  else
+    Result := nil;
+
+  if Result = nil then
+    Result := TdxDockControlPainter;
 end;
 
-procedure TdxDockControlButtonsController.MouseMove(const P: TPoint);
+procedure TdxDockingPaintersManager.Register(APainterClass: TdxDockControlPainterClass);
 begin
-  HotButton := HitTest(P);
-end;
-
-procedure TdxDockControlButtonsController.MouseDown(const P: TPoint);
-begin
-  PressedButton := HitTest(P);
-  if PressedButton <> nil then
-    PressedButton.MouseDown(P);
-end;
-
-procedure TdxDockControlButtonsController.MouseUp(const P: TPoint);
-begin
-  if PressedButton <> nil then
+  if FPainters.IndexOf(APainterClass) < 0 then
   begin
-    PressedButton.MouseUp(P);
-    PressedButton := nil;
-  end;
-end;
-
-procedure TdxDockControlButtonsController.RegisterButton(AButton: TdxDockControlButton);
-begin
-  FButtonsList.Add(AButton);
-end;
-
-procedure TdxDockControlButtonsController.UnregisterButton(AButton: TdxDockControlButton);
-begin
-  FButtonsList.Remove(AButton);
-end;
-
-function TdxDockControlButtonsController.GetButton(Index: Integer): TdxDockControlButton;
-begin
-  Result := TdxDockControlButton(FButtonsList[Index]);
-end;
-
-function TdxDockControlButtonsController.GetButtonsCount: Integer;
-begin
-  Result := FButtonsList.Count;
-end;
-
-procedure TdxDockControlButtonsController.SetHotButton(AValue: TdxDockControlButton);
-begin
-  if AValue <> FHotButton then
-  begin
-    FHotButton := AValue;
+    FPainters.Add(APainterClass);
     Changed;
   end;
 end;
 
-procedure TdxDockControlButtonsController.SetPressedButton(AValue: TdxDockControlButton);
+procedure TdxDockingPaintersManager.Unregister(APainterClass: TdxDockControlPainterClass);
 begin
-  if AValue <> FPressedButton then
+  if Self <> nil then
   begin
-    FPressedButton := AValue;
-    Changed;
+    if FPainters.Remove(APainterClass) >= 0 then
+      Changed;
   end;
 end;
+
+function TdxDockingPaintersManager.GetPainterClass(Index: Integer): TdxDockControlPainterClass;
+begin
+  Result := TdxDockControlPainterClass(FPainters[Index]);
+end;
+
+function TdxDockingPaintersManager.GetPainterClassCount: Integer;
+begin
+  Result := FPainters.Count;
+end;
+
+{ TdxHorizContainerDockSite }
+
+procedure TdxHorizContainerDockSite.UpdateControlResizeZones(AControl: TdxCustomDockControl);
+begin
+  inherited;
+  if (AControl.SideContainerItem <> nil) and (AControl.SideContainer = Self) then
+    if GetNextValidChild(AControl.SideContainerIndex) <> nil then
+    begin
+      AControl.ResizeZones.RegisterZone(TdxHorizContainerZone.Create(
+        AControl.SideContainerItem, ControllerResizeZonesWidth, zkResizing));
+    end;
+end;
+
+procedure TdxHorizContainerDockSite.UpdateControlOriginalSize(AControl: TdxCustomDockControl);
+begin
+  if (AControl = Self) or (DockType in [dtTop, dtBottom]) then
+    inherited
+  else if (DockType = dtClient) and (FloatDockSite <> nil) then
+    AControl.FOriginalHeight := FloatDockSite.Height;
+end;
+
+class function TdxHorizContainerDockSite.GetHeadDockType: TdxDockingType;
+begin
+  Result := dtLeft;
+end;
+
+class function TdxHorizContainerDockSite.GetTailDockType: TdxDockingType;
+begin
+  Result := dtRight;
+end;
+
+function TdxHorizContainerDockSite.GetContainerSize: Integer;
+begin
+  if HandleAllocated and (ClientWidth > 0) then
+    Result := ClientWidth
+  else Result := Width;
+end;
+
+function TdxHorizContainerDockSite.GetDimension(AWidth, AHeight: Integer): Integer;
+begin
+  Result := AWidth;
+end;
+
+function TdxHorizContainerDockSite.GetMinSize(Index: Integer): Integer;
+begin
+  Result := Children[Index].GetMinimizedWidth;
+end;
+
+function TdxHorizContainerDockSite.GetOriginalSize(Index: Integer): Integer;
+begin
+  Result := Children[Index].OriginalWidth;
+end;
+
+function TdxHorizContainerDockSite.GetSize(Index: Integer): Integer;
+begin
+  Result := Children[Index].Width;
+end;
+
+function TdxHorizContainerDockSite.GetPosition(Index: Integer): Integer;
+begin
+  Result := Children[Index].Left;
+end;
+
+procedure TdxHorizContainerDockSite.SetDimension(var AWidth, AHeight: Integer; AValue: Integer);
+begin
+  AWidth := AValue;
+end;
+
+procedure TdxHorizContainerDockSite.SetOriginalSize(Index: Integer;
+  const Value: Integer);
+var
+  I: Integer;
+begin
+  Children[Index].FOriginalWidth := Value;
+  if Children[Index] is TdxTabContainerDockSite then
+    for I := 0 to Children[Index].ChildCount - 1 do
+      Children[Index].Children[I].FOriginalWidth := Value;
+end;
+
+procedure TdxHorizContainerDockSite.SetSize(Index: Integer; const Value: Integer);
+begin
+  Children[Index].Width := Value;
+end;
+
+procedure TdxHorizContainerDockSite.SetPosition(Index: Integer; const Value: Integer);
+begin
+  Children[Index].Left := Value;
+end;
+
 
 { TdxCustomDockControl }
 
@@ -4557,7 +11164,7 @@ begin
       else
       begin
         AutoHideHostSite.UnregisterAutoHideDockControl(Self);
-        //Activate;
+//!!        Activate;
       end;
       UpdateResizeZones;
       UpdateDockZones;
@@ -6347,2522 +12954,6 @@ begin
   end;
 end;
 
-{ TdxLayoutDockSite }
-
-constructor TdxLayoutDockSite.Create(AOwner: TComponent);
-begin
-  inherited Create(AOwner);
-  ControlStyle := ControlStyle + [csDesignInteractive];
-end;
-
-procedure TdxLayoutDockSite.BeforeDestruction;
-begin
-  if not CanDestroy then
-    raise EdxException.Create(sdxInvalidLayoutSiteDeleting);
-  inherited;
-end;
-
-function TdxLayoutDockSite.CanDockHost(AControl: TdxCustomDockControl; AType: TdxDockingType): Boolean;
-begin
-  Result := inherited CanDockHost(AControl, AType);
-  Result := Result and ((AType in [dtLeft, dtRight, dtTop, dtBottom]) or
-    ((Atype in [dtClient]) and (ChildCount = 0)));
-end;
-
-procedure TdxLayoutDockSite.SetParent(AParent: TWinControl);
-begin
-  if not IsUpdateLayoutLocked and not IsDestroying and
-    ((AParent = nil) or not (csLoading in AParent.ComponentState)) then
-    raise EdxException.Create(sdxInvalidParentAssigning)
-  else if (AParent <> nil) and not (AParent is TdxCustomDockControl) then
-    raise EdxException.CreateFmt(sdxInvalidParent, [ClassName])
-  else inherited SetParent(AParent);
-end;
-
-procedure TdxLayoutDockSite.UpdateControlDockZones(AControl: TdxCustomDockControl; AZoneWidth: Integer);
-begin
-  if (SiblingDockControl = nil) or (SiblingDockControl.DockType <> dtClient) then
-  begin
-    if not AControl.DockZones.RegisterDockZone(Self, AControl, TdxClientZone, AZoneWidth) then
-      AControl.DockZones.RegisterDockZone(Self, AControl, TdxInvisibleClientZone, AZoneWidth);
-    inherited UpdateControlDockZones(AControl, AZoneWidth);
-  end;
-end;
-
-procedure TdxLayoutDockSite.CreateLayout(AControl: TdxCustomDockControl; AType: TdxDockingType;
-  Index: Integer);
-begin
-  inherited;
-  if SiblingDockControl <> nil then
-    SiblingDockControl.UpdateRelatedControlsVisibility;
-end;
-
-procedure TdxLayoutDockSite.DestroyLayout(AControl: TdxCustomDockControl);
-begin
-  inherited;
-  if SiblingDockControl <> nil then
-    SiblingDockControl.UpdateRelatedControlsVisibility;
-end;
-
-function TdxLayoutDockSite.GetSiblingDockControl: TdxCustomDockControl;
-begin
-  if (ParentDockControl <> nil) and (ParentDockControl.ChildCount = 2) then
-    Result := ParentDockControl.Children[1 - DockIndex]
-  else Result := nil;
-end;
-
-function TdxLayoutDockSite.CanDestroy: Boolean;
-begin
-  Result := ((ParentDockControl = nil) or ParentDockControl.IsDestroying) or
-    ((ChildCount = 0) and (ParentDockControl.ChildCount = 1));
-end;
-
-procedure TdxLayoutDockSite.WMNCHitTest(var Message: TWMNCHitTest);
-begin
-  if not Visible or (IsDesigning and not Controller.IsDocking) then
-    Message.Result := HTTRANSPARENT
-  else
-    inherited;
-end;
-
-{ TdxContainerDockSite }
-
-constructor TdxContainerDockSite.Create(AOwner: TComponent);
-begin
-  inherited;
-  UseDoubleBuffer := True;
-end;
-
-function TdxContainerDockSite.CanDock: Boolean;
-begin
-  Result := True;
-end;
-
-function TdxContainerDockSite.CanDockHost(AControl: TdxCustomDockControl; AType: TdxDockingType): Boolean;
-begin
-  Result := inherited CanDockHost(AControl, AType);
-end;
-
-function TdxContainerDockSite.CanContainerDockHost(AType: TdxDockingType): Boolean;
-begin
-  Result := (AType = GetHeadDockType) or (AType = GetTailDockType);
-end;
-
-function TdxContainerDockSite.GetControlAutoHidePosition(AControl: TdxCustomDockControl): TdxAutoHidePosition;
-begin
-  Result := inherited GetControlAutoHidePosition(Self);
-end;
-
-procedure TdxContainerDockSite.ChildVisibilityChanged(Sender: TdxCustomDockControl);
-begin
-  if disManagerChanged in Controller.FInternalState then Exit;
-  Visible := (ValidChildCount > 0) and not (AutoHide and not Visible);
-end;
-
-procedure TdxContainerDockSite.Loaded;
-begin
-  inherited;
-  SetActiveChildByIndex(FActiveChildIndex)
-end;
-
-procedure TdxContainerDockSite.SetParent(AParent: TWinControl);
-begin
-  if not IsUpdateLayoutLocked and not IsDestroying and
-    ((AParent = nil) or not (csLoading in AParent.ComponentState)) then
-    raise EdxException.Create(sdxInvalidParentAssigning)
-  else if (AParent <> nil) and not ((AParent is TdxCustomDockControl) or
-    (AutoHide and (AParent is TdxDockSiteAutoHideContainer))) then
-    raise EdxException.CreateFmt(sdxInvalidParent, [ClassName])
-  else inherited SetParent(AParent);
-end;
-
-procedure TdxContainerDockSite.CreateLayout(AControl: TdxCustomDockControl;
-  AType: TdxDockingType; Index: Integer);
-begin
-  if CanContainerDockHost(AType) then
-    AControl.IncludeToDock(Self, AType, Index)
-  else Assert(False, Format(sdxInternalErrorCreateLayout, [TdxContainerDockSite.ClassName]));
-end;
-
-procedure TdxContainerDockSite.DestroyChildLayout;
-var
-  ADockIndex: Integer;
-  AAutoHide, AActive: Boolean;
-  AParentControl, ASite: TdxCustomDockControl;
-begin
-  Include(FInternalState, dcisDestroying);
-  ADockIndex := DockIndex;
-  AParentControl := ParentDockControl;
-  if AutoHide then
-  begin
-    AAutoHide := True;
-    AutoHide := False;
-  end
-  else
-    AAutoHide := False;
-  AActive := (Container <> nil) and (Container.ActiveChild = Self);
-  ASite := Children[0];
-  ASite.ExcludeFromDock;
-  ExcludeFromDock;
-  ASite.SetDockType(dtClient);
-  ASite.AdjustControlBounds(Self);
-  ASite.IncludeToDock(AParentControl, DockType, ADockIndex);
-  if (ASite.Container <> nil) and AActive then
-    ASite.Container.ActiveChild := ASite;
-  if AAutoHide then
-    ASite.AutoHide := True;
-  DoDestroy;
-end;
-
-procedure TdxContainerDockSite.DestroyLayout(AControl: TdxCustomDockControl);
-var
-  AParentControl: TdxCustomDockControl;
-begin
-  AParentControl := ParentDockControl;
-  AParentControl.BeginUpdateLayout;
-  try
-    AControl.ExcludeFromDock;
-    if ChildCount = 1 then // !!!
-      DestroyChildLayout
-    else
-      Assert(ChildCount > 0, Format(sdxInternalErrorDestroyLayout, [ClassName]));
-  finally
-    AParentControl.EndUpdateLayout;
-  end;
-end;
-
-procedure TdxContainerDockSite.UpdateLayout;
-begin
-  inherited;
-  ValidateActiveChild(-1);
-end;
-
-procedure TdxContainerDockSite.LoadLayoutFromCustomIni(AIniFile: TCustomIniFile;
-  AParentForm: TCustomForm; AParentControl: TdxCustomDockControl; ASection: string);
-begin
-  BeginAdjustBounds;
-  try
-    inherited;
-    ActiveChildIndex := AIniFile.ReadInteger(ASection, 'ActiveChildIndex', -1);
-  finally
-    EndAdjustBounds;
-  end;
-end;
-
-procedure TdxContainerDockSite.SaveLayoutToCustomIni(AIniFile: TCustomIniFile;
-  ASection: string);
-begin
-  inherited;
-  with AIniFile do
-    WriteInteger(ASection, 'ActiveChildIndex', ActiveChildIndex);
-end;
-
-procedure TdxContainerDockSite.BeginAdjustBounds;
-begin
-  DisableAlign;
-end;
-
-procedure TdxContainerDockSite.EndAdjustBounds;
-begin
-  EnableAlign;
-end;
-
-procedure TdxContainerDockSite.DoActiveChildChanged(APrevActiveChild: TdxCustomDockControl);
-begin
-  ValidateActiveChild(-1);
-  UpdateCaption;
-end;
-
-class function TdxContainerDockSite.GetHeadDockType: TdxDockingType;
-begin
-  Result := dtClient;
-end;
-
-class function TdxContainerDockSite.GetTailDockType: TdxDockingType;
-begin
-  Result := dtClient;
-end;
-
-function TdxContainerDockSite.GetFirstValidChild: TdxCustomDockControl;
-var
-  I: Integer;
-begin
-  Result := nil;
-  for I := 0 to ChildCount - 1 do
-    if IsValidChild(Children[I]) then
-    begin
-      Result := Children[I];
-      break;
-    end;
-end;
-
-function TdxContainerDockSite.GetFirstValidChildIndex: Integer;
-var
-  AControl: TdxCustomDockControl;
-begin
-  AControl := GetFirstValidChild;
-  if AControl <> nil then
-    Result := AControl.DockIndex
-  else Result := -1;
-end;
-
-function TdxContainerDockSite.GetLastValidChild: TdxCustomDockControl;
-var
-  I: Integer;
-begin
-  Result := nil;
-  for I := ChildCount - 1 downto 0 do
-    if IsValidChild(Children[I]) then
-    begin
-      Result := Children[I];
-      break;
-    end;
-end;
-
-function TdxContainerDockSite.GetLastValidChildIndex: Integer;
-var
-  AControl: TdxCustomDockControl;
-begin
-  AControl := GetLastValidChild;
-  if AControl <> nil then
-    Result := AControl.DockIndex
-  else Result := -1;
-end;
-
-function TdxContainerDockSite.GetNextValidChild(AIndex: Integer): TdxCustomDockControl;
-var
-  I: Integer;
-begin
-  Result := nil;
-  for I := AIndex + 1 to ChildCount - 1 do
-    if IsValidChild(Children[I]) then
-    begin
-      Result := Children[I];
-      break;
-    end;
-end;
-
-function TdxContainerDockSite.GetNextValidChildIndex(AIndex: Integer): Integer;
-var
-  AControl: TdxCustomDockControl;
-begin
-  AControl := GetNextValidChild(AIndex);
-  if AControl <> nil then
-    Result := AControl.DockIndex
-  else Result := -1;
-end;
-
-function TdxContainerDockSite.GetPrevValidChild(AIndex: Integer): TdxCustomDockControl;
-var
-  I: Integer;
-begin
-  Result := nil;
-  for I := AIndex - 1 downto 0  do
-    if IsValidChild(Children[I]) then
-    begin
-      Result := Children[I];
-      break;
-    end;
-end;
-
-function TdxContainerDockSite.GetPrevValidChildIndex(AIndex: Integer): Integer;
-var
-  AControl: TdxCustomDockControl;
-begin
-  AControl := GetPrevValidChild(AIndex);
-  if AControl <> nil then
-    Result := AControl.DockIndex
-  else Result := -1;
-end;
-
-function TdxContainerDockSite.IsValidActiveChild(AControl: TdxCustomDockControl): Boolean;
-begin
-  Result := IsValidChild(AControl);
-end;
-
-procedure TdxContainerDockSite.ValidateActiveChild(AIndex: Integer);
-begin
-end;
-
-function TdxContainerDockSite.GetActiveChildIndex: Integer;
-begin
-  if IsLoading then
-    Result := FActiveChildIndex
-  else
-    if ActiveChild <> nil then
-      Result := ActiveChild.DockIndex
-    else
-      Result := -1;
-end;
-
-procedure TdxContainerDockSite.SetActiveChildByIndex(AIndex: Integer);
-begin
-  if (0 <= AIndex) and (AIndex < ChildCount) then
-    ActiveChild := Children[AIndex]
-  else
-    ActiveChild := nil;
-end;
-
-procedure TdxContainerDockSite.SetActiveChild(Value: TdxCustomDockControl);
-var
-  APrevActiveChild: TdxCustomDockControl;
-begin
-  if (FActiveChild <> Value) and ((Value = nil) or IsValidActiveChild(Value)) then
-  begin
-    BeginUpdateNC;
-    try
-      APrevActiveChild := FActiveChild;
-      FActiveChild := Value;
-      DoActiveChildChanged(APrevActiveChild);
-      if Assigned(FOnActiveChildChanged) then
-        FOnActiveChildChanged(Self, FActiveChild);
-    finally
-      EndUpdateNC;
-    end;
-    Modified;
-  end;
-end;
-
-procedure TdxContainerDockSite.SetActiveChildIndex(Value: Integer);
-begin
-  if IsLoading then
-    FActiveChildIndex := Value
-  else
-    SetActiveChildByIndex(Value);
-end;
-
-{ TdxTabContainerDockSite }
-
-constructor TdxTabContainerDockSite.Create(AOwner: TComponent);
-begin
-  inherited Create(AOwner);
-  FTabsProperties := TdxTabContainerDockSiteTabControlProperties.Create(Self);
-  FTabsController := TdxTabContainerDockSiteTabControlController.Create(Self);
-  FTabControlViewInfo := TdxDockingTabControlViewInfo.Create(Self);
-end;
-
-destructor TdxTabContainerDockSite.Destroy;
-begin
-  FreeAndNil(FTabControlViewInfo);
-  FreeAndNil(FTabsController);
-  FreeAndNil(FTabsProperties);
-  inherited Destroy;
-end;
-
-procedure TdxTabContainerDockSite.Assign(Source: TPersistent);
-begin
-  if Source is TdxTabContainerDockSite then
-    TabsProperties.Assign(TdxTabContainerDockSite(Source).TabsProperties);
-  inherited Assign(Source);
-end;
-
-function TdxTabContainerDockSite.CanDrawParentBackground: Boolean;
-begin
-  Result := False;
-end;
-
-function TdxTabContainerDockSite.GetBoundsRect: TRect;
-begin
-  Result := FTabControlSuggestedBounds;
-end;
-
-function TdxTabContainerDockSite.GetCanvas: TcxCanvas;
-begin
-  Result := Canvas;
-end;
-
-function TdxTabContainerDockSite.GetColor: TColor;
-begin
-  Result := Color;
-end;
-
-function TdxTabContainerDockSite.GetControl: TWinControl;
-begin
-  Result := Self;
-end;
-
-function TdxTabContainerDockSite.GetController: TcxCustomTabControlController;
-begin
-  Result := TabsController;
-end;
-
-function TdxTabContainerDockSite.GetDragAndDropObject: TcxDragAndDropObject;
-begin
-  Result := nil;
-end;
-
-function TdxTabContainerDockSite.GetDragAndDropState: TcxDragAndDropState;
-begin
-  Result := ddsNone;
-end;
-
-function TdxTabContainerDockSite.GetFont: TFont;
-begin
-  Result := Font;
-end;
-
-function TdxTabContainerDockSite.GetLookAndFeel: TcxLookAndFeel;
-begin
-  Result := Controller.LookAndFeel(ParentForm);
-end;
-
-function TdxTabContainerDockSite.GetPainter: TcxPCCustomPainter;
-begin
-  Result := TabControlViewInfo.Painter;
-end;
-
-function TdxTabContainerDockSite.GetProperties: TcxCustomTabControlProperties;
-begin
-  Result := TabsProperties;
-end;
-
-function TdxTabContainerDockSite.GetViewInfo: TcxCustomTabControlViewInfo;
-begin
-  Result := TabControlViewInfo;
-end;
-
-procedure TdxTabContainerDockSite.InvalidateRect(const R: TRect; AEraseBackground: Boolean);
-begin
-  RedrawWindow(Handle, nil, 0, RDW_FRAME or RDW_INVALIDATE);
-end;
-
-function TdxTabContainerDockSite.IsEnabled: Boolean;
-begin
-  Result := Enabled;
-end;
-
-function TdxTabContainerDockSite.IsFocused: Boolean;
-begin
-  Result := Focused;
-end;
-
-function TdxTabContainerDockSite.IsParentBackground: Boolean;
-begin
-  Result := False;
-end;
-
-procedure TdxTabContainerDockSite.RequestLayout;
-begin
-  if not TabsController.IsUpdating then
-    NCChanged(True);
-end;
-
-procedure TdxTabContainerDockSite.SetModified;
-begin
-  Modified;
-end;
-
-procedure TdxTabContainerDockSite.ActivateChild(AChild: TdxCustomDockControl);
-begin
-  ActiveChild := AChild;
-  if ActiveChild = AChild then
-    Modified;
-end;
-
-procedure TdxTabContainerDockSite.ChildChanged(AChild: TdxCustomDockControl);
-begin
-  TabsController.TabInfoChanged(AChild);
-  inherited ChildChanged(AChild);
-end;
-
-procedure TdxTabContainerDockSite.DoActiveChildChanged(APrevActiveChild: TdxCustomDockControl);
-var
-  AParentForm: TCustomForm;
-  AWasActive: Boolean;
-begin
-  inherited DoActiveChildChanged(APrevActiveChild);
-  AParentForm := Forms.GetParentForm(Self);
-  AWasActive := (AParentForm <> nil) and (APrevActiveChild <> nil) and
-    APrevActiveChild.ContainsControl(AParentForm.ActiveControl);
-
-  if ActiveChild <> nil then
-    ActiveChild.BringToFront;
-  if (AutoHideControl = Self) and (AutoHideHostSite <> nil) then
-    AutoHideHostSite.InvalidateNC(False);
-  TabsController.UpdateActiveTabIndex;
-  InvalidateNC(False);
-  UpdateChildrenState;
-
-  if AWasActive then
-  begin
-    if ActiveChild <> nil then
-      ActiveChild.DoActivate
-    else
-      AParentForm.ActiveControl := Self;
-  end;
-end;
-
-procedure TdxTabContainerDockSite.UpdateActiveTab;
-begin
-  if ActiveChild <> nil then
-    Controller.ActiveDockControl := ActiveChild;
-end;
-
-procedure TdxTabContainerDockSite.UpdateChildrenState;
-var
-  I: Integer;
-begin
-  for I := 0 to ChildCount - 1 do
-    Children[I].UpdateState;
-end;
-
-procedure TdxTabContainerDockSite.ValidateActiveChild(AIndex: Integer);
-var
-  AActiveChild: TdxCustomDockControl;
-begin
-  if not IsValidChild(ActiveChild) then
-  begin
-    if (ActiveChild <> nil) and IsValidChild(ActiveChild.Container) then
-      ActiveChild := ActiveChild.Container
-    else
-      if AIndex = -1 then
-        ActiveChild := GetFirstValidChild
-      else
-      begin
-        if (AIndex >= 0) and (AIndex < ChildCount) then
-          AActiveChild := Children[AIndex]
-        else
-          AActiveChild := nil;
-
-        if not IsValidChild(AActiveChild) then
-        begin
-          AActiveChild := GetNextValidChild(AIndex);
-          if AActiveChild = nil then
-            AActiveChild := GetPrevValidChild(AIndex);
-        end;
-        ActiveChild := AActiveChild;
-      end;
-  end;
-end;
-
-procedure TdxTabContainerDockSite.CalculateNC(var ARect: TRect);
-begin
-  inherited CalculateNC(ARect);
-  FTabControlSuggestedBounds := ARect;
-  TabsController.RefreshImageList;
-  TabControlViewInfo.Calculate;
-  if HasTabs then
-    ARect := TabControlViewInfo.PageClientBounds;
-end;
-
-procedure TdxTabContainerDockSite.MouseLeave;
-begin
-  inherited MouseLeave;
-  TabsController.MouseLeave;
-end;
-
-procedure TdxTabContainerDockSite.NCPaint(ACanvas: TcxCanvas);
-begin
-  inherited NCPaint(ACanvas);
-  if HasTabs then
-    TabControlViewInfo.Draw(ACanvas);
-end;
-
-procedure TdxTabContainerDockSite.RefreshTabsList;
-var
-  I: Integer;
-begin
-  TabsController.BeginUpdate;
-  try
-    TabsController.Tabs.Clear;
-    for I := 0 to ChildCount - 1 do
-      TabsController.AddTab(Children[I], IsValidChild(Children[I]));
-    TabsController.UpdateActiveTabIndex;
-  finally
-    TabsController.EndUpdate;
-    NCChanged;
-  end;
-end;
-
-function TdxTabContainerDockSite.HasBorder: Boolean;
-begin
-  Result := (FloatDockSite = nil) and ((ValidChildCount > 1) or AutoHide);
-end;
-
-function TdxTabContainerDockSite.HasCaption: Boolean;
-begin
-  Result := (doTabContainerHasCaption in ControllerOptions) and ShowCaption and HasBorder;
-end;
-
-function TdxTabContainerDockSite.HasTabs: Boolean;
-begin
-  Result := not AutoHide and (ValidChildCount > 1);
-end;
-
-function TdxTabContainerDockSite.IsCaptionActive: Boolean;
-begin
-  Result := inherited IsCaptionActive or ((Controller.ActiveDockControl <> nil) and
-    (Controller.ActiveDockControl.Container = Self) and Application.Active);
-end;
-
-function TdxTabContainerDockSite.CanActive: Boolean;
-begin
-  Result := True;
-end;
-
-function TdxTabContainerDockSite.CanAutoHide: Boolean;
-begin
-  Result := IsLoading or ((AutoHideHostSite <> nil) and
-    ((AutoHideControl = nil) or (AutoHideControl = Self)));
-end;
-
-function TdxTabContainerDockSite.CanDockHost(AControl: TdxCustomDockControl; AType: TdxDockingType): Boolean;
-var
-  ACanDockHost: Boolean;
-begin
-  ACanDockHost := CanContainerDockHost(AType);
-  if Container is TdxSideContainerDockSite then
-  begin
-    ACanDockHost := ACanDockHost or Container.CanContainerDockHost(AType);
-    if doSideContainerCanInSideContainer in ControllerOptions then
-      ACanDockHost := ACanDockHost or (AType in [dtLeft, dtRight, dtTop, dtBottom]);
-  end
-  else
-    if doTabContainerCanInSideContainer in ControllerOptions then
-      ACanDockHost := ACanDockHost or (AType in [dtLeft, dtRight, dtTop, dtBottom]);
-  Result := inherited CanDockHost(AControl, AType) and ACanDockHost;
-end;
-
-function TdxTabContainerDockSite.CanMaximize: Boolean;
-begin
-  Result := not AutoHide and (SideContainer <> nil) and (SideContainer.ValidChildCount > 1);
-end;
-
-procedure TdxTabContainerDockSite.ActivateNextChild(AGoForward, AGoOnCycle: Boolean);
-var
-  AIndex, AnActiveChildIndex: Integer;
-begin
-  AnActiveChildIndex := ActiveChildIndex;
-  AIndex := AnActiveChildIndex;
-  if AIndex = -1 then
-    AIndex := 0
-  else
-    repeat
-      if AGoForward then
-      begin
-        if AIndex < ChildCount - 1 then
-          Inc(AIndex)
-        else
-          AIndex := IfThen(AGoOnCycle, 0, AnActiveChildIndex);
-      end
-      else
-      begin
-        if AIndex > 0 then
-          Dec(AIndex)
-        else
-          AIndex := IfThen(AGoOnCycle, ChildCount - 1, AnActiveChildIndex);
-      end;
-    until IsValidChild(Children[AIndex]) or (AIndex = AnActiveChildIndex);
-  ActiveChildIndex := AIndex;
-end;
-
-function TdxTabContainerDockSite.GetDesignHitTest(const APoint: TPoint; AShift: TShiftState): Boolean;
-begin
-  Result := inherited GetDesignHitTest(APoint, AShift) or PtInRect(TabsRect, ClientToWindow(APoint));
-end;
-
-function TdxTabContainerDockSite.CanResizeAtPos(pt: TPoint): Boolean;
-begin
-  Result := inherited CanResizeAtPos(pt) and (TabsController.GetTabIndexAtPoint(Pt) = -1);
-end;
-
-procedure TdxTabContainerDockSite.DefineProperties(Filer: TFiler);
-begin
-  inherited DefineProperties(Filer);
-  Filer.DefineProperty('TabsPosition', TabsProperties.ReadOldTabsPosition, nil, False);
-  Filer.DefineProperty('TabsScroll', TabsProperties.ReadOldTabsScroll, nil, False);
-end;
-
-procedure TdxTabContainerDockSite.Loaded;
-begin
-  inherited Loaded;
-  RefreshTabsList;
-end;
-
-procedure TdxTabContainerDockSite.UpdateControlDockZones(
-  AControl: TdxCustomDockControl; AZoneWidth: Integer);
-var
-  I: Integer;
-begin
-  if not (doUseCaptionAreaToClientDocking in ControllerOptions) then
-  begin
-    if TdxTabContainerZone.ValidateDockZone(Self, AControl) then
-      DockZones.RegisterZone(TdxTabContainerZone.Create(Self))
-  end;
-
-  inherited UpdateControlDockZones(AControl, AZoneWidth);
-
-  if TdxTabContainerTabZone.ValidateDockZone(Self, AControl) then
-  begin
-    if Controller.DockStyle(AControl.ParentForm) = dsVS2005 then
-      DockZones.RegisterZone(TdxTabContainerNewTabZone.Create(Self));
-    for I := 0 to ChildCount - 1 do
-    begin
-      if IsValidChild(Children[I]) then
-        DockZones.RegisterZone(TdxTabContainerTabZone.Create(Self, I));
-    end;
-  end;
-
-  if doUseCaptionAreaToClientDocking in ControllerOptions then
-  begin
-    if TdxTabContainerCaptionZone.ValidateDockZone(Self, AControl) then
-      DockZones.RegisterZone(TdxTabContainerCaptionZone.Create(Self));
-  end;
-end;
-
-procedure TdxTabContainerDockSite.CreateLayout(
-  AControl: TdxCustomDockControl; AType: TdxDockingType; Index: Integer);
-begin
-  if CanContainerDockHost(AType) then
-    inherited CreateLayout(AControl, AType, Index)
-  else
-    if (Container <> nil) and Container.CanContainerDockHost(AType) then
-      CreateContainerLayout(Container, AControl, AType, DockIndex)
-    else
-      case AType of
-        dtLeft, dtRight, dtTop, dtBottom:
-          CreateSideContainerLayout(AControl, AType, Index);
-        else
-          Assert(False, Format(sdxInternalErrorCreateLayout, [TdxTabContainerDockSite.ClassName]));
-      end;
-end;
-
-procedure TdxTabContainerDockSite.DestroyLayout(AControl: TdxCustomDockControl);
-var
-  AActiveIndex: Integer;
-begin
-  if ActiveChild <> nil then
-    AActiveIndex := ActiveChild.DockIndex
-  else
-    AActiveIndex := -1;
-
-  inherited DestroyLayout(AControl);
-  if (AControl = ActiveChild) and (ChildCount > 1) then
-    ValidateActiveChild(AActiveIndex);
-end;
-
-procedure TdxTabContainerDockSite.IncludeToDock(
-  AControl: TdxCustomDockControl; AType: TdxDockingType; Index: Integer);
-var
-  AChild: TdxCustomDockControl;
-begin
-  if AControl.CanAcceptTabContainerItems(Self) and (ChildCount > 0) then
-  begin
-    Include(FInternalState, dcisDestroying);
-    while ChildCount > 0 do
-    begin
-      AChild := Children[ChildCount - 1];
-      AChild.ExcludeFromDock;
-      AChild.IncludeToDock(AControl, AType, Index);
-    end;
-    DoDestroy;
-  end
-  else
-    inherited IncludeToDock(AControl, AType, Index);
-end;
-
-procedure TdxTabContainerDockSite.UpdateLayout;
-begin
-  inherited UpdateLayout;
-  if ActiveChild <> nil then
-    ActiveChild.BringToFront;
-  RefreshTabsList;
-end;
-
-procedure TdxTabContainerDockSite.LoadLayoutFromCustomIni(AIniFile: TCustomIniFile;
-  AParentForm: TCustomForm; AParentControl: TdxCustomDockControl; ASection: string);
-begin
-  inherited LoadLayoutFromCustomIni(AIniFile, AParentForm, AParentControl, ASection);
-  ShowCaption := AIniFile.ReadBool(ASection, 'ShowCaption', ShowCaption);
-  TabsProperties.LoadFromIniFile(AIniFile, ASection);
-end;
-
-procedure TdxTabContainerDockSite.SaveLayoutToCustomIni(AIniFile: TCustomIniFile; ASection: string);
-begin
-  inherited SaveLayoutToCustomIni(AIniFile, ASection);
-  AIniFile.WriteBool(ASection, 'ShowCaption', ShowCaption);
-  TabsProperties.SaveToIniFile(AIniFile, ASection);
-end;
-
-function TdxTabContainerDockSite.CanAcceptSideContainerItems(AContainer: TdxSideContainerDockSite): Boolean;
-begin
-  Result := not ((doSideContainerCanInTabContainer in ControllerOptions) or IsLoading);
-end;
-
-function TdxTabContainerDockSite.CanAcceptTabContainerItems(AContainer: TdxTabContainerDockSite): Boolean;
-begin
-  Result := True;
-end;
-
-procedure TdxTabContainerDockSite.ChangeAutoHide;
-begin
-  if AutoHide then
-    AutoHide := False
-  else
-    if doTabContainerCanAutoHide in ControllerOptions then
-      inherited ChangeAutoHide
-    else
-      if ActiveChild <> nil then
-        ActiveChild.ChangeAutoHide;
-end;
-
-procedure TdxTabContainerDockSite.UpdateCaption;
-var
-  ACaption: string;
-begin
-  if ActiveChild <> nil then
-    ACaption := ActiveChild.Caption
-  else
-    ACaption := '';
-
-  if Caption <> ACaption then
-    Caption := ACaption;
-  inherited UpdateCaption;
-end;
-
-procedure TdxTabContainerDockSite.DoClose;
-var
-  I: Integer;
-begin
-  if (doTabContainerCanClose in ControllerOptions) then
-  begin
-    BeginUpdateLayout;
-    try
-      for I := ChildCount - 1 downto 0 do
-      begin
-        if Children[I].Visible then
-          Children[I].DoClose;
-      end;    
-      if (AutoHideControl = Self) and (AutoHideHostSite <> nil) then
-        AutoHideHostSite.InvalidateNC(True);
-    finally
-      EndUpdateLayout;
-    end;
-  end
-  else
-    if ActiveChild <> nil then
-    begin
-      ActiveChild.DoClose;
-      if (AutoHideControl = Self) and (AutoHideHostSite <> nil) then
-        AutoHideHostSite.InvalidateNC(True);
-      UpdateActiveTab;
-    end;
-end;
-
-procedure TdxTabContainerDockSite.ChildVisibilityChanged(Sender: TdxCustomDockControl);
-begin
-  inherited ChildVisibilityChanged(Sender);
-  if (Sender = ActiveChild) and not IsValidChild(Sender) then
-    ValidateActiveChild(Sender.DockIndex);
-end;
-
-function TdxTabContainerDockSite.GetTabRectCount: Integer;
-begin
-  Result := TabControlViewInfo.Tabs.Count;
-end;
-
-function TdxTabContainerDockSite.GetTabRect(AIndex: Integer): TRect;
-begin
-  Result := TabControlViewInfo.TabBounds[AIndex];
-end;
-
-function TdxTabContainerDockSite.GetTabsRect: TRect;
-begin
-  Result := TabControlViewInfo.TabsAreaBounds;
-end;
-
-procedure TdxTabContainerDockSite.SetTabsProperties(
-  AValue: TdxTabContainerDockSiteTabControlProperties);
-begin
-  TabsProperties.Assign(AValue);
-end;
-
-procedure TdxTabContainerDockSite.WMLButtonDown(var Message: TWMLButtonDown);
-begin
-  inherited;
-  if HasTabs and (Message.Result = 0) then
-    TabsController.DoMouseDown(Message);
-end;
-
-procedure TdxTabContainerDockSite.WMLButtonUp(var Message: TWMLButtonUp);
-begin
-  inherited;
-  if HasTabs and (Message.Result = 0) then
-    TabsController.DoMouseUp(Message);
-end;
-
-procedure TdxTabContainerDockSite.WMLButtonDblClk(var Message: TWMLButtonDblClk);
-begin
-  inherited;
-  if HasTabs and (Message.Result = 0) then
-    TabsController.DoMouseDblClick(Message);
-end;
-
-procedure TdxTabContainerDockSite.WMMouseMove(var Message: TWMMouseMove);
-begin
-  inherited;
-  if HasTabs and (Message.Result = 0) then
-    TabsController.DoMouseMove(Message);
-end;
-
-{ TdxDockingTabControlProperties }
-
-constructor TdxDockingTabControlProperties.Create(AOwner: TPersistent);
-begin
-  inherited Create(AOwner);
-  TabPosition := tpBottom;
-end;
-
-procedure TdxDockingTabControlProperties.DoCloseTab(AIndex: Integer);
-begin
-  DoClose(AIndex);
-end;
-
-procedure TdxDockingTabControlProperties.ReadOldTabsPosition(AReader: TReader);
-const
-  TabPositionMap: array[Boolean] of TcxTabPosition = (tpBottom, tpTop);
-begin
-  TabPosition := TabPositionMap[SameText(AReader.ReadIdent, 'tctpTop')];
-end;
-
-procedure TdxDockingTabControlProperties.ReadOldTabsScroll(AReader: TReader);
-begin
-  TabsScroll := AReader.ReadBoolean;
-end;
-
-{ TdxDockingTabControlViewInfo }
-
-destructor TdxDockingTabControlViewInfo.Destroy;
-begin
-  FreeAndNil(FPainter);
-  inherited Destroy;
-end;
-
-function TdxDockingTabControlViewInfo.ClientToWindow(const P: TPoint): TPoint;
-begin
-  Result := cxPointOffset(P, BoundsRect.TopLeft);
-end;
-
-function TdxDockingTabControlViewInfo.ClientToWindowRect(const R: TRect): TRect;
-begin
-  Result := cxRectOffset(R, BoundsRect.TopLeft);
-end;
-
-function TdxDockingTabControlViewInfo.WindowToClient(const P: TPoint): TPoint;
-begin
-  Result := cxPointOffset(P, BoundsRect.TopLeft, False);
-end;
-
-function TdxDockingTabControlViewInfo.GetPainterClass: TcxPCPainterClass;
-begin
-  Result := Owner.Painter.GetTabsPainter(Properties.Style);
-  if Result = nil then
-    Result := inherited GetPainterClass;
-end;
-
-procedure TdxDockingTabControlViewInfo.Draw(ACanvas: TcxCanvas);
-var
-  APrevWindowOrg: TPoint;
-begin
-  APrevWindowOrg := ACanvas.WindowOrg;
-  try
-    ACanvas.WindowOrg := cxPointInvert(BoundsRect.TopLeft);
-    Painter.Paint(ACanvas);
-  finally
-    ACanvas.WindowOrg := APrevWindowOrg;
-  end;
-end;
-
-function TdxDockingTabControlViewInfo.HasBorders: Boolean;
-begin
-  Result := False;
-end;
-
-function TdxDockingTabControlViewInfo.GetOwner: TdxCustomDockControl;
-begin
-  Result := inherited Owner as TdxCustomDockControl;
-end;
-
-function TdxDockingTabControlViewInfo.GetPageClientBounds: TRect;
-begin
-  Result := ClientToWindowRect(PageClientRect);
-end;
-
-function TdxDockingTabControlViewInfo.GetPainter: TcxPCCustomPainter;
-var
-  ANewPainterClass: TcxPCPainterClass;
-begin
-  ANewPainterClass := GetPainterClass;
-  if (FPainter = nil) or (ANewPainterClass <> FPainter.ClassType) then
-  begin
-    FreeAndNil(FPainter);
-    FPainter := ANewPainterClass.Create(Self);
-  end;
-  Result := FPainter;
-end;
-
-function TdxDockingTabControlViewInfo.GetPopupOwner: TComponent;
-begin
-  Result := nil;
-end;
-
-function TdxDockingTabControlViewInfo.GetProperties: TdxDockingTabControlProperties;
-begin
-  Result := inherited Properties as TdxDockingTabControlProperties;
-end;
-
-function TdxDockingTabControlViewInfo.GetTabsAreaBounds: TRect;
-begin
-  Result := ClientToWindowRect(TabsAreaRect);
-end;
-
-function TdxDockingTabControlViewInfo.GetTabBounds(AIndex: Integer): TRect;
-begin
-  Result := ClientToWindowRect(Properties.Tabs[AIndex].VisibleRect);
-end;
-
-function TdxDockingTabControlViewInfo.GetTabs: TcxTabs;
-begin
-  Result := Properties.Tabs;
-end;
-
-{ TdxDockingTabControlController }
-
-constructor TdxDockingTabControlController.Create(AOwner: TObject);
-begin
-  inherited Create(AOwner);
-  Properties.OnChange := DoTabIndexChanged;
-  Properties.OnChanged := DoChanged;
-  Properties.OnClose := DoTabClose;
-  Properties.OnStyleChanged := DoStyleChanged;
-end;
-
-procedure TdxDockingTabControlController.AddTab(
-  ADockControl: TdxCustomDockControl; AVisible: Boolean);
-var
-  ATabIndex: Integer;
-begin
-  ATabIndex := Tabs.AddObject('', ADockControl);
-  RefreshTabInfo(Tabs[ATabIndex], ADockControl);
-  Tabs[ATabIndex].Visible := AVisible;
-end;
-
-procedure TdxDockingTabControlController.DoChanged(
-  Sender: TObject; AType: TcxCustomTabControlPropertiesChangedType);
-begin
-  if not IsUpdating then
-    Owner.NCChanged;
-end;
-
-procedure TdxDockingTabControlController.BeginUpdate;
-begin
-  Inc(FUpdateCount);
-end;
-
-procedure TdxDockingTabControlController.EndUpdate;
-begin
-  Dec(FUpdateCount);
-end;
-
-procedure TdxDockingTabControlController.DoMouseDblClick(var Message: TWMLButtonDblClk);
-var
-  AControl: TdxCustomDockControl;
-  APoint: TPoint;
-  ATabIndex: Integer;
-begin
-  if (doDblClickDocking in Owner.ControllerOptions) and not (Owner.IsDesigning or Owner.AutoHide) then
-  begin
-    ATabIndex := GetTabIndexAtPoint(Owner.CursorPoint);
-    if ATabIndex >= 0 then
-    begin
-      AControl := DockControls[ATabIndex];
-      if IsDockable(AControl) then
-      begin
-        APoint := Owner.ClientToScreen(Owner.CursorPoint);
-        Owner.DoStartDocking(APoint);
-        DoUndock(APoint, AControl);
-        Owner.DoEndDocking(APoint);
-        Message.Result := 1;
-      end;
-    end;
-  end;
-end;
-
-procedure TdxDockingTabControlController.DoMouseDown(var Message: TWMLButtonDown);
-var
-  P: TPoint;
-begin
-  P := GetMappedToTabsSmallPoint(Message.Pos);
-  MouseDown(mbLeft, KeysToShiftState(Message.Keys), P.X, P.Y);
-  Message.Result := 1;
-end;
-
-procedure TdxDockingTabControlController.DoMouseMove(var Message: TWMMouseMove);
-
-  function CanStartDragDocking: Boolean;
-  begin
-    Result := (MouseDownTabVisibleIndex >= 0) and (Owner.IsDesigning and
-      (Owner.GetDraggingMouseShift > 3) or (Owner.GetDraggingMouseShift > 0) and
-      (MouseDownTabVisibleIndex <> GetVisibleTabIndexAtPoint(Owner.CursorPoint)));
-  end;
-
-var
-  AActiveChild: TdxCustomDockControl;
-  P: TPoint;
-begin
-  if Owner.FloatFormActive or Owner.ParentFormActive or Owner.IsDesigning then
-  begin
-    P := GetMappedToTabsSmallPoint(Message.Pos);
-    MouseMove(KeysToShiftState(Message.Keys), P.X, P.Y);
-    Message.Result := 1;
-
-    if CanStartDragDocking then
-    begin
-      AActiveChild := VisibleDockControls[MouseDownTabVisibleIndex];
-      MouseDownTabVisibleIndex := -1;
-      Owner.ReleaseMouse;
-      if AActiveChild <> nil then
-        AActiveChild.StartDocking(Owner.ClientToScreen(Owner.SourcePoint));
-    end;
-  end;
-end;
-
-procedure TdxDockingTabControlController.DoMouseUp(var Message: TWMLButtonUp);
-var
-  P: TPoint;
-begin
-  P := GetMappedToTabsSmallPoint(Message.Pos);
-  MouseUp(mbLeft, KeysToShiftState(Message.Keys), P.X, P.Y);
-  Message.Result := 1;
-end;
-
-procedure TdxDockingTabControlController.DoStyleChanged(Sender: TObject);
-begin
-  Owner.NCChanged;
-end;
-
-procedure TdxDockingTabControlController.DoTabClose(Sender: TObject; ATabIndex: Integer);
-begin
-  DockControls[ATabIndex].Close;
-end;
-
-procedure TdxDockingTabControlController.DoTabIndexChanged(Sender: TObject);
-begin
-end;
-
-procedure TdxDockingTabControlController.DoUndock(
-  const APoint: TPoint; ADockControl: TdxCustomDockControl);
-begin
-  ADockControl.MakeFloating;
-end;
-
-function TdxDockingTabControlController.IsDockable(AControl: TdxCustomDockControl): Boolean;
-begin
-  Result := (AControl <> nil) and AControl.Dockable;
-end;
-
-procedure TdxDockingTabControlController.RefreshImageList;
-begin
-  BeginUpdate;
-  try
-    Properties.Images := Owner.Controller.Images(Owner.ParentForm);
-  finally
-    EndUpdate;
-  end;
-end;
-
-procedure TdxDockingTabControlController.RefreshTabInfo(
-  ATab: TcxTab; ADockControl: TdxCustomDockControl);
-begin
-  ATab.ImageIndex := ADockControl.ImageIndex;
-  ATab.Caption := ADockControl.Caption;
-end;
-
-procedure TdxDockingTabControlController.TabDown(ATabVisibleIndex: Integer; AShift: TShiftState);
-begin
-  inherited TabDown(ATabVisibleIndex, AShift);
-  if ATabVisibleIndex >= 0 then
-    Owner.CaptureMouse;
-end;
-
-procedure TdxDockingTabControlController.TabInfoChanged(ADockControl: TdxCustomDockControl);
-var
-  AIndex: Integer;
-begin
-  AIndex := Tabs.IndexOfObject(ADockControl);
-  if AIndex >= 0 then
-    RefreshTabInfo(Tabs[AIndex], ADockControl);
-end;
-
-procedure TdxDockingTabControlController.TabUp(ATabVisibleIndex: Integer; AShift: TShiftState);
-begin
-  inherited TabUp(ATabVisibleIndex, AShift);
-  Owner.ReleaseMouse;
-end;
-
-function TdxDockingTabControlController.GetClientToScreen(const APoint: TPoint): TPoint;
-begin
-  Result := Owner.WindowToScreen(ViewInfo.ClientToWindow(APoint));
-end;
-
-function TdxDockingTabControlController.GetDockControl(Index: Integer): TdxCustomDockControl;
-begin
-  Result := Tabs.Objects[Index] as TdxCustomDockControl;
-end;
-
-function TdxDockingTabControlController.GetOwner: TdxCustomDockControl;
-begin
-  Result := inherited Owner as TdxCustomDockControl;
-end;
-
-function TdxDockingTabControlController.GetIsUpdating: Boolean;
-begin
-  Result := FUpdateCount > 0;
-end;
-
-function TdxDockingTabControlController.GetProperties: TdxDockingTabControlProperties;
-begin
-  Result := inherited Properties as TdxDockingTabControlProperties;
-end;
-
-function TdxDockingTabControlController.GetMappedToTabsPoint(const P: TPoint): TPoint;
-begin
-  Result := ViewInfo.WindowToClient(Owner.ClientToWindow(P));
-end;
-
-function TdxDockingTabControlController.GetMappedToTabsSmallPoint(const P: TSmallPoint): TPoint;
-begin
-  Result := GetMappedToTabsPoint(SmallPointToPoint(P));
-end;
-
-function TdxDockingTabControlController.GetScreenToClient(const APoint: TPoint): TPoint;
-begin
-  Result := ViewInfo.WindowToClient(Owner.ScreenToWindow(APoint));
-end;
-
-function TdxDockingTabControlController.GetTabIndexAtPoint(const P: TPoint): Integer;
-begin
-  Result := GetVisibleTabIndexAtPoint(P);
-  if Result >= 0 then
-    Result := Tabs.VisibleTabs[Result].Index;
-end;
-
-function TdxDockingTabControlController.GetTabs: TcxTabs;
-begin
-  Result := (Properties as TdxDockingTabControlProperties).Tabs;
-end;
-
-function TdxDockingTabControlController.GetViewInfo: TdxDockingTabControlViewInfo;
-begin
-  Result := inherited ViewInfo as TdxDockingTabControlViewInfo;
-end;
-
-function TdxDockingTabControlController.GetVisibleDockControl(Index: Integer): TdxCustomDockControl;
-begin
-  Result := Tabs.VisibleTabs[Index].Data as TdxCustomDockControl;
-end;
-
-function TdxDockingTabControlController.GetVisibleTabIndexAtPoint(const P: TPoint): Integer;
-begin
-  with GetMappedToTabsPoint(P) do
-    Result := ViewInfo.VisibleIndexOfTabAt(X, Y);
-end;
-
-{ TdxTabContainerDockSiteTabControlController }
-
-procedure TdxTabContainerDockSiteTabControlController.DoTabIndexChanged(Sender: TObject);
-begin
-  inherited DoTabIndexChanged(Sender);
-  if (Properties.TabIndex >= 0) and (Properties.TabIndex < Tabs.Count) then
-    Owner.ActivateChild(DockControls[Properties.TabIndex]);
-end;
-
-procedure TdxTabContainerDockSiteTabControlController.UpdateActiveTabIndex;
-begin
-  ViewInfo.TabIndex := Tabs.IndexOfObject(Owner.ActiveChild);
-end;
-
-function TdxTabContainerDockSiteTabControlController.GetOwner: TdxTabContainerDockSite;
-begin
-  Result := inherited Owner as TdxTabContainerDockSite;
-end;
-
-{ TdxTabContainerDockSiteTabControlProperties }
-
-procedure TdxTabContainerDockSiteTabControlProperties.LoadFromIniFile(
-  AIniFile: TCustomIniFile; const ASection: string);
-begin
-  CloseButtonMode := TcxPCCloseButtonMode(AIniFile.ReadInteger(ASection, 'CloseButtonMode', Ord(cbmNone)));
-  HotTrack := AIniFile.ReadBool(ASection, 'HotTrack', False);
-  ImageBorder := AIniFile.ReadInteger(ASection, 'ImageBorder', 0);
-  MultiLine := AIniFile.ReadBool(ASection, 'MultiLine', False);
-  NavigatorPosition := TcxPCNavigatorPosition(AIniFile.ReadInteger(ASection, 'NavigatorPosition', Ord(npRightTop)));
-  RaggedRight := AIniFile.ReadBool(ASection, 'RaggedRight', False);
-  Rotate := AIniFile.ReadBool(ASection, 'Rotate', False);
-  RotatedTabsMaxWidth := AIniFile.ReadInteger(ASection, 'RotatedTabsMaxWidth', 0);
-  Style := TcxPCStyleID(AIniFile.ReadInteger(ASection, 'Style', cxPCDefaultStyle));
-  TabCaptionAlignment := TAlignment(AIniFile.ReadInteger(ASection, 'TabCaptionAlignment', Ord(taCenter)));
-  TabHeight := AIniFile.ReadInteger(ASection, 'TabHeight', 0);
-  TabPosition := TcxTabPosition(AIniFile.ReadInteger(ASection, 'TabsPosition', Ord(tpBottom)));
-  TabsScroll := AIniFile.ReadBool(ASection, 'TabsScroll', True);
-  TabWidth := AIniFile.ReadInteger(ASection, 'TabWidth', 0);
-  LoadTabSlants(AIniFile, ASection);
-  LoadOptions(AIniFile, ASection);
-end;
-
-procedure TdxTabContainerDockSiteTabControlProperties.SaveToIniFile(
-  AIniFile: TCustomIniFile; const ASection: string);
-begin
-  AIniFile.WriteBool(ASection, 'HotTrack', HotTrack);
-  AIniFile.WriteBool(ASection, 'MultiLine', MultiLine);
-  AIniFile.WriteBool(ASection, 'RaggedRight', RaggedRight);
-  AIniFile.WriteBool(ASection, 'Rotate', Rotate);
-  AIniFile.WriteBool(ASection, 'TabsScroll', TabsScroll);
-  AIniFile.WriteInteger(ASection, 'CloseButtonMode', Ord(CloseButtonMode));
-  AIniFile.WriteInteger(ASection, 'ImageBorder', ImageBorder);
-  AIniFile.WriteInteger(ASection, 'NavigatorPosition', Ord(NavigatorPosition));
-  AIniFile.WriteInteger(ASection, 'RotatedTabsMaxWidth', RotatedTabsMaxWidth);
-  AIniFile.WriteInteger(ASection, 'Style', Style);
-  AIniFile.WriteInteger(ASection, 'TabCaptionAlignment', Ord(TabCaptionAlignment));
-  AIniFile.WriteInteger(ASection, 'TabHeight', TabHeight);
-  AIniFile.WriteInteger(ASection, 'TabsPosition', Ord(TabPosition));
-  AIniFile.WriteInteger(ASection, 'TabWidth', TabWidth);
-  SaveTabSlants(AIniFile, ASection);
-  SaveOptions(AIniFile, ASection);
-end;
-
-procedure TdxTabContainerDockSiteTabControlProperties.LoadOptions(
-  AIniFile: TCustomIniFile; const ASection: string);
-var
-  AOption: TcxPCOption;
-  AOptions: TcxPCOptions;
-begin
-  AOptions := [];
-  for AOption := Low(AOption) to High(AOption) do
-  begin
-    if AIniFile.ReadBool(ASection, 'Option' + dxPCOptionsNames[AOption], AOption in cxPCDefaultOptions) then
-      Include(AOptions, AOption);
-  end;
-  Options := AOptions;
-end;
-
-procedure TdxTabContainerDockSiteTabControlProperties.LoadTabSlants(
-  AIniFile: TCustomIniFile; const ASection: string);
-var
-  ATabSlantPositions: TcxTabSlantPositions;
-begin
-  ATabSlantPositions := [];
-  if AIniFile.ReadBool(ASection, 'TabSlantsLeft', spLeft in cxTabSlantDefaultPositions) then
-    Include(ATabSlantPositions, spLeft);
-  if AIniFile.ReadBool(ASection, 'TabSlantsRight', spRight in cxTabSlantDefaultPositions) then
-    Include(ATabSlantPositions, spRight);
-  TabSlants.Positions := ATabSlantPositions;
-  TabSlants.Kind := TcxTabSlantKind(AIniFile.ReadInteger(ASection, 'TabSlantsKind', Ord(skSlant)));
-end;
-
-procedure TdxTabContainerDockSiteTabControlProperties.SaveOptions(
-  AIniFile: TCustomIniFile; const ASection: string);
-var
-  AOption: TcxPCOption;
-begin
-  for AOption := Low(AOption) to High(AOption) do
-    AIniFile.WriteBool(ASection, 'Option' + dxPCOptionsNames[AOption], AOption in Options);
-end;
-
-procedure TdxTabContainerDockSiteTabControlProperties.SaveTabSlants(
-  AIniFile: TCustomIniFile; const ASection: string);
-begin
-  AIniFile.WriteBool(ASection, 'TabSlantsLeft', spLeft in TabSlants.Positions);
-  AIniFile.WriteBool(ASection, 'TabSlantsRight', spRight in TabSlants.Positions);
-  AIniFile.WriteInteger(ASection, 'TabSlantsKind', Integer(TabSlants.Kind));
-end;
-
-{ TdxSideContainerDockSite }
-
-procedure TdxSideContainerDockSite.ChildChanged(AChild: TdxCustomDockControl);
-begin
-  InvalidateNC(False);
-end;
-
-procedure TdxSideContainerDockSite.DoActiveChildChanged(APrevActiveChild: TdxCustomDockControl);
-begin
-  inherited;
-  NCChanged;
-  AdjustChildrenBounds(nil);
-end;
-
-function TdxSideContainerDockSite.CanChildResize(AControl: TdxCustomDockControl; ADeltaSize: Integer): Boolean;
-var
-  AIndex, ANextIndex: Integer;
-begin
-  AIndex := AControl.DockIndex;
-  ANextIndex := GetNextValidChildIndex(AIndex);
-  Result := (ANextIndex > -1) and (MinSizes[AIndex] < OriginalSizes[AIndex] + ADeltaSize) and
-    (MinSizes[ANextIndex] < OriginalSizes[ANextIndex] - ADeltaSize);
-end;
-
-procedure TdxSideContainerDockSite.DoChildResize(AControl: TdxCustomDockControl;
-  ADeltaSize: Integer; AResizeNextControl: Boolean);
-var
-  I, AIndex, ANextIndex: Integer;
-begin
-  if ADeltaSize = 0 then
-    Exit;
-  AIndex := AControl.DockIndex;
-  if AResizeNextControl then
-    ANextIndex := GetNextValidChildIndex(AIndex)
-  else
-    ANextIndex := GetPrevValidChildIndex(AIndex);
-
-  if (AIndex > -1) and (ANextIndex > -1) then
-  begin
-    BeginAdjustBounds;
-    try
-      if ActiveChild <> nil then
-      begin
-        for I := 0 to ChildCount - 1 do
-          OriginalSizes[I] := Sizes[I];
-        ActiveChild := nil;
-      end;
-      OriginalSizes[AIndex] := OriginalSizes[AIndex] + ADeltaSize;
-      OriginalSizes[ANextIndex] := OriginalSizes[ANextIndex] - ADeltaSize;
-      if OriginalSizes[AIndex] < MinSizes[AIndex] then
-      begin
-        ADeltaSize := MinSizes[AIndex] - OriginalSizes[AIndex];
-        OriginalSizes[AIndex] := OriginalSizes[AIndex] + ADeltaSize;
-        OriginalSizes[ANextIndex] := OriginalSizes[ANextIndex] - ADeltaSize;
-      end;
-      if OriginalSizes[ANextIndex] < MinSizes[ANextIndex] then
-      begin
-        ADeltaSize := MinSizes[ANextIndex] - OriginalSizes[ANextIndex];
-        OriginalSizes[ANextIndex] := OriginalSizes[ANextIndex] + ADeltaSize;
-        OriginalSizes[AIndex] := OriginalSizes[AIndex] - ADeltaSize;
-      end;
-      Sizes[AIndex] := OriginalSizes[AIndex];
-      Sizes[ANextIndex] := OriginalSizes[ANextIndex];
-    finally
-      EndAdjustBounds;
-    end;
-  end;
-end;
-
-procedure TdxSideContainerDockSite.BeginAdjustBounds;
-begin
-  Inc(FAdjustBoundsLock);
-  inherited;
-end;
-
-procedure TdxSideContainerDockSite.EndAdjustBounds;
-begin
-  inherited;
-  Dec(FAdjustBoundsLock);
-end;
-
-function TdxSideContainerDockSite.IsAdjustBoundsLocked: Boolean;
-begin
-  Result := AdjustBoundsLock > 0;
-end;
-
-procedure TdxSideContainerDockSite.AdjustChildrenBounds(AControl: TdxCustomDockControl);
-var
-  I, ADeltaSize: Integer;
-  APrevIndex: Integer;
-begin
-  if IsAdjustBoundsLocked or IsUpdateLayoutLocked and (AControl = nil) then exit;
-  BeginAdjustBounds;
-  try
-    if ActiveChild <> nil then
-    begin
-      for I := 0 to ActiveChildIndex - 1 do
-      begin
-        if not IsValidChild(Children[I]) then continue;
-        Children[I].SetDockType(GetHeadDockType);
-        Sizes[I] := MinSizes[I];
-      end;
-      for I := ChildCount - 1 downto ActiveChildIndex + 1 do
-      begin
-        if not IsValidChild(Children[I]) then continue;
-        Children[I].SetDockType(GetTailDockType);
-        Sizes[I] := MinSizes[I];
-      end;
-      if IsValidChild(ActiveChild) then ActiveChild.SetDockType(dtClient);
-    end
-    else if ValidChildCount > 1 then
-    begin
-      if AControl <> nil then
-        ADeltaSize := GetDifferentSize div (ValidChildCount - 1)
-      else ADeltaSize := GetDifferentSize div ValidChildCount;
-      for I := 0 to ChildCount - 1 do
-      begin
-        if Children[I] = AControl then continue;
-        if not IsValidChild(Children[I]) then continue;
-        OriginalSizes[I] := OriginalSizes[I] + ADeltaSize;
-        if OriginalSizes[I] < MinSizes[I] then
-          OriginalSizes[I] := MinSizes[I];
-      end;
-      NormalizeChildrenBounds(GetDifferentSize);
-      for I := 0 to ChildCount - 1 do
-      begin
-        if not IsValidChild(Children[I]) then continue;
-        Children[I].SetDockType(GetHeadDockType);
-        APrevIndex := GetPrevValidChildIndex(I);
-        if APrevIndex > -1 then
-          Positions[I] := Positions[APrevIndex] + Sizes[APrevIndex];
-        Sizes[I] := OriginalSizes[I];
-      end;
-    end
-    else if ValidChildCount > 0 then
-    begin
-      for I := 0 to ChildCount - 1 do
-      begin
-        if not IsValidChild(Children[I]) then continue;
-        Children[I].SetDockType(dtClient);
-      end;
-    end;
-  finally
-    EndAdjustBounds;
-  end;
-end;
-
-procedure TdxSideContainerDockSite.NormalizeChildrenBounds(ADeltaSize: Integer);
-var
-  I: Integer;
-begin
-  for I := 0 to ChildCount - 1 do
-  begin
-    if not IsValidChild(Children[I]) then continue;
-    if ADeltaSize = 0 then break;
-    if OriginalSizes[I] > MinSizes[I] then
-      if OriginalSizes[I] + ADeltaSize < MinSizes[I] then
-      begin
-        ADeltaSize := ADeltaSize + (OriginalSizes[I] - MinSizes[I]);
-        OriginalSizes[I] := MinSizes[I];
-      end
-      else
-      begin
-        OriginalSizes[I] := OriginalSizes[I] + ADeltaSize;
-        ADeltaSize := 0;
-      end;
-  end;
-end;
-
-procedure TdxSideContainerDockSite.SetChildBounds(AControl: TdxCustomDockControl;
-  var AWidth, AHeight: Integer);
-begin
-  if (ActiveChild = nil) and not IsAdjustBoundsLocked then
-  begin
-    OriginalSizes[AControl.DockIndex] := GetDimension(AWidth, AHeight);
-    AdjustChildrenBounds(nil);
-    SetDimension(AWidth, AHeight, OriginalSizes[AControl.DockIndex]);
-  end;
-end;
-
-function TdxSideContainerDockSite.IsValidActiveChild(AControl: TdxCustomDockControl): Boolean;
-begin
-  Result := IsValidChild(AControl) or (AControl = nil);
-end;
-
-procedure TdxSideContainerDockSite.ValidateActiveChild(AIndex: Integer);
-begin
-  if not IsValidChild(ActiveChild) then
-  begin
-    if (ActiveChild <> nil) and IsValidChild(ActiveChild.Container) then
-      ActiveChild := ActiveChild.Container
-    else ActiveChild := nil;
-  end;
-end;
-
-function TdxSideContainerDockSite.HasBorder: Boolean;
-begin
-  Result := (doSideContainerHasCaption in ControllerOptions) and
-    ShowCaption and (FloatDockSite = nil) and (ValidChildCount > 1);
-end;
-
-function TdxSideContainerDockSite.HasCaption: Boolean;
-begin
-  Result := (doSideContainerHasCaption in ControllerOptions) and
-    ShowCaption and (FloatDockSite = nil) and ((ValidChildCount > 1) or AutoHide);
-end;
-
-function TdxSideContainerDockSite.CanActive: Boolean;
-begin
-  Result := True;
-end;
-
-function TdxSideContainerDockSite.CanAutoHide: Boolean;
-begin
-  Result := IsLoading or ((AutoHideHostSite <> nil) and
-    ((AutoHideControl = nil) or (AutoHideControl = Self)));
-end;
-
-function TdxSideContainerDockSite.CanDockHost(AControl: TdxCustomDockControl; AType: TdxDockingType): Boolean;
-var
-  ACanDockHost: Boolean;
-begin
-  ACanDockHost := CanContainerDockHost(AType);
-  if doSideContainerCanInSideContainer in ControllerOptions then
-    ACanDockHost := ACanDockHost or (AType in [dtLeft, dtRight, dtTop, dtBottom]);
-  if doSideContainerCanInTabContainer in ControllerOptions then
-    ACanDockHost := ACanDockHost or (AType in [dtClient]);
-  Result := inherited CanDockHost(AControl, AType) and ACanDockHost;
-end;
-
-function TdxSideContainerDockSite.CanMaximize: Boolean;
-begin
-  Result := not AutoHide and (SideContainer <> nil) and (SideContainer.ValidChildCount > 1);
-end;
-
-procedure TdxSideContainerDockSite.SetBounds(ALeft, ATop, AWidth, AHeight: Integer);
-begin
-  inherited;
-  AdjustChildrenBounds(nil);
-end;
-
-procedure TdxSideContainerDockSite.UpdateControlDockZones(AControl: TdxCustomDockControl;
-  AZoneWidth: Integer);
-begin
-  if doSideContainerCanInSideContainer in ControllerOptions then
-    inherited;
-end;
-
-procedure TdxSideContainerDockSite.IncludeToDock(AControl: TdxCustomDockControl;
-  AType: TdxDockingType; Index: Integer);
-var
-  AChild: TdxCustomDockControl;
-begin
-  if AControl.CanAcceptSideContainerItems(Self) and (ChildCount > 0) then
-  begin
-    Include(FInternalState, dcisDestroying);
-    while ChildCount > 0 do
-    begin
-      AChild := Children[ChildCount - 1];
-      AChild.ExcludeFromDock;
-      AChild.IncludeToDock(AControl, AType, Index);
-      if AControl is TdxSideContainerDockSite then
-        (AControl as TdxSideContainerDockSite).AdjustChildrenBounds(AChild);
-    end;
-    DoDestroy;
-  end
-  else inherited;
-end;
-
-procedure TdxSideContainerDockSite.CreateLayout(AControl: TdxCustomDockControl;
-  AType: TdxDockingType; Index: Integer);
-begin
-  if CanContainerDockHost(AType) then
-  begin
-    AControl.IncludeToDock(Self, AType, Index);
-    AdjustChildrenBounds(AControl);
-  end
-  else if (Container <> nil) and Container.CanContainerDockHost(AType) then
-    CreateContainerLayout(Container, AControl, AType, DockIndex)
-  else
-    case AType of
-      dtLeft, dtRight,
-      dtTop, dtBottom:
-        CreateSideContainerLayout(AControl, AType, Index);
-      dtClient:
-        CreateTabContainerLayout(AControl, AType, Index);
-    else
-      Assert(False, Format(sdxInternalErrorCreateLayout, [TdxTabContainerDockSite.ClassName]));
-    end;
-end;
-
-procedure TdxSideContainerDockSite.UpdateLayout;
-begin
-  inherited;
-  AdjustChildrenBounds(nil);
-end;
-
-procedure TdxSideContainerDockSite.LoadLayoutFromCustomIni(AIniFile: TCustomIniFile;
-  AParentForm: TCustomForm; AParentControl: TdxCustomDockControl; ASection: string);
-begin
-  BeginAdjustBounds;
-  try
-    inherited;
-  finally
-    EndAdjustBounds;
-  end;
-end;
-
-function TdxSideContainerDockSite.CanAcceptSideContainerItems(AContainer: TdxSideContainerDockSite): Boolean;
-begin
-  if (doSideContainerCanInSideContainer in ControllerOptions) or IsLoading then
-    Result := AContainer.ClassType = ClassType
-  else
-    Result := True;
-end;
-
-function TdxSideContainerDockSite.CanAcceptTabContainerItems(AContainer: TdxTabContainerDockSite): Boolean;
-begin
-  if (doTabContainerCanInSideContainer in ControllerOptions) or IsLoading then
-    Result := False
-  else
-    Result := True;
-end;
-
-procedure TdxSideContainerDockSite.UpdateCaption;
-var
-  I: Integer;
-  ACaption: string;
-begin
-  ACaption := '';
-  for I := 0 to ChildCount - 1 do
-  begin
-    if not IsValidChild(Children[I]) then continue;
-    ACaption := ACaption + Children[I].Caption;
-    if GetNextValidChild(I) <> nil then
-      ACaption := ACaption + ', ';
-  end;
-  if Caption <> ACaption then
-    Caption := ACaption;
-  inherited UpdateCaption;
-end;
-
-procedure TdxSideContainerDockSite.ChangeAutoHide;
-begin
-  if AutoHide then
-    AutoHide := False
-  else if doSideContainerCanAutoHide in ControllerOptions then
-    inherited ChangeAutoHide
-  else if ActiveChild <> nil then
-    ActiveChild.ChangeAutoHide
-  else if GetFirstValidChild <> nil then
-    GetFirstValidChild.ChangeAutoHide
-end;
-
-procedure TdxSideContainerDockSite.DoClose;
-begin
-  if (doSideContainerCanClose in ControllerOptions) then
-    inherited DoClose
-  else if ActiveChild <> nil then
-    ActiveChild.DoClose
-  else if GetFirstValidChild <> nil then
-    GetFirstValidChild.DoClose;
-end;
-
-procedure TdxSideContainerDockSite.ChildVisibilityChanged(Sender: TdxCustomDockControl);
-begin
-  inherited;
-  if IsValidChild(Sender) then
-    AdjustChildrenBounds(Sender)
-  else if Sender = ActiveChild then
-    ValidateActiveChild(Sender.DockIndex);
-  NCChanged;
-end;
-
-function TdxSideContainerDockSite.GetDifferentSize: Integer;
-var
-  I: Integer;
-begin
-  Result := 0;
-  for I := 0 to ChildCount - 1 do
-  begin
-    if not IsValidChild(Children[I]) then continue;
-    Inc(Result, OriginalSizes[I]);
-  end;
-  Result := GetContainerSize - Result;
-end;
-
-{ TdxHorizContainerDockSite }
-
-procedure TdxHorizContainerDockSite.UpdateControlResizeZones(AControl: TdxCustomDockControl);
-begin
-  inherited;
-  if (AControl.SideContainerItem <> nil) and (AControl.SideContainer = Self) then
-    if GetNextValidChild(AControl.SideContainerIndex) <> nil then
-    begin
-      AControl.ResizeZones.RegisterZone(TdxHorizContainerZone.Create(
-        AControl.SideContainerItem, ControllerResizeZonesWidth, zkResizing));
-    end;
-end;
-
-procedure TdxHorizContainerDockSite.UpdateControlOriginalSize(AControl: TdxCustomDockControl);
-begin
-  if (AControl = Self) or (DockType in [dtTop, dtBottom]) then
-    inherited
-  else if (DockType = dtClient) and (FloatDockSite <> nil) then
-    AControl.FOriginalHeight := FloatDockSite.Height;
-end;
-
-class function TdxHorizContainerDockSite.GetHeadDockType: TdxDockingType;
-begin
-  Result := dtLeft;
-end;
-
-class function TdxHorizContainerDockSite.GetTailDockType: TdxDockingType;
-begin
-  Result := dtRight;
-end;
-
-function TdxHorizContainerDockSite.GetContainerSize: Integer;
-begin
-  if HandleAllocated and (ClientWidth > 0) then
-    Result := ClientWidth
-  else Result := Width;
-end;
-
-function TdxHorizContainerDockSite.GetDimension(AWidth, AHeight: Integer): Integer;
-begin
-  Result := AWidth;
-end;
-
-function TdxHorizContainerDockSite.GetMinSize(Index: Integer): Integer;
-begin
-  Result := Children[Index].GetMinimizedWidth;
-end;
-
-function TdxHorizContainerDockSite.GetOriginalSize(Index: Integer): Integer;
-begin
-  Result := Children[Index].OriginalWidth;
-end;
-
-function TdxHorizContainerDockSite.GetSize(Index: Integer): Integer;
-begin
-  Result := Children[Index].Width;
-end;
-
-function TdxHorizContainerDockSite.GetPosition(Index: Integer): Integer;
-begin
-  Result := Children[Index].Left;
-end;
-
-procedure TdxHorizContainerDockSite.SetDimension(var AWidth, AHeight: Integer; AValue: Integer);
-begin
-  AWidth := AValue;
-end;
-
-procedure TdxHorizContainerDockSite.SetOriginalSize(Index: Integer;
-  const Value: Integer);
-var
-  I: Integer;
-begin
-  Children[Index].FOriginalWidth := Value;
-  if Children[Index] is TdxTabContainerDockSite then
-    for I := 0 to Children[Index].ChildCount - 1 do
-      Children[Index].Children[I].FOriginalWidth := Value;
-end;
-
-procedure TdxHorizContainerDockSite.SetSize(Index: Integer; const Value: Integer);
-begin
-  Children[Index].Width := Value;
-end;
-
-procedure TdxHorizContainerDockSite.SetPosition(Index: Integer; const Value: Integer);
-begin
-  Children[Index].Left := Value;
-end;
-
-{ TdxVertContainerDockSite }
-
-procedure TdxVertContainerDockSite.UpdateControlResizeZones(AControl: TdxCustomDockControl);
-begin
-  inherited;
-  if (AControl.SideContainerItem <> nil) and (AControl.SideContainer = Self) then
-    if GetNextValidChild(AControl.SideContainerIndex) <> nil then
-    begin
-      AControl.ResizeZones.RegisterZone(TdxVertContainerZone.Create(
-        AControl.SideContainerItem, ControllerResizeZonesWidth, zkResizing));
-    end;
-end;
-
-procedure TdxVertContainerDockSite.UpdateControlOriginalSize(AControl: TdxCustomDockControl);
-begin
-  if (AControl = Self) or (DockType in [dtLeft, dtRight]) then
-    inherited
-  else if (DockType = dtClient) and (FloatDockSite <> nil) then
-    AControl.FOriginalWidth := FloatDockSite.Width;
-end;
-
-class function TdxVertContainerDockSite.GetHeadDockType: TdxDockingType;
-begin
-  Result := dtTop;
-end;
-
-class function TdxVertContainerDockSite.GetTailDockType: TdxDockingType;
-begin
-  Result := dtBottom;
-end;
-
-function TdxVertContainerDockSite.GetContainerSize: Integer;
-begin
-  if HandleAllocated and (ClientHeight > 0) then
-    Result := ClientHeight
-  else Result := Height;
-end;
-
-function TdxVertContainerDockSite.GetDimension(AWidth, AHeight: Integer): Integer;
-begin
-  Result := AHeight;
-end;
-
-function TdxVertContainerDockSite.GetMinSize(Index: Integer): Integer;
-begin
-  Result := Children[Index].GetMinimizedHeight;
-end;
-
-function TdxVertContainerDockSite.GetOriginalSize(Index: Integer): Integer;
-begin
-  Result := Children[Index].OriginalHeight;
-end;
-
-function TdxVertContainerDockSite.GetSize(Index: Integer): Integer;
-begin
-  Result := Children[Index].Height;
-end;
-
-function TdxVertContainerDockSite.GetPosition(Index: Integer): Integer;
-begin
-  Result := Children[Index].Top;
-end;
-
-procedure TdxVertContainerDockSite.SetDimension(var AWidth, AHeight: Integer; AValue: Integer);
-begin
-  AHeight := AValue;
-end;
-
-procedure TdxVertContainerDockSite.SetOriginalSize(Index: Integer;
-  const Value: Integer);
-var
-  I: Integer;
-begin
-  Children[Index].FOriginalHeight := Value;
-  if Children[Index] is TdxTabContainerDockSite then
-    for I := 0 to Children[Index].ChildCount - 1 do
-      Children[Index].Children[I].FOriginalHeight := Value;
-end;
-
-procedure TdxVertContainerDockSite.SetSize(Index: Integer; const Value: Integer);
-begin
-  Children[Index].Height := Value;
-end;
-
-procedure TdxVertContainerDockSite.SetPosition(Index: Integer; const Value: Integer);
-begin
-  Children[Index].Top := Value;
-end;
-
-{ TdxDockSiteAutoHideContainer }
-
-constructor TdxDockSiteAutoHideContainer.Create(AOwner: TComponent);
-begin
-  inherited;
-  Visible := False;
-  ControlStyle := [csNoDesignVisible];
-end;
-
-procedure TdxDockSiteAutoHideContainer.CreateParams(var Params: TCreateParams);
-begin
-  inherited CreateParams(Params);
-  Params.Style := Params.Style or WS_CLIPCHILDREN;
-end;
-
-procedure TdxDockSiteAutoHideContainer.AlignControls(AControl: TControl; var Rect: TRect);
-
-  procedure DoAlignChild(AControl: TControl);
-  begin
-    case AControl.Align of
-      alTop:
-        Rect.Bottom := Rect.Top + AControl.Height;
-      alBottom:
-        Rect.Top := Rect.Bottom - AControl.Height;
-      alLeft:
-        Rect.Right := Rect.Left + AControl.Width;
-      alRight:
-        Rect.Left := Rect.Right - AControl.Width;
-      alClient:
-        ;
-      else
-        Exit;
-    end;
-    AControl.BoundsRect := Rect;
-  end;
-
-begin
-  dxTestCheck(ControlCount <= 1, 'TdxDockSiteAutoHideContainer.ControlCount > 1');
-  if ControlCount > 0 then
-  begin
-    DoAlignChild(Controls[0]);
-    Rect:= cxNullRect;
-    if Showing then
-      AdjustSize;
-  end;
-end;
-
-procedure TdxDockSiteAutoHideContainer.CMControlListChange(var Message: TMessage);
-begin
-  if (csDesigning in ComponentState) and not (csLoading in ComponentState) and
-    Boolean(Message.LParam) {Inserting} and
-    IsControlContainsDockSite(TControl(Message.WParam))
-  then
-    raise EdxException.Create(sdxInvalidDockSiteParent);
-  inherited;
-end;
-
-{ TdxDockSiteHideBar }
-
-constructor TdxDockSiteHideBar.Create(AOwner: TdxDockSite);
-begin
-  inherited Create;
-  FOwner := AOwner;
-  FButtons := TdxDockSiteHideBarButtonsList.Create;
-  FScrollDownButton := CreateScrollButton(-1);
-  FScrollUpButton := CreateScrollButton(1);
-end;
-
-destructor TdxDockSiteHideBar.Destroy;
-begin
-  FreeAndNil(FScrollDownButton);
-  FreeAndNil(FScrollUpButton);
-  FreeAndNil(FButtons);
-  inherited Destroy;
-end;
-
-procedure TdxDockSiteHideBar.Calculate(const R: TRect);
-var
-  ARect: TRect;
-  ASections: TdxDockSiteHideBarButtonSectionList;
-  I: Integer;
-begin
-  CalculateBounds(R);
-  if Visible then
-  begin
-    ARect := ContentRect;
-    for I := 0 to Buttons.Count - 1 do
-      CalculateButton(ARect, Buttons[I]);
-
-    ASections := Buttons.GetSections;
-    try
-      if ASections.Count > 0 then
-        ARect := cxRectUnion(ASections.First.Bounds, ASections.Last.Bounds)
-      else
-        ARect := cxNullRect;
-
-      CalculateScrollButtons(ARect);
-      FButtonSectionMaxTopIndex := CalculateButtonSectionMaxTopIndex(ASections);
-      FButtonSectionTopIndex := Min(ButtonSectionTopIndex, ButtonSectionMaxTopIndex);
-      ScrollUpButton.Enabled := ButtonSectionTopIndex < ButtonSectionMaxTopIndex;
-      ScrollDownButton.Enabled := ButtonSectionTopIndex > 0;
-      CalculateButtonsPosition(ASections);
-    finally
-      ASections.Free;
-    end;
-  end;
-end;
-
-procedure TdxDockSiteHideBar.CalculateButton(var R: TRect; AButton: TdxDockSiteHideBarButton);
-begin
-  AButton.ClearSections;
-  if AButton.DockControl is TdxTabContainerDockSite then
-    CalculateMultiSectionButton(R, AButton)
-  else
-    CalculateSingleSectionButton(R, AButton);
-end;
-
-procedure TdxDockSiteHideBar.CreateAutoHideContainer(AControl: TdxCustomDockControl);
-var
-  AContainer: TdxDockSiteAutoHideContainer;
-begin
-  AContainer := TdxDockSiteAutoHideContainer.Create(Owner);
-  AContainer.Anchors := GetContainersAnchors;
-  AContainer.Parent := Owner.Parent;
-  AContainer.BringToFront;
-
-  AControl.BeginUpdateLayout;
-  try
-    AControl.Parent := AContainer;
-    AControl.Align := GetControlsAlign;
-    AControl.SetVisibility(False);
-    AControl.AdjustControlBounds(AControl);
-  finally
-    AControl.EndUpdateLayout;
-  end;
-end;
-
-function TdxDockSiteHideBar.CreateScrollButton(ADirection: Integer): TdxDockSiteHideBarScrollButton;
-begin
-  Result := TdxDockSiteHideBarScrollButton.Create(Owner.ButtonsController);
-  Result.OnClick := DoScrollButtonClick;
-  Result.Direction := ADirection;
-end;
-
-procedure TdxDockSiteHideBar.DestroyAutoHideContainer(AControl: TdxCustomDockControl);
-var
-  AContainer: TdxDockSiteAutoHideContainer;
-begin
-  AContainer := AControl.AutoHideContainer;
-  if AContainer <> nil then
-  begin
-    AControl.BeginUpdateLayout;
-    try
-      AContainer.Perform(WM_SETREDRAW, Integer(False), 0);
-      AControl.SetVisibility(True);
-      AControl.SetParentDockControl(AControl.ParentDockControl);
-      AControl.SetDockType(AControl.DockType);
-      AControl.AdjustControlBounds(AControl);
-    finally
-      AControl.EndUpdateLayout;
-    end;
-    dxDockingController.PostponedDestroyComponent(AContainer);
-  end;
-end;
-
-procedure TdxDockSiteHideBar.DoScrollButtonClick(Sender: TObject);
-begin
-  ButtonSectionTopIndex := ButtonSectionTopIndex +
-    (Sender as TdxDockSiteHideBarScrollButton).Direction;
-end;
-
-procedure TdxDockSiteHideBar.Draw(ACanvas: TcxCanvas);
-begin
-  Painter.DrawHideBar(ACanvas, Bounds, Position);
-  DrawScrollButtons(ACanvas);
-  DrawButtons(ACanvas);
-end;
-
-procedure TdxDockSiteHideBar.DrawButtons(ACanvas: TcxCanvas);
-var
-  I: Integer;
-begin
-  ACanvas.SaveClipRegion;
-  try
-    ACanvas.IntersectClipRect(ButtonsVisibleRect);
-    for I := 0 to Buttons.Count - 1 do
-      Painter.DrawHideBarButton(ACanvas, Buttons[I], Position);
-  finally
-    ACanvas.RestoreClipRegion;
-  end;
-end;
-
-procedure TdxDockSiteHideBar.DrawScrollButtons(ACanvas: TcxCanvas);
-
-  procedure DrawScrollButton(AButton: TdxDockSiteHideBarScrollButton; AArrow: TcxArrowDirection);
-  begin
-    if AButton.Visible then
-      Painter.DrawHideBarScrollButton(ACanvas, AButton.Bounds, AButton.State, AArrow);
-  end;
-
-const
-  ScrollDownButtonArrows: array[Boolean] of TcxArrowDirection = (adLeft, adUp);
-  ScrollUpButtonArrows: array[Boolean] of TcxArrowDirection = (adRight, adDown);
-begin
-  DrawScrollButton(ScrollUpButton, ScrollUpButtonArrows[Position in [ahpLeft, ahpRight]]);
-  DrawScrollButton(ScrollDownButton, ScrollDownButtonArrows[Position in [ahpLeft, ahpRight]]);
-end;
-
-function TdxDockSiteHideBar.IndexOfDockControl(AControl: TdxCustomDockControl): Integer;
-begin
-  Result := Buttons.IndexOfDockControl(AControl);
-end;
-
-procedure TdxDockSiteHideBar.RegisterDockControl(AControl: TdxCustomDockControl);
-begin
-  Buttons.Add(AControl);
-  CreateAutoHideContainer(AControl);
-  if DockControlCount = 1 then
-    Owner.NCChanged(True);
-end;
-
-procedure TdxDockSiteHideBar.UnregisterDockControl(AControl: TdxCustomDockControl);
-begin
-  DestroyAutoHideContainer(AControl);
-  Buttons.RemoveDockControl(AControl);
-  if DockControlCount = 0 then
-    Owner.NCChanged(True);
-end;
-
-function TdxDockSiteHideBar.GetControlAtPos(
-  const P: TPoint; var ASubControl: TdxCustomDockControl): TdxCustomDockControl;
-var
-  I: Integer;
-begin
-  Result := nil;
-  if PtInRect(ButtonsVisibleRect, P) then
-  begin
-    for I := 0 to Buttons.Count - 1 do
-      if Buttons[I].HitTest(P, ASubControl) then
-      begin
-        Result := Buttons[I].DockControl;
-        if Result = ASubControl then
-          ASubControl := nil;
-        Break;
-      end;
-  end;
-end;
-
-function TdxDockSiteHideBar.GetHideBarHorzInterval: Integer;
-begin
-  Result := Painter.GetHideBarHorizInterval;
-end;
-
-function TdxDockSiteHideBar.GetHideBarVertInterval: Integer;
-begin
-  Result := Painter.GetHideBarVertInterval;
-end;
-
-function TdxDockSiteHideBar.GetButtonSectionSize(
-  ADockControl: TdxCustomDockControl; AExpanded: Boolean = True): Integer;
-var
-  ADockSite: TdxTabContainerDockSite;
-  AIndent: Integer;
-  ATabWidth: Integer;
-  I: Integer;
-begin
-  AIndent := 2 * GetHideBarHorzInterval;
-  if ADockControl is TdxTabContainerDockSite then
-  begin
-    ADockSite := TdxTabContainerDockSite(ADockControl);
-    Result := GetDefaultImageSize;
-    if AExpanded then
-    begin
-      for I := 0 to ADockSite.ChildCount - 1 do
-        if ADockSite.IsValidChild(ADockSite.Children[I]) then
-        begin
-          ATabWidth := Owner.Canvas.TextWidth(ADockSite.Children[I].Caption);
-          if Painter.IsValidImageIndex(ADockSite.Children[I].ImageIndex) then
-            Inc(ATabWidth, GetDefaultImageSize + AIndent);
-          Result := Max(Result, ATabWidth);
-        end;
-    end;
-    Inc(Result, AIndent);
-  end
-  else
-  begin
-    Result := Owner.Canvas.TextWidth(ADockControl.Caption) + AIndent;
-    if GetImageSize > 0 then
-      Inc(Result, GetImageSize + AIndent)
-    else
-      Inc(Result, GetHideBarHorzInterval);
-  end;
-end;
-
-function TdxDockSiteHideBar.GetButtonRectCount: Integer;
-begin
-  Result := Buttons.Count;
-end;
-
-function TdxDockSiteHideBar.GetButtonRect(Index: Integer): TRect;
-begin
-  Result := Buttons[Index].Bounds;
-end;
-
-function TdxDockSiteHideBar.GetContentRect: TRect;
-begin
-  Result := cxRectContent(Bounds, GetContentOffsets);
-end;
-
-function TdxDockSiteHideBar.GetDefaultImageSize: Integer;
-begin
-  Result := Painter.GetDefaultImageSize(Position);
-end;
-
-function TdxDockSiteHideBar.GetDockControl(Index: Integer): TdxCustomDockControl;
-begin
-  Result := Buttons[Index].DockControl;
-end;
-
-function TdxDockSiteHideBar.GetDockControlCount: Integer;
-begin
-  Result := Buttons.Count;
-end;
-
-function TdxDockSiteHideBar.GetPainter: TdxDockControlPainter;
-begin
-  Result := Owner.Painter;
-end;
-
-function TdxDockSiteHideBar.GetVisible: Boolean;
-begin
-  Result := DockControlCount > 0;
-end;
-
-procedure TdxDockSiteHideBar.SetButtonSectionTopIndex(AValue: Integer);
-begin
-  AValue := Min(Max(AValue, 0), ButtonSectionMaxTopIndex);
-  if AValue <> ButtonSectionTopIndex then
-  begin
-    FButtonSectionTopIndex := AValue;
-    Owner.NCChanged;
-  end;
-end;
-
-{ TdxDockSiteHideBarButton }
-
-constructor TdxDockSiteHideBarButton.Create(ADockControl: TdxCustomDockControl);
-begin
-  inherited Create;
-  FDockControl := ADockControl;
-  FSections := TdxDockSiteHideBarButtonSectionList.Create;
-end;
-
-destructor TdxDockSiteHideBarButton.Destroy;
-begin
-  FreeAndNil(FSections);
-  inherited Destroy;
-end;
-
-procedure TdxDockSiteHideBarButton.AddSection(const ABounds: TRect;
-  ADockControl: TdxCustomDockControl; AExpanded: Boolean = True);
-var
-  ASection: TdxDockSiteHideBarButtonSection;
-begin
-  ASection := TdxDockSiteHideBarButtonSection.Create;
-  ASection.FBounds := ABounds;
-  ASection.FDockControl := ADockControl;
-  ASection.FExpanded := AExpanded;
-  FSections.Add(ASection);
-end;
-
-procedure TdxDockSiteHideBarButton.ClearSections;
-begin
-  FSections.Clear;
-end;
-
-function TdxDockSiteHideBarButton.HitTest(
-  const P: TPoint; out ADockControl: TdxCustomDockControl): Boolean;
-var
-  I: Integer;
-begin
-  Result := PtInRect(Bounds, P);
-  if Result then
-  begin
-    ADockControl := DockControl;
-    for I := 0 to Sections.Count - 1 do
-      if PtInRect(Sections[I].Bounds, P) then
-      begin
-        ADockControl := Sections[I].DockControl;
-        Break;
-      end;
-  end;
-end;
-
-procedure TdxDockSiteHideBarButton.Scroll(dX, dY: Integer);
-var
-  I: Integer;
-begin
-  for I := 0 to Sections.Count - 1 do
-    OffsetRect(Sections[I].FBounds, dX, dY);
-end;
-
-function TdxDockSiteHideBarButton.GetBounds: TRect;
-begin
-  if Sections.Count > 0 then
-    Result := cxRectUnion(Sections[0].Bounds, Sections[Sections.Count - 1].Bounds)
-  else
-    Result := cxNullRect
-end;
-
-{ TdxDockSiteHideBarButtonsList }
-
-function TdxDockSiteHideBarButtonsList.Add(
-  ADockControl: TdxCustomDockControl): TdxDockSiteHideBarButton;
-begin
-  Result := TdxDockSiteHideBarButton.Create(ADockControl);
-  inherited Add(Result);
-end;
-
-function TdxDockSiteHideBarButtonsList.IndexOfDockControl(ADockControl: TdxCustomDockControl): Integer;
-var
-  I: Integer;
-begin
-  Result := -1;
-  for I := 0 to Count - 1 do
-    if Items[I].DockControl = ADockControl then
-    begin
-      Result := I;
-      Break;
-    end;
-end;
-
-function TdxDockSiteHideBarButtonsList.GetSections: TdxDockSiteHideBarButtonSectionList;
-
-  procedure DoAddSections(AList: TdxDockSiteHideBarButtonSectionList; AButton: TdxDockSiteHideBarButton);
-  var
-    I: Integer;
-  begin
-    AList.Capacity := Max(AList.Capacity, AList.Count + AButton.Sections.Count);
-    for I := 0 to AButton.Sections.Count - 1 do
-      AList.Add(AButton.Sections[I]);
-  end;
-
-var
-  I: Integer;
-begin
-  Result := TdxDockSiteHideBarButtonSectionList.Create(False);
-  for I := 0 to Count - 1 do
-    DoAddSections(Result, Items[I]);
-end;
-
-function TdxDockSiteHideBarButtonsList.RemoveDockControl(
-  ADockControl: TdxCustomDockControl): Integer;
-begin
-  Result := IndexOfDockControl(ADockControl);
-  if Result >= 0 then
-    FreeAndDelete(Result);
-end;
-
-procedure TdxDockSiteHideBarButtonsList.Scroll(dX, dY: Integer);
-var
-  I: Integer;
-begin
-  if (dX <> 0) or (dY <> 0) then
-  begin
-    for I := 0 to Count - 1 do
-      Items[I].Scroll(dX, dY);
-  end;
-end;
-
-function TdxDockSiteHideBarButtonsList.GetItem(AIndex: Integer): TdxDockSiteHideBarButton;
-begin
-  Result := TdxDockSiteHideBarButton(inherited Items[AIndex]);
-end;
-
-{ TdxDockSiteHideBarButtonSectionList }
-
-function TdxDockSiteHideBarButtonSectionList.First: TdxDockSiteHideBarButtonSection;
-begin
-  Result := Items[0];
-end;
-
-function TdxDockSiteHideBarButtonSectionList.Last: TdxDockSiteHideBarButtonSection;
-begin
-  Result := Items[Count - 1];
-end;
-
-function TdxDockSiteHideBarButtonSectionList.GetItem(Index: Integer): TdxDockSiteHideBarButtonSection;
-begin
-  Result := TdxDockSiteHideBarButtonSection(inherited Items[Index]);
-end;
-
-{ TdxDockSiteHideBarScrollButton }
-
-procedure TdxDockSiteHideBarScrollButton.MouseDown(const P: TPoint);
-begin
-  StartScrollingTimer;
-  Click;
-end;
-
-procedure TdxDockSiteHideBarScrollButton.MouseUp(const P: TPoint);
-begin
-  StopScrollingTimer;
-end;
-
-procedure TdxDockSiteHideBarScrollButton.ScrollingTimerHandler(Sender: TObject);
-begin
-  FScrollTimer.Interval := TabScrollingDelay;
-  if State = cxbsPressed then
-    Click;
-end;
-
-procedure TdxDockSiteHideBarScrollButton.StartScrollingTimer;
-begin
-  FScrollTimer := cxCreateTimer(ScrollingTimerHandler, TabScrollingStartDelay);
-end;
-
-procedure TdxDockSiteHideBarScrollButton.StopScrollingTimer;
-begin
-  FreeAndNil(FScrollTimer);
-end;
 
 { TdxDockSiteLeftHideBar }
 
@@ -9204,4228 +13295,257 @@ begin
     GetHideBarVertInterval, 0, GetHideBarVertInterval);
 end;
 
-{ TdxDockSiteRightHideBar }
+{ TdxFloatForm }
 
-procedure TdxDockSiteRightHideBar.CalculateBounds(const R: TRect);
+constructor TdxFloatForm.Create(AOwner: TComponent);
 begin
-  FBounds := cxRectSetRight(R, R.Right, GetHideBarSize);
-end;
-
-function TdxDockSiteRightHideBar.GetContainersAnchors: TAnchors;
-begin
-  Result := Owner.Anchors;
-  if akRight in Result then
-    Exclude(Result, akLeft);
-end;
-
-function TdxDockSiteRightHideBar.GetControlsAlign: TAlign;
-begin
-  Result := alLeft;
-end;
-
-function TdxDockSiteRightHideBar.GetPosition: TdxAutoHidePosition;
-begin
-  Result := ahpRight;
-end;
-
-procedure TdxDockSiteRightHideBar.SetFinalPosition(AControl: TdxCustomDockControl);
-begin
-  AControl.AutoHideContainer.SetBounds(Owner.GetClientLeft + Owner.GetClientWidth - AControl.OriginalWidth,
-    Owner.GetClientTop, AControl.OriginalWidth, Owner.GetClientHeight);
-end;
-
-procedure TdxDockSiteRightHideBar.SetInitialPosition(AControl: TdxCustomDockControl);
-begin
-  AControl.AutoHideContainer.SetBounds(Owner.GetClientLeft + Owner.GetClientWidth,
-    Owner.GetClientTop, 0, Owner.GetClientHeight);
-end;
-
-procedure TdxDockSiteRightHideBar.UpdatePosition(ADelta: Integer);
-begin
-  if (ADelta > 0) and (Owner.MovingContainer.Width + ADelta > Owner.MovingControl.OriginalWidth) then
-    SetFinalPosition(Owner.MovingControl)
-  else if (ADelta < 0) and (Owner.MovingContainer.Width + ADelta < 0) then
-    SetInitialPosition(Owner.MovingControl)
-  else Owner.MovingContainer.SetBounds(Owner.MovingContainer.Left - ADelta, Owner.MovingContainer.Top,
-    Owner.MovingContainer.Width + ADelta, Owner.MovingContainer.Height);
-end;
-
-{ TdxDockSiteBottomHideBar }
-
-procedure TdxDockSiteBottomHideBar.CalculateBounds(const R: TRect);
-begin
-  FBounds := cxRectSetBottom(R, R.Bottom, GetHideBarSize);
-end;
-
-function TdxDockSiteBottomHideBar.GetContainersAnchors: TAnchors;
-begin
-  Result := Owner.Anchors;
-  if akBottom in Result then
-    Exclude(Result, akTop);
-end;
-
-function TdxDockSiteBottomHideBar.GetControlsAlign: TAlign;
-begin
-  Result := alTop;
-end;
-
-function TdxDockSiteBottomHideBar.GetPosition: TdxAutoHidePosition;
-begin
-  Result := ahpBottom;
-end;
-
-procedure TdxDockSiteBottomHideBar.SetFinalPosition(AControl: TdxCustomDockControl);
-begin
-  AControl.AutoHideContainer.SetBounds(Owner.GetClientLeft,
-    Owner.GetClientTop + Owner.GetClientHeight - AControl.OriginalHeight,
-    Owner.GetClientWidth, AControl.OriginalHeight);
-end;
-
-procedure TdxDockSiteBottomHideBar.SetInitialPosition(AControl: TdxCustomDockControl);
-begin
-  AControl.AutoHideContainer.SetBounds(Owner.GetClientLeft, Owner.GetClientTop + Owner.GetClientHeight,
-    Owner.GetClientWidth, 0);
-end;
-
-procedure TdxDockSiteBottomHideBar.UpdatePosition(ADelta: Integer);
-begin
-  if (ADelta > 0) and (Owner.MovingContainer.Height + ADelta > Owner.MovingControl.OriginalHeight) then
-    SetFinalPosition(Owner.MovingControl)
-  else if (ADelta < 0) and (Owner.MovingContainer.Height + ADelta < 0) then
-    SetInitialPosition(Owner.MovingControl)
-  else Owner.MovingContainer.SetBounds(Owner.MovingContainer.Left, Owner.MovingContainer.Top - ADelta,
-    Owner.MovingContainer.Width, Owner.MovingContainer.Height + ADelta);
-end;
-
-{ TdxDockSite }
-
-constructor TdxDockSite.Create(AOwner: TComponent);
-begin
-  inherited Create(AOwner);
-  FHideBars := TObjectList.Create;
-  CreateHideBars;
-  FHidingTimerID := -1;
-  FMovingTimerID := -1;
-  FShowingTimerID := -1;
-  UseDoubleBuffer := True;
-  UpdateDockZones;
-end;
-
-destructor TdxDockSite.Destroy;
-begin
-  if not (dcisCreating in FInternalState) then
-  begin
-    DestroyHideBars;
-    FreeAndNil(FHideBars);
-  end;
-  inherited;
-end;
-
-function TdxDockSite.GetHideBarByControl(AControl: TdxCustomDockControl): TdxDockSiteHideBar;
-var
-  I: Integer;
-begin
-  Result := nil;
-  for I := 0 to HideBarCount - 1 do
-    if (HideBars[I].IndexOfDockControl(AControl) > -1) then
-    begin
-      Result := HideBars[I];
-      Break;
-    end;
-end;
-
-function TdxDockSite.GetHideBarByPosition(APosition: TdxAutoHidePosition): TdxDockSiteHideBar;
-var
-  I: Integer;
-begin
-  Result := nil;
-  for I := 0 to HideBarCount - 1 do
-    if (HideBars[I].Position = APosition) then
-    begin
-      Result := HideBars[I];
-      Break;
-    end;
-end;
-
-procedure TdxDockSite.CreateHideBars;
-begin
-  FHideBars.Add(TdxDockSiteTopHideBar.Create(Self));
-  FHideBars.Add(TdxDockSiteBottomHideBar.Create(Self));
-  FHideBars.Add(TdxDockSiteLeftHideBar.Create(Self));
-  FHideBars.Add(TdxDockSiteRightHideBar.Create(Self));
-end;
-
-procedure TdxDockSite.DestroyHideBars;
-begin
-  FHideBars.Clear;
-end;
-
-function TdxDockSite.CanDockHost(AControl: TdxCustomDockControl; AType: TdxDockingType): Boolean;
-begin
-  Result := inherited CanDockHost(AControl, AType);
-  Result := Result and ((AType in [dtLeft, dtRight, dtTop, dtBottom]) or
-    ((Atype in [dtClient]) and (ChildCount = 0)));
-  Result := Result and (not AutoSize or ((AutoSizeClientControl = nil) and (AType = dtClient)));
-end;
-
-function TdxDockSite.GetPositionByControl(AControl: TdxCustomDockControl): TdxAutoHidePosition;
-var
-  AHideBar: TdxDockSiteHideBar;
-begin
-  AHideBar := GetHideBarByControl(AControl);
-  if AHideBar <> nil then
-    Result := AHideBar.Position
-  else
-    Result := ahpLeft;
-end;
-
-function TdxDockSite.HasAutoHideControls: Boolean;
-var
-  I: Integer;
-begin
-  Result := False;
-  for I := 0 to HideBarCount - 1 do
-    if HideBars[I].DockControlCount > 0 then
-    begin
-      Result := True;
-      Break;
-    end;
-end;
-
-function TdxDockSite.GetControlAtPos(pt: TPoint; var SubControl: TdxCustomDockControl): TdxCustomDockControl;
-var
-  I: Integer;
-begin
-  Result := nil;
-  pt := ClientToWindow(pt);
-  for I := 0 to HideBarCount - 1 do
-  begin
-    Result := HideBars[I].GetControlAtPos(pt, SubControl);
-    if Result <> nil then
-      Break;
-  end;
-end;
-
-function TdxDockSite.GetHideBarAtPos(pt: TPoint): TdxDockSiteHideBar;
-var
-  I: Integer;
-begin
-  Result := nil;
-  pt := ClientToWindow(pt);
-  for I := 0 to HideBarCount - 1 do
-    if HideBars[I].Visible and ptInRect(HideBars[I].Bounds, pt) then
-    begin
-      Result := HideBars[I];
-      Break;
-    end;
-end;
-
-function TdxDockSite.GetControlAutoHidePosition(AControl: TdxCustomDockControl): TdxAutoHidePosition;
-begin
-  if AutoSize then
-  begin
-    case Align of
-      alTop: Result := ahpTop;
-      alBottom: Result := ahpBottom;
-      alLeft: Result := ahpLeft;
-      alRight: Result := ahpRight;
-    else
-      if AControl.Width > AControl.Height then
-        Result := ahpTop
-      else
-        Result := ahpLeft;
-    end;
-  end
-  else
-    Result := inherited GetControlAutoHidePosition(AControl);
-end;
-
-procedure TdxDockSite.RegisterAutoHideDockControl(AControl: TdxCustomDockControl;
-  APosition: TdxAutoHidePosition);
-var
-  AHideBar: TdxDockSiteHideBar;
-begin
-  NCChanged;
-  ImmediatelyHide;
-  AHideBar := GetHideBarByPosition(APosition);
-  if AHideBar <> nil then
-  begin
-    AControl.FAutoHidePosition := APosition;
-    FMovingControlHideBar := AHideBar;
-    FMovingControl := AControl;
-    try
-      AHideBar.RegisterDockControl(AControl);
-      if Controller.ActiveDockControl = AControl then
-        Controller.ActiveDockControl := nil;
-    finally
-      FMovingControl := nil;
-      FMovingControlHideBar := nil;
-    end;
-  end;
-end;
-
-procedure TdxDockSite.UnregisterAutoHideDockControl(AControl: TdxCustomDockControl);
-var
-  AHideBar: TdxDockSiteHideBar;
-begin
-  NCChanged;
-  ImmediatelyHide(True);
-  AHideBar := GetHideBarByControl(AControl);
-  if AHideBar <> nil then
-  begin
-    FMovingControlHideBar := AHideBar;
-    FMovingControl := AControl;
-    Assert(MovingContainer <> nil, sdxInternalErrorAutoHide);
-    try
-      AHideBar.UnregisterDockControl(AControl);
-      if WorkingControl = AControl then
-        WorkingControl := nil;
-    finally
-      FMovingControl := nil;
-      FMovingControlHideBar := nil;
-    end;
-    AControl.FAutoHidePosition := ahpUndefined;
-  end;
-end;
-
-procedure TdxDockSite.AdjustAutoSizeBounds;
-begin
-  if IsDestroying or not AutoSize or (Align = alClient) then exit;
-  if ChildCount > 0 then
-    SetSize(FAutoSizeWidth, FAutoSizeHeight)
-  else
-    SetSize(FOriginalWidth, FOriginalHeight);
-  BringToFront;
-end;
-
-function TdxDockSite.CanAutoSizeChange: Boolean;
-begin
-  Result := FAutoSize or (ChildCount = 0) or IsLoading; // childCount = 1 TODO: !!!
-end;
-
-function TdxDockSite.CanResizing(NewWidth, NewHeight: Integer): Boolean;
-begin
-  Result := inherited CanResizing(NewWidth, NewHeight);
-  if AutoSizeClientControl <> nil then
-    Result := Result and AutoSizeClientControl.CanResizing(NewWidth, NewHeight);
-end;
-
-procedure TdxDockSite.CheckAutoSizeBounds;
-var
-  AContainer: TdxContainerDockSite;
-begin
-  // TODO: Is Simple + GetContainer
-  if AutoSize and (ChildCount = 2) and (ValidChildCount = 0) then
-  begin
-    if Children[0] is TdxContainerDockSite then
-      AContainer := Children[0] as TdxContainerDockSite
-    else
-      if Children[1] is TdxContainerDockSite then
-        AContainer := Children[1] as TdxContainerDockSite 
-      else
-        AContainer := nil; // error!
-    ChildVisibilityChanged(AContainer);
-  end;
-end;
-
-function TdxDockSite.GetAutoSizeClientControl: TdxCustomDockControl;
-begin
-  if AutoSize and (ChildCount > 1) and Children[0].CanDock then
-    Result := Children[0]
-  else
-    if AutoSize and (ChildCount > 1) and Children[1].CanDock then
-      Result := Children[1]
-    else
-      Result := nil;
-end;
-
-procedure TdxDockSite.UpdateAutoSizeBounds(AWidth, AHeight: Integer);
-begin                          
-  if not AutoSize then Exit;
-  FAutoSizeHeight := AHeight;
-  FAutoSizeWidth := AWidth;
-end;
-
-procedure TdxDockSite.DoHideControl(AControl: TdxCustomDockControl);
-begin
-  if Assigned(FOnHideControl) then
-    FOnHideControl(Self, AControl);
-end;
-
-procedure TdxDockSite.DoShowControl(AControl: TdxCustomDockControl);
-begin
-  if Assigned(FOnShowControl) then
-    FOnShowControl(Self, AControl);
-end;
-
-procedure ShowMovementTimerProc(Wnd: HWnd; Msg, TimerID, SysTime: Longint); stdcall;
-var
-  AControl: TdxDockSite;
-begin
-  AControl := TdxDockSite(FindControl(Wnd));
-  if AControl <> nil then
-    AControl.DoShowMovement;
-end;
-
-procedure TdxDockSite.DoShowMovement;
-
-  procedure TotalShowMovingControl;
-  begin
-    if FMovingTimerID > -1 then
-    begin
-      KillTimer(Handle, FMovingTimerID);
-      FMovingTimerID := -1;
-    end;
-    FMovingControlHideBar := nil;
-    FShowingControl := FMovingControl;
-    FMovingControl := nil;
-    InitializeHiding;
-  end;
-
-var
-  AAutoHideMovingSize: Integer;
-begin
-  AAutoHideMovingSize := IfThen(ControllerAutoHideMovingInterval = 0, MAXWORD, ControllerAutoHideMovingSize);
-  MovingControlHideBar.UpdatePosition(AAutoHideMovingSize);
-  if MovingControlHideBar.CheckShowingFinish then
-    TotalShowMovingControl
-  else
-    if FMovingTimerID < 0 then
-      FMovingTimerID := SetTimer(Handle, 1, ControllerAutoHideMovingInterval, @ShowMovementTimerProc);
-end;
-
-procedure HideMovementTimerProc(Wnd: HWnd; Msg, TimerID, SysTime: Longint); stdcall;
-var
-  AControl: TdxDockSite;
-begin
-  AControl := TdxDockSite(FindControl(Wnd));
-  if AControl <> nil then
-    AControl.DoHideMovement;
-end;
-
-procedure TdxDockSite.DoHideMovement;
-
-  procedure TotalHideMovingControl;
-  begin
-    DoHideControl(FMovingControl);
-    if FMovingTimerID > -1 then
-    begin
-      KillTimer(Handle, FMovingTimerID);
-      FMovingTimerID := -1;
-    end;
-    Assert(MovingContainer <> nil, sdxInternalErrorAutoHide);
-    MovingContainer.Visible := False;
-    MovingControl.SetVisibility(False);
-    FMovingControlHideBar := nil;
-    WorkingControl := nil;
-    FMovingControl := nil;
-    FShowingControl := nil;
-    FinalizeHiding;
-  end;
-
-var
-  AAutoHideMovingSize: Integer;
-begin
-  AAutoHideMovingSize := IfThen(ControllerAutoHideMovingInterval = 0, MAXWORD, ControllerAutoHideMovingSize);
-  MovingControlHideBar.UpdatePosition(-AAutoHideMovingSize);
-  if MovingControlHideBar.CheckHidingFinish then
-    TotalHideMovingControl
-  else
-    if FMovingTimerID < 0 then
-      FMovingTimerID := SetTimer(Handle, 1, ControllerAutoHideMovingInterval, @HideMovementTimerProc);
-end;
-
-procedure TdxDockSite.ImmediatelyHide(AFinalizing: Boolean = False);
-begin
-  if ShowingControl <> nil then
-  begin
-    DoHideControl(ShowingControl);
-    if not AFinalizing then
-      ShowingControl.AutoHideContainer.Visible := False;
-    ShowingControl.SetVisibility(False);
-    if (Controller.ActiveDockControl = ShowingControl) and
-      (Controller.ActiveDockControl <> Controller.FActivatingDockControl) then
-      Controller.ActiveDockControl := nil;
-    FShowingControl := nil;
-    FinalizeHiding;
-  end;
-  WorkingControl := nil;
-  FMovingControl := nil;
-  FMovingControlHideBar := nil;
-  if FMovingTimerID > -1 then
-  begin
-    KillTimer(Handle, FMovingTimerID);
-    FMovingTimerID := -1;
-  end;
-end;
-
-procedure TdxDockSite.ImmediatelyShow(AControl: TdxCustomDockControl);
-var
-  AHideBar: TdxDockSiteHideBar;
-begin
-  if MovingControl <> nil then exit;
-  if ShowingControl <> AControl then
-  begin
-    ImmediatelyHide;
-    AHideBar := GetHideBarByControl(AControl);
-    if AHideBar <> nil then
-    begin
-      WorkingControl := AControl;
-      FShowingControl := AControl;
-      AHideBar.SetFinalPosition(AControl);
-      AControl.AutoHideContainer.Visible := True;
-      AControl.SetVisibility(True);
-      AControl.AutoHideContainer.BringToFront;
-      DoShowControl(AControl);
-      InitializeHiding;
-    end;
-  end;
-end;
-
-procedure AutoHideTimerProc(Wnd: HWnd; Msg, TimerID, SysTime: Longint); stdcall;
-var
-  AControl: TdxDockSite;
-begin
-  AControl := TdxDockSite(FindControl(Wnd));
-  if (AControl <> nil) and (AControl.ShowingControl <> nil) then
-    AControl.FinalizeHiding
-  else
-    KillTimer(Wnd, TimerID);
-end;
-
-procedure TdxDockSite.InitializeHiding;
-begin
-  if FHidingTimerID > -1 then
-  begin
-    KillTimer(Handle, FHidingTimerID);
-    FHidingTimerID := -1;
-  end;
-  if not IsDestroying and (FHidingTimerID = -1) and (ShowingControl <> nil) then
-    FHidingTimerID := SetTimer(Handle, 2, ControllerAutoHideInterval, @AutoHideTimerProc)
-end;
-
-procedure AutoShowTimerProc(Wnd: HWnd; Msg, TimerID, SysTime: Longint); stdcall;
-var
-  AControl: TdxDockSite;
-begin
-  AControl := TdxDockSite(FindControl(Wnd));
-  if AControl <> nil then
-    AControl.FinalizeShowing
-  else
-    KillTimer(Wnd, TimerID);
-end;
-
-procedure TdxDockSite.InitializeShowing;
-begin
-  if not IsDestroying and (FShowingTimerID = -1) then
-    FShowingTimerID := SetTimer(Handle, 3, ControllerAutoShowInterval, @AutoShowTimerProc)
-end;
-
-procedure TdxDockSite.FinalizeHiding;
-var
-  pt: TPoint;
-  AControl: TdxCustomDockControl;
-begin
-  if Controller.IsDocking or Controller.IsResizing then Exit;
-  if MovingControl <> nil then Exit;
-  if ShowingControl <> nil then
-  begin
-    GetCursorPos(pt);
-    AControl := Controller.GetDockControlAtPos(pt);
-    if
-      not (((AControl = Self) and (GetHideBarAtPos(ScreenToClient(pt)) <> nil)) or
-        ((AControl <> nil) and (AControl.AutoHideControl = ShowingControl)) or
-        (not (doHideAutoHideIfActive in ControllerOptions) and (Controller.ActiveDockControl <> nil) and
-        (Controller.ActiveDockControl.AutoHideControl = ShowingControl))) then
-      ShowingControl := nil;
-  end
-  else
-    if FHidingTimerID > -1 then
-    begin
-      KillTimer(Handle, FHidingTimerID);
-      FHidingTimerID := -1;
-    end;
-end;
-
-procedure TdxDockSite.FinalizeShowing;
-var
-  pt: TPoint;
-  AControl, ASubControl: TdxCustomDockControl;
-begin
-  if FShowingTimerID > -1 then
-  begin
-    KillTimer(Handle, FShowingTimerID);
-    FShowingTimerID := -1;
-  end;
-  GetCursorPos(pt);
-  ASubControl := nil;
-  AControl := GetControlAtPos(ScreenToClient(pt), ASubControl);
-  if (FShowingControlCandidate <> nil) and (FShowingControlCandidate = AControl) and not (disContextMenu in Controller.FInternalState) then
-  begin
-    if (ASubControl <> nil) and (AControl is TdxTabContainerDockSite) then
-    begin
-      if ASubControl <> (AControl as TdxTabContainerDockSite).ActiveChild then
-      begin
-        ImmediatelyHide;
-        (AControl as TdxTabContainerDockSite).ActiveChild := ASubControl;
-      end;
-      ShowingControl := AControl;
-    end
-    else
-      if (AControl <> nil) then
-        ShowingControl := AControl;
-  end;
-end;
-
-procedure TdxDockSite.SetFinalPosition(AControl: TdxCustomDockControl);
-var
-  AHideBar: TdxDockSiteHideBar;
-begin
-  AHideBar := GetHideBarByControl(AControl);
-  if AHideBar <> nil then
-    AHideBar.SetFinalPosition(AControl);
-end;
-
-procedure TdxDockSite.SetInitialPosition(AControl: TdxCustomDockControl);
-var
-  AHideBar: TdxDockSiteHideBar;
-begin
-  AHideBar := GetHideBarByControl(AControl);
-  if AHideBar <> nil then
-    AHideBar.SetInitialPosition(AControl);
-end;
-
-function TdxDockSite.GetClientLeft: Integer;
-begin
-  Result := ClientOrigin.X - Parent.ClientOrigin.X;
-end;
-
-function TdxDockSite.GetClientTop: Integer;
-begin
-  Result := ClientOrigin.Y - Parent.ClientOrigin.Y;
-end;
-
-function TdxDockSite.GetClientWidth: Integer;
-begin
-  Result := ClientWidth;
-end;
-
-function TdxDockSite.GetClientHeight: Integer;
-begin
-  Result := ClientHeight;
-end;
-
-function TdxDockSite.GetDesignHitTest(const APoint: TPoint; AShift: TShiftState): Boolean;
-begin
-  Result := inherited GetDesignHitTest(APoint, AShift) or (GetHideBarAtPos(APoint) <> nil);
-end;
-
-procedure TdxDockSite.Loaded;
-begin
-  inherited Loaded;
-  CheckAutoSizeBounds;
-  UpdateDockZones;
-end;
-
-procedure TdxDockSite.MouseLeave;
-begin
-  inherited MouseLeave;
-  if ShowingControl <> nil then
-    InitializeHiding;
-end;
-
-procedure TdxDockSite.ReadState(Reader: TReader);
-begin
-  inherited ReadState(Reader);
-  UpdateLayout;
-end;
-
-procedure TdxDockSite.SetAutoSize(Value: Boolean);
-begin
-  if (FAutoSize <> Value) and CanAutoSizeChange then
-  begin
-    FAutoSize := Value;
-    if not IsLoading then
-    begin
-      AdjustAutoSizeBounds;
-      UpdateLayout;
-    end;
-  end;
-end;
-
-procedure TdxDockSite.SetParent(AParent: TWinControl);
-begin
-  if IsDesigning and not IsLoading and ParentIsDockControl(AParent) then
-    raise EdxException.Create(sdxInvalidDockSiteParent)
-  else
-    inherited SetParent(AParent);
-end;
-
-procedure TdxDockSite.ValidateInsert(AComponent: TComponent);
-begin
-  if not ((AComponent is TdxCustomDockControl) or (AComponent is TdxDockSiteAutoHideContainer)) then
-  begin
-    if AComponent is TControl then
-      (AComponent as TControl).Parent := ParentForm;
-    raise EdxException.CreateFmt(sdxInvalidSiteChild, [AComponent.ClassName]);
-  end;
-end;
-
-procedure TdxDockSite.UpdateControlResizeZones(AControl: TdxCustomDockControl);
-begin
-  if AutoSize and (AControl <> Self) then
-  begin
-    AControl.ResizeZones.RegisterResizeZone(Self, AControl, TdxAutoSizeRightZone, ControllerResizeZonesWidth);
-    AControl.ResizeZones.RegisterResizeZone(Self, AControl, TdxAutoSizeLeftZone, ControllerResizeZonesWidth);
-    AControl.ResizeZones.RegisterResizeZone(Self, AControl, TdxAutoSizeBottomZone, ControllerResizeZonesWidth);
-    AControl.ResizeZones.RegisterResizeZone(Self, AControl, TdxAutoSizeTopZone, ControllerResizeZonesWidth);
-  end
-  else
-    inherited UpdateControlResizeZones(AControl);
-end;
-
-procedure TdxDockSite.UpdateControlDockZones(AControl: TdxCustomDockControl; AZoneWidth: Integer);
-begin
-  if AutoSize then
-  begin
-    if not AControl.DockZones.RegisterDockZone(Self, AControl, TdxAutoSizeClientZone, AZoneWidth) then
-      AControl.DockZones.RegisterDockZone(Self, AControl, TdxInvisibleAutoSizeClientZone, AZoneWidth);
-  end
-  else
-  begin
-    if not AControl.DockZones.RegisterDockZone(Self, AControl, TdxClientZone, AZoneWidth) then
-      AControl.DockZones.RegisterDockZone(Self, AControl, TdxInvisibleClientZone, AZoneWidth);
-    inherited UpdateControlDockZones(AControl, AZoneWidth);
-  end;
-end;
-
-procedure TdxDockSite.CreateLayout(AControl: TdxCustomDockControl; AType: TdxDockingType;
-  Index: Integer);
-var
-  AWidth, AHeight: Integer;
-begin
-  AWidth := AControl.OriginalWidth;
-  AHeight := AControl.OriginalHeight;
-  inherited;
-  UpdateAutoSizeBounds(AWidth, AHeight);
-  AdjustAutoSizeBounds;
-end;
-
-procedure TdxDockSite.DestroyLayout(AControl: TdxCustomDockControl);
-begin
-  inherited;
-  AdjustAutoSizeBounds;
-end;
-
-procedure TdxDockSite.LoadLayoutFromCustomIni(AIniFile: TCustomIniFile;
-  AParentForm: TCustomForm; AParentControl: TdxCustomDockControl; ASection: string);
-var
-  I, AChildCount: Integer;
-  AChildSection: string;
-  ADockTypes: TdxDockingTypes;
-  AWidth, AHeight: Integer;
-begin
-  BeginUpdateLayout;
-  try
-    with AIniFile do
-    begin
-      ADockTypes := [];
-      if ReadBool(ASection, 'AllowDockClientsLeft', dtLeft in AllowDockClients) then
-        ADockTypes := ADockTypes + [dtLeft];
-      if ReadBool(ASection, 'AllowDockClientsTop', dtTop in AllowDockClients) then
-        ADockTypes := ADockTypes + [dtTop];
-      if ReadBool(ASection, 'AllowDockClientsRight', dtRight in AllowDockClients) then
-        ADockTypes := ADockTypes + [dtRight];
-      if ReadBool(ASection, 'AllowDockClientsBottom', dtBottom in AllowDockClients) then
-        ADockTypes := ADockTypes + [dtBottom];
-      if ReadBool(ASection, 'AllowDockClientsClient', dtClient in AllowDockClients) then
-        ADockTypes := ADockTypes + [dtClient];
-      AllowDockClients := ADockTypes;
-      Visible := ReadBool(ASection, 'Visible', Visible);
-      AChildCount := ReadInteger(ASection, 'ChildCount', 0);
-      for I := 0 to AChildCount - 1 do
-      begin
-        AChildSection := ReadString(ASection, 'Children' + IntToStr(I), '');
-        Controller.LoadControlFromCustomIni(AIniFile, AParentForm, Self, AChildSection);
-      end;
-      AWidth := ReadInteger(ASection, 'Width', Width);
-      AHeight := ReadInteger(ASection, 'Height', Height);
-      SetSize(AWidth, AHeight);
-      FOriginalWidth := ReadInteger(ASection, 'OriginalWidth', OriginalWidth);
-      FOriginalHeight := ReadInteger(ASection, 'OriginalHeight', OriginalHeight);
-      FAutoSize := ReadBool(ASection, 'AutoSize', AutoSize);
-      // TODO: !!!
-      AdjustAutoSizeBounds;
-    end;
-  finally
-    EndUpdateLayout;
-  end;
-end;
-
-procedure TdxDockSite.SaveLayoutToCustomIni(AIniFile: TCustomIniFile; ASection: string);
-var
-  I: Integer;
-begin
-  with AIniFile do
-  begin
-    WriteInteger(ASection, 'ChildCount', ChildCount);
-    for I := 0 to ChildCount - 1 do
-      WriteString(ASection, 'Children' + IntToStr(I), IntToStr(Controller.IndexOfDockControl(Children[I])));
-    WriteBool(ASection, 'AllowDockClientsLeft', dtLeft in AllowDockClients);
-    WriteBool(ASection, 'AllowDockClientsTop', dtTop in AllowDockClients);
-    WriteBool(ASection, 'AllowDockClientsRight', dtRight in AllowDockClients);
-    WriteBool(ASection, 'AllowDockClientsBottom', dtBottom in AllowDockClients);
-    WriteBool(ASection, 'AllowDockClientsClient', dtClient in AllowDockClients);
-    WriteInteger(ASection, 'Width', Width);
-    WriteInteger(ASection, 'Height', Height);
-    WriteInteger(ASection, 'OriginalWidth', OriginalWidth);
-    WriteInteger(ASection, 'OriginalHeight', OriginalHeight);
-    WriteBool(ASection, 'Visible', Visible);
-    WriteBool(ASection, 'AutoSize', AutoSize);
-  end;
-  for I := 0 to ChildCount - 1 do
-    Controller.SaveControlToCustomIni(AIniFile, Children[I]);
-end;
-
-procedure TdxDockSite.ChildVisibilityChanged(Sender: TdxCustomDockControl);
-var
-  AHideBar: TdxDockSiteHideBar;
-begin
-  // TODO: !!!
-  if AutoSize and (AutoSizeClientControl = Sender) then
-  begin
-    if Sender.Visible and not HasAutoHideControls then
-      UpdateAutoSizeBounds(Sender.OriginalWidth, Sender.OriginalHeight)
-    else
-      if not Sender.Visible and not HasAutoHideControls then
-        UpdateAutoSizeBounds(FOriginalWidth, FOriginalHeight)
-      else
-        if HasAutoHideControls then
-        begin
-          AHideBar := GetHideBarByPosition(GetControlAutoHidePosition(Sender));
-          if AHideBar <> nil then
-            AHideBar.UpdateOwnerAutoSizeBounds(Sender);
-        end;
-    AdjustAutoSizeBounds;
-  end;
-end;
-
-procedure TdxDockSite.UpdateControlOriginalSize(AControl: TdxCustomDockControl);
-begin
-  if not AutoSize and (AControl <> Self) then
-    inherited
-  else
-    if (AControl <> Self) and (AControl.UpdateVisibilityLock = 0) and
-      not AControl.IsUpdateLayoutLocked then
-    begin
-      case Align of
-        alLeft, alRight:
-          AControl.FOriginalWidth := Width;
-        alTop, alBottom:
-          AControl.FOriginalHeight := Height;
-      end;
-    end
-    else
-      if not AutoSize or (ChildCount = 0) then
-      begin
-        AControl.FOriginalWidth := Width;
-        AControl.FOriginalHeight := Height;
-      end;
-end;
-
-procedure TdxDockSite.CalculateNC(var ARect: TRect);
-var
-  I: Integer;
-begin
-  inherited CalculateNC(ARect);
-  for I := 0 to HideBarCount - 1 do
-    HideBars[I].Calculate(ARect);
-  Dec(ARect.Bottom, cxRectHeight(BottomHideBar.Bounds));
-  Dec(ARect.Right, cxRectWidth(RightHideBar.Bounds));
-  Inc(ARect.Left, cxRectWidth(LeftHideBar.Bounds));
-  Inc(ARect.Top, cxRectHeight(TopHideBar.Bounds));
-end;
-
-procedure TdxDockSite.NCPaint(ACanvas: TcxCanvas);
-var
-  I: Integer;
-begin
-  for I := 0 to HideBarCount - 1 do
-  begin
-    if HideBars[I].Visible then
-      HideBars[I].Draw(ACanvas);
-  end;
-end;
-
-procedure TdxDockSite.Recalculate;
-begin
-  CheckAutoSizeBounds;
-  inherited Recalculate;
-end;
-
-function TdxDockSite.GetHideBarCount: Integer;
-begin
-  Result := FHideBars.Count;
-end;
-
-function TdxDockSite.GetHideBar(Index: Integer): TdxDockSiteHideBar;
-begin
-  if (0 <= Index) and (Index < FHideBars.Count) then
-    Result := TdxDockSiteHideBar(FHideBars[Index])
-  else
-    Result := nil;
-end;
-
-function TdxDockSite.GetMovingContainer: TdxDockSiteAutoHideContainer;
-begin
-  if FMovingControl <> nil then
-    Result := FMovingControl.AutoHideContainer
-  else
-    Result := nil;
-end;
-
-procedure TdxDockSite.SetWorkingControl(AValue: TdxCustomDockControl);
-begin
-  if AValue <> FWorkingControl then
-  begin
-    FWorkingControl := AValue;
-    if Painter.IsHideBarButtonHotTrackSupports then
-      InvalidateNC(False);
-  end;
-end;
-
-procedure TdxDockSite.SetShowingControl(Value: TdxCustomDockControl);
-var
-  AHideBar: TdxDockSiteHideBar;
-begin
-  if (FShowingControl <> Value) and (MovingControl = nil) then
-  begin
-    if Value <> nil then
-    begin
-      ImmediatelyHide;
-      AHideBar := GetHideBarByControl(Value);
-      if AHideBar <> nil then
-      begin
-        FMovingControlHideBar := AHideBar;
-        FMovingControl := Value;
-        WorkingControl := Value;
-        Assert(MovingContainer <> nil, sdxInternalErrorAutoHide);
-        MovingControlHideBar.SetInitialPosition(Value);
-        MovingContainer.Visible := True;
-        MovingControl.SetVisibility(True);
-        MovingContainer.BringToFront;
-        DoShowControl(Value);
-        DoShowMovement;
-      end;
-    end
-    else
-    begin
-      AHideBar := GetHideBarByControl(FShowingControl);
-      if AHideBar <> nil then
-      begin
-        FMovingControlHideBar := AHideBar;
-        FMovingControl := FShowingControl;
-        WorkingControl := FShowingControl; 
-        Assert(MovingContainer <> nil, sdxInternalErrorAutoHide);
-        DoHideMovement;
-      end;
-    end;
-  end;
-end;
-
-procedure TdxDockSite.CMControlListChange(var Message: TMessage);
-begin
-  if IsDesigning and not IsLoading and Boolean(Message.LParam) {Inserting} and
-    IsControlContainsDockSite(TControl(Message.WParam)) then
-    raise EdxException.Create(sdxInvalidDockSiteParent);
-  inherited;
-end;
-
-procedure TdxDockSite.WMLButtonDown(var Message: TWMLButtonDown);
-var
-  AControl, ASubControl: TdxCustomDockControl;
-begin
-  inherited;
-  if Message.Result = 0 then
-  begin
-    AControl := GetControlAtPos(SourcePoint, ASubControl);
-    if AControl <> nil then
-    begin
-      Controller.ActiveDockControl := AControl;
-      Controller.FActivatingDockControl := AControl;
-      Message.Result := 1;
-    end;
-  end
-end;
-
-procedure TdxDockSite.WMMouseMove(var Message: TWMMouseMove);
-var
-  ASubControl: TdxCustomDockControl;
-begin
-  inherited;
-  if (Message.Result = 0) and (ParentFormActive or IsDesigning) then
-  begin
-    FShowingControlCandidate := GetControlAtPos(CursorPoint, ASubControl);
-    if FShowingControlCandidate <> nil then
-      InitializeShowing;
-    Message.Result := 1;
-  end;
-end;
-
-{ TdxFloatDockSite }
-
-constructor TdxFloatDockSite.Create(AOwner: TComponent);
-begin
-  inherited;
-  CreateFloatForm;
-end;
-
-destructor TdxFloatDockSite.Destroy;
-begin
-  DestroyFloatForm;
-  inherited;
-end;
-
-procedure TdxFloatDockSite.BeforeDestruction;
-begin
-  if not CanDestroy then
-    raise EdxException.Create(sdxInvalidFloatSiteDeleting);
-  inherited;
-end;
-
-procedure TdxFloatDockSite.HideFloatForm;
-begin
-  if FloatForm <> nil then
-  begin
-    FloatForm.Hide;
-    FloatForm.SetDesigning(False);
-  end;
-end;
-
-procedure TdxFloatDockSite.ShowFloatForm;
-begin                                        
-  if (FloatForm <> nil) and Visible and (ParentFormVisible or IsDesigning) then
-  begin
-    FloatForm.Show;
-    FloatForm.SetDesigning(IsDesigning);
-    FFloatLeft := FloatForm.Left;
-    FFloatTop := FloatForm.Top;
-  end;
-end;
-
-procedure TdxFloatDockSite.SetFloatFormPosition(ALeft, ATop: Integer);
-var
-  R: TRect;
-begin
-  if FloatForm = nil then Exit;
-  // check work area
-  R := GetDesktopWorkArea(Point(ALeft, ATop));
-  if ALeft < R.Left then ALeft := R.Left;
-  if ALeft >= R.Right then ALeft := R.Right - FloatForm.Width;
-  if ATop < R.Top then ATop := R.Top;
-  if ATop >= R.Bottom then ATop := R.Bottom - FloatForm.Height;
-  FloatForm.SetBounds(ALeft, ATop, FloatForm.Width, FloatForm.Height);
-end;
-
-procedure TdxFloatDockSite.SetFloatFormSize(AWidth, AHeight: Integer);
-begin
-  if FloatForm = nil then exit;
-  if FloatForm.HandleAllocated then
-  begin
-    FloatForm.ClientWidth := AWidth;
-    FloatForm.ClientHeight := AHeight;
-  end
-  else
-  begin
-    FloatForm.FClientHeight := AHeight;
-    FloatForm.FClientWidth := AWidth;
-  end;  
-end;
-
-function TdxFloatDockSite.HasParent: Boolean;
-begin
-  Result := False;
-end;
-
-procedure TdxFloatDockSite.Loaded;
-begin
-  inherited;
-  CreateFloatForm;
-  UpdateCaption;
-  ShowFloatForm;
-
-  if IsDesigning and IsLoadingFromForm then // Anchors bug - see TdxFloatForm.InsertDockSite
-    SetDockType(dtClient);
-
-  SetFloatFormSize(OriginalWidth, OriginalHeight);
-end;
-
-function TdxFloatDockSite.GetDesignRect: TRect;
-begin
-  Result := cxNullRect;
-end;
-
-procedure TdxFloatDockSite.SetParent(AParent: TWinControl);
-begin
-  if not IsUpdateLayoutLocked and not IsDestroying and
-    ((AParent = nil) or not (csLoading in AParent.ComponentState)) then
-    raise EdxException.Create(sdxInvalidParentAssigning)
-  else if (AParent <> nil) and not (AParent is TCustomForm) then
-    raise EdxException.Create(sdxInvalidFloatSiteParent)
-  else inherited SetParent(AParent);
-end;
-
-function TdxFloatDockSite.IsLoadingFromForm: Boolean;
-begin
-  Result := csLoading in Owner.ComponentState; // Anchors bug - see TdxFloatForm.InsertDockSite
-end;
-
-function TdxFloatDockSite.CanUndock(AControl: TdxCustomDockControl): Boolean;
-begin
-  Result := ValidChildCount > 1;
-end;
-
-procedure TdxFloatDockSite.StartDocking(const pt: TPoint);
-begin
-  if Child <> nil then
-    Child.StartDocking(pt);
-end;
-
-procedure TdxFloatDockSite.CheckDockClientsRules;
-begin
-end;
-
-procedure TdxFloatDockSite.UpdateControlDockZones(AControl: TdxCustomDockControl; AZoneWidth: Integer);
-begin
-  if doUseCaptionAreaToClientDocking in ControllerOptions then
-  begin
-    if TdxFloatZone.ValidateDockZone(Self, AControl) then
-      AControl.DockZones.RegisterZone(TdxFloatZone.Create(Self));
-  end;
-end;
-
-procedure TdxFloatDockSite.AdjustControlBounds(AControl: TdxCustomDockControl);
-begin
-  if FloatForm <> nil then
-    SetFloatFormSize(AControl.OriginalWidth, AControl.OriginalHeight)
-  else
-    inherited AdjustControlBounds(AControl);
-end;
-
-procedure TdxFloatDockSite.UpdateControlOriginalSize(AControl: TdxCustomDockControl);
-begin
-  if not FloatFormVisible then exit;
-  AControl.FOriginalHeight := Height;
-  AControl.FOriginalWidth := Width;
-end;
-
-procedure TdxFloatDockSite.UpdateFloatPosition;
-begin
-  if FloatFormVisible then
-  begin
-    FFloatLeft := FloatForm.Left;
-    FFloatTop := FloatForm.Top;
-    Modified;
-  end;
-end;
-
-procedure TdxFloatDockSite.ChildVisibilityChanged(Sender: TdxCustomDockControl);
-begin
-  if Sender = Child then
-  begin
-    Visible := Sender.Visible;
-    FloatForm.Visible := Sender.Visible and ParentFormVisible;
-  end;
-end;
-
-procedure TdxFloatDockSite.Activate;
-begin
-  if GetDockPanel <> nil then
-    GetDockPanel.Activate
-  else
-  begin // old code
-    if Child <> nil then
-      Child.Activate;
-  end;    
-end;
-
-procedure TdxFloatDockSite.DoClose;
-begin
-  if Child <> nil then
-    Child.DoClose;
-end;
-
-function TdxFloatDockSite.CanDestroy: Boolean;
-begin
-  Result := (Child = nil) or Child.IsDestroying;
-end;
-
-function TdxFloatDockSite.CanDockHost(AControl: TdxCustomDockControl; AType: TdxDockingType): Boolean;
-begin
-  Result := False;
-end;
-
-function TdxFloatDockSite.GetDockPanel: TdxCustomDockControl;
-begin
-  Result := Child;
-  if not (Result is TdxDockPanel) then
-  begin
-    if Result is TdxSideContainerDockSite then
-    begin
-      if (Result as TdxSideContainerDockSite).ActiveChild <> nil then
-        Result := (Result as TdxSideContainerDockSite).ActiveChild
-      else
-        if (Result as TdxSideContainerDockSite).ValidChildCount > 0 then
-          Result := (Result as TdxSideContainerDockSite).ValidChildren[0]
-        else
-          Result := nil; 
-    end
-    else
-    begin
-      if Result is TdxContainerDockSite then
-        Result := (Result as TdxContainerDockSite).ActiveChild
-      else
-        Result := nil;
-    end;
-  end;
-end;
-
-procedure TdxFloatDockSite.CreateLayout(AControl: TdxCustomDockControl;
-  AType: TdxDockingType; Index: Integer);
-begin
-  Assert(ChildCount = 0, Format(sdxInternalErrorCreateLayout, [ClassName]));
-  AControl.IncludeToDock(Self, AType, 0);
-end;
-
-procedure TdxFloatDockSite.DestroyLayout(AControl: TdxCustomDockControl);
-begin
-  Assert(ChildCount = 1, Format(sdxInternalErrorDestroyLayout, [ClassName]));
-  Include(FInternalState, dcisDestroying);
-  AControl.ExcludeFromDock;
-  if not IsDestroying then DoDestroy;
-end;
-
-procedure TdxFloatDockSite.LoadLayoutFromCustomIni(AIniFile: TCustomIniFile;
-  AParentForm: TCustomForm; AParentControl: TdxCustomDockControl; ASection: string);
-begin
-  inherited;
-  with AIniFile do
-  begin
-    FloatLeft := ReadInteger(ASection, 'FloatLeft', FloatLeft);
-    FloatTop := ReadInteger(ASection, 'FloatTop', FloatTop);
-    FOriginalWidth := ReadInteger(ASection, 'Width', Width);
-    FOriginalHeight := ReadInteger(ASection, 'Height', Height);
-  end;
-  CreateFloatForm;
-  UpdateCaption;
-  ShowFloatForm;
-  SetFloatFormSize(OriginalWidth, OriginalHeight);
-  // To fix bad layouts
-  if ChildCount <> 1 then DoDestroy;
-end;
-
-procedure TdxFloatDockSite.SaveLayoutToCustomIni(AIniFile: TCustomIniFile;
-  ASection: string);
-begin
-  inherited;
-  with AIniFile do
-  begin
-    WriteInteger(ASection, 'FloatLeft', FloatLeft);
-    WriteInteger(ASection, 'FloatTop', FloatTop);
-  end;
-end;
-
-procedure TdxFloatDockSite.DoSetFloatFormCaption;
-begin
-  if Assigned(FOnSetFloatFormCaption) then
-    FOnSetFloatFormCaption(Self, FloatForm);
-  Controller.DoSetFloatFormCaption(Self, FloatForm);
-end;
-
-procedure TdxFloatDockSite.UpdateCaption;
-begin
-  if (Child <> nil) and (FloatForm <> nil) then
-    FloatForm.Caption := RemoveAccelChars(Child.Caption, False);
-  DoSetFloatFormCaption;
-end;
-
-function TdxFloatDockSite.GetFloatForm: TdxFloatForm;
-begin
-  Result := FFloatForm as TdxFloatForm;
-end;
-
-procedure TdxFloatDockSite.RestoreDockPosition(pt: TPoint);
-begin
-  if (Child <> nil) and Child.Dockable then
-    Child.RestoreDockPosition(pt);
-end;
-
-function TdxFloatDockSite.GetFloatFormClass: TdxFloatFormClass;
-begin
-  Result := TdxFloatForm;
-end;
-
-procedure TdxFloatDockSite.CreateFloatForm;
-var
-  AWidth, AHeight: Integer;
-begin
-  BeginUpdateLayout;
-  try
-    AWidth := OriginalWidth;
-    AHeight := OriginalHeight;
-    if FFloatForm = nil then
-      if IsDesigning then
-        FFloatForm := GetFloatFormClass.Create(Application)
-      else
-        FFloatForm := GetFloatFormClass.Create(Owner);
-    FloatForm.InsertDockSite(Self);
-    SetFloatFormPosition(FloatLeft, FloatTop);
-    SetFloatFormSize(AWidth, AHeight);
-    if (doFloatingOnTop in ControllerOptions) or IsDesigning then
-      FloatForm.BringToFront(True);
-  finally
-    EndUpdateLayout;
-  end;
-end;
-
-procedure TdxFloatDockSite.DestroyFloatForm;
-begin
-  if FFloatForm = nil then exit;
-  BeginUpdateLayout;
-  try
-    if not FloatForm.IsDestroying then
-      FreeAndNil(FFloatForm);
-  finally
-    EndUpdateLayout;
-  end;
-end;
-
-function TdxFloatDockSite.GetChild: TdxCustomDockControl;
-begin
-  if ChildCount = 1 then
-    Result := Children[0]
-  else
-    Result := nil;
-end;
-
-function TdxFloatDockSite.GetFloatLeft: Integer;
-begin
-  if FloatForm <> nil then
-    Result := FloatForm.Left
-  else
-    Result := FFloatLeft;
-end;
-
-function TdxFloatDockSite.GetFloatTop: Integer;
-begin
-  if FloatForm <> nil then
-    Result := FloatForm.Top
-  else
-    Result := FFloatTop;
-end;
-
-function TdxFloatDockSite.GetFloatWidth: Integer;
-begin
-  if FloatForm <> nil then
-  begin
-    if FloatForm.HandleAllocated then
-      Result := FloatForm.ClientWidth
-    else
-      Result := FloatForm.FClientWidth;
-  end
-  else Result := FFloatWidth;
-end;
-
-function TdxFloatDockSite.GetFloatHeight: Integer;
-begin
-  if FloatForm <> nil then
-  begin
-    if FloatForm.HandleAllocated then
-      Result := FloatForm.ClientHeight
-    else
-      Result := FloatForm.FClientHeight;
-  end
-  else
-    Result := FFloatHeight;
-end;
-
-procedure TdxFloatDockSite.SetFloatLeft(const Value: Integer);
-begin
-  FFloatLeft := Value;
-  if FloatForm <> nil then
-    FloatForm.Left := Value;
-end;
-
-procedure TdxFloatDockSite.SetFloatTop(const Value: Integer);
-begin
-  FFloatTop := Value;
-  if FloatForm <> nil then
-    FloatForm.Top := Value;
-end;
-
-procedure TdxFloatDockSite.SetFloatWidth(const Value: Integer);
-begin
-  FFloatWidth := Value;
-  SetFloatFormSize(Value, FloatHeight);
-end;
-
-procedure TdxFloatDockSite.SetFloatHeight(const Value: Integer);
-begin
-  FFloatHeight := Value;
-  SetFloatFormSize(FloatWidth, Value);
-end;
-
-procedure TdxFloatDockSite.WMNCHitTest(var Message: TWMNCHitTest);
-begin
-  Message.Result := HTTRANSPARENT;
-end;
-
-{ TdxDockControlPainter }
-
-constructor TdxDockControlPainter.Create(ADockControl: TdxCustomDockControl);
-begin
-  FDockControl := ADockControl;
-end;
-
-class function TdxDockControlPainter.GetTabsPainter(ATabsStyle: TcxPCStyleID): TcxPCPainterClass;
-begin
-  Result := nil;
-end;
-
-class function TdxDockControlPainter.HasLookAndFeelStyle(AStyle: TcxLookAndFeelStyle): Boolean;
-begin
-  Result := AStyle = lfsStandard;
-end;
-
-function TdxDockControlPainter.CanVerticalCaption: Boolean;
-begin
-  Result := True;
-end;
-
-function TdxDockControlPainter.GetBorderWidths: TRect;
-begin
-  Result := Rect(2, 2, 2, 2);
-end;
-
-function TdxDockControlPainter.GetCaptionButtonSize: TSize;
-begin
-  Result := cxSize(12, 12);
-end;
-
-function TdxDockControlPainter.GetCaptionHeight: Integer;
-begin
-  Result := 16;
-end;
-
-function TdxDockControlPainter.GetCaptionSeparatorSize: Integer;
-begin
-  Result := GetBorderWidths.Top;
-end;
-
-function TdxDockControlPainter.GetDefaultImageHeight: Integer;
-begin
-  if DockControl.Images <> nil then
-    Result := DockControl.Images.Height
-  else
-    Result := dxDefaultImageHeight;
-end;
-
-function TdxDockControlPainter.GetDefaultImageSize(APosition: TdxAutoHidePosition): Integer;
-begin
-  if APosition in [ahpLeft, ahpRight] then
-    Result := GetDefaultImageHeight
-  else
-    Result := GetDefaultImageWidth;
-end;
-
-function TdxDockControlPainter.GetDefaultImageWidth: Integer;
-begin
-  if DockControl.Images <> nil then
-    Result := DockControl.Images.Width
-  else
-    Result := dxDefaultImageWidth;
-end;
-
-function TdxDockControlPainter.GetImageHeight: Integer;
-begin
-  if DockControl.Images <> nil then
-    Result := DockControl.Images.Height
-  else Result := 0;
-end;
-
-function TdxDockControlPainter.GetImageWidth: Integer;
-begin
-  if DockControl.Images <> nil then
-    Result := DockControl.Images.Width
-  else
-    Result := 0;
-end;
-
-function TdxDockControlPainter.GetSpaceBetweenCaptionButtons: Integer;
-begin
-  Result := 2;
-end;
-
-function TdxDockControlPainter.IsValidImageIndex(AIndex: Integer): Boolean;
-begin
-  Result := IsImageAssigned(DockControl.Images, AIndex);
-end;
-
-function TdxDockControlPainter.GetHideBarHeight: Integer;
-begin
-  Result := 10 + GetFont.Size + 10;
-  if Result < GetHideBarVertInterval + 2 + GetImageHeight + 2 + GetHideBarVertInterval then
-    Result := GetHideBarVertInterval + 2 + GetImageHeight + 2 + GetHideBarVertInterval;
-end;
-
-function TdxDockControlPainter.GetHideBarWidth: Integer;
-begin
-  Result := 10 + GetFont.Size + 10;
-  if Result < GetHideBarVertInterval + 2 + GetImageWidth + 2 + GetHideBarVertInterval then
-    Result := GetHideBarVertInterval + 2 + GetImageWidth + 2 + GetHideBarVertInterval;
-end;
-
-function TdxDockControlPainter.GetHideBarVertInterval: Integer;
-begin
-  Result := 2;
-end;
-
-function TdxDockControlPainter.GetHideBarHorizInterval: Integer;
-begin
-  Result := 4;
-end;
-
-function TdxDockControlPainter.GetHideBarScrollButtonSize: TSize;
-begin
-  Result := cxSize(16, 16);
-end;
-
-procedure TdxDockControlPainter.DrawBorder(ACanvas: TcxCanvas; ARect: TRect);
-var
-  ABorders: TRect;
-begin
-  ACanvas.Brush.Color := ColorToRGB(GetBorderColor);
-  ACanvas.Brush.Style := bsSolid;
-  with ARect do
-  begin
-    ABorders := GetBorderWidths;
-    ACanvas.FillRect(Rect(Left, Top, Left + ABorders.Left, Bottom));
-    ACanvas.FillRect(Rect(Left, Bottom - ABorders.Bottom, Right, Bottom));
-    ACanvas.FillRect(Rect(Right - ABorders.Right, Top, Left + Right, Bottom));
-    ACanvas.FillRect(Rect(Left, Top, Right, Top + ABorders.Top));
-  end;
-  DrawColorEdge(ACanvas, ARect, GetColor, etRaisedOuter, [epTopLeft]);
-  DrawColorEdge(ACanvas, ARect, GetColor, etRaisedInner, [epBottomRight]);
-end;
-
-procedure TdxDockControlPainter.DrawHideBar(
-  ACanvas: TcxCanvas; ARect: TRect; APosition: TdxAutoHidePosition);
-begin
-  ACanvas.FillRect(ARect, ColorToRGB(GetHideBarColor));
-end;
-
-procedure TdxDockControlPainter.DrawCaption(
-  ACanvas: TcxCanvas; ARect: TRect; IsActive: Boolean);
-begin
-  ACanvas.FillRect(ARect, ColorToRGB(GetCaptionColor(IsActive)));
-end;
-
-procedure TdxDockControlPainter.DrawCaptionSeparator(ACanvas: TcxCanvas; ARect: TRect);
-begin
-  ACanvas.FillRect(ARect, ColorToRGB(GetBorderColor));
-end;
-
-procedure TdxDockControlPainter.DrawCaptionText(ACanvas: TcxCanvas; ARect: TRect; IsActive: Boolean);
-var
-  R: TRect;
-begin
-  R := ARect;
-  if DockControl.IsCaptionVertical then
-  begin
-    if ARect.Top < ARect.Bottom then
-    begin
-      R.Right := ARect.Left + (ARect.Right - ARect.Left) div 2 - 1;
-      R.Left := R.Right - 3;
-      DrawColorEdge(ACanvas, R, GetCaptionColor(IsActive), etRaisedOuter, [epTopLeft]);
-      DrawColorEdge(ACanvas, R, GetCaptionColor(IsActive), etRaisedInner, [epBottomRight]);
-      R.Left := ARect.Left + (ARect.Right - ARect.Left) div 2;
-      R.Right := R.Left + 3;
-      DrawColorEdge(ACanvas, R, GetCaptionColor(IsActive), etRaisedOuter, [epTopLeft]);
-      DrawColorEdge(ACanvas, R, GetCaptionColor(IsActive), etRaisedInner, [epBottomRight]);
-    end;
-  end
-  else
-  begin
-    if ARect.Left < ARect.Right then
-    begin
-      R.Bottom := ARect.Top + (ARect.Bottom - ARect.Top) div 2 - 1;
-      R.Top := R.Bottom - 3;
-      DrawColorEdge(ACanvas, R, GetCaptionColor(IsActive), etRaisedOuter, [epTopLeft]);
-      DrawColorEdge(ACanvas, R, GetCaptionColor(IsActive), etRaisedInner, [epBottomRight]);
-      R.Top := ARect.Top + (ARect.Bottom - ARect.Top) div 2;
-      R.Bottom := R.Top + 3;
-      DrawColorEdge(ACanvas, R, GetCaptionColor(IsActive), etRaisedOuter, [epTopLeft]);
-      DrawColorEdge(ACanvas, R, GetCaptionColor(IsActive), etRaisedInner, [epBottomRight]);
-    end;
-  end;
-end;
-
-procedure TdxDockControlPainter.DrawCaptionButtonSelection(
-  ACanvas: TcxCanvas; ARect: TRect; AIsActive: Boolean; AState: TcxButtonState);
-begin
-  if AState = cxbsPressed then
-  begin
-    DrawColorEdge(ACanvas, ARect, GetCaptionColor(AIsActive), etSunkenOuter, [epRect]);
-    InflateRect(ARect, -1, -1);
-    DrawColorEdge(ACanvas, ARect, GetCaptionColor(AIsActive), etSunkenInner, [epTopLeft]);
-  end
-  else
-  begin
-    DrawColorEdge(ACanvas, ARect, GetCaptionColor(AIsActive), etRaisedOuter, [epRect]);
-    InflateRect(ARect, -1, -1);
-    DrawColorEdge(ACanvas, ARect, GetCaptionColor(AIsActive), etRaisedInner, [epBottomRight]);
-  end;
-end;
-
-procedure TdxDockControlPainter.DrawCaptionCloseButton(
-  ACanvas: TcxCanvas; ARect: TRect; AIsActive: Boolean; AState: TcxButtonState);
-begin
-  DrawCaptionButtonSelection(ACanvas, ARect, AIsActive, AState);
-  if AState = cxbsPressed then
-    OffsetRect(ARect, 1, 1);
-  ACanvas.Pen.Style := psSolid;
-  ACanvas.Pen.Width := 1;
-  ACanvas.Pen.Color := ColorToRGB(GetCaptionSignColor(AIsActive, AState));
-  ACanvas.MoveTo(ARect.Left + 2, ARect.Top + 2);
-  ACanvas.LineTo(ARect.Right - 3, ARect.Bottom - 3);
-  ACanvas.MoveTo(ARect.Right - 4, ARect.Top + 2);
-  ACanvas.LineTo(ARect.Left + 1, ARect.Bottom - 3);
-end;
-
-procedure TdxDockControlPainter.DrawCaptionHideButton(ACanvas: TcxCanvas;
-  ARect: TRect; IsActive, IsSwitched: Boolean; AState: TcxButtonState);
-begin
-  DrawCaptionButtonSelection(ACanvas, ARect, IsActive, AState);
-  if AState = cxbsPressed then
-    OffsetRect(ARect, 1, 1);
-  ACanvas.Pen.Style := psSolid;
-  ACanvas.Pen.Width := 1;
-  ACanvas.Pen.Color := ColorToRGB(GetCaptionSignColor(IsActive, AState));
-  ACanvas.Brush.Style := bsClear;
-  if IsSwitched then
-  begin
-    ACanvas.Rectangle(ARect.Left + 4, ARect.Top + 3, ARect.Right - 3, ARect.Bottom - 4);
-    ACanvas.MoveTo(ARect.Left + 4, ARect.Top + 2);
-    ACanvas.LineTo(ARect.Left + 4, ARect.Bottom - 3);
-    ACanvas.MoveTo(ARect.Left + 4, ARect.Bottom - 6);
-    ACanvas.LineTo(ARect.Right - 3, ARect.Bottom - 6);
-    ACanvas.MoveTo(ARect.Left + 2, ARect.Top + 5);
-    ACanvas.LineTo(ARect.Left + 4, ARect.Top + 5);
-  end
-  else
-  begin
-    ACanvas.Rectangle(ARect.Left + 3, ARect.Top + 2, ARect.Right - 4, ARect.Bottom - 5);
-    ACanvas.MoveTo(ARect.Left + 2, ARect.Bottom - 6);
-    ACanvas.LineTo(ARect.Right - 3, ARect.Bottom - 6);
-    ACanvas.MoveTo(ARect.Right - 6, ARect.Top + 2);
-    ACanvas.LineTo(ARect.Right - 6, ARect.Bottom - 5);
-    ACanvas.MoveTo(ARect.Left + 5, ARect.Bottom - 5);
-    ACanvas.LineTo(ARect.Left + 5, ARect.Bottom - 3);
-  end;
-  ACanvas.Brush.Style := bsSolid;
-end;
-
-procedure TdxDockControlPainter.DrawCaptionMaximizeButton(ACanvas: TcxCanvas;
-  ARect: TRect; IsActive, IsSwitched: Boolean; AState: TcxButtonState);
-var
-  pts: array[0..2] of TPoint;
-begin
-  DrawCaptionButtonSelection(ACanvas, ARect, IsActive, AState);
-  if AState = cxbsPressed then
-    OffsetRect(ARect, 1, 1);
-  ACanvas.Pen.Style := psSolid;
-  ACanvas.Pen.Width := 1;
-  ACanvas.Pen.Color := ColorToRGB(GetCaptionSignColor(IsActive, AState));
-  ACanvas.Brush.Style := bsSolid;
-  ACanvas.Brush.Color := ColorToRGB(GetCaptionSignColor(IsActive, AState));
-  if DockControl.SideContainer is TdxVertContainerDockSite then
-    if IsSwitched then
-    begin
-      pts[0] := Point(ARect.Right - 4, ARect.Top + 2);
-      pts[1] := Point(ARect.Left + 2, ARect.Top + 2);
-    end
-    else
-    begin
-      pts[0] := Point(ARect.Right - 4, ARect.Bottom - 4);
-      pts[1] := Point(ARect.Left + 2, ARect.Bottom - 4);
-    end
-  else
-    if IsSwitched then
-    begin
-      pts[0] := Point(ARect.Left + 2, ARect.Top + 2);
-      pts[1] := Point(ARect.Left + 2, ARect.Bottom - 4);
-    end
-    else
-    begin
-      pts[0] := Point(ARect.Right - 4, ARect.Top + 2);
-      pts[1] := Point(ARect.Right - 4, ARect.Bottom - 4);
-    end;
-  pts[2] := Point(ARect.Left + 5, ARect.Top + 5);
-  ACanvas.Polygon(pts);
-end;
-
-procedure TdxDockControlPainter.DrawClient(ACanvas: TcxCanvas; ARect: TRect);
-begin
-  ACanvas.FillRect(ARect, ColorToRGB(GetColor));
-end;
-
-procedure TdxDockControlPainter.DrawHideBarButtonBackground(
-  ACanvas: TcxCanvas; AButton: TdxDockSiteHideBarButton; APosition: TdxAutoHidePosition);
-const
-  TopEdges: array[TdxAutoHidePosition] of TdxEdgePositions =
-    ([epTop], [epLeft], [epTopLeft], [epTopLeft], []);
-  BottomEdges: array[TdxAutoHidePosition] of TdxEdgePositions =
-    ([epBottomRight], [epBottomRight], [epBottom], [epRight], []);
-begin
-  DrawColorEdge(ACanvas, AButton.Bounds, GetHideBarButtonColor, etRaisedOuter, TopEdges[APosition]);
-  DrawColorEdge(ACanvas, AButton.Bounds, GetHideBarButtonColor, etRaisedInner, BottomEdges[APosition]);
-end;
-
-procedure TdxDockControlPainter.DrawHideBarButtonSection(ACanvas: TcxCanvas;
-  AButtonSection: TdxDockSiteHideBarButtonSection; APosition: TdxAutoHidePosition);
-
-  procedure DrawHideBarButtonSectionImage(
-    var R: TRect; ASection: TdxDockSiteHideBarButtonSection);
-  var
-    AImageRect: TRect;
-    AImageSize: Integer;
-  begin
-    if IsValidImageIndex(ASection.DockControl.ImageIndex) then
-    begin
-      AImageSize := GetDefaultImageSize(APosition) + 2 * GetHideBarHorizInterval;
-      if APosition in [ahpLeft, ahpRight] then
-      begin
-        AImageRect := cxRectSetHeight(R, AImageSize);
-        R.Top := AImageRect.Bottom;
-      end
-      else
-      begin
-        AImageRect := cxRectSetWidth(R, AImageSize);
-        R.Left := AImageRect.Right;
-      end;
-      DrawHideBarButtonImage(ACanvas, ASection.DockControl, AImageRect);
-    end;
-  end;
-
-var
-  ARect: TRect;
-begin
-  ARect := AButtonSection.Bounds;
-  if not cxRectIsEmpty(ARect) then
-    DrawHideBarButtonSectionImage(ARect, AButtonSection);
-  if not cxRectIsEmpty(ARect) then
-    DrawHideBarButtonText(ACanvas, AButtonSection.DockControl, ARect, APosition);
-end;
-
-procedure TdxDockControlPainter.DrawHideBarButtonSections(
-  ACanvas: TcxCanvas; AButton: TdxDockSiteHideBarButton; APosition: TdxAutoHidePosition);
-var
-  I: Integer;
-begin
-  for I := 0 to AButton.Sections.Count - 1 do
-  begin
-    DrawHideBarButtonSection(ACanvas, AButton.Sections[I], APosition);
-    if I + 1 < AButton.Sections.Count then
-      DrawHideBarButtonSectionSeparator(ACanvas, AButton.Sections[I], APosition);
-  end;
-end;
-
-procedure TdxDockControlPainter.DrawHideBarButtonSectionSeparator(ACanvas: TcxCanvas;
-  AButtonSection: TdxDockSiteHideBarButtonSection; APosition: TdxAutoHidePosition);
-const
-  SeparatorEdges: array[TdxAutoHidePosition] of TdxEdgePositions =
-    ([epBottom], [epRight], [epBottom], [epRight], []);
-begin
-  DrawColorEdge(ACanvas, AButtonSection.Bounds,
-    GetHideBarButtonColor, etRaisedInner, SeparatorEdges[APosition]);
-end;
-
-procedure TdxDockControlPainter.DrawHideBarButton(ACanvas: TcxCanvas;
-  AButton: TdxDockSiteHideBarButton; APosition: TdxAutoHidePosition);
-begin
-  DrawHideBarButtonBackground(ACanvas, AButton, APosition);
-  DrawHideBarButtonSections(ACanvas, AButton, APosition);
-end;
-
-procedure TdxDockControlPainter.DrawHideBarButtonImage(
-  ACanvas: TcxCanvas; AControl: TdxCustomDockControl; ARect: TRect);
-var
-  R: TRect;
-begin
-  if IsValidImageIndex(AControl.ImageIndex) then
-  begin
-    R.Left := ARect.Left + (ARect.Right - ARect.Left - GetImageWidth) div 2;
-    R.Top := ARect.Top + (ARect.Bottom - ARect.Top - GetImageHeight) div 2;
-    R.Right := R.Left + GetImageWidth;
-    R.Bottom := R.Top + GetImageHeight;
-    DrawImage(ACanvas, AControl.Images, AControl.ImageIndex, R);
-  end;
-end;
-
-procedure TdxDockControlPainter.DrawHideBarButtonText(ACanvas: TcxCanvas;
-  AControl: TdxCustomDockControl; ARect: TRect; APosition: TdxAutoHidePosition);
-
-  procedure DoDrawText(ACanvas: TCanvas; R: TRect);
-  begin
-    ACanvas.Brush.Style := bsClear;
-    ACanvas.Font := GetHideBarButtonFont;
-    ACanvas.Font.Color := ColorToRGB(GetHideBarButtonFontColor);
-    cxDrawText(ACanvas.Handle, AControl.Caption, R,
-      DT_SINGLELINE or DT_LEFT or DT_VCENTER or DT_END_ELLIPSIS);
-  end;
-
-var
-  ABitmap: TcxBitmap;
-begin
-  InflateRect(ARect, -2, -2);
-  case APosition of
-    ahpTop, ahpBottom:
-      DoDrawText(ACanvas.Canvas, ARect);
-    ahpLeft, ahpRight:
-      begin
-        ABitmap := TcxBitmap.CreateSize(ARect, pf32bit);
-        try
-          cxBitBlt(ABitmap.Canvas.Handle, ACanvas.Handle, ABitmap.ClientRect, ARect.TopLeft, SRCCOPY);
-          ABitmap.Rotate(raPlus90);
-          DoDrawText(ABitmap.Canvas, ABitmap.ClientRect);
-          ABitmap.Rotate(raMinus90);
-          ACanvas.Draw(ARect.Left, ARect.Top, ABitmap);
-        finally
-          ABitmap.Free;
-        end;
-      end;
-  end;
-end;
-
-procedure TdxDockControlPainter.DrawHideBarScrollButton(ACanvas: TcxCanvas;
-  const ARect: TRect; AState: TcxButtonState; AArrow: TcxArrowDirection);
-begin
-  cxLookAndFeelPaintersManager.GetPainter(lfsFlat).DrawArrow(ACanvas, ARect, AState, AArrow);
-end;
-
-class procedure TdxDockControlPainter.CreateColors;
-begin
-end;
-
-class procedure TdxDockControlPainter.RefreshColors;
-begin
-end;
-
-class procedure TdxDockControlPainter.ReleaseColors;
-begin
-end;
-
-class function TdxDockControlPainter.LightColor(AColor: TColor): TColor;
-begin
-  Result := Light(AColor, 60);
-end;
-
-class function TdxDockControlPainter.LightLightColor(AColor: TColor): TColor;
-begin
-  Result := Light(AColor, 20);
-end;
-
-class function TdxDockControlPainter.DarkColor(AColor: TColor): TColor;
-begin
-  Result := Dark(AColor, 60);
-end;
-
-class function TdxDockControlPainter.DarkDarkColor(AColor: TColor): TColor;
-begin
-  Result := Dark(AColor, 20);
-end;
-
-class procedure TdxDockControlPainter.DrawColorEdge(ACanvas: TcxCanvas;
-  ARect: TRect; AColor: TColor; AEdgesType: TdxEdgesType; AEdgePositios: TdxEdgePositions);
-var
-  LTCol, RBCol: TColor;
-begin
-  case AEdgesType of
-    etFlat: begin
-      LTCol := DarkColor(AColor);
-      RBCol := DarkColor(AColor);
-    end;
-    etRaisedOuter: begin
-      LTCol := LightLightColor(AColor);
-      RBCol := DarkDarkColor(AColor);
-    end;
-    etRaisedInner: begin
-      LTCol := LightColor(AColor);
-      RBCol := DarkColor(AColor);
-    end;
-    etSunkenOuter: begin
-      LTCol := DarkDarkColor(AColor);
-      RBCol := LightLightColor(AColor);
-    end;
-    etSunkenInner: begin
-      LTCol := DarkColor(AColor);
-      RBCol := LightColor(AColor);
-    end;
-  else
-    LTCol := ColorToRGB(AColor);
-    RBCol := ColorToRGB(AColor);
-  end;
-  ACanvas.Pen.Style := psSolid;
-  ACanvas.Pen.Width := 1;
-  ACanvas.MoveTo(ARect.Left, ARect.Bottom - 1);
-  ACanvas.Pen.Color := LTCol;
-  if (epLeft in AEdgePositios) or (epTopLeft in AEdgePositios) or (epRect in AEdgePositios) then
-    ACanvas.LineTo(ARect.Left, ARect.Top - 1);
-  ACanvas.MoveTo(ARect.Left, ARect.Top);
-  if (epTop in AEdgePositios) or (epTopLeft in AEdgePositios) or (epRect in AEdgePositios) then
-    ACanvas.LineTo(ARect.Right, ARect.Top);
-  ACanvas.MoveTo(ARect.Right - 1, ARect.Top);
-  ACanvas.Pen.Color := RBCol;
-  if (epRight in AEdgePositios) or (epBottomRight in AEdgePositios) or (epRect in AEdgePositios) then
-    ACanvas.LineTo(ARect.Right - 1, ARect.Bottom);
-  ACanvas.MoveTo(ARect.Right - 1, ARect.Bottom - 1);
-  if (epBottom in AEdgePositios) or (epBottomRight in AEdgePositios) or (epRect in AEdgePositios) then
-    ACanvas.LineTo(ARect.Left - 1, ARect.Bottom - 1)
-end;
-
-class procedure TdxDockControlPainter.DrawImage(ACanvas: TcxCanvas;
-  AImageList: TCustomImageList; AImageIndex: Integer; R: TRect);
-begin
-  AImageList.Draw(ACanvas.Canvas, R.Left, R.Top, AImageIndex);
-end;
-
-class function TdxDockControlPainter.RectInRect(R1, R2: TRect): Boolean;
-begin
-  Result := PtInRect(R2, R1.TopLeft) and PtInRect(R2, R1.BottomRight);
-end;
-
-function TdxDockControlPainter.GetCaptionRect(const ARect: TRect; AIsVertical: Boolean): TRect;
-begin
-  Result := ARect;
-  if AIsVertical then
-    Result.Right := Result.Left + GetCaptionAreaHeight
-  else
-    Result.Bottom := Result.Top + GetCaptionAreaHeight;
-end;
-
-function TdxDockControlPainter.GetCaptionContentOffsets(AIsVertical: Boolean): TRect;
-begin
-  if AIsVertical then
-    Result := cxRect(0, 4, 0, 4)
-  else
-    Result := cxRect(4, 0, 4, 0);
-end;
-
-function TdxDockControlPainter.GetColor: TColor;
-begin
-  Result := DockControl.Color;
-end;
-
-function TdxDockControlPainter.GetFont: TFont;
-begin
-  Result := DockControl.Font;
-end;
-
-function TdxDockControlPainter.GetBorderColor: TColor;
-begin
-  Result := GetColor;
-end;
-
-function TdxDockControlPainter.GetCaptionAreaHeight: Integer;
-begin
-  Result := Max(GetCaptionHeight, GetCaptionButtonSize.cy);
-end;
-
-function TdxDockControlPainter.GetCaptionColor(IsActive: Boolean): TColor;
-begin
-  Result := GetColor;
-end;
-
-function TdxDockControlPainter.GetCaptionFont(IsActive: Boolean): TFont;
-begin
-  Result := GetFont;
-end;
-
-function TdxDockControlPainter.GetCaptionFontColor(IsActive: Boolean): TColor;
-begin
-  Result := GetCaptionFont(IsActive).Color;
-end;
-
-function TdxDockControlPainter.GetCaptionSignColor(IsActive: Boolean; AState: TcxButtonState): TColor;
-begin
-  Result := GetCaptionFontColor(IsActive);
-end;
-
-function TdxDockControlPainter.GetHideBarColor: TColor;
-begin
-  Result := GetColor;
-end;
-
-function TdxDockControlPainter.IsHideBarButtonHotTrackSupports: Boolean; 
-begin
-  Result := False;
-end;
-
-function TdxDockControlPainter.GetHideBarButtonColor: TColor;
-begin
-  Result := GetColor;
-end;
-
-function TdxDockControlPainter.GetHideBarButtonFont: TFont;
-begin
-  Result := GetFont;
-end;
-
-function TdxDockControlPainter.GetHideBarButtonFontColor: TColor;
-begin
-  Result := GetHideBarButtonFont.Color;
-end;
-
-function TdxDockControlPainter.GetLookAndFeelPainter: TcxCustomLookAndFeelPainter;
-begin
-  Result := DockControl.ControllerLookAndFeel.Painter;
-end;
-
-function TdxDockControlPainter.DrawCaptionFirst: Boolean;
-begin
-  Result := False;
-end;
-
-function TdxDockControlPainter.NeedRedrawOnResize: Boolean;
-begin
-  Result := False;
-end;
-
-{ TdxDockingController }
-
-procedure dxDockWndProcHook(ACode: Integer; wParam: WPARAM; lParam: LPARAM; var AHookResult: LRESULT);
-
-{$IFDEF DELPHI11}
-  function NeedAdditionalUpdateVisibilityFloatForms(AForm: TCustomForm): Boolean;
-  begin
-    Result := Application.MainFormOnTaskBar and (AForm = Application.MainForm) and
-      not (doFloatingOnTop in dxDockingController.Options(AForm));
-  end;
+  CreateNew(AOwner);
+{$IFDEF DELPHI9}
+  Position := poDesigned;
+  PopupMode := pmExplicit;
 {$ENDIF}
-
-var
-  AControl: TWinControl;
-  AParentDockControl, AActiveDockControl: TdxCustomDockControl;
-  AMsg: PCWPStruct;
-begin
-  AMsg := PCWPStruct(lParam);
-  AControl := FindControl(AMsg.hwnd);
-  if AControl is TdxFloatForm then
-    AControl := nil;
-  case AMsg.message of
-    WM_ACTIVATEAPP:
-      begin
-        if (AControl is TCustomForm) then
-        begin
-          if (csDesigning in AControl.ComponentState) then
-            dxDockingController.UpdateVisibilityFloatForms(nil, AMsg.wParam <> 0)
-          else
-          begin
-          {$IFDEF DELPHI11}
-            if NeedAdditionalUpdateVisibilityFloatForms(TCustomForm(AControl)) and (AMsg.wParam <> 0) then
-              dxDockingController.UpdateVisibilityFloatForms(Application.MainForm, AMsg.wParam <> 0);
-          {$ENDIF}
-          end;
-        end;
-        dxDockingController.ActiveAppChanged(AMsg.wParam <> 0);
-      end;
-    WM_ENABLE:
-      if (AControl is TCustomForm) then
-        dxDockingController.UpdateEnableStatusFloatForms(AControl as TCustomForm, AMsg.wParam <> 0);
-  {$IFDEF DELPHI11}
-    WM_SIZE:
-      if (AControl is TCustomForm) and
-        NeedAdditionalUpdateVisibilityFloatForms(TCustomForm(AControl)) then
-        case AMsg.wParam of
-          SIZE_MINIMIZED: dxDockingController.UpdateVisibilityFloatForms(Application.MainForm, False);
-          SIZE_RESTORED: dxDockingController.UpdateVisibilityFloatForms(Application.MainForm, True);
-        end;
-  {$ENDIF}
-    WM_WINDOWPOSCHANGED:
-    begin
-      if (AControl is TCustomForm) then
-      begin
-        if PWindowPos(AMsg.lParam).flags and SWP_SHOWWINDOW <> 0 then
-          dxDockingController.UpdateVisibilityFloatForms(AControl as TCustomForm, True)
-        else
-          if PWindowPos(AMsg.lParam).flags and SWP_HIDEWINDOW <> 0 then
-            dxDockingController.UpdateVisibilityFloatForms(AControl as TCustomForm, False);
-      end;
-    end;
-    WM_SETFOCUS:
-      begin
-        if dxDockingController.FActiveDockControlLockCount = 0 then
-        begin
-          AActiveDockControl := dxDockingController.GetDockControlForWindow(AMsg.hwnd);
-          if Application.Active and
-            (AActiveDockControl <> nil) and AActiveDockControl.HandleAllocated and
-            (AActiveDockControl <> dxDockingController.FActivatingDockControl) then
-            dxDockingController.ActiveDockControl := AActiveDockControl;
-        end;
-      end;
-    WM_KILLFOCUS:
-      begin
-        if dxDockingController.FActiveDockControlLockCount = 0 then
-        begin
-          AParentDockControl := dxDockingController.GetDockControlForWindow(AMsg.hwnd);
-          if Application.Active and (AParentDockControl <> nil) and
-            (dxDockingController.ActiveDockControl = AParentDockControl) and
-            (AParentDockControl <> dxDockingController.FActivatingDockControl) then
-          begin
-            AActiveDockControl := dxDockingController.GetDockControlForWindow(AMsg.wParam); // focused
-            if (AActiveDockControl = nil) or (AActiveDockControl <> AParentDockControl) then
-              dxDockingController.ActiveDockControl := nil;
-          end;
-        end;
-      end;
-  end;
+  FClientHeight := -1;
+  FClientWidth := -1;
+  AutoScroll := False;
+  BorderStyle := bsSizeToolWin;
+  DefaultMonitor := dmDesktop;
+  Visible := False;
 end;
 
-constructor TdxDockingController.Create;
+destructor TdxFloatForm.Destroy;
 begin
-  inherited;
-  FDestroyedComponents := TcxComponentList.Create(True);
-  FLoadedForms := TList.Create;
-  FDockControls := TList.Create;
-  FDockManagers := TList.Create;
-  FFont := TFont.Create;
-  FInvalidNC := TList.Create;
-  FInvalidNCBounds := TList.Create;
-  FInvalidRedraw := TList.Create;
-  FSelectionBrush := TBrush.Create;
-  FSelectionBrush.Bitmap := AllocPatternBitmap(clBlack, clWhite);
-  dxSetHook(htWndProc, dxDockWndProcHook);
-  TdxDockControlPainter.CreateColors;
-  FAppEvents := TApplicationEvents.Create(nil);
-  FAppEvents.OnDeactivate := ApplicationDeactivated;
-end;
-
-destructor TdxDockingController.Destroy;
-begin
-  FreeAndNil(FAppEvents);
-  TdxDockControlPainter.ReleaseColors;
-  dxReleaseHook(dxDockWndProcHook);
-  FreeAndNil(FSelectionBrush);
-  FreeAndNil(FInvalidRedraw);
-  FreeAndNil(FInvalidNCBounds);
-  FreeAndNil(FInvalidNC);
-  FreeAndNil(FFont);
-  FreeAndNil(FDockManagers);
-  FreeAndNil(FDockControls);
-  FreeAndNil(FLoadedForms);
-  FreeAndNil(FDestroyedComponents);
-  ReleaseTempBitmap;
+  RemoveDockSite;
   inherited;
 end;
 
-procedure TdxDockingController.ActiveAppChanged(AActive: Boolean);
+procedure TdxFloatForm.InsertDockSite(ADockSite: TdxFloatDockSite);
 begin
-  if not AActive then
+  FDockSite := ADockSite;
+  if not (FDockSite.IsDesigning and FDockSite.IsLoadingFromForm) then // Anchors bug - see TdxFloatDockSite.Loaded
+    FDockSite.SetDockType(dtClient);
+  FDockSite.Parent := Self;
+  FCanDesigning := True;
+end;
+
+procedure TdxFloatForm.RemoveDockSite;
+begin
+  FCanDesigning := False;
+  if FDockSite <> nil then
   begin
-    FinishDocking;
-    FinishResizing;
+    FDockSite.Parent := nil;
+    FDockSite.FFloatForm := nil;
+    FDockSite := nil;
   end;
-
-  ApplicationActive := Application.Active;
-  if not AActive then
-    FApplicationDeactivating := True;
 end;
 
-function TdxDockingController.IsApplicationDeactivating: Boolean;
+procedure TdxFloatForm.BringToFront(ATopMost: Boolean);
 begin
-  Result := FApplicationDeactivating;
-end;
-
-procedure TdxDockingController.BeginUpdate;
-begin
-  BeginUpdateNC;
-end;
-
-procedure TdxDockingController.EndUpdate;
-begin
-  EndUpdateNC;
-end;
-
-function TdxDockingController.GetDockControlAtPos(const P: TPoint): TdxCustomDockControl;
-begin
-  Result := GetDockControlForWindow(WindowFromPoint(P));
-end;
-
-function TdxDockingController.GetDockControlForWindow(AWnd: HWND; ADockWindow: HWND = 0): TdxCustomDockControl;
-var
-  AControl: TControl;
-  AFloatForm: TdxFloatForm;
-begin
-  Result := nil;
-  while AWnd <> 0 do
+  if FOnTopMost <> ATopMost then
   begin
-    if Assigned(cxControls.cxGetParentWndForDocking) then
-      AWnd := cxControls.cxGetParentWndForDocking(AWnd);
-
-    AControl := FindControl(AWnd);
-    if AControl is TdxCustomDockControl then
-    begin
-      Result := TdxCustomDockControl(AControl);
-      if (ADockWindow = 0) or (AWnd = ADockWindow) then
-        Break
-      else
-        Result := nil;
-    end;
-
-    if AControl is TdxFloatForm then
-    begin
-      AFloatForm := TdxFloatForm(AControl);
-      if AFloatForm.DockSite <> nil then
-        Result := AFloatForm.DockSite.GetDockPanel
-      else
-        Result := nil;
-      if (Result <> nil) and (ADockWindow <> 0) and (Result.Handle <> ADockWindow) then
-        Result := nil;
-      Break;
-    end;
-
-    AWnd := GetParent(AWnd);
+    FOnTopMost := ATopMost;
+    RecreateWnd;
   end;
 end;
 
-function TdxDockingController.GetFloatDockSiteAtPos(const pt: TPoint): TdxCustomDockControl;
-var
-  AControl: TWinControl;
-  Message: TMessage;
+function TdxFloatForm.CanDesigning: Boolean;
 begin
-  Result := nil;
-  AControl := FindVCLWindow(pt);
-  if AControl is TdxFloatForm then
-  begin
-    Message.Msg := WM_NCHITTEST;
-    Message.LParamLo := pt.X;
-    Message.LParamHi := pt.Y;
-    Message.Result := 0;
-    AControl.WindowProc(Message);
-    if (Message.Result = HTCAPTION) then
-      Result := (AControl as TdxFloatForm).DockSite;
-  end;
+  Result := FCanDesigning and IsDesigning and not IsDestroying and
+    (ParentForm <> nil) and (ParentForm.Designer <> nil) and
+    not dxDockingController.IsDocking;
 end;
 
-function TdxDockingController.GetNearestDockSiteAtPos(const pt: TPoint; ADockControl: TdxCustomDockControl = nil): TdxCustomDockControl;
-
-  function DoGetNearestDockSiteAtPos(const pt: TPoint; ADockControl: TdxCustomDockControl): TdxCustomDockControl;
-  var
-    I: Integer;
-    ADockSite: TdxDockSite;
-    R: TRect;
-  begin
-    Result := nil;
-    for I := 0 to DockControlCount - 1 do
-      if (DockControls[I] is TdxDockSite) then
-      begin
-        ADockSite := DockControls[I] as TdxDockSite;
-
-        if (ADockControl <> nil) and (ADockControl.ParentForm <> ADockSite.ParentForm) then Continue;
-        if not ADockSite.AutoSize then Continue;
-        if not (ADockSite.Align in [alLeft, alTop, alRight, alBottom]) then Continue;
-        if (ADockSite.Align in [alLeft, alRight]) and (ADockSite.Width > ADockSite.ControllerDockZonesWidth) then Continue;
-        if (ADockSite.Align in [alTop, alBottom]) and (ADockSite.Height > ADockSite.ControllerDockZonesWidth) then Continue;
-
-        R := cxGetWindowRect(ADockSite);
-        case ADockSite.Align of
-          alLeft:
-            R.Right := R.Left + ADockSite.ControllerDockZonesWidth;
-          alTop:
-            R.Bottom := R.Top + ADockSite.ControllerDockZonesWidth;
-          alRight:
-            R.Left := R.Right - ADockSite.ControllerDockZonesWidth;
-          alBottom:
-            R.Top := R.Bottom - ADockSite.ControllerDockZonesWidth;
-        end;
-        if PtInRect(R, pt) then
-        begin
-          Result := ADockSite;
-          break;
-        end;
-      end;
-  end;
-
-begin
-  Result := DoGetNearestDockSiteAtPos(pt, ADockControl);
-  if (Result = nil) and (ADockControl <> nil) then
-    Result := DoGetNearestDockSiteAtPos(pt, nil);
-end;
-
-function TdxDockingController.IsDockControlFocusedEx(ADockControl: TdxCustomDockControl): Boolean;
-begin
-  Result := ADockControl.HandleAllocated and
-    (dxDockingController.GetDockControlForWindow(GetFocus, ADockControl.Handle) = ADockControl);
-end;
-
-function TdxDockingController.FindManager(AForm: TCustomForm): TdxDockingManager;
-begin
-  Result := FindFormManager(AForm);
-  if (Result = nil) and (DockManagerCount > 0) then
-    Result := DockManagers[0];
-end;
-
-function TdxDockingController.FindFormManager(AForm: TCustomForm): TdxDockingManager;
-var
-  I: Integer;
-  AManager: TdxDockingManager;
-begin
-  Result := nil;
-  if AForm <> nil then
-    for I := 0 to FDockManagers.Count - 1 do
-    begin
-      AManager := TdxDockingManager(FDockManagers[I]);
-      if AManager.ParentForm = AForm then
-      begin
-        Result := AManager;
-        break;
-      end;
-    end;
-end;
-
-procedure TdxDockingController.RegisterManager(AManager: TdxDockingManager);
-begin
-
-  if FindFormManager(AManager.ParentForm) <> nil then
-    raise EdxException.Create(sdxManagerError)
-  else
-  begin
-    FDockManagers.Add(AManager);
-    DoManagerChanged(AManager.ParentForm);
-  end;
-end;
-
-procedure TdxDockingController.UnregisterManager(AManager: TdxDockingManager);
-begin
-  if FDockManagers.Remove(AManager) >= 0 then
-    DoManagerChanged(nil);
-end;
-
-procedure TdxDockingController.DoActiveDockControlChanged(ASender: TdxCustomDockControl;
-  ACallEvent: Boolean);
-var
-  AManager: TdxDockingManager;
-begin
-  if ACallEvent and (ASender <> nil) then
-  begin
-    AManager := FindManager(ASender.ParentForm);
-    if (AManager <> nil) and Assigned(AManager.OnActiveDockControlChanged) then
-      AManager.OnActiveDockControlChanged(AManager);
-  end;
-end;
-
-procedure TdxDockingController.DoCreateFloatSite(ASender: TdxCustomDockControl; ASite: TdxFloatDockSite);
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(ASender.ParentForm);
-  if (AManager <> nil) and Assigned(AManager.OnCreateFloatSite) then
-    AManager.OnCreateFloatSite(ASender, ASite);
-end;
-
-procedure TdxDockingController.DoCreateLayoutSite(ASender: TdxCustomDockControl; ASite: TdxLayoutDockSite);
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(ASender.ParentForm);
-  if (AManager <> nil) and Assigned(AManager.OnCreateLayoutSite) then
-    AManager.OnCreateLayoutSite(ASender, ASite);
-end;
-
-procedure TdxDockingController.DoCreateSideContainerSite(ASender: TdxCustomDockControl;
-  ASite: TdxSideContainerDockSite);
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(ASender.ParentForm);
-  if (AManager <> nil) and Assigned(AManager.OnCreateSideContainer) then
-    AManager.OnCreateSideContainer(ASender, ASite);
-end;
-
-procedure TdxDockingController.DoCreateTabContainerSite(ASender: TdxCustomDockControl;
-  ASite: TdxTabContainerDockSite);
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(ASender.ParentForm);
-  if (AManager <> nil) and Assigned(AManager.OnCreateTabContainer) then
-    AManager.OnCreateTabContainer(ASender, ASite);
-end;
-
-function TdxDockingController.DoCustomDrawResizingSelection(ASender: TdxCustomDockControl;
-  DC: HDC; AZone: TdxZone; pt: TPoint; Erasing: Boolean): Boolean;
-var
-  AManager: TdxDockingManager;
-begin
-  Result := False;
-  if Assigned(ASender.OnCustomDrawResizingSelection) then
-    ASender.OnCustomDrawResizingSelection(ASender, DC, AZone, AZone.GetResizingSelection(pt), Erasing, Result);
-  if not Result then
-  begin
-    AManager := FindManager(ASender.ParentForm);
-    if (AManager <> nil) and Assigned(AManager.OnCustomDrawResizingSelection) then
-      AManager.OnCustomDrawResizingSelection(ASender, DC, AZone, AZone.GetResizingSelection(pt), Erasing, Result);
-  end;
-end;
-
-function TdxDockingController.DoCustomDrawDockingSelection(ASender: TdxCustomDockControl;
-  DC: HDC; AZone: TdxZone; R: TRect; Erasing: Boolean): Boolean;
-var
-  AManager: TdxDockingManager;
-begin
-  Result := False;
-  if Assigned(ASender.OnCustomDrawDockingSelection) then
-    ASender.OnCustomDrawDockingSelection(ASender, DC, AZone, R, Erasing, Result);
-  if not Result then
-  begin
-    AManager := FindManager(ASender.ParentForm);
-    if (AManager <> nil) and Assigned(AManager.OnCustomDrawDockingSelection) then
-      AManager.OnCustomDrawDockingSelection(ASender, DC, AZone, R, Erasing, Result);
-  end;
-end;
-
-procedure TdxDockingController.DoSetFloatFormCaption(ASender: TdxCustomDockControl;
-  AFloatForm: TdxFloatForm);
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(ASender.ParentForm);
-  if (AManager <> nil) and Assigned(AManager.OnSetFloatFormCaption) then
-    AManager.OnSetFloatFormCaption(ASender, AFloatForm);
-end;
-
-function TdxDockingController.LookAndFeel(AForm: TCustomForm): TcxLookAndFeel;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if AManager <> nil then
-    Result := AManager.LookAndFeel
-  else
-    Result := RootLookAndFeel;
-end;
-
-function TdxDockingController.DefaultLayoutSiteProperties(AForm: TCustomForm): TdxLayoutDockSiteProperties;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if (AManager <> nil) and AManager.UseDefaultSitesProperties then
-    Result := AManager.DefaultLayoutSiteProperties
-  else
-    Result := nil;
-end;
-
-function TdxDockingController.DefaultFloatSiteProperties(AForm: TCustomForm): TdxFloatDockSiteProperties;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if (AManager <> nil) and AManager.UseDefaultSitesProperties then
-    Result := AManager.DefaultFloatSiteProperties
-  else Result := nil;
-end;
-
-function TdxDockingController.DefaultHorizContainerSiteProperties(AForm: TCustomForm): TdxSideContainerDockSiteProperties;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if (AManager <> nil) and AManager.UseDefaultSitesProperties then
-    Result := AManager.DefaultHorizContainerSiteProperties
-  else Result := nil;
-end;
-
-function TdxDockingController.DefaultVertContainerSiteProperties(AForm: TCustomForm): TdxSideContainerDockSiteProperties;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if (AManager <> nil) and AManager.UseDefaultSitesProperties then
-    Result := AManager.DefaultVertContainerSiteProperties
-  else Result := nil;
-end;
-
-function TdxDockingController.DefaultTabContainerSiteProperties(AForm: TCustomForm): TdxTabContainerDockSiteProperties;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if (AManager <> nil) and AManager.UseDefaultSitesProperties then
-    Result := AManager.DefaultTabContainerSiteProperties
-  else Result := nil;
-end;
-
-procedure TdxDockingController.LoadLayoutFromIniFile(AFileName: string; AForm: TCustomForm = nil);
-var
-  AStream: TFileStream;
-begin
-  if ExtractFileExt(AFileName) = '' then
-    AFileName := ChangeFileExt(AFileName, '.ini');
-  if not FileExists(AFileName) then Exit;
-  AStream := TFileStream.Create(AFileName, fmOpenRead, fmShareDenyWrite);
-  try
-    LoadLayoutFromStream(AStream, AForm);
-  finally
-    AStream.Free;
-  end;
-end;
-
-procedure TdxDockingController.LoadLayoutFromRegistry(ARegistryPath: string; AForm: TCustomForm = nil);
-var
-  Storage: TRegistryIniFile;
-begin
-  Storage := TRegistryIniFile.Create(ARegistryPath);
-  try
-    LoadLayoutFromCustomIni(Storage, AForm);
-  finally
-    Storage.Free;
-  end;
-end;
-
-procedure TdxDockingController.LoadLayoutFromStream(AStream: TStream; AForm: TCustomForm = nil);
-var
-  Storage: TMemIniFile;
-  AStrings: TStringList;
-begin
-  Storage := TMemIniFile.Create('');
-  AStrings := TStringList.Create;
-  try
-    AStrings.LoadFromStream(AStream);
-    Storage.SetStrings(AStrings);
-    LoadLayoutFromCustomIni(Storage, AForm);
-  finally
-    AStrings.Free;
-    Storage.Free;
-  end;
-end;
-
-procedure TdxDockingController.SaveLayoutToIniFile(AFileName: string; AForm: TCustomForm = nil);
-var
-  AStream: TFileStream;
-begin
-  if AFileName = '' then exit;
-  if ExtractFileExt(AFileName) = '' then
-    AFileName := ChangeFileExt(AFileName, '.ini');
-  AStream := TFileStream.Create(AFileName, fmCreate, fmShareExclusive);
-  try
-    SaveLayoutToStream(AStream, AForm);
-  finally
-    AStream.Free;
-  end;
-end;
-
-procedure TdxDockingController.SaveLayoutToRegistry(ARegistryPath: string; AForm: TCustomForm = nil);
-var
-  Storage: TRegistryIniFile;
-begin
-  if ARegistryPath = '' then exit;
-  Storage := TRegistryIniFile.Create(ARegistryPath);
-  try
-    SaveLayoutToCustomIni(Storage, AForm);
-  finally
-    Storage.Free;
-  end;
-end;
-
-procedure TdxDockingController.SaveLayoutToStream(AStream: TStream; AForm: TCustomForm = nil);
-var
-  Storage: TMemIniFile;
-  AStrings: TStringList;
-begin
-  Storage := TMemIniFile.Create('');
-  AStrings := TStringList.Create;
-  try
-    SaveLayoutToCustomIni(Storage, AForm);
-    Storage.GetStrings(AStrings);
-    AStrings.SaveToStream(AStream);
-  finally
-    AStrings.Free;
-    Storage.Free;
-  end;
-end;
-
-function TdxDockingController.AutoHideInterval(AForm: TCustomForm): Integer;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if AManager <> nil then
-    Result := AManager.AutoHideInterval
-  else Result := dxAutoHideInterval;
-end;
-
-function TdxDockingController.AutoHideMovingInterval(AForm: TCustomForm): Integer;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if AManager <> nil then
-    Result := AManager.AutoHideMovingInterval
-  else Result := dxAutoHideMovingInterval;
-end;
-
-function TdxDockingController.AutoHideMovingSize(AForm: TCustomForm): Integer;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if AManager <> nil then
-    Result := AManager.AutoHideMovingSize
-  else Result := dxAutoHideMovingSize;
-end;
-
-function TdxDockingController.AutoShowInterval(AForm: TCustomForm): Integer;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if AManager <> nil then
-    Result := AManager.AutoShowInterval
-  else Result := dxAutoShowInterval;
-end;
-
-function TdxDockingController.Color(AForm: TCustomForm): TColor;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if AManager <> nil then
-    Result := AManager.Color
-  else
-    Result := clBtnFace;
-end;
-
-function TdxDockingController.DockStyle(AForm: TCustomForm): TdxDockStyle;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if AManager <> nil then
-    Result := AManager.DockStyle
-  else
-    Result := dxDefaultDockStyle;
-end;
-
-function TdxDockingController.DockZonesWidth(AForm: TCustomForm): Integer;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if AManager <> nil then
-    Result := AManager.DockZonesWidth
-  else
-    Result := dxDockZonesWidth;
-end;
-
-function TdxDockingController.GetFont(AForm: TCustomForm): TFont;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if AManager <> nil then
-    Result := AManager.Font
-  else
-    Result := FFont;
-end;
-
-function TdxDockingController.Images(AForm: TCustomForm): TCustomImageList;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if AManager <> nil then
-    Result := AManager.Images
-  else Result := nil;
-end;
-
-function TdxDockingController.Options(AForm: TCustomForm): TdxDockingOptions;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if AManager <> nil then
-    Result := AManager.Options
-  else
-    Result := dxDockingDefaultOptions;
-end;
-
-function TdxDockingController.ResizeZonesWidth(AForm: TCustomForm): Integer;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if AManager <> nil then
-    Result := AManager.ResizeZonesWidth
-  else
-    Result := dxResizeZonesWidth;
-end;
-
-function TdxDockingController.SelectionFrameWidth(AForm: TCustomForm): Integer;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if AManager <> nil then
-    Result := AManager.SelectionFrameWidth
-  else Result := dxSelectionFrameWidth;
-end;
-
-function TdxDockingController.TabsScrollInterval(AForm: TCustomForm): Integer;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if AManager <> nil then
-    Result := AManager.TabsScrollInterval
-  else Result := dxTabsScrollInterval;
-end;
-
-procedure TdxDockingController.DoColorChanged(AForm: TCustomForm);
-var
-  I: Integer;
-begin
-  BeginUpdateNC;
-  try
-    for I := 0 to DockControlCount - 1 do
-      if ControlNeedUpdate(DockControls[I], AForm) and DockControls[I].ManagerColor then
-      begin
-        DockControls[I].Color := Color(DockControls[I].ParentForm);
-        DockControls[I].FManagerColor := True;
-      end;
-    InvalidateControls(AForm, False);
-  finally
-    EndUpdateNC;
-  end;
-end;
-
-procedure TdxDockingController.DoImagesChanged(AForm: TCustomForm);
-begin
-  CalculateControls(AForm);
-end;
-
-procedure TdxDockingController.DoLayoutLoaded(AForm: TCustomForm);
-var
-  I: Integer;
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if (AManager <> nil) then
-  begin
-    if Assigned(AManager.OnLayoutChanged) then
-      AManager.OnLayoutChanged(nil);
-  end
-  else for I := 0 to DockManagerCount - 1 do
-  begin
-    if Assigned(DockManagers[I].OnLayoutChanged) then
-      DockManagers[I].OnLayoutChanged(nil);
-  end;
-end;
-
-procedure TdxDockingController.DoFontChanged(AForm: TCustomForm);
-var
-  I: Integer;
-begin
-  BeginUpdateNC;
-  try
-    for I := 0 to DockControlCount - 1 do
-      if ControlNeedUpdate(DockControls[I], AForm) and DockControls[I].ManagerFont then
-      begin
-        if not DockControls[I].IsDestroying then // !!!
-        begin
-          DockControls[I].Font := GetFont(DockControls[I].ParentForm);
-          DockControls[I].FManagerFont := True;
-        end;
-      end;
-    CalculateControls(AForm);
-  finally
-    EndUpdateNC;
-  end;
-end;
-
-procedure TdxDockingController.DoLayoutChanged(ASender: TdxCustomDockControl);
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(ASender.ParentForm);
-  if (AManager <> nil) and Assigned(AManager.OnLayoutChanged) then
-    AManager.OnLayoutChanged(ASender);
-end;
-
-procedure TdxDockingController.DoManagerChanged(AForm: TCustomForm);
-begin
-  BeginUpdateNC;
-  Include(FInternalState, disManagerChanged);
-  try
-    DoColorChanged(AForm);
-    DoImagesChanged(AForm);
-    DoFontChanged(AForm);
-    DoOptionsChanged(AForm);
-    DoPainterChanged(AForm, False);
-  finally
-    Exclude(FInternalState, disManagerChanged);
-    EndUpdateNC;
-  end;
-end;
-
-procedure TdxDockingController.DoOptionsChanged(AForm: TCustomForm);
-begin
-  BringToFrontFloatForms(nil, doFloatingOnTop in Options(AForm));
-  UpdateLayout(AForm);
-  CalculateControls(AForm);
-end;
-
-procedure TdxDockingController.DoPainterChanged(AForm: TCustomForm; AssignDefaultStyle: Boolean);
-var
-  I: Integer;
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  BeginUpdateNC;
-  try
-    if AManager <> nil then
-      AManager.ReleasePainterClass
-    else
-      for I := 0 to DockManagerCount - 1 do
-        DockManagers[I].ReleasePainterClass;
-    for I := 0 to DockControlCount - 1 do
-    begin
-      if ControlNeedUpdate(DockControls[I], AForm) then
-      begin
-        DockControls[I].FPainter.Free;
-        DockControls[I].FPainter := nil;
-      end;
-    end;
-    if AManager <> nil then
-      AManager.CreatePainterClass(AssignDefaultStyle)
-    else
-      for I := 0 to DockManagerCount - 1 do
-        DockManagers[I].CreatePainterClass(AssignDefaultStyle);
-    CalculateControls(AForm);
-  finally
-    EndUpdateNC;
-  end;
-end;
-
-procedure TdxDockingController.DoZonesWidthChanged(AForm: TCustomForm);
-begin
-  UpdateLayout(AForm);
-end;
-
-procedure TdxDockingController.DoUpdateDockZones(ASender: TdxCustomDockControl);
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(ASender.ParentForm);
-  if (AManager <> nil) and Assigned(AManager.OnUpdateDockZones) then
-    AManager.OnUpdateDockZones(ASender, ASender.DockZones);
-end;
-
-procedure TdxDockingController.DoUpdateResizeZones(ASender: TdxCustomDockControl);
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(ASender.ParentForm);
-  if (AManager <> nil) and Assigned(AManager.OnUpdateResizeZones) then
-    AManager.OnUpdateResizeZones(ASender, ASender.ResizeZones);
-end;
-
-procedure TdxDockingController.ClearLayout(AForm: TCustomForm);
-var
-  I: Integer;
-begin
-  I := 0;
-  while I < DockControlCount do
-  begin
-    if ((DockControls[I].ParentForm = AForm) or (AForm = nil)) and
-      (DockControls[I] is TdxDockPanel) and (DockControls[I].ParentDockControl <> nil) then
-    begin
-      DockControls[I].UnDock;
-      I := 0;
-    end
-    else Inc(I);
-  end;
-  SendMessage(Handle, DXM_DOCK_DESTROYCONTROLS, 0, 0);
-end;
-
-procedure TdxDockingController.LoadLayoutFromCustomIni(AIniFile: TCustomIniFile; AForm: TCustomForm);
-var
-  I, ADockControlCount: Integer;
-  ASections: TStringList;
-  AControlClass: TdxCustomDockControlClass;
-  AParentForm: TCustomForm;
-  ASectionName: string;
-begin
-  BeginUpdateNC;
-  Include(FInternalState, disLoading);
-  try
-    ASections := TStringList.Create;
-    with AIniFile do
-      try
-        ReadSections(ASections);
-        ADockControlCount := ReadInteger('Root', 'DockControlCount', ASections.Count);
-        if ASections.Count > 0 then
-          ClearLayout(AForm);
-        for I := 0 to ADockControlCount - 1 do
-        begin
-          ASectionName := IntToStr(I);
-          if SectionExists(ASectionName) then
-          begin
-            AControlClass := TdxCustomDockControlClass(FindClass(ReadString(ASectionName, 'ClassName', '')));
-            if (AControlClass = TdxDockSite) or (AControlClass = TdxFloatDockSite) then
-            begin
-              AParentForm := FindGlobalComponent(ReadString(ASectionName, 'ParentForm', '')) as TCustomForm;
-              if (AParentForm <> nil) and ((AParentForm = AForm) or (AForm = nil)) then
-                LoadControlFromCustomIni(AIniFile, AForm, nil, ASectionName);
-            end;
-          end;
-        end;
-      finally
-        ASections.Free;
-      end;
-  finally
-    Exclude(FInternalState, disLoading);
-    EndUpdateNC;
-  end;
-  DoLayoutLoaded(nil);
-end;
-
-procedure TdxDockingController.LoadControlFromCustomIni(AIniFile: TCustomIniFile;
-  AParentForm: TCustomForm; AParentControl: TdxCustomDockControl; ASection: string);
-var
-  AControl: TdxCustomDockControl;
-  AControlClass: TdxCustomDockControlClass;
-begin
-  with AIniFile do
-  begin
-    if AParentForm = nil then
-      AParentForm := FindGlobalComponent(ReadString(ASection, 'ParentForm', '')) as TCustomForm;
-    if AParentForm <> nil then
-    begin
-      AControl := AParentForm.FindComponent(ReadString(ASection, 'Name', '')) as TdxCustomDockControl;
-      if AControl = nil then
-      begin
-        AControlClass := TdxCustomDockControlClass(FindClass(ReadString(ASection, 'ClassName', '')));
-        if (AControlClass <> nil) then
-        begin
-          AControl := AControlClass.Create(AParentForm);
-          AControl.Name := ReadString(ASection, 'Name', '');
-        end;
-      end;
-      if AControl <> nil then
-        AControl.LoadLayoutFromCustomIni(AIniFile, AParentForm, AParentControl, ASection);
-    end;
-  end;
-end;
-
-procedure TdxDockingController.SaveLayoutToCustomIni(AIniFile: TCustomIniFile; AForm: TCustomForm);
-var
-  I, AOldCount: Integer;
-begin
-  SendMessage(Handle, DXM_DOCK_DESTROYCONTROLS, 0, 0);
-  // Erase old section
-  AOldCount := AIniFile.ReadInteger('Root', 'DockControlCount', 0);
-  for I := AOldCount - 1 downto 0 do
-    AIniFile.EraseSection(IntToStr(I));
-  AIniFile.WriteInteger('Root', 'DockControlCount', DockControlCount);
-  for I := 0 to DockControlCount - 1 do
-  begin
-    if DockControls[I].DockState = dsDestroyed then continue;
-    if ((DockControls[I].ParentForm = AForm) or (AForm = nil)) and
-      ((DockControls[I] is TdxDockSite) or (DockControls[I] is TdxFloatDockSite)) then
-      SaveControlToCustomIni(AIniFile, DockControls[I]);
-  end;
-end;
-
-procedure TdxDockingController.SaveControlToCustomIni(AIniFile: TCustomIniFile;
-  AControl: TdxCustomDockControl);
-var
-  ASection: string;
-begin
-  with AIniFile do
-  begin
-    ASection := IntToStr(IndexOfDockControl(AControl));
-    WriteString(ASection, 'ClassName', AControl.ClassName);
-    WriteString(ASection, 'Name', AControl.Name);
-    WriteString(ASection, 'ParentForm', AControl.ParentForm.Name);
-    AControl.SaveLayoutToCustomIni(AIniFile, ASection);
-  end;
-end;
-
-procedure TdxDockingController.UpdateLayout(AForm: TCustomForm);
-var
-  I: Integer;
-begin
-  for I := 0 to DockControlCount - 1 do
-  begin
-    if DockControls[I].IsDestroying or DockControls[I].IsUpdateLayoutLocked then
-      continue;
-    if ControlNeedUpdate(DockControls[I], AForm) then
-      DockControls[I].UpdateLayout;
-  end;
-end;
-
-procedure TdxDockingController.BeginUpdateNC(ALockRedraw: Boolean);
-begin
-  if FCalculatingControl <> nil then exit;
-  if (FUpdateNCLock = 0) and ALockRedraw then
-    Include(FInternalState, disRedrawLocked);
-  Inc(FUpdateNCLock);
-end;
-
-procedure TdxDockingController.EndUpdateNC;
-begin
-  if FCalculatingControl <> nil then exit;
-  Dec(FUpdateNCLock);
-  if FUpdateNCLock = 0 then
-  begin
-    UpdateInvalidControlsNC;
-    Exclude(FInternalState, disRedrawLocked);
-  end;
-end;
-
-procedure TdxDockingController.ApplicationDeactivated(Sender: TObject);
-begin
-  FApplicationDeactivating := False;
-end;
-
-function TdxDockingController.ControlNeedUpdate(AControl: TdxCustomDockControl; AForm: TCustomForm): Boolean;
-begin
-  Result := FindManager(AControl.ParentForm) = FindManager(AForm);
-end;
-
-procedure TdxDockingController.DestroyControls;
-begin
-  dxMessagesController.KillMessages(Handle, DXM_DOCK_DESTROYCONTROLS);
-  FDestroyedComponents.Clear;
-end;
-
-procedure TdxDockingController.FinishDocking;
-begin
-  if DockingDockControl <> nil then
-    DockingDockControl.EndDocking(Point(0, 0), True);
-end;
-
-procedure TdxDockingController.FinishResizing;
-begin
-  if ResizingDockControl <> nil then
-    ResizingDockControl.EndResize(Point(0, 0), True);
-end;
-
-function CompareDocks(Item1, Item2: Pointer): Integer;
-var
-  AControl1, AControl2: TdxCustomDockControl;
-begin
-  AControl1 := TdxCustomDockControl(Item1);
-  AControl2 := TdxCustomDockControl(Item2);
-  Result := AControl1.DockLevel - AControl2.DockLevel;
-  if Result = 0 then
-    Result := AControl1.DockIndex - AControl2.DockIndex;
-  if AControl2.AutoHide and not AControl1.AutoHide then
-    Result := -1
-  else if AControl2.AutoHide and not AControl1.AutoHide then
-    Result := 1;
-end;
-
-procedure TdxDockingController.UpdateInvalidControlsNC;
-var
-  I: Integer;
-  AControl: TdxCustomDockControl;
-begin
-  if FCalculatingControl <> nil then exit;
-  while FInvalidNCBounds.Count > 0 do
-  begin
-    FInvalidNCBounds.Sort(CompareDocks);
-    FCalculatingControl := TdxCustomDockControl(FInvalidNCBounds[0]);
-    try
-      FCalculatingControl.NCChanged;
-      FCalculatingControl.Realign;
-      FInvalidNCBounds.Remove(FCalculatingControl);
-    finally
-      FCalculatingControl := nil;
-    end;
-  end;
-  FInvalidNC.Sort(CompareDocks);
-  for I := 0 to FInvalidNC.Count - 1 do
-  begin
-    AControl := TdxCustomDockControl(FInvalidNC.Items[I]);
-    if not AControl.Visible then continue;
-    if FInvalidRedraw.IndexOf(AControl) > -1 then
-    begin
-      if disRedrawLocked in FInternalState then
-      begin
-        AControl.Perform(WM_SETREDRAW, Integer(True), 0);
-//      SendMessage(AControl.Handle, WM_SETREDRAW, Integer(True), 0);
-        AControl.Redraw(True);
-      end
-      else
-        AControl.Redraw(False);
-
-      if AControl.HandleAllocated and (AControl is TdxDockSite) and (AControl.Parent <> nil) then
-      begin
-        if AControl.NeedRedrawOnResize then
-          RedrawWindow(AControl.Parent.Handle, nil, 0, RDW_INVALIDATE or RDW_ERASE or RDW_ALLCHILDREN);
-      end;
-    end
-    else
-      AControl.InvalidateNC(True);
-  end;
-  FInvalidNC.Clear;
-  FInvalidRedraw.Clear;
-end;
-
-procedure TdxDockingController.WndProc(var Message: TMessage);
-begin
-  case Message.Msg of
-    DXM_DOCK_DESTROYCONTROLS:
-      DestroyControls;
-    WM_SYSCOLORCHANGE:
-      DoPainterChanged(nil, True);
-  end;
-  inherited;
-end;
-
-function TdxDockingController.CanUpdateNC(AControl: TdxCustomDockControl): Boolean;
-begin
-  Result := (FUpdateNCLock = 0) and (FCalculatingControl = nil);
-  if not Result then
-  begin
-    if FInvalidNC.IndexOf(AControl) = -1 then
-      FInvalidNC.Add(AControl);
-  end;
-end;
-
-function TdxDockingController.CanCalculateNC(AControl: TdxCustomDockControl): Boolean;
-begin
-  Result := (FUpdateNCLock = 0);
-  if not Result then
-  begin
-    if FInvalidRedraw.IndexOf(AControl) = -1 then
-    begin
-      if disRedrawLocked in FInternalState then
-        AControl.Perform(WM_SETREDRAW, Integer(False), 0);
-//      SendMessage(AControl.Handle, WM_SETREDRAW, Integer(False), 0);
-      FInvalidRedraw.Add(AControl);
-    end;
-    if FInvalidNCBounds.IndexOf(AControl) = -1 then
-      FInvalidNCBounds.Add(AControl);
-    if FInvalidNC.IndexOf(AControl) = -1 then
-      FInvalidNC.Add(AControl);
-  end;
-end;
-
-procedure TdxDockingController.DrawDockingSelection(ADockControl: TdxCustomDockControl;
-  AZone: TdxZone; const APoint: TPoint; AErasing: Boolean);
-var
-  R, ARegionRect: TRect;
-  AHandled: Boolean;
-  ARegion: TcxRegion;
-begin
-  if (AZone <> nil) or ADockControl.AllowFloating then
-  begin
-    if AZone <> nil then
-      R := AZone.GetDockingSelection(ADockControl)
-    else
-      R := ADockControl.GetFloatDockRect(APoint);
-
-    AHandled := DoCustomDrawDockingSelection(ADockControl, cxScreenCanvas.Handle, AZone, R, AErasing);
-
-    if not AHandled then
-    begin
-      ARegion := TcxRegion.Create;
-      try
-        ARegionRect := Rect(0, 0, cxRectWidth(R), cxRectHeight(R));
-        if AZone <> nil then
-          AZone.PrepareSelectionRegion(ARegion, ADockControl, ARegionRect)
-        else
-          ADockControl.PrepareSelectionRegion(ARegion, ARegionRect);
-        DockingControllerHelper.DragImage.DrawSizeFrame(R, ARegion);
-      finally
-        ARegion.Free;
-      end;
-    end;
-  end;
-end;
-
-procedure TdxDockingController.DrawResizingSelection(ADockControl: TdxCustomDockControl;
-  AZone: TdxZone; const APoint: TPoint; AErasing: Boolean);
-var
-  AWindow: HWND;
-  ADC: HDC;
-  AOldBrush: HBrush;
-  AHandled: Boolean;
-  AParentForm: TCustomForm;
-  AClientRect: TRect;
-begin
-  AParentForm := GetParentForm(ADockControl);
-  AWindow := AParentForm.Handle;
-  ADC := GetWindowDC(AWindow);
-  try
-    AClientRect := dxMapWindowRect(AWindow, 0, AParentForm.ClientRect, False);
-    SetWindowOrgEx(ADC, AClientRect.Left, AClientRect.top, nil);
-    AHandled := DoCustomDrawResizingSelection(ADockControl, ADC, AZone, APoint, AErasing);
-    if not AHandled then
-    begin
-      AOldBrush := SelectObject(ADC, SelectionBrush.Handle);
-      AZone.DrawResizingSelection(ADC, APoint);
-      SelectObject(ADC, AOldBrush);
-    end;
-  finally
-    ReleaseDC(AWindow, ADC);
-  end;
-end;
-
-function TdxDockingController.PainterClass(AForm: TCustomForm): TdxDockControlPainterClass;
-var
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if AManager <> nil then
-    Result := AManager.PainterClass
-  else
-    Result := dxDockingPaintersManager.GetAvailablePainterClass(LookAndFeel(AForm));
-end;
-
-procedure TdxDockingController.CalculateControls(AForm: TCustomForm);
-var
-  I: Integer;
-begin
-  BeginUpdateNC;
-  try
-    for I := 0 to DockControlCount - 1 do
-      if ControlNeedUpdate(DockControls[I], AForm) then
-        DockControls[I].Recalculate;
-  finally
-    EndUpdateNC;
-  end;
-end;
-
-procedure TdxDockingController.InvalidateActiveDockControl;
-begin
-  if ActiveDockControl <> nil then
-  begin
-    // InvalidateCaptionArea
-    ActiveDockControl.InvalidateCaptionArea;
-    if ActiveDockControl.Container <> nil then
-      ActiveDockControl.Container.InvalidateCaptionArea;
-  end;
-end;
-
-procedure TdxDockingController.InvalidateControls(AForm: TCustomForm; ANeedRecalculate: Boolean);
-var
-  I: Integer;
-begin
-  BeginUpdateNC;
-  try
-    for I := 0 to DockControlCount - 1 do
-      if ControlNeedUpdate(DockControls[I], AForm) then
-         DockControls[I].InvalidateNC(ANeedRecalculate);
-  finally
-    EndUpdateNC;
-  end;
-end;
-
-procedure TdxDockingController.CreatePainterColors(AForm: TCustomForm);
-var
-  I: Integer;
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if AManager <> nil then
-    AManager.PainterClass.CreateColors
-  else for I := 0 to DockManagerCount - 1 do
-    DockManagers[I].PainterClass.CreateColors;
-end;
-
-procedure TdxDockingController.RefreshPainterColors(AForm: TCustomForm);
-var
-  I: Integer;
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if AManager <> nil then
-  begin
-    if AManager.FPainterClass <> nil then
-      AManager.FPainterClass.RefreshColors;
-  end
-  else for I := 0 to DockManagerCount - 1 do
-    if DockManagers[I].FPainterClass <> nil then
-      DockManagers[I].FPainterClass.RefreshColors;
-end;
-
-procedure TdxDockingController.ReleasePainterColors(AForm: TCustomForm);
-var
-  I: Integer;
-  AManager: TdxDockingManager;
-begin
-  AManager := FindManager(AForm);
-  if AManager <> nil then
-  begin
-    if AManager.FPainterClass <> nil then
-      AManager.FPainterClass.ReleaseColors;
-  end
-  else for I := 0 to DockManagerCount - 1 do
-    if DockManagers[I].FPainterClass <> nil then
-      DockManagers[I].FPainterClass.ReleaseColors;
-end;
-
-function TdxDockingController.IsUpdateNCLocked: Boolean;
-begin
-  Result := FUpdateNCLock > 0;
-end;
-
-procedure TdxDockingController.CheckTempBitmap(ARect: TRect);
-const
-  BitmapReserve = 10;
-begin
-  if FTempBitmap = nil then
-    FTempBitmap := TcxBitmap.CreateSize(0, 0, cxDoubleBufferedBitmapPixelFormat);
-  if FTempBitmap.Width < cxRectWidth(ARect) then
-    FTempBitmap.Width := cxRectWidth(ARect) + BitmapReserve;
-  if FTempBitmap.Height < cxRectHeight(ARect) then
-    FTempBitmap.Height := cxRectHeight(ARect) + BitmapReserve;
-end;
-
-procedure TdxDockingController.ReleaseTempBitmap;
-begin
-  FreeAndNil(FTempBitmap);
-end;
-
-function TdxDockingController.GetIsDocking: Boolean;
-begin
-  Result := DockingDockControl <> nil;
-end;
-
-function TdxDockingController.GetDockControl(Index: Integer): TdxCustomDockControl;
-begin
-  Result := TdxCustomDockControl(FDockControls.Items[Index]);
-end;
-
-function TdxDockingController.GetDockControlCount: Integer;
-begin
-  Result := FDockControls.Count;
-end;
-
-function TdxDockingController.GetDockManager(Index: Integer): TdxDockingManager;
-begin
-  Result := TdxDockingManager(FDockManagers.Items[Index]);
-end;
-
-function TdxDockingController.GetDockManagerCount: Integer;
-begin
-  Result := FDockManagers.Count;
-end;
-
-function TdxDockingController.GetIsResizing: Boolean;
-begin
-  Result := ResizingDockControl <> nil;
-end;
-
-procedure TdxDockingController.SetActiveDockControl(Value: TdxCustomDockControl);
-
-  procedure ActivateParent(AControl: TdxCustomDockControl);
-  begin
-    // SetActiveDockControl call recursive
-    if (AControl <> nil) and not (AControl is TdxDockSite) then
-      ActiveDockControl := AControl;
-  end;
-
-var
-  AOldActiveSite: TdxCustomDockControl;
-  ACallEvent: Boolean;
-begin
-  if FActiveDockControl <> Value then
-  begin
-    Inc(FActiveDockControlLockCount);
-    try
-      AOldActiveSite := FActiveDockControl;
-
-      if Value <> nil then
-        ActivateParent(Value.ParentDockControl);
-
-      if (Value = nil) or Value.CanActive then
-      begin
-        FActiveDockControl := Value;
-        dxMessagesController.KillMessages(0, DXM_DOCK_CHECKACTIVEDOCKCONTROL);
-
-        ACallEvent := FActiveDockControlLockCount = 1;
-        if AOldActiveSite <> nil then
-          AOldActiveSite.DoActiveChanged(False, ACallEvent);
-        if FActiveDockControl <> nil then
-          FActiveDockControl.DoActiveChanged(True, ACallEvent);
-        if AOldActiveSite <> FActiveDockControl then
-          DoActiveDockControlChanged(FActiveDockControl, ACallEvent);
-      end;
-      FActivatingDockControl := nil;
-    finally
-      Dec(FActiveDockControlLockCount);
-    end;
-  end;
-end;
-
-function TdxDockingController.IsParentForFloatDockSite(AParentForm: TCustomForm;
-  AFloatDockSite: TdxFloatDockSite): Boolean;
-begin
-  Result := (AParentForm = nil) or (AParentForm = AFloatDockSite.ParentForm) or
-    IsMDIForm(AParentForm) and IsMDIChild(AFloatDockSite.ParentForm);
-end;
-
-procedure TdxDockingController.BringToFrontFloatForms(AParentForm: TCustomForm; ATopMost: Boolean);
-var
-  I: Integer;
-  AControl: TdxFloatDockSite;
-begin
-  for I := 0 to DockControlCount - 1 do
-  begin
-    if DockControls[I].IsDesigning then continue;
-    if DockControls[I].IsDestroying then continue;
-    if DockControls[I] is TdxFloatDockSite then
-    begin
-      AControl := DockControls[I] as TdxFloatDockSite;
-      if (AParentForm = nil) or (AParentForm = AControl.ParentForm) then
-        AControl.FloatForm.BringToFront(ATopMost);
-    end;
-  end;
-end;
-
-procedure TdxDockingController.UpdateVisibilityFloatForms(AParentForm: TCustomForm; AShow: Boolean);
-
-  procedure FloatFormsHide;
-  var
-    I: Integer;
-    AControl: TdxFloatDockSite;
-  begin
-    for I := 0 to DockControlCount - 1 do
-    begin
-      if DockControls[I] is TdxFloatDockSite then
-      begin
-        AControl := DockControls[I] as TdxFloatDockSite;
-        if IsParentForFloatDockSite(AParentForm, AControl) and (AControl.FloatForm <> nil) {bug in Delphi 2005} then
-          AControl.FloatForm.HideWindow;
-      end;
-    end;
-  end;
-
-  procedure FloatFormsShow;
-  var
-    I: Integer;
-    AControl: TdxFloatDockSite;
-  begin
-    for I := 0 to DockControlCount - 1 do
-    begin
-      if DockControls[I] is TdxFloatDockSite then
-      begin
-        AControl := DockControls[I] as TdxFloatDockSite;
-        if AControl.Visible and IsParentForFloatDockSite(AParentForm, AControl) and (AControl.FloatForm <> nil) then
-          AControl.FloatForm.ShowWindow;
-      end;
-    end;
-  end;
-
-begin
-  if AShow then
-    FloatFormsShow
-  else
-    FloatFormsHide;
-end;
-
-procedure TdxDockingController.UpdateEnableStatusFloatForms(AParentForm: TCustomForm; AEnable: Boolean);
-var
-  I: Integer;
-  AControl: TdxFloatDockSite;
-begin
-  for I := 0 to DockControlCount - 1 do
-  begin
-    if DockControls[I] is TdxFloatDockSite then
-    begin
-      AControl := DockControls[I] as TdxFloatDockSite;
-      if IsParentForFloatDockSite(AParentForm, AControl) and (AControl.FloatForm <> nil) {bug in Delphi 2005} then
-        EnableWindow(AControl.FloatForm.Handle, AEnable);
-    end;
-  end;
-end;
-
-function TdxDockingController.CreateDockingControllerHelper(
-  ADockStyle: TdxDockStyle): TdxDockingControllerHelper;
-const
-  HelperClassMap: array[TdxDockStyle] of TdxDockingControllerHelperClass =
-    (TdxDockingControllerHelper, TdxDockingControllerVS2005Helper);
-begin
-  Result := HelperClassMap[ADockStyle].Create;
-end;
-
-procedure TdxDockingController.StartDocking(AControl: TdxCustomDockControl; const APoint: TPoint);
-begin
-  FDockingControllerHelper := CreateDockingControllerHelper(DockStyle(AControl.ParentForm));
-  FDockingControllerHelper.DockingStart(AControl, APoint);
-end;
-
-procedure TdxDockingController.Docking(AControl: TdxCustomDockControl; const APoint: TPoint);
-begin
-  if GetKeyState(VK_CONTROL) < 0 then
-    AControl.SetDockingParams(nil, APoint)
-  else
-    DockingControllerHelper.DockingMove(AControl, APoint);
-end;
-
-procedure TdxDockingController.EndDocking(AControl: TdxCustomDockControl; const APoint: TPoint);
-begin
-  DockingControllerHelper.DockingFinish(AControl, APoint);
-  FreeAndNil(FDockingControllerHelper);
-end;
-
-procedure TdxDockingController.DockControlLoaded(AControl: TdxCustomDockControl);
-begin
-  if FLoadedForms.IndexOf(AControl.ParentForm) = -1 then
-    FLoadedForms.Add(AControl.ParentForm);
-end;
-
-procedure TdxDockingController.DockManagerLoaded(AParentForm: TCustomForm);
-begin
-  FLoadedForms.Remove(AParentForm);
-end;
-
-function TdxDockingController.IndexOfDockControl(AControl: TdxCustomDockControl): Integer;
-begin
-  Result := FDockControls.IndexOf(AControl);
-end;
-
-procedure TdxDockingController.PostponedDestroyDockControl(AControl: TdxCustomDockControl);
-begin
-  PostponedDestroyComponent(AControl);
-end;
-
-procedure TdxDockingController.PostponedDestroyComponent(AComponent: TComponent);
-begin
-  FDestroyedComponents.Add(AComponent);
-  PostMessage(Handle, DXM_DOCK_DESTROYCONTROLS, 0, 0);
-end;
-
-procedure TdxDockingController.RegisterDockControl(AControl: TdxCustomDockControl);
-begin
-  FDockControls.Add(AControl);
-  if Assigned(FOnRegisterDockControl) then
-    FOnRegisterDockControl(AControl);
-end;
-
-procedure TdxDockingController.UnregisterDockControl(AControl: TdxCustomDockControl);
-begin
-  if Assigned(FOnUnregisterDockControl) then
-    FOnUnregisterDockControl(AControl);
-  if AControl = FActivatingDockControl then
-    FActivatingDockControl := nil;
-  if AControl = FDockingDockControl then
-    FDockingDockControl := nil;
-  if AControl = FResizingDockControl then
-    FResizingDockControl := nil;
-  FDockControls.Remove(AControl);
-  FInvalidRedraw.Remove(AControl);
-  FInvalidNC.Remove(AControl);
-  FInvalidNCBounds.Remove(AControl);
-  if FActiveDockControl = AControl then
-    FActiveDockControl := nil;
-end;
-
-procedure TdxDockingController.SetApplicationActive(AValue: Boolean);
-begin
-  if AValue <> FApplicationActive then
-  begin
-    FApplicationActive := AValue;
-    InvalidateActiveDockControl;
-  end;
-end;
-
-procedure TdxDockingController.SetSelectionBrush(Value: TBrush);
-begin
-  FSelectionBrush.Assign(Value);
-end;
-
-{ TdxDockingControllerHelper }
-
-function TdxDockingControllerHelper.CanDocking(
-  AControl, ATargetControl: TdxCustomDockControl;
-  ATargetZone: TdxZone; const APoint: TPoint): Boolean;
-begin
-  Result := ATargetControl <> nil;
-  if Result then
-  begin
-    AControl.DoDocking(APoint, ATargetZone, Result);
-    if (ATargetZone <> nil) and (ATargetZone.Owner <> nil) then
-      ATargetZone.Owner.DoCanDocking(AControl, APoint, ATargetZone, Result);
-  end;
-end;
-
-procedure TdxDockingControllerHelper.CreateSelectionDragImage(AControl: TdxCustomDockControl);
-begin
-  FDragImage := TdxDockingDragImage.Create(AControl.ControllerSelectionFrameWidth);
-  FDragImage.FillSelection := doFillDockingSelection in AControl.ControllerOptions;
-  FDragImage.PopupParent := AControl.PopupParent;
-  if doFillDockingSelection in AControl.ControllerOptions then
-  begin
-    DragImage.AlphaBlend := True;
-    DragImage.AlphaBlendValue := 100;
-    DragImage.Canvas.Brush.Color := clHighlight
-  end
-  else
-  begin
-    DragImage.AlphaBlend := False;
-    DragImage.Canvas.Brush := dxDockingController.SelectionBrush;
-  end;
-end;
-
-procedure TdxDockingControllerHelper.DockingStart(AControl: TdxCustomDockControl; const APoint: TPoint);
-begin
-  CreateSelectionDragImage(AControl);
-  DragImage.Show;
-end;
-
-procedure TdxDockingControllerHelper.DockingMove(AControl: TdxCustomDockControl; const APoint: TPoint);
-var
-  ATargetControl: TdxCustomDockControl;
-  ATargetZone: TdxZone;
-begin
-  ATargetControl := AControl.GetDockingTargetControlAtPos(APoint);
-  if ATargetControl <> nil then
-    ATargetZone := ATargetControl.GetDockZoneAtPos(AControl, APoint)
-  else
-    ATargetZone := nil;
-
-  if not CanDocking(AControl, ATargetControl, ATargetZone, APoint) then
-    ATargetZone := nil;
-  AControl.SetDockingParams(ATargetZone, APoint);
-end;
-
-procedure TdxDockingControllerHelper.DockingFinish(AControl: TdxCustomDockControl; const APoint: TPoint);
-begin
-  FreeAndNil(FDragImage);
-end;
-
-{ TdxCustomDockControlProperties }
-
-constructor TdxCustomDockControlProperties.Create(AOwner: TdxDockingManager);
-begin
-  FOwner := AOwner;
-  FAllowDock := dxDockingDefaultDockingTypes;
-  FAllowDockClients := dxDockingDefaultDockingTypes;
-  FAllowFloating := True;
-  FCaptionButtons := dxDockinkDefaultCaptionButtons;
-  FColor := clBtnFace;
-  FDockable := True;
-  FFont := TFont.Create;
-  FImageIndex := -1;
-  FManagerColor := True;
-  FManagerFont := True;
-  FShowCaption := True;
-  FShowHint := False;
-  FTag := 0;
-end;
-
-destructor TdxCustomDockControlProperties.Destroy;
-begin
-  FreeAndNil(FFont);
-  inherited;
-end;
-
-procedure TdxCustomDockControlProperties.AssignTo(Dest: TPersistent);
-var
-  AControl: TdxCustomDockControl;
-  AControlProperties: TdxCustomDockControlProperties;
-begin
-  if Dest is TdxCustomDockControl then
-  begin
-    AControl := Dest as TdxCustomDockControl;
-    AControl.AllowDock := FAllowDock;
-    AControl.AllowDockClients := FAllowDockClients;
-    AControl.AllowFloating := FAllowFloating;
-    AControl.Caption := FCaption;
-    AControl.CaptionButtons := FCaptionButtons;
-    AControl.Dockable := FDockable;
-    AControl.ImageIndex := FImageIndex;
-    AControl.ShowCaption := FShowCaption;
-    AControl.Color := FColor;
-    AControl.Cursor := FCursor;
-    AControl.Font := FFont;
-    AControl.Hint := FHint;
-    AControl.ManagerColor := FManagerColor;
-    AControl.ManagerFont := FManagerFont;
-    AControl.PopupMenu := FPopupMenu;
-    AControl.ShowHint := FShowHint;
-    AControl.Tag := FTag;
-  end
-  else if Dest is TdxCustomDockControlProperties then
-  begin
-    AControlProperties := Dest as TdxCustomDockControlProperties;
-    AControlProperties.AllowDock := FAllowDock;
-    AControlProperties.AllowDockClients := FAllowDockClients;
-    AControlProperties.AllowFloating := FAllowFloating;
-    AControlProperties.Caption := FCaption;
-    AControlProperties.CaptionButtons := FCaptionButtons;
-    AControlProperties.Dockable := FDockable;
-    AControlProperties.ImageIndex := FImageIndex;
-    AControlProperties.ShowCaption := FShowCaption;
-    AControlProperties.Color := FColor;
-    AControlProperties.Cursor := FCursor;
-    AControlProperties.Font := FFont;
-    AControlProperties.Hint := FHint;
-    AControlProperties.ManagerColor := FManagerColor;
-    AControlProperties.ManagerFont := FManagerFont;
-    AControlProperties.PopupMenu := FPopupMenu;
-    AControlProperties.ShowHint := FShowHint;
-    AControlProperties.Tag := FTag;
-  end
-  else inherited;
-end;
-
-function  TdxCustomDockControlProperties.GetOwner: TPersistent;
-begin
-  Result := FOwner;
-end;
-
-function TdxCustomDockControlProperties.IsColorStored: Boolean;
-begin
-  Result := not ManagerColor;
-end;
-
-function TdxCustomDockControlProperties.IsFontStored: Boolean;
-begin
-  Result := not ManagerFont;
-end;
-
-procedure TdxCustomDockControlProperties.SetColor(const Value: TColor);
-begin
-  if FColor <> Value then
-  begin
-    FColor := Value;
-    if not (csLoading in FOwner.ComponentState)then
-      FManagerColor := False;
-  end;
-end;
-
-procedure TdxCustomDockControlProperties.SetFont(const Value: TFont);
-begin
-  FFont.Assign(Value);
-  if not (csLoading in FOwner.ComponentState)then
-    FManagerFont := False;
-end;
-
-procedure TdxCustomDockControlProperties.SetManagerColor(const Value: Boolean);
-begin
-  if FManagerColor <> Value then
-  begin
-    if Value and not (csLoading in FOwner.ComponentState) then
-      FColor := FOwner.Color;
-    FManagerColor := Value;
-  end;
-end;
-
-procedure TdxCustomDockControlProperties.SetManagerFont(const Value: Boolean);
-begin
-  if FManagerFont <> Value then
-  begin
-    if Value and not (csLoading in FOwner.ComponentState) then
-      FFont.Assign(FOwner.Font);
-    FManagerFont := Value;
-  end;
-end;
-
-{ TdxTabContainerDockSiteProperties }
-
-constructor TdxTabContainerDockSiteProperties.Create(AOwner: TdxDockingManager);
-begin
-  inherited Create(AOwner);
-  FTabsProperties := TdxDockingTabControlProperties.Create(nil);
-end;
-
-destructor TdxTabContainerDockSiteProperties.Destroy;
-begin
-  FreeAndNil(FTabsProperties);
-  inherited Destroy;
-end;
-
-procedure TdxTabContainerDockSiteProperties.AssignTo(Dest: TPersistent);
-begin
-  if Dest is TdxTabContainerDockSite then
-    TdxTabContainerDockSite(Dest).TabsProperties.Assign(TabsProperties)
-  else
-    if Dest is TdxTabContainerDockSiteProperties then
-      TdxTabContainerDockSiteProperties(Dest).TabsProperties.Assign(TabsProperties);
-
-  inherited AssignTo(Dest);
-end;
-
-procedure TdxTabContainerDockSiteProperties.DefineProperties(Filer: TFiler);
-begin
-  inherited DefineProperties(Filer);
-  Filer.DefineProperty('TabsPosition', TabsProperties.ReadOldTabsPosition, nil, False);
-  Filer.DefineProperty('TabsScroll', TabsProperties.ReadOldTabsScroll, nil, False);
-end;
-
-procedure TdxTabContainerDockSiteProperties.SetTabsProperties(AValue: TdxDockingTabControlProperties);
-begin
-  FTabsProperties.Assign(AValue);
-end;
-
-{ TdxDockingManager }
-
-constructor TdxDockingManager.Create(AOwner: TComponent);
-begin
-  inherited Create(AOwner);
-  FAutoHideInterval := dxAutoHideInterval;
-  FAutoHideMovingInterval := dxAutoHideMovingInterval;
-  FAutoHideMovingSize := dxAutoHideMovingSize;
-  FAutoShowInterval := dxAutoShowInterval;
-  FChangeLink := TChangeLink.Create;
-  FChangeLink.OnChange := DoOnImagesChanged;
-  FColor := clBtnFace;
-  FDefaultSitesPropertiesList := TObjectList.Create;
-  FDockZonesWidth := dxDockZonesWidth;
-  CreateDefaultSitesProperties;
-  FFont := TFont.Create;
-  FFont.OnChange := DoOnFontChanged;
-  FLookAndFeel := TcxLookAndFeel.Create(Self);
-  FLookAndFeel.OnChanged := DoOnLFChanged;
-  FOptions := dxDockingDefaultOptions;
-  FResizeZonesWidth := dxResizeZonesWidth;
-  FSelectionFrameWidth := dxSelectionFrameWidth;
-  FTabsScrollInterval := dxTabsScrollInterval;
-  FUseDefaultSitesProperties := True;
-  FDockStyle := dxDefaultDockStyle;
-  dxDockingController.RegisterManager(Self);
-end;
-
-destructor TdxDockingManager.Destroy;
-begin
-  dxDockingController.UnregisterManager(Self);
-  FreeAndNil(FLookAndFeel);
-  FreeAndNil(FFont);
-  DestroyDefaultSitesProperties;
-  FreeAndNil(FDefaultSitesPropertiesList);
-  FreeAndNil(FChangeLink);
-  inherited Destroy;
-end;
-
-procedure TdxDockingManager.LoadLayoutFromIniFile(AFileName: string);
-begin
-  dxDockingController.LoadLayoutFromIniFile(AFileName, ParentForm);
-end;
-
-procedure TdxDockingManager.LoadLayoutFromRegistry(ARegistryPath: string);
-begin
-  dxDockingController.LoadLayoutFromRegistry(ARegistryPath, ParentForm);
-end;
-
-procedure TdxDockingManager.LoadLayoutFromStream(AStream: TStream);
-begin
-  dxDockingController.LoadLayoutFromStream(AStream, ParentForm);
-end;
-
-procedure TdxDockingManager.SaveLayoutToIniFile(AFileName: string);
-begin
-  dxDockingController.SaveLayoutToIniFile(AFileName, ParentForm);
-end;
-
-procedure TdxDockingManager.SaveLayoutToRegistry(ARegistryPath: string);
-begin
-  dxDockingController.SaveLayoutToRegistry(ARegistryPath, ParentForm);
-end;
-
-procedure TdxDockingManager.SaveLayoutToStream(AStream: TStream);
-begin
-  dxDockingController.SaveLayoutToStream(AStream, ParentForm);
-end;
-
-procedure TdxDockingManager.DefineProperties(Filer: TFiler);
-begin
-  inherited DefineProperties(Filer);
-  Filer.DefineProperty('ViewStyle', ReadViewStyle, nil, False);
-end;
-
-procedure TdxDockingManager.Notification(AComponent: TComponent; Operation: TOperation);
-var
-  I: Integer;
-begin
-  inherited;
-  if (Operation = opRemove) and not IsDestroying then
-  begin
-    if AComponent = Images then
-      Images := nil;
-    for I := 0 to DefaultSitesPropertiesCount - 1 do
-      if AComponent = DefaultSitesProperties[I].PopupMenu then
-        DefaultSitesProperties[I].PopupMenu := nil;
-  end;
-end;
-
-procedure TdxDockingManager.Loaded;
-begin
-  inherited;
-  UpdateDefaultSitesPropertiesColor;
-  UpdateDefaultSitesPropertiesFont;
-  dxDockingController.DockManagerLoaded(ParentForm);
-  dxDockingController.DoManagerChanged(ParentForm);
-end;
-
-procedure TdxDockingManager.ChangeScale(M, D: Integer);
-begin
-  FFont.Height := MulDiv(FFont.Height, M, D);
-end;
-
-function TdxDockingManager.IsLoading: Boolean;
+function TdxFloatForm.IsDesigning: Boolean;
 begin
-  Result := csLoading in ComponentState;
+  Result := csDesigning in ComponentState;
 end;
 
-function TdxDockingManager.IsDestroying: Boolean;
+function TdxFloatForm.IsDestroying: Boolean;
 begin
   Result := csDestroying in ComponentState;
 end;
 
-procedure TdxDockingManager.DoColorChanged;
+procedure TdxFloatForm.CreateParams(var Params: TCreateParams);
 begin
-  UpdateDefaultSitesPropertiesColor;
-  dxDockingController.DoColorChanged(ParentForm);
-end;
-
-procedure TdxDockingManager.DoFontChanged;
-begin
-  UpdateDefaultSitesPropertiesFont;
-  dxDockingController.DoFontChanged(ParentForm);
-end;
-
-procedure TdxDockingManager.CreatePainterClass(AssignDefaultStyle: Boolean);
-begin
-  PainterClass.CreateColors;
-end;
-
-function TdxDockingManager.GetLookAndFeel: TcxLookAndFeel;
-begin
-  Result := FLookAndFeel;
-end;
-
-function TdxDockingManager.GetActualPainterClass: TdxDockControlPainterClass;
-begin
-  Result := dxDockingPaintersManager.GetAvailablePainterClass(LookAndFeel);
-end;
-
-function TdxDockingManager.GetPainterClass: TdxDockControlPainterClass;
-begin
-  if FPainterClass = nil then
-    FPainterClass := GetActualPainterClass;
-  Result := FPainterClass;
-end;
-
-procedure TdxDockingManager.ReleasePainterClass;
-begin
-  if FPainterClass <> nil then
-  begin
-    FPainterClass.ReleaseColors;
-    FPainterClass := nil;
-  end;
-end;
-
-procedure TdxDockingManager.CreateDefaultSitesProperties;
-begin
-  FDefaultSitesPropertiesList.Add(TdxLayoutDockSiteProperties.Create(Self));
-  FDefaultSitesPropertiesList.Add(TdxFloatDockSiteProperties.Create(Self));
-  FDefaultSitesPropertiesList.Add(TdxSideContainerDockSiteProperties.Create(Self));
-  FDefaultSitesPropertiesList.Add(TdxSideContainerDockSiteProperties.Create(Self));
-  FDefaultSitesPropertiesList.Add(TdxTabContainerDockSiteProperties.Create(Self));
-end;
-
-procedure TdxDockingManager.DestroyDefaultSitesProperties;
-begin
-  FDefaultSitesPropertiesList.Clear;
-end;
-
-procedure TdxDockingManager.ReadViewStyle(AReader: TReader);
-
-  procedure SetLookAndFeelKind(AKind: TcxLookAndFeelKind);
-  begin
-    LookAndFeel.NativeStyle := False;
-    LookAndFeel.Kind := AKind;
-  end;
-
-var
-  AValue: string;
-begin
-  AValue := AReader.ReadIdent;
-  if SameText(AValue, 'vsStandard') then
-    SetLookAndFeelKind(lfStandard);
-  if SameText(AValue, 'vsNET') then
-    SetLookAndFeelKind(lfUltraFlat);
-  if SameText(AValue, 'vsOffice11') then
-    SetLookAndFeelKind(lfOffice11);
-  if SameText(AValue, 'vsXP') then
-    LookAndFeel.NativeStyle := True;
-end;
-
-procedure TdxDockingManager.UpdateDefaultSitesPropertiesColor;
-var
-  I: Integer;
-begin
-  for I := 0 to DefaultSitesPropertiesCount - 1 do
-    if DefaultSitesProperties[I].ManagerColor then
+{$IFDEF DELPHI9}
+  PopupParent := ParentForm;
+{$ENDIF}
+  inherited CreateParams(Params);
+  with Params do
+    if FOnTopMost and (ParentForm <> nil) then
     begin
-      DefaultSitesProperties[I].Color := Color;
-      DefaultSitesProperties[I].FManagerColor := True;
+      Style := Style or WS_POPUPWINDOW;
+      WndParent := ParentForm.Handle;
+    end
+    else
+    begin
+    {$IFDEF DELPHI11}
+      if Application.MainFormOnTaskBar and (ParentForm <> Application.MainForm) then
+        WndParent := Application.MainFormHandle
+      else
+    {$ENDIF}
+        WndParent := Application.Handle;
     end;
 end;
 
-procedure TdxDockingManager.UpdateDefaultSitesPropertiesFont;
+procedure TdxFloatForm.CreateWnd;
+begin
+  inherited;
+  if (FClientWidth <> -1) and (FClientHeight <> -1) then
+  begin
+    ClientWidth := FClientWidth;
+    ClientHeight := FClientHeight;
+    FClientWidth := -1;
+    FClientHeight := -1;
+  end;
+end;
+
+function TdxFloatForm.IsShortCut(var Message: TWMKey): Boolean;
+begin
+  Result := inherited IsShortCut(Message);
+  if not Result and (ParentForm <> nil) then
+    Result := ParentForm.IsShortCut(Message);
+end;
+
+procedure TdxFloatForm.ShowWindow;
+begin
+  if not Visible then
+    Show
+  else
+    if IsWindowVisible(Handle) then
+      SetWindowPos(Handle, ParentForm.Handle, 0, 0, 0, 0, SWP_NOSIZE or SWP_NOMOVE or SWP_NOACTIVATE)
+    else
+      Windows.ShowWindow(Handle, SW_SHOWNA);
+end;
+
+procedure TdxFloatForm.HideWindow;
+begin
+  if HandleAllocated then
+    Windows.ShowWindow(Handle, SW_HIDE);
+end;
+
+procedure dxIllegalSetParentField(AHackedControl: TWinControl; ANewParent: TObject);
 var
-  I: Integer;
+  PParent: PInteger;
 begin
-  for I := 0 to DefaultSitesPropertiesCount - 1 do
-    if DefaultSitesProperties[I].ManagerFont then
-    begin
-      DefaultSitesProperties[I].Font := Font;
-      DefaultSitesProperties[I].FManagerFont := True;
-    end;
+  PParent := @AHackedControl.Parent;
+  PParent^ := Integer(ANewParent);
 end;
 
-procedure TdxDockingManager.DoOnImagesChanged(Sender: TObject);
-begin
-  if not IsLoading then
-    dxDockingController.DoImagesChanged(ParentForm);
-end;
-
-procedure TdxDockingManager.DoOnFontChanged(Sender: TObject);
-begin
-  if not IsLoading then
-    DoFontChanged;
-end;
-
-procedure TdxDockingManager.DoOnLFChanged(Sender: TcxLookAndFeel; AChangedValues: TcxLookAndFeelValues);
-begin
-  if not IsLoading then
-  begin
-    dxDockingController.DoPainterChanged(ParentForm, True);
-    DoViewChanged;
-  end;
-end;
-
-procedure TdxDockingManager.DoViewChanged;
-begin
-  if Assigned(FOnViewChanged) then
-    FOnViewChanged(Self);
-end;
-
-function TdxDockingManager.IsDefaultSitePropertiesStored: Boolean;
-begin
-  Result := FUseDefaultSitesProperties;
-end;
-
-function TdxDockingManager.GetDefaultSiteProperties(Index: Integer): TdxCustomDockControlProperties;
-begin
-  if (0 <= Index) and (Index < FDefaultSitesPropertiesList.Count) then
-    Result := TdxCustomDockControlProperties(FDefaultSitesPropertiesList[Index])
-  else
-    Result := nil;
-end;
-
-function TdxDockingManager.GetDefaultSitesPropertiesCount: Integer;
-begin
-  Result := FDefaultSitesPropertiesList.Count;
-end;
-
-function TdxDockingManager.GetDefaultLayoutSiteProperties: TdxLayoutDockSiteProperties;
-begin
-  Result := DefaultSitesProperties[0] as TdxLayoutDockSiteProperties;
-end;
-
-function TdxDockingManager.GetDefaultFloatSiteProperties: TdxFloatDockSiteProperties;
-begin
-  Result := DefaultSitesProperties[1] as TdxFloatDockSiteProperties;
-end;
-
-function TdxDockingManager.GetDefaultHorizContainerSiteProperties: TdxSideContainerDockSiteProperties;
-begin
-  Result := DefaultSitesProperties[2] as TdxSideContainerDockSiteProperties;
-end;
-
-function TdxDockingManager.GetDefaultVertContainerSiteProperties: TdxSideContainerDockSiteProperties;
-begin
-  Result := DefaultSitesProperties[3] as TdxSideContainerDockSiteProperties;
-end;
-
-function TdxDockingManager.GetDefaultTabContainerSiteProperties: TdxTabContainerDockSiteProperties;
-begin
-  Result := DefaultSitesProperties[4] as TdxTabContainerDockSiteProperties;
-end;
-
-function TdxDockingManager.GetParentForm: TCustomForm;
-begin
-  if Owner is TCustomForm then
-    Result := Owner as TCustomForm
-  else
-    Result := nil;
-end;
-
-procedure TdxDockingManager.SetColor(const Value: TColor);
-begin
-  if FColor <> Value then
-  begin
-    FColor := Value;
-    if not IsLoading then
-      DoColorChanged;
-  end;
-end;
-
-procedure TdxDockingManager.SetDefaultLayoutSiteProperties(Value: TdxLayoutDockSiteProperties);
-begin
-  (DefaultSitesProperties[0] as TdxLayoutDockSiteProperties).Assign(Value);
-end;
-
-procedure TdxDockingManager.SetDefaultFloatSiteProperties(Value: TdxFloatDockSiteProperties);
-begin
-  (DefaultSitesProperties[1] as TdxFloatDockSiteProperties).Assign(Value);
-end;
-
-procedure TdxDockingManager.SetDefaultHorizContainerSiteProperties(Value: TdxSideContainerDockSiteProperties);
-begin
-  (DefaultSitesProperties[2] as TdxSideContainerDockSiteProperties).Assign(Value);
-end;
-
-procedure TdxDockingManager.SetDefaultVertContainerSiteProperties(Value: TdxSideContainerDockSiteProperties);
-begin
-  (DefaultSitesProperties[3] as TdxSideContainerDockSiteProperties).Assign(Value);
-end;
-
-procedure TdxDockingManager.SetDefaultTabContainerSiteProperties(Value: TdxTabContainerDockSiteProperties);
-begin
-  (DefaultSitesProperties[3] as TdxTabContainerDockSiteProperties).Assign(Value);
-end;
-
-procedure TdxDockingManager.SetDockStyle(AValue: TdxDockStyle);
-begin
-  if AValue <> FDockStyle then
-  begin
-    FDockStyle := AValue;
-    dxDockingController.UpdateLayout(ParentForm);
-  end;
-end;
-
-procedure TdxDockingManager.SetDockZonesWidth(const Value: Integer);
-begin
-  if FDockZonesWidth <> Value then
-  begin
-    FDockZonesWidth := Value;
-    dxDockingController.DoZonesWidthChanged(ParentForm);
-  end;
-end;
-
-procedure TdxDockingManager.SetFont(const Value: TFont);
-begin
-  FFont.Assign(Value);
-end;
-
-procedure TdxDockingManager.SetImages(const Value: TCustomImageList);
-begin
-  cxSetImageList(Value, FImages, FChangeLink, Self);
-end;
-
-procedure TdxDockingManager.SetLookAndFeel(Value: TcxLookAndFeel);
-begin
-  FLookAndFeel.Assign(Value);
-end;
-
-procedure TdxDockingManager.SetOptions(const Value: TdxDockingOptions);
-begin
-  if FOptions <> Value then
-  begin
-    FOptions := Value;
-    if not IsLoading then
-      dxDockingController.DoOptionsChanged(ParentForm);
-  end;
-end;
-
-procedure TdxDockingManager.SetResizeZonesWidth(const Value: Integer);
-begin
-  if FResizeZonesWidth <> Value then
-  begin
-    FResizeZonesWidth := Value;
-    dxDockingController.DoZonesWidthChanged(ParentForm);
-  end;
-end;
-
-{ TdxDockingPaintersManager }
-
-constructor TdxDockingPaintersManager.Create;
-begin
-  inherited Create;
-  FPainters := TList.Create;
-end;
-
-destructor TdxDockingPaintersManager.Destroy;
-begin
-  FreeAndNil(FPainters);
-  inherited Destroy;
-end;
-
-procedure TdxDockingPaintersManager.Changed;
-begin
-  dxDockingController.DoPainterChanged(nil, False);
-end;
-
-function TdxDockingPaintersManager.Find(AStyle: TcxLookAndFeelStyle): TdxDockControlPainterClass;
+procedure TdxFloatForm.WndProc(var Message: TMessage);
 var
-  I: Integer;
+  ADesigner: IDesignerHook;
 begin
-  Result := nil;
-  for I := 0 to PainterClassCount - 1 do
-    if PainterClass[I].HasLookAndFeelStyle(AStyle) then
-    begin
-      Result := PainterClass[I];
-      Break;
-    end;
-end;
+  if IsDesigning then
+  begin
+    if Designer <> nil then
+      ADesigner := Designer
+    else
+      if CanDesigning then
+        ADesigner := ParentForm.Designer
+      else
+        ADesigner := nil;
+    if Designer <> nil then
+      Designer := nil;
+    inherited WndProc(Message);
+    if (ADesigner <> nil) and CanDesigning then
+      Designer := ADesigner;
 
-function TdxDockingPaintersManager.GetAvailablePainterClass(ALookAndFeel: TcxLookAndFeel): TdxDockControlPainterClass;
-begin
-  if ALookAndFeel <> nil then
-    Result := Find(ALookAndFeel.ActiveStyle)
+  {$IFDEF DELPHI10}
+    // A1439
+    if Message.Msg = DXM_DOCK_PURGEPARENT then
+      dxIllegalSetParentField(Self, nil);
+  {$ENDIF}
+  end
   else
-    Result := nil;
-
-  if Result = nil then
-    Result := TdxDockControlPainter;
+    inherited WndProc(Message);
 end;
 
-procedure TdxDockingPaintersManager.Register(APainterClass: TdxDockControlPainterClass);
+function TdxFloatForm.GetParentForm: TCustomForm;
 begin
-  if FPainters.IndexOf(APainterClass) < 0 then
+  if (FDockSite <> nil) and not FDockSite.IsDestroying then
+    Result := FDockSite.ParentForm
+  else Result := nil;
+end;
+
+procedure TdxFloatForm.WMClose(var Message: TWMClose);
+begin
+  if (DockSite <> nil) and not DockSite.IsDesigning then
+    DockSite.DoClose;
+end;
+
+procedure TdxFloatForm.WMMove(var Message: TWMMove);
+begin
+  inherited;
+  if DockSite <> nil then
+    DockSite.UpdateFloatPosition;
+end;
+
+procedure TdxFloatForm.WMSize(var Message: TWMSize);
+begin
+  inherited;
+  if DockSite <> nil then
+    DockSite.Modified;
+end;
+
+procedure TdxFloatForm.WMWindowPosChanging(var Message: TWMWindowPosChanging);
+var
+  AWindowPos: PWindowPos;
+begin
+  if dxDockingController.IsApplicationDeactivating and FOnTopMost then
   begin
-    FPainters.Add(APainterClass);
-    Changed;
+    AWindowPos := Message.WindowPos;
+    if (AWindowPos.flags and SWP_NOZORDER) = 0 then
+      AWindowPos.flags := AWindowPos.flags or SWP_NOZORDER;
   end;
+  inherited;
 end;
 
-procedure TdxDockingPaintersManager.Unregister(APainterClass: TdxDockControlPainterClass);
+procedure TdxFloatForm.WMMouseActivate(var Message: TWMMouseActivate);
 begin
-  if Self <> nil then
+  inherited;
+  if DockSite <> nil then
+    DockSite.Activate;
+end;
+
+procedure TdxFloatForm.WMNCLButtonDown(var Message: TWMNCLButtonDown);
+begin
+  if (Message.HitTest = HTCAPTION) and not IsIconic(Handle) and (DockSite <> nil) then
   begin
-    if FPainters.Remove(APainterClass) >= 0 then
-      Changed;
-  end;
+    SendMessage(DockSite.Handle, WM_MOUSEACTIVATE, 0, 0);
+    SetWindowPos(Handle, 0, 0, 0, 0, 0, SWP_NOZORDER or SWP_NOMOVE or SWP_NOSIZE);
+    SendMessage(Handle, WM_NCLBUTTONUP, TMessage(Message).WParam, TMessage(Message).LParam);
+    FCaptionIsDown := True;
+    FCaptionPoint := Point(Message.XCursor, Message.YCursor);
+  end
+  else inherited;
 end;
 
-function TdxDockingPaintersManager.GetPainterClass(Index: Integer): TdxDockControlPainterClass;
+procedure TdxFloatForm.WMNCLButtonUp(var Message: TWMNCLButtonUp);
 begin
-  Result := TdxDockControlPainterClass(FPainters[Index]);
+  FCaptionIsDown := False;
+  inherited;
 end;
 
-function TdxDockingPaintersManager.GetPainterClassCount: Integer;
+procedure TdxFloatForm.WMNCLButtonDblClk(var Message: TWMNCMButtonDblClk);
 begin
-  Result := FPainters.Count;
+  if not IsDesigning and (Message.HitTest = HTCAPTION) and not IsIconic(Handle) and
+    (DockSite <> nil) and (doDblClickDocking in DockSite.ControllerOptions)
+  then
+    DockSite.RestoreDockPosition(Point(Message.XCursor, Message.YCursor))
+  else
+    inherited;
+end;
+
+procedure TdxFloatForm.WMNCMouseMove(var Message: TWMNCMouseMove);
+begin
+  if FCaptionIsDown and ((FCaptionPoint.X <> Message.XCursor) or
+    (FCaptionPoint.Y <> Message.YCursor)) then
+  begin
+    FCaptionIsDown := False;
+    DockSite.StartDocking(Point(Message.XCursor, Message.YCursor));
+  end
+  else
+    inherited;
 end;
 
 initialization

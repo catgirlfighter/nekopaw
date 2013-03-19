@@ -81,6 +81,7 @@ object mf: Tmf
             Align = alClient
             TabOrder = 0
             Properties.CloseButtonMode = cbmEveryTab
+            Properties.CustomButtons.Buttons = <>
             Properties.Images = dm.il
             Properties.Options = [pcoGoDialog]
             OnCanCloseEx = pcTablesCanCloseEx
@@ -399,7 +400,6 @@ object mf: Tmf
     ImageOptions.Images = dm.il
     NotDocking = [dsNone]
     PopupMenuLinks = <>
-    Style = bmsUseLookAndFeel
     UseSystemFont = True
     Left = 408
     Top = 40
@@ -433,6 +433,10 @@ object mf: Tmf
         item
           Visible = True
           ItemName = 'bbStartPics'
+        end
+        item
+          Visible = True
+          ItemName = 'bbAdvanced'
         end
         item
           Visible = True
@@ -477,6 +481,25 @@ object mf: Tmf
       Visible = ivAlways
       ImageIndex = 2
       OnClick = bbNewClick
+    end
+    object bbAdvanced: TdxBarSubItem
+      Caption = '_ADVANCED_'
+      Category = 0
+      Visible = ivAlways
+      ImageIndex = 21
+      ShowCaption = False
+      ItemLinks = <
+        item
+          Visible = True
+          ItemName = 'bbDeleteMD5Doubles'
+        end>
+    end
+    object bbDeleteMD5Doubles: TdxBarButton
+      Caption = '_DELETEMD5DOUBLES_'
+      Category = 0
+      Hint = '_DELETEMD5DOUBLES_'
+      Visible = ivAlways
+      OnClick = bbDeleteMD5DoublesClick
     end
   end
   object ApplicationEvents1: TApplicationEvents

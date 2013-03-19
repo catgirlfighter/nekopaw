@@ -3,7 +3,7 @@ unit OpBase;
 interface
 
 uses Windows, SysUtils, Messages, GraberU, INIFiles, Classes, Common,
-MyHTTP, MyINIFile;
+MyHTTP, MyINIFile, Dialogs;
 
 var
   FullResList: TResourceList;
@@ -46,6 +46,11 @@ var
   end;}
 
 type
+  terrorclass = class
+  public
+    procedure OnError(Sender: TObject; Msg: String);
+  end;
+
   tGUIValue = (gvSizes,gvResSet,gvGridFields);
   tGUIValues = set of tGUIValue;
 
@@ -66,10 +71,19 @@ var
   GLOBAL_LOGMODE: Boolean;
 
 procedure SetLogMode(Value: Boolean);
+procedure SetConSettings(r:TResourceList);
 
 implementation
 
 uses LangString, EncryptStrings, AES;
+
+var
+  erclass: terrorclass;
+
+procedure terrorclass.OnError(Sender: TObject; Msg: string);
+begin
+  MessageDLG('Error in initiation: ' + Msg,mtError,[mbOk],0);
+end;
 
 procedure LoadResourceSettings;
 var
@@ -551,7 +565,28 @@ begin
   end;
 end;
 
+procedure SetConSettings(r:TResourceList);
+begin
+  if GlobalSettings.Downl.UsePerRes then
+    r.MaxThreadCount := GlobalSettings.Downl.PerResThreads
+  else
+    r.MaxThreadCount := 0;
+
+  r.ThreadHandler.Proxy := GlobalSettings.Proxy;
+  r.ThreadHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
+  r.ThreadHandler.Retries := GlobalSettings.Downl.Retries;
+
+  r.DWNLDHandler.Proxy := GlobalSettings.Proxy;
+  r.DWNLDHandler.ThreadCount := GlobalSettings.Downl.PicThreads;
+  r.DWNLDHandler.Retries := GlobalSettings.Downl.Retries;
+  r.PictureList.IgnoreList := CopyDSArray(IgnoreList);
+
+  r.LogMode := GLOBAL_LOGMODE;
+end;
+
 initialization
+
+erclass := terrorclass.Create;
 
 rootdir := ExtractFileDir(paramstr(0));
 
@@ -567,6 +602,7 @@ end;
 CreateLangINI(IncludeTrailingPathDelimiter(rootdir)+IncludeTrailingPathDelimiter('languages')+langname+'.ini');
 
 FullResList := TResourceList.Create;
+FullResList.OnError := erclass.OnError;
 FullResList.LoadList(IncludeTrailingPathDelimiter(rootdir) + 'resources');
 
 TagDump := TPictureTagList.Create;
@@ -587,5 +623,6 @@ finalization
 GlobalFavList.Free;
 FullResList.Free;
 TagDump.Free;
+erclass.Free;
 
 end.
