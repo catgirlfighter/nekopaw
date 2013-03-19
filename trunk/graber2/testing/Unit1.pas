@@ -118,19 +118,7 @@ procedure TForm1.Button5Click(Sender: TObject);
 var
   h: tmyidhttp;
 begin
-  h := CreateHTTP;
-  h.HandleRedirects := false;
-  try
-    try
-      h.Head(edit1.Text);
-    except
-    end;
-    memo1.Clear;
-    memo1.Lines.Add(h.ResponseText);
-    memo1.Lines.Add(h.Response.Location);
-  finally
-    h.Free;
-  end;
+  memo1.Text := CheckProto(edit1.Text,'https://herp.derp/hurr/durr/durr.html');
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);

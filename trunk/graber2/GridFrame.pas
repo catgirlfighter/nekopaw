@@ -16,7 +16,7 @@ uses
   dxSkinsDefaultPainters, dxSkinscxPCPainter, dxSkinsdxStatusBarPainter,
   dxSkinsdxBarPainter,
   {graber}
-  graberU, common, dxBarExtItems;
+  graberU, common, dxBarExtItems, cxNavigator;
 
 type
 
@@ -43,7 +43,7 @@ type
 
   TcxGridViewData = class(cxGridTableView.TcxGridViewData)
   protected
-    function GetRecordClass(ARecordInfo: TcxRowInfo)
+    function GetRecordClass(const ARecordInfo: TcxRowInfo)
       : TcxCustomGridRecordClass; override;
   end;
 
@@ -123,8 +123,8 @@ type
       AItem: TcxCustomGridTableItem);
     procedure vChildGridFocusedItemChanged(Sender: TcxCustomGridTableView;
       APrevFocusedItem, AFocusedItem: TcxCustomGridTableItem);
-    procedure GridFocusedViewChanged(Sender: TcxCustomGrid; APrevFocusedView,
-      AFocusedView: TcxCustomGridView);
+    procedure GridFocusedViewChanged(Sender: TcxCustomGrid;
+      APrevFocusedView, AFocusedView: TcxCustomGridView);
   private
     // FList: TList;
     // FFieldList: TStringList;
@@ -151,6 +151,7 @@ type
     FChildSizeColumn: TcxGridColumn;
     FChildPosColumn: TcxGridColumn;
     FChildResColumn: TcxGridColumn;
+    FOnLog: TLogEvent;
   public
     ResList: TResourceList;
     procedure vGridRecordExpandable(MasterDataRow: TcxGridMasterDataRow;
@@ -169,7 +170,7 @@ type
     procedure SetLang;
     procedure OnListPicChanged(Pic: TTPicture; Changes: TPicChanges);
     procedure SetColWidths;
-    procedure updatefocusedrecord(rec: TcxCustomGridrecord);
+    procedure updatefocusedrecord(rec: TcxCustomGridRecord);
     procedure ForceStop(Sender: TObject);
     procedure ForcePicsStop(Sender: TObject);
     procedure SetSettings;
@@ -187,11 +188,15 @@ type
     function getprogress: DUInt64;
     procedure sendprogress;
     procedure SetChildColWidths(clone: TcxGridTableView);
-    procedure FillRecord(dc: tcxGridDataController; RecNo: integer; pic: TTPicture);
+    procedure FillRecord(dc: tcxGridDataController; RecNo: Integer;
+      Pic: TTPicture);
+    procedure DeleteMD5Doubles;
+    procedure Log(s: string);
     property OnPicChanged: TPictureNotifyEvent read FPicChanged
       write FPicChanged;
     // property OnPageComplete: TNotifyEvent read FPageComplete write FPageComplete;
     property OnTagUpdate: TTagUpdateEvent read FTagUpdate write FTagUpdate;
+    property OnLog: TLogEvent read FOnLog write fOnLog;
     { Public declarations }
   end;
 
@@ -218,7 +223,7 @@ end;
 
 { TmycxGridViewData }
 
-function TcxGridViewData.GetRecordClass(ARecordInfo: TcxRowInfo)
+function TcxGridViewData.GetRecordClass(const ARecordInfo: TcxRowInfo)
   : TcxCustomGridRecordClass;
 begin
   Result := inherited GetRecordClass(ARecordInfo);
@@ -379,6 +384,28 @@ begin
     ResList.Clear;
 end;
 
+procedure TfGrid.DeleteMD5Doubles;
+var
+  i,n,c: integer;
+  md5list: tMetaList;
+begin
+  if MessageDlg(lang('_CONFIRM_DELETEMD5_'),mtConfirmation,[mbYes,mbNo],0) <> mrYes then
+    Exit;
+
+  c := 0;
+  md5list := tMetaList.Create; try
+    for i := 0 to ResList.PictureList.Count -1 do
+      if Assigned(ResList.PictureList[i].MD5) then
+        if md5list.FindPosition(ResList.PictureList[i].MD5^,n) then
+        begin
+          ResList.PictureList[i].DeleteFile;
+          inc(c);
+        end else
+          md5list.Add(ResList.PictureList[i].MD5^,n);
+    Log(Format(lang('_DELETED_COUNT_'),[c]));
+  finally md5list.Free; end;
+end;
+
 procedure TfGrid.doUpdates;
 var
   i: Integer;
@@ -411,13 +438,14 @@ begin
 
     if i > 0 then
     begin
-      sBar.Panels[1].Text := 'TTL ' + IntToStr(ResList.PictureList.Count) + ' OK '
-        + IntToStr(ResList.PictureList.PicCounter.OK) + ' SKP ' +
+      sBar.Panels[1].Text := 'TTL ' + IntToStr(ResList.PictureList.Count) +
+        ' OK ' + IntToStr(ResList.PictureList.PicCounter.OK) + ' SKP ' +
         IntToStr(ResList.PictureList.PicCounter.SKP) + ' EXS ' +
         IntToStr(ResList.PictureList.PicCounter.EXS) + ' ERR ' +
         IntToStr(ResList.PictureList.PicCounter.ERR);
 
-      if (ResList.PictureList.Count - ResList.PictureList.PicCounter.SKP) > 0 then
+      if (ResList.PictureList.Count - ResList.PictureList.PicCounter.
+        SKP) > 0 then
         sBar.Panels[0].Text := FormatFloat('0.00%',
           ResList.PictureList.PicCounter.FSH / (ResList.PictureList.Count -
           ResList.PictureList.PicCounter.SKP) * 100);
@@ -430,15 +458,16 @@ begin
   end;
 end;
 
-procedure TfGrid.FillRecord(dc: tcxGridDataController; RecNo: integer; pic: TTPicture);
+procedure TfGrid.FillRecord(dc: tcxGridDataController; RecNo: Integer;
+  Pic: TTPicture);
 var
-  j,idx: integer;
+  j, idx: Integer;
   n: TListValue;
   clm: TcxGridColumn;
 begin
-  for j := 0 to pic.Meta.Count - 1 do
+  for j := 0 to Pic.Meta.Count - 1 do
   begin
-    n := pic.Meta.Items[j];
+    n := Pic.Meta.Items[j];
     idx := FFieldList.IndexOf(n.Name);
     if idx <> -1 then
     begin
@@ -459,7 +488,7 @@ begin
     else
     begin
       IF Assigned(ResList.OnError) then
-        ResList.OnError(Self, pic.Resource.Name + ': field ' + n.Name +
+        ResList.OnError(Self, Pic.Resource.Name + ': field ' + n.Name +
           ' does not declared in field list');
     end;
   end;
@@ -481,10 +510,10 @@ begin
   Result.V2 := ResList.PictureList.Count - ResList.PictureList.PicCounter.SKP;
 end;
 
-procedure TfGrid.GridFocusedViewChanged(Sender: TcxCustomGrid; APrevFocusedView,
-  AFocusedView: TcxCustomGridView);
+procedure TfGrid.GridFocusedViewChanged(Sender: TcxCustomGrid;
+  APrevFocusedView, AFocusedView: TcxCustomGridView);
 begin
-    updatefocusedrecord((AFocusedView as tcxGridTableView).Controller.FocusedRow);
+  updatefocusedrecord((AFocusedView as TcxGridTableView).Controller.FocusedRow);
 end;
 
 procedure TfGrid.GridLevel2GetGridView(Sender: TcxGridLevel;
@@ -512,12 +541,18 @@ begin
   end;
 end;
 
+procedure TfGrid.Log(s: string);
+begin
+  if Assigned(OnLog) then
+    OnLog(self,s);
+end;
+
 procedure TfGrid.OnEndPicList(Sender: TObject);
 var
-  c, i{, j, idx}: Integer;
+  c, i { , j, idx } : Integer;
   t1, t3: Integer;
-//  n: TListValue;
-//  clm: TcxGridColumn;
+  // n: TListValue;
+  // clm: TcxGridColumn;
 begin
   t1 := GetTickCount;
   vGrid.BeginUpdate;
@@ -538,7 +573,7 @@ begin
         Values[i, FLabelColumn.Index] := PictureList[i].DisplayLabel;
         { if PictureList[i].Meta.Count <> FFieldLIst.Count then
           raise Exception.Create('Picture Meta does not equal to grid fields'); }
-        FillRecord(vGrid.DataController,i,PictureList[i]);
+        FillRecord(vGrid.DataController, i, PictureList[i]);
       end;
   finally
     vGrid.EndUpdate;
@@ -799,8 +834,8 @@ begin
       FFieldList.Clear;
 
     for i := 0 to ResList.PictureList.Meta.Count - 1 do
-    begin
-      FFieldList.Insert(i, ResList.PictureList.Meta.Items[i].Name);
+    if ResList.PictureList.Meta.Items[i].Name <> '' then begin
+      FFieldList.Add(ResList.PictureList.Meta.Items[i].Name);
       p := ResList.PictureList.Meta.Items[i].Value;
       case p.ValueType of
         DB.ftString:
@@ -819,9 +854,9 @@ begin
       else
         c := AddField(vGrid, ResList.PictureList.Meta.Items[i].Name);
       end;
-      FFieldList.Objects[i] := c;
-      c.Visible := def.IndexOf(FFieldList[i]) > -1;
-      c.GroupIndex := grp.IndexOf(FFieldList[i]);
+      FFieldList.Objects[FFieldList.Count-1] := c;
+      c.Visible := def.IndexOf(FFieldList[FFieldList.Count-1]) > -1;
+      c.GroupIndex := grp.IndexOf(FFieldList[FFieldList.Count-1]);
     end;
 
     FPosColumn.Index := vGrid.ItemCount;
@@ -1012,22 +1047,22 @@ end;
 
 procedure TfGrid.SetChildColWidths(clone: TcxGridTableView);
 begin
-  //FChildSizeColumn.Width := 60;
-  //FChildPosColumn.Width := 60;
-  //FChildProgressColumn.Width := 60;
-  //clone.Columns[FChildSizeColumn.Index].Options := FChildSizeColumn.Options;
+  // FChildSizeColumn.Width := 60;
+  // FChildPosColumn.Width := 60;
+  // FChildProgressColumn.Width := 60;
+  // clone.Columns[FChildSizeColumn.Index].Options := FChildSizeColumn.Options;
   clone.Columns[FChildSizeColumn.Index].Width := FChildSizeColumn.Width;
 
-  //clone.Columns[FChildPosColumn.Index].Options := FChildPosColumn.Options;
+  // clone.Columns[FChildPosColumn.Index].Options := FChildPosColumn.Options;
   clone.Columns[FChildPosColumn.Index].Width := FChildPosColumn.Width;
 
-  //clone.Columns[FChildProgressColumn.Index].Options.HorzSizing := false;
+  // clone.Columns[FChildProgressColumn.Index].Options.HorzSizing := false;
   clone.Columns[FChildProgressColumn.Index].Width := FChildProgressColumn.Width;
-  //for i := 0 to clone.ColumnCount -1 do
-  //begin
-  //  clone.Columns[i].Width := 10;
-  //end;
-  //(clone.Items[FChildProgressColumn.Index] as tcxGridColumn).Visible := false;
+  // for i := 0 to clone.ColumnCount -1 do
+  // begin
+  // clone.Columns[i].Width := 10;
+  // end;
+  // (clone.Items[FChildProgressColumn.Index] as tcxGridColumn).Visible := false;
 end;
 
 procedure TfGrid.SetMenus;
@@ -1049,21 +1084,7 @@ end;
 
 procedure TfGrid.SetSettings;
 begin
-  if GlobalSettings.Downl.UsePerRes then
-    ResList.MaxThreadCount := GlobalSettings.Downl.PerResThreads
-  else
-    ResList.MaxThreadCount := 0;
-
-  ResList.ThreadHandler.Proxy := GlobalSettings.Proxy;
-  ResList.ThreadHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
-  ResList.ThreadHandler.Retries := GlobalSettings.Downl.Retries;
-
-  ResList.DWNLDHandler.Proxy := GlobalSettings.Proxy;
-  ResList.DWNLDHandler.ThreadCount := GlobalSettings.Downl.PicThreads;
-  ResList.DWNLDHandler.Retries := GlobalSettings.Downl.Retries;
-  ResList.PictureList.IgnoreList := CopyDSArray(IgnoreList);
-
-  ResList.LogMode := GLOBAL_LOGMODE;
+  SetConSettings(ResList);
 
   bbDALF.Down := GlobalSettings.Downl.SDALF;
   bbAutoUnch.Down := GlobalSettings.Downl.AutoUncheckInvisible;
@@ -1115,11 +1136,11 @@ end;
 procedure TfGrid.updatefocusedrecord;
 var
   n: variant;
-//  p: TcxCustomGridRow;
+  // p: TcxCustomGridRow;
 begin
   if Assigned(FPicChanged) { and vd.Active } then
   begin
-    //p := vGrid.Controller.FocusedRow;
+    // p := vGrid.Controller.FocusedRow;
 
     if Assigned(rec) and rec.IsData then
       n := rec.Values[FIdColumn.Index]
@@ -1134,7 +1155,7 @@ procedure TfGrid.updatepic(Pic: TTPicture);
 var
   n: Integer;
   Changes: TPicChanges;
-  dc: TcxGridDataController;
+  dc: tcxGridDataController;
   sc, pc, prgc, lc, cc: TcxGridColumn;
 begin
   // Pic.Changes
@@ -1146,7 +1167,7 @@ begin
   begin
     n := Pic.Parent.BookMark - 1;
 
-    dc := TcxGridDataController(dc.GetDetailDataController(n, 0));
+    dc := tcxGridDataController(dc.GetDetailDataController(n, 0));
 
     if not Assigned(dc) or (dc.RecordCount = 0) then
       Exit;
@@ -1156,7 +1177,8 @@ begin
     prgc := FChildProgressColumn;
     lc := FChildLabelColumn;
     cc := FChildCheckColumn;
-  end else
+  end
+  else
   begin
     sc := FSizeColumn;
     pc := FPosColumn;
@@ -1173,11 +1195,10 @@ begin
   begin
     if pcData in Changes then
     begin
-      FillRecord(dc,n,pic);
+      FillRecord(dc, n, Pic);
 
-      if (Grid.FocusedView = dc.GridView)
-      and (dc.FocusedRecordIndex = n) then
-        FPicChanged(Self,pic);
+      if (Grid.FocusedView = dc.GridView) and (dc.FocusedRecordIndex = n) then
+        FPicChanged(Self, Pic);
     end;
 
     if pcSize in Changes then
@@ -1194,14 +1215,16 @@ begin
         Values[n, pc.Index] := GetBTString(Pic.Pos);
 
       case Pic.Status of
-        JOB_NOJOB: Values[n, prgc.Index] := null;
+        JOB_NOJOB:
+          Values[n, prgc.Index] := null;
         JOB_INPROGRESS:
           if (Pic.Size = 0) and (Pic.Linked.Count = 0) then
             Values[n, prgc.Index] := 'START'
           else if (Pic.Linked.Count = 0) then
             Values[n, prgc.Index] := Pic.Pos / Pic.Size * 100
           else
-            Values[n, prgc.Index] := Pic.Linked.PicCounter.FSH / Pic.Linked.Count * 100;
+            Values[n, prgc.Index] := Pic.Linked.PicCounter.FSH /
+              Pic.Linked.Count * 100;
         // FormatFloat('00.00%',);
         JOB_FINISHED:
           if (Pic.Size = 0) and (Pic.Linked.Count = 0) then
@@ -1218,7 +1241,8 @@ begin
           Values[n, prgc.Index] := 'ERROR';
         JOB_CANCELED:
           Values[n, prgc.Index] := 'ABORT';
-        JOB_REFRESH: Values[n, prgc.Index] := 'REFRESH';
+        JOB_REFRESH:
+          Values[n, prgc.Index] := 'REFRESH';
       end;
     end;
 
@@ -1243,21 +1267,22 @@ procedure TfGrid.vChildGridEditValueChanged(Sender: TcxCustomGridTableView;
   AItem: TcxCustomGridTableItem);
 var
   n: Integer;
-  pic: TTPicture;
+  Pic: TTPicture;
 begin
   if AItem.Index <> FChildCheckColumn.Index then
     Exit;
   n := Sender.DataController.FocusedRecordIndex;
   if n > -1 then
   begin
-    pic := TTPicture(Integer(Sender.DataController.Values[n,FChildIdColumn.Index]));
-    pic.Checked := Sender.DataController.Values[n, AItem.Index];
-    pic.Parent.Checked := true;
-    pic.Parent.Changes := [pcChecked];
-    updatepic(pic.Parent);
+    Pic := TTPicture(Integer(Sender.DataController.Values[n,
+      FChildIdColumn.Index]));
+    Pic.Checked := Sender.DataController.Values[n, AItem.Index];
+    Pic.Parent.Checked := true;
+    Pic.Parent.Changes := [pcChecked];
+    updatepic(Pic.Parent);
 
-  //  ResList.PictureList[n].Checked := vGrid.DataController.Values
-  //    [n, AItem.Index];
+    // ResList.PictureList[n].Checked := vGrid.DataController.Values
+    // [n, AItem.Index];
   end;
 end;
 
@@ -1326,7 +1351,7 @@ procedure TfGrid.vGrid1FocusedRecordChanged(Sender: TcxCustomGridTableView;
   ANewItemRecordFocusingChanged: Boolean);
 
 begin
-  //AFocusedRecord.is
+  // AFocusedRecord.is
   if APrevFocusedRecord <> AFocusedRecord then
     updatefocusedrecord(AFocusedRecord);
 end;
@@ -1363,7 +1388,7 @@ end;
 procedure TfGrid.vGridDataControllerDetailExpanded(ADataController
   : TcxCustomDataController; ARecordIndex: Integer);
 var
-  ADetailDC: TcxGridDataController;
+  ADetailDC: tcxGridDataController;
   AMasterRecord: TcxCustomGridRecord;
   viewClone: TcxGridTableView;
   i: Integer;
@@ -1371,12 +1396,12 @@ var
   ARowIndex: Integer;
   Pic: TTPicture;
 begin
-  ADetailDC := TcxGridDataController(ADataController.GetDetailDataController
+  ADetailDC := tcxGridDataController(ADataController.GetDetailDataController
     (ARecordIndex, 0));
   ARowIndex := ADataController.GetRowIndexByRecordIndex(ARecordIndex, false);
   if ARowIndex < 0 then
     Exit;
-  AMasterRecord := TcxGridDataController(ADataController)
+  AMasterRecord := tcxGridDataController(ADataController)
     .GridView.ViewData.Records[ARowIndex];
   viewClone := TcxGridTableView(ADetailDC.GridView);
 
@@ -1401,7 +1426,7 @@ begin
 
   finally
     viewClone.DataController.EndUpdate;
-   // SetChildColWidths(viewClone);
+    // SetChildColWidths(viewClone);
   end;
 end;
 
@@ -1409,7 +1434,7 @@ procedure TfGrid.vGridEditValueChanged(Sender: TcxCustomGridTableView;
   AItem: TcxCustomGridTableItem);
 var
   n: Integer;
-  i: integer;
+  i: Integer;
 begin
   if AItem.Index <> FCheckColumn.Index then
     Exit;
@@ -1419,9 +1444,10 @@ begin
     ResList.PictureList[n].Checked := vGrid.DataController.Values
       [n, AItem.Index];
     if ResList.PictureList[n].Linked.Count > 0 then
-      for i := 0 to ResList.PictureList[n].Linked.Count-1 do
+      for i := 0 to ResList.PictureList[n].Linked.Count - 1 do
       begin
-        ResList.PictureList[n].Linked[i].Checked := vGrid.DataController.Values[n, AItem.Index];
+        ResList.PictureList[n].Linked[i].Checked := vGrid.DataController.Values
+          [n, AItem.Index];
         ResList.PictureList[n].Linked[i].Changes := [pcChecked];
         updatepic(ResList.PictureList[n].Linked[i]);
       end;

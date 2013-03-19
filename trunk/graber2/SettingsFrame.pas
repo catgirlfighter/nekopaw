@@ -16,7 +16,7 @@ uses
   cxGridCustomTableView, cxGridTableView, cxClasses, cxGridLevel, cxGrid,
   dxSkinsdxBarPainter, dxBar,
   {Graber}
-  cxmymultirow, MyHTTP, Common, GraberU;
+  cxmymultirow, MyHTTP, Common, GraberU, cxNavigator;
 {
   dxSkinsdxBarPainter, dxBar, dxSkinBlack, dxSkinBlue,
   dxSkinBlueprint, dxSkinCaramel, dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide,
@@ -717,8 +717,10 @@ begin
   begin
     FLogedOn := false;
     if not FullResList.ListFinished then
-      FullResList.StartJob(JOB_STOPLIST)
-    else
+    begin
+      SetConSettings(FullResList);
+      FullResList.StartJob(JOB_STOPLIST);
+    end else
       fLogin.Close;
   end else
   begin

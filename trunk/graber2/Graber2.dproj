@@ -3,7 +3,7 @@
 			<ProjectGuid>{DB2644DF-90D9-40BF-8DC8-9BDB1ECD35E2}</ProjectGuid>
 			<ProjectVersion>12.2</ProjectVersion>
 			<MainSource>Graber2.dpr</MainSource>
-			<Config Condition="'$(Config)'==''">Release</Config>
+			<Config Condition="'$(Config)'==''">Debug</Config>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<Base>True</Base>
 			<Platform>Win32</Platform>
@@ -43,6 +43,7 @@
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
 			<DCCReference Include="common.pas"/>
+			<DCCReference Include="md5.pas"/>
 			<DCCReference Include="MainForm.pas">
 				<Form>mf</Form>
 			</DCCReference>
@@ -139,7 +140,7 @@
 						<VersionInfo Name="MajorVer">2</VersionInfo>
 						<VersionInfo Name="MinorVer">0</VersionInfo>
 						<VersionInfo Name="Release">1</VersionInfo>
-						<VersionInfo Name="Build">40</VersionInfo>
+						<VersionInfo Name="Build">47</VersionInfo>
 						<VersionInfo Name="Debug">False</VersionInfo>
 						<VersionInfo Name="PreRelease">False</VersionInfo>
 						<VersionInfo Name="Special">False</VersionInfo>
@@ -151,7 +152,7 @@
 					<VersionInfoKeys>
 						<VersionInfoKeys Name="CompanyName">catgirl group</VersionInfoKeys>
 						<VersionInfoKeys Name="FileDescription">Nekopaw Grabber</VersionInfoKeys>
-						<VersionInfoKeys Name="FileVersion">2.0.1.40</VersionInfoKeys>
+						<VersionInfoKeys Name="FileVersion">2.0.1.47</VersionInfoKeys>
 						<VersionInfoKeys Name="InternalName"/>
 						<VersionInfoKeys Name="LegalCopyright">nekopaw.googlecode.com</VersionInfoKeys>
 						<VersionInfoKeys Name="LegalTrademarks"/>

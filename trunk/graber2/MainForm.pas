@@ -96,6 +96,8 @@ type
     dxSkinController: TdxSkinController;
     XPManifest1: TXPManifest;
     chlbtagsfilter: TcxButtonEdit;
+    bbAdvanced: TdxBarSubItem;
+    bbDeleteMD5Doubles: TdxBarButton;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     { procedure gLevel2GetGridView(Sender: TcxGridLevel;
@@ -115,6 +117,7 @@ type
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure chlbFullTagsClickCheck(Sender: TObject; AIndex: Integer;
       APrevState, ANewState: TcxCheckBoxState);
+    procedure bbDeleteMD5DoublesClick(Sender: TObject);
 
   private
     mFrame: TFrame;
@@ -161,6 +164,7 @@ type
     // procedure OnTabClose(ASender: TObject; ATabSheet: TcxTabSheet);
     procedure ShowPanels;
     procedure OnError(Sender: TObject; Msg: String);
+    procedure OnLog(Sender: TObject; Msg: String);
     procedure Setlang;
     procedure PicInfo(Sender: TObject; a: TTPicture);
     procedure CheckUpdates;
@@ -367,12 +371,7 @@ begin
 end;
 
 procedure Tmf.OnError(Sender: TObject; Msg: String);
-// var
-// b: boolean;
-// h: HWND;
 begin
-  // h := Application.ActiveFormHandle;
-
   if mErrors.Lines.Count = 0 then
     mErrors.Lines[0] := FormatDateTime('hh:nn:ss', Time) + ' ' +
     { Sender.ClassName + ': ' + } Msg
@@ -385,15 +384,25 @@ begin
   else
     dsLogs.AutoHide := false;
 
-//  ShowMessage(mFrame.ClassName);
-
   dsLogs.ActiveChild := dpErrors;
 end;
 
-{ procedure Tmf.OnTabClose(ASender: TObject; ATabSheet: TcxTabSheet);
-  begin
-  CloseTab(ATabSheet);
-  end; }
+procedure Tmf.OnLog(Sender: TObject; Msg: String);
+begin
+  if mLog.Lines.Count = 0 then
+    mLog.Lines[0] := FormatDateTime('hh:nn:ss', Time) + ' ' +
+    { Sender.ClassName + ': ' + } Msg
+  else
+    mLog.Lines.add(FormatDateTime('hh:nn:ss', Time) + ' ' +
+      { Sender.ClassName + ': ' + } Msg);
+
+  if Assigned(mFrame) and (mFrame is tfStart) then
+//    MessageDlg(Msg,mtError,[mbOk],0)
+  else
+    dsLogs.AutoHide := false;
+
+  dsLogs.ActiveChild := dpLog;
+end;
 
 procedure Tmf.pcTablesCanCloseEx(Sender: TObject; ATabIndex: Integer;
   var ACanClose: Boolean);
@@ -453,12 +462,22 @@ begin
       a.Resource.Name, true);
     dm.CreateField(vgCurMain, 'vgiName', lang('_FILENAME_'), '', ftString, nil,
       a.PicName + '.' + a.Ext, true);
-    dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '', ftPathText,
-      nil, a.FileName, true);
+    if a.FactFileName = '' then
+      dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '', ftPathText,
+      nil, a.FileName, true)
+    else
+      dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '', ftPathText,
+      nil, a.FactFileName, true);
+
     for i := 0 to a.Meta.Count - 1 do
       with a.Meta.Items[i] do
         dm.CreateField(vgCurMain, 'avgi' + Name, Name, '', VrType(Value), nil,
           VarToStr(Value), true);
+
+    if Assigned(a.MD5) then
+      dm.CreateField(vgCurMain, 'vgiMD5', lang('_MD5_'), '', ftString, nil,
+        a.MD5^, true);
+
   finally
     vgCurMain.EndUpdate;
   end;
@@ -601,9 +620,14 @@ begin
   f2 := tfGrid.Create(n) as tfGrid;
   f2.CreateList;
   f2.ResList.OnError := OnError;
+  f2.OnLog := OnLog;
 
-  if VarToStr(FullResList[0].Fields['tag']) <> '' then
-    n.Caption := FullResList[0].Fields['tag'];
+  if (VarToStr(FullResList[0].Fields['tag']) <> '')
+  then
+    n.Caption := FullResList[0].Fields['tag']
+  else if (f.tvRes.DataController.RecordCount < 3)
+  and (FullResList[f.tvRes.DataController.Values[1, 0]].Fields['tag'] <> '') then
+    n.Caption := FullResList[f.tvRes.DataController.Values[1, 0]].Fields['tag'];
 
   f2.ResList.OnPageComplete := DoRefreshResInfo;
   // f2.OnTagUpdate := RefreshTags;
@@ -641,6 +665,16 @@ begin
   f.OnClose;
   CloseTab(SttPanel as TcxTabSheet);
   // SttPanel := nil;
+end;
+
+procedure Tmf.bbDeleteMD5DoublesClick(Sender: TObject);
+var
+  f: TFrame;
+begin
+  HideBalloon;
+  f := TFrame((pcTables.ActivePage as TMycxTabSheet).MainFrame);
+  if f is tfGrid then
+    (f as tfGrid).DeleteMD5Doubles;
 end;
 
 procedure Tmf.bbNewClick(Sender: TObject);
@@ -949,6 +983,7 @@ begin
           bbStartPics.ImageIndex := 6;
           bbStartList.Enabled := false;
         end;
+
         // bbStartList.Enabled := true;
 
         // pcTables.Options := pcTables.Options + [pcoCloseButton];
@@ -977,6 +1012,8 @@ begin
       // pcTables.Options := pcTables.Options - [pcoCloseButton];
       dsTags.Hide;
     end;
+
+    bbAdvanced.Enabled := bbStartPics.Enabled and bbStartList.Enabled;
   end;
 end;
 
@@ -1285,6 +1322,8 @@ begin
   bbStartList.Caption := lang('_STARTLIST_');
   bbStartPics.Caption := lang('_STARTPICS_');
   bbSettings.Caption := lang('_SETTINGS_');
+  bbAdvanced.Caption := lang('_ADVANCED_');
+  bbDeleteMD5Doubles.Caption := lang('_DELETEMD5DOUBLES_');
   dpLog.Caption := lang('_LOG_');
   dpErrors.Caption := lang('_ERRORS_');
   dpTags.Caption := lang('_COMMON_');

@@ -78,6 +78,7 @@ object fSettings: TfSettings
       item
       end>
     Images = il
+    Navigator.Buttons.CustomButtons = <>
     OptionsData.Editing = False
     OptionsData.Deleting = False
     OptionsView.ColumnAutoWidth = True
@@ -122,6 +123,7 @@ object fSettings: TfSettings
     Align = alClient
     TabOrder = 3
     Properties.ActivePage = cxTabSheet1
+    Properties.CustomButtons.Buttons = <>
     Properties.HideTabs = True
     ClientRectBottom = 273
     ClientRectRight = 279
@@ -431,6 +433,8 @@ object fSettings: TfSettings
     object cxTabSheet4: TcxTabSheet
       Caption = 'cxTabSheet4'
       ImageIndex = 3
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0
@@ -455,6 +459,7 @@ object fSettings: TfSettings
         Align = alClient
         TabOrder = 0
         object tvDoubles: TcxGridTableView
+          Navigator.Buttons.CustomButtons = <>
           DataController.Summary.DefaultGroupSummaryItems = <>
           DataController.Summary.FooterSummaryItems = <>
           DataController.Summary.SummaryGroups = <>
@@ -604,7 +609,6 @@ object fSettings: TfSettings
       True)
     ImageOptions.Images = dm.il
     PopupMenuLinks = <>
-    Style = bmsUseLookAndFeel
     UseSystemFont = True
     Left = 392
     Top = 232

@@ -3,7 +3,7 @@ unit MyHTTP;
 interface
 
 uses IdHTTP, IdInterceptThrottler, Classes, SysUtils, SyncObjs, Strutils,
-  Variants, Common;
+  Variants, Common, MyIdURI;
 
 type
   TMyCookieList = class(TStringList)
@@ -46,11 +46,40 @@ type
   function AddURLVar(URL,Variable: String; Value: Variant): String;
   function GetURLDomain(url: string): string;
   procedure GetPostStrings(s: string; outs: TStrings);
+  function CheckProto(url,referer: string): string;
 
 var
   idThrottler: tidInterceptThrottler;
 
 implementation
+
+function CheckProto(url,referer: string): string;
+var
+  uri1,uri2: tiduri;
+begin
+  uri1 := tiduri.Create(url); try
+  uri2 := tiduri.Create(referer); try
+
+  if uri1.Protocol = '' then
+    if uri2.Protocol = '' then
+      uri1.Protocol := 'http'
+    else
+      uri1.Protocol := uri2.Protocol;
+
+  if (uri1.Host = '') then
+  begin
+    uri1.Host := uri2.Host;
+
+    if uri1.Path = '' then
+      uri1.Path := uri2.Path;
+
+  end;
+
+  result := uri1.GetFullURI;
+
+  finally uri2.Free; end;
+  finally uri1.Free; end;
+end;
 
 procedure GetPostStrings(s: string; outs: TStrings);
 var

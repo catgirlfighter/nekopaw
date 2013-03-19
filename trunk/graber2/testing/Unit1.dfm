@@ -77,7 +77,7 @@ object Form1: TForm1
     Text = 'Edit1'
   end
   object Button5: TButton
-    Left = 364
+    Left = 359
     Top = 80
     Width = 75
     Height = 25
