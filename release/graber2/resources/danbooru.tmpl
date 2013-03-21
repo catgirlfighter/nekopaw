@@ -157,6 +157,10 @@ $ok = 0;
 	}
 }
 
+^div#class="pagination"{
+	^a{?$thread.count < @urlvar("page",#href){$thread.count = @urlvar("page",#href);}}
+}
+
 ^div#class="content"{
 	^{
 		^div#id="popular-preview"{$non=0;}
