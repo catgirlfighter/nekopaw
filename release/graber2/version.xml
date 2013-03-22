@@ -1,20 +1,20 @@
-<item file="Graber2.exe"  archive="Graber2.zip"    version=53 />
+<item file="Graber2.exe"  archive="Graber2.zip"    version=54 />
 <item file="versionlog.txt"                        version=-1 />
 
 <item file="resources\danbooru.tmpl"               version=22 />
 <item file="resources\gelbooru.tmpl"               version=12 />
 
-<item file="resources\anime-pictures.net.cfg"      version=1 />
+<item file="resources\anime-pictures.net.cfg"      version=2 />
 <item file="resources\behoimi.org.cfg"             version=0 />
 <item file="resources\ii.booru.org.cfg"            version=0 />
-<item file="resources\comicartcommunity.com.cfg"   version=0 />
+<item file="resources\comicartcommunity.com.cfg"   version=1 />
 <item file="resources\derpiboo.ru.cfg"             version=5 />
-<item file="resources\deviantart.com.cfg"          version=3 />
+<item file="resources\deviantart.com.cfg"          version=4 />
 <item file="resources\donmai.us.cfg"               version=2 />
 <item file="resources\e621.net.cfg"                version=1 />
-<item file="resources\furaffinity.net.cfg"         version=4 />
+<item file="resources\furaffinity.net.cfg"         version=5 />
 <item file="resources\gelbooru.com.cfg"            version=0 />
-<item file="resources\hentai-foundry.com.cfg"      version=4 />
+<item file="resources\hentai-foundry.com.cfg"      version=5 />
 <item file="resources\konachan.com.cfg"            version=0 />
 <item file="resources\lolibooru.com.cfg"           version=0 />
 <item file="resources\mangahere.com.cfg"           version=1 />
@@ -25,11 +25,11 @@
 <item file="resources\safebooru.org.cfg"           version=0 />
 <item file="resources\chan.sankakucomplex.com.cfg" version=4 />
 <item file="resources\idol.sankakucomplex.com.cfg" version=4 />
-<item file="resources\seiga.nicovideo.jp.cfg"      version=0 />
-<item file="resources\cosplay.paheal.net.cfg"      version=3 />
-<item file="resources\rule34.paheal.net.cfg"       version=4 />
-<item file="resources\rule63.paheal.net.cfg"       version=3 />
-<item file="resources\pixiv.net.cfg"               version=6 />
+<item file="resources\seiga.nicovideo.jp.cfg"      version=1 />
+<item file="resources\cosplay.paheal.net.cfg"      version=4 />
+<item file="resources\rule34.paheal.net.cfg"       version=5 />
+<item file="resources\rule63.paheal.net.cfg"       version=4 />
+<item file="resources\pixiv.net.cfg"               version=7 />
 <item file="resources\rmart.org.cfg"               version=7 />
 <item file="resources\tbib.org.cfg"                version=0 />
 <item file="resources\tentaclerape.net.cfg"        version=1 />
