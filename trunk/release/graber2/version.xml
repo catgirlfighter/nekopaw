@@ -4,6 +4,7 @@
 <item file="resources\danbooru.tmpl"               version=22 />
 <item file="resources\gelbooru.tmpl"               version=12 />
 
+<item file="resources\analbooru.com.cfg"           version=0 />
 <item file="resources\anime-pictures.net.cfg"      version=2 />
 <item file="resources\behoimi.org.cfg"             version=0 />
 <item file="resources\ii.booru.org.cfg"            version=0 />
@@ -44,6 +45,7 @@
 <item file="resources\ponibooru.413chan.net.cfg"   version=1 deleted=1 />
 <item file="resources\oreno.imouto.org.cfg"        version=0 deleted=1 />
 
+<item file="resources\icons\analbooru.com.bmp"           version=0 />
 <item file="resources\icons\wildcritters.ws.bmp"         version=0 />
 <item file="resources\icons\tbib.org.bmp"                version=0 />
 <item file="resources\icons\safebooru.org.bmp"           version=0 />
