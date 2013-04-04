@@ -21,7 +21,7 @@
 <item file="resources\mangahere.com.cfg"           version=1 />
 <item file="resources\minitokyo.net.cfg"           version=7 />
 <item file="resources\nabyn.com.cfg"               version=3 />
-<item file="resources\nekobooru.net.cfg"           version=0 />
+<item file="resources\neko.booru.org.cfg"          version=0 />
 <item file="resources\nihonomaru.com.cfg"          version=0 />
 <item file="resources\safebooru.org.cfg"           version=0 />
 <item file="resources\chan.sankakucomplex.com.cfg" version=4 />
@@ -44,6 +44,7 @@
 
 <item file="resources\ponibooru.413chan.net.cfg"   version=1 deleted=1 />
 <item file="resources\oreno.imouto.org.cfg"        version=0 deleted=1 />
+<item file="resources\nekobooru.net.cfg"           version=0 deleted=1 />
 
 <item file="resources\icons\analbooru.com.bmp"           version=0 />
 <item file="resources\icons\wildcritters.ws.bmp"         version=0 />
