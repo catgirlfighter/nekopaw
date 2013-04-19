@@ -32,7 +32,8 @@ type
     public
 {      procedure Get(AURL: string; AResponseContent: TStream;
         AIgnoreReplies: array of SmallInt);  }
-      function Get(AURL: string; AResponse: TStream = nil): string;
+      function Get(AURL: string; AResponse: TStream = nil): string; overload;
+      function Get(AURL: string; AIgnoreReplies: array of SmallInt): string; overload;
       function Post(AURL: string; ASource: TStrings): string; overload;
       procedure Post(AURL: string; ASource: TStrings; AResponse: TStream); overload;
       procedure ReadCookies(url: string; AResponse: TIdHTTPResponse);
@@ -325,6 +326,11 @@ begin
     Result := inherited Get(AURL)
   else
     inherited Get(AURL,AResponse);
+end;
+
+function TMyIdHTTP.Get(AURL: string; AIgnoreReplies: array of SmallInt): string;
+begin
+  Result := inherited Get(AUrl,AIgnoreReplies);
 end;
 
 function TMyIdHTTP.Post(AURL: string; ASource: TStrings): string;

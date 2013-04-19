@@ -301,9 +301,13 @@ begin
 end;
 
 procedure TfPathEditor.SetValue(s: string);
+///var
+//  n: integer;
 begin
+  //n := cbPath.SelStart;
   cbPath.SelText := s;
   cbPath.SetFocus;
+  //cbPath.SelLength := 0;
 end;
 
 procedure TfPathEditor.N10Click(Sender: TObject);

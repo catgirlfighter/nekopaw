@@ -503,7 +503,9 @@ object mf: Tmf
     end
   end
   object ApplicationEvents1: TApplicationEvents
+    OnDeactivate = ApplicationEvents1Deactivate
     OnException = ApplicationEvents1Exception
+    OnMinimize = ApplicationEvents1Minimize
     Left = 504
     Top = 176
   end

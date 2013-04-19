@@ -40,17 +40,16 @@ object fNewList: TfNewList
     object btnPrevious: TcxButton
       Left = 0
       Top = 0
-      Width = 95
+      Width = 127
       Height = 25
       Caption = 'btnPrevious'
-      Enabled = False
       TabOrder = 0
       OnClick = btnPreviousClick
     end
     object btnNext: TcxButton
-      Left = 101
+      Left = 133
       Top = 0
-      Width = 95
+      Width = 127
       Height = 25
       Caption = 'btnNext'
       Enabled = False
@@ -58,8 +57,8 @@ object fNewList: TfNewList
       OnClick = btnNextClick
     end
     object lTip: TcxLabel
-      Left = 202
-      Top = 3
+      Left = 266
+      Top = 5
     end
   end
   object gRes: TcxGrid
@@ -223,6 +222,13 @@ object fNewList: TfNewList
             Options.Editing = False
           end
         end
+        object gFullCardView1: TcxGridCardView
+          Navigator.Buttons.CustomButtons = <>
+          DataController.Summary.DefaultGroupSummaryItems = <>
+          DataController.Summary.FooterSummaryItems = <>
+          DataController.Summary.SummaryGroups = <>
+          OptionsView.CardIndent = 7
+        end
         object lvlFull1: TcxGridLevel
           GridView = tvFull
           Options.DetailFrameWidth = 0
@@ -299,6 +305,16 @@ object fNewList: TfNewList
     AutoPopup = False
     Left = 264
     Top = 152
+    object AddFav1: TMenuItem
+      Caption = 'AddFav'
+    end
+    object RemFav1: TMenuItem
+      Caption = 'RemFav'
+    end
+    object TagList1: TMenuItem
+      Caption = 'TagList'
+      OnClick = TagList1Click
+    end
   end
   object pmgFullCopy: TPopupMenu
     Left = 232
@@ -309,8 +325,8 @@ object fNewList: TfNewList
     end
   end
   object pmgResCopy: TPopupMenu
-    Left = 32
-    Top = 96
+    Left = 56
+    Top = 112
     object COPY2: TMenuItem
       Caption = '_COPY_'
       OnClick = COPY2Click

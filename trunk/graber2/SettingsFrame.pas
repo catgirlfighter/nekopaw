@@ -122,14 +122,15 @@ type
     FIgnList: TDSArray;
     FLangList: TStringList;
     FOnError: TLogEvent;
+    FFullResList: TResourceList;
     function ResetRelogin(idx: integer): boolean;
-    procedure CreateResFields(n: Integer);
+    procedure CreateResFields(rs: TResource);
     procedure SaveResFields;
     procedure LoginCallBack(Sender: TObject; N: integer; Login,Password: String;
       const Cancel: boolean);
     { Private declarations }
   public
-    procedure ResetButons;
+    procedure ResetButtons;
     procedure SetLang;
     procedure GetLanguages;
     procedure LoadSettings;
@@ -141,6 +142,7 @@ type
     procedure LoadDoubles;
     function CheckDoublesName(rulename: string): boolean;
     property OnError: TLogEvent read FOnError write FOnError;
+    property FullResList: TResourceList read FFulLResList;
     { Public declarations }
   end;
 
@@ -343,6 +345,14 @@ var
   item: tcxTreeListNode;
   bmp: tbitmap;
 begin
+  if not Assigned(FullResList) then
+  begin
+    FFullResList := TResourceList.Create;
+    dm.LoadFullResList(FFullResList);
+    FFullResList.OnError := OnErrorEvent;
+    FFullResList.OnJobChanged := JobStatus;
+  end;
+
   bmp := TBitmap.Create;
   for i := 1 to FulLResList.Count -1 do
   begin
@@ -481,11 +491,12 @@ procedure TfSettings.OnClose;
 begin
   if Assigned(FLangList) then
     FLangList.Free;
-  FullResList.OnError := nil;
-  FullResList.OnJobChanged := nil;
+  //FullResList.OnError := nil;
+  //FullResList.OnJobChanged := nil;
+  FullResList.Free;
 end;
 
-procedure TfSettings.ResetButons;
+procedure TfSettings.ResetButtons;
 begin
   eHost.Enabled := chbProxy.Checked;
   ePort.Enabled := chbProxy.Checked;
@@ -556,9 +567,9 @@ begin
     SaveResFields;
 
   if (AFocusedNode = tlList.Items[3]) then
-    CreateResFields(0)
+    CreateResFields(FullResList[0])
   else if (AFocusedNode.Parent = tlList.Items[3]) then
-    CreateResFields(AFocusedNode.Index + 1);
+    CreateResFields(FullResList[AFocusedNode.Index + 1]);
 
 end;
 
@@ -576,7 +587,7 @@ begin
   Result := false;
 end;
 
-procedure TfSettings.CreateResFields(n: Integer);
+procedure TfSettings.CreateResFields(rs: TResource);
 var
   c: TcxCategoryRow;
   r: TcxCustomRow;
@@ -590,19 +601,19 @@ begin
 }
   vgSettings.BeginUpdate;
   vgSettings.ClearRows;
-  vgSettings.Tag := n;
-  if n = 0 then
+  vgSettings.Tag := Integer(rs);
+  if rs = FullResList[0] then
   begin
     c := dm.CreateCategory(vgSettings,'vgimain',lang('_MAINCONFIG_'));
     //dm.CreateField(vgSettings,'vgitag',_TAGSTRING_,'',ftString,c,FullResList[n].Fields['tag']);
-    dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftPathText,c,FullResList[n].NameFormat);
+    dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftPathText,c,rs.NameFormat);
     dm.CreateField(vgSettings,'vgisdalf',lang('_SDALF_'),'',ftCheck,c,GlobalSettings.Downl.SDALF);
     dm.CreateField(vgSettings,'vgiautounch',lang('_AUTOUNCHECKINVISIBLE_'),'',ftCheck,c,GlobalSettings.Downl.AutoUncheckInvisible);
   end
   else
-  with FullResList[n] do begin
+  with rs do begin
     c := dm.CreateCategory(vgSettings,'vgimain',lang('_MAINCONFIG_') + ' ' +
-      FullResList[n].Name);
+      rs.Name);
     dm.CreateField(vgSettings,'vgiinherit',lang('_INHERIT_'),'',ftCheck,c,Inherit);
 
     {s := VarToStr(Fields['tag']);
@@ -629,15 +640,15 @@ begin
     c := nil;
     r := nil;
 
-    if FullResList[n].Fields.Count > d then
+    if rs.Fields.Count > d then
     begin
       if not Assigned(c) then
         c := dm.CreateCategory(vgSettings,'vgieditional',lang('_EDITIONALCONFIG_'));
 
-      with FullResList[n].Fields do
+      with rs.Fields do
         for i := d to Count - 1 do
           if Items[i].restype <> ftNone then
-            with FullResList[n].Fields.Items[i]^ do
+            with rs.Fields.Items[i]^ do
               if InMulti then
                 dm.CreateField(vgSettings,'evgi' + resname,restitle,resitems,restype,r,resvalue)
               else
@@ -649,12 +660,12 @@ end;
 
 procedure TfSettings.SaveResFields;
 var
-  i, n, d: Integer;
+  i, d: Integer;
   r: tcxMyMultiEditorRow;
-
+  rs: TResource;
 begin
-  n := vgSettings.Tag;
-  with FullResList[n] do
+  rs := TResource(vgSettings.Tag);
+  with rs do
   begin
 {    Fields['tag'] := (vgSettings.RowByName('vgitag') as TcxEditorRow)
       .Properties.Value;    }
@@ -662,13 +673,13 @@ begin
     NameFormat := (vgSettings.RowByName('vgidwpath') as TcxEditorRow)
       .Properties.Value;
 
-    if vgSettings.Tag = 0 then
+    if rs = FullResList[0] then
     begin
       GlobalSettings.Downl.SDALF := (vgSettings.RowByName('vgisdalf') as TcxEditorRow)
         .Properties.Value;
       GlobalSettings.Downl.AutoUncheckInvisible :=
         (vgSettings.RowByName('vgiautounch') as TcxEditorRow).Properties.Value;
-    end else if vgSettings.Tag > 0 then
+    end else
     begin
       Inherit := (vgSettings.RowByName('vgiinherit') as TcxEditorRow)
         .Properties.Value;
