@@ -144,6 +144,11 @@ object fGrid: TfGrid
           Description = 'REFRESH'
           ImageIndex = 20
           Value = 'REFRESH'
+        end
+        item
+          Description = 'DELAY'
+          ImageIndex = 22
+          Value = 'DELAY'
         end>
       Properties.ReadOnly = True
       Properties.ShowDescriptions = False

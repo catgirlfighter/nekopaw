@@ -16,7 +16,8 @@ uses
   dxSkinscxPCPainter,cxDropDownEdit,
   {graber2}
   cxmymultirow,cxmycombobox,common, Graberu, cxCheckBox,
-  cxExtEditRepositoryItems, cxContainer, cxNavigator;
+  cxExtEditRepositoryItems, cxContainer, cxNavigator, cxGridCustomLayoutView,
+  cxGridCardView;
 
 type
   TListFrameState = (lfsNew, lfsEdit);
@@ -59,6 +60,10 @@ type
     COPY1: TMenuItem;
     pmgResCopy: TPopupMenu;
     COPY2: TMenuItem;
+    AddFav1: TMenuItem;
+    RemFav1: TMenuItem;
+    TagList1: TMenuItem;
+    gFullCardView1: TcxGridCardView;
     procedure pcMainChange(Sender: TObject);
     procedure gRescButtonPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
@@ -90,15 +95,19 @@ type
     procedure ExecCheatSheetClick(Sender: TObject);
     procedure COPY1Click(Sender: TObject);
     procedure COPY2Click(Sender: TObject);
+    procedure TagList1Click(Sender: TObject);
   private
     { Private declarations }
     FOnError: TLogEvent;
 //    fPathList: TStringList;
     FAutoAdd: Boolean;
+    FFullResList: TResourceList;
+    FActualResList: TResourceList;
+    fCurrItem: TResource;
   protected
     procedure OnTagstringButtonClick(Sender: TObject; AButtonIndex: Integer);
-    procedure LoadFavs(pm: TPopupMenu; Event: TNotifyEvent);
-    function ResetRelogin(idx: integer = -1): boolean;
+    procedure LoadFavs(pm: TMenuItem; Event: TNotifyEvent);
+    function ResetRelogin(idx: integer = 0): boolean;
     procedure SetIntrfEnabled(b: boolean);
     procedure LoginCallBack(Sender: TObject; N: integer; Login,Password: String;
     const Cancel: boolean);
@@ -106,14 +115,14 @@ type
     State: TListFrameState;
     procedure AddItem(index: Integer);
     procedure RemoveItem(index: Integer);
-    procedure CreateSettings(n: Integer);
+    procedure CreateSettings(rs: TResource);
     procedure SaveSettings;
     procedure LoadItems;
     procedure ResetItems;
     procedure SetLang;
     procedure OnErrorEvent(Sender: TObject; Msg: String);
     procedure JobStatus(Sander: TObject; Action: integer);
-    procedure SendMsg;
+    procedure SendMsg(cancel: boolean = false);
     procedure SaveSet;
 //    procedure LoadLists;
     procedure Release;
@@ -121,6 +130,8 @@ type
     procedure ResetRemFav;
     //procedure LoadSet;
     property OnError: TLogEvent read FOnError write FOnError;
+    property FullResList: TResourceList read FFullResList;
+    property ActualResList: TResourceList read FActualReslist write FActualResList;
     { Public declarations }
   end;
 
@@ -142,7 +153,7 @@ begin
     Result := n2;
 end;
 
-function  TfNewList.ResetRelogin(idx: integer = -1): boolean;
+function  TfNewList.ResetRelogin(idx: integer = 0): boolean;
 var
   i: integer;
   n: TResource;
@@ -150,24 +161,28 @@ begin
   Result := false;
   for i := 0 to FullResList.Count -1 do
     FullResList[i].Relogin := false;
-  if idx = -1 then
+  if idx = 0 then
     for i := 1 to tvRes.DataController.RecordCount-1 do
     begin
-      n := FullResList[tvRes.DataController.Values[i, 0]];
-      if (n.ScriptStrings.Login<>'')or(n.HTTPRec.CookieStr<>'')
-      and(n.LoginPrompt or (nullstr(n.Fields['login'])<>''))then
+      n := Pointer(Integer(tvRes.DataController.Values[i, 0]));
+      //n := n.Parent;
+      if not n.Parent.Relogin
+      and((n.ScriptStrings.Login<>'')or(n.HTTPRec.CookieStr<>'')
+      and(n.LoginPrompt or (nullstr(n.Fields['login'])<>'')))then
       begin
-        n.Relogin := true;
+        n.Parent.Fields.Assign(n.Fields);
+        n.Parent.Relogin := true;
         Result := true;
       end;
     end
   else
   begin
-    n := FullResList[idx{tvRes.DataController.Values[idx, 0]}];
+    n := Pointer(idx);
     if(n.ScriptStrings.Login<>'')or(n.HTTPRec.CookieStr<>'')
     and(n.LoginPrompt or (nullstr(n.Fields['login'])<>''))then
     begin
-      n.Relogin := true;
+      n.Parent.Fields.Assign(n.Fields);
+      n.Parent.Relogin := true;
       Result := true;
     end;
   end;
@@ -175,27 +190,32 @@ end;
 
 procedure TfNewList.ResetRemFav;
 begin
-  pmFavList.Items.Clear;
-  LoadFavs(pmFavList,RemoveFromFavoritesClick);
+  RemFav1.Clear;
+  //pmFavList.Items.Clear;
+  LoadFavs(RemFav1,RemoveFromFavoritesClick);
 end;
 
 procedure TfNewList.AddItem(index: Integer);
 var
   i: Integer;
+  //n: integer;
+  r: tresource;
 begin
-  tvRes.BeginUpdate;
-  tvFull.BeginUpdate;
+  tvFull.BeginUpdate; try
+  tvRes.BeginUpdate; try
   i := tvRes.DataController.RecordCount;
   tvRes.DataController.RecordCount := i + 1;
-  tvRes.DataController.Values[i, 0] := tvFull.DataController.Values[index, 1];
+  r := ActualResList[ActualResList.CopyResource(FullResList[index + 1])];
+  r.Parent := FullResList[index + 1];
+  tvRes.DataController.Values[i, 0] := integer(r); {tvFull.DataController.Values[index, 1];}
   tvRes.DataController.Values[i, 1] := tvFull.DataController.Values[index, 2];
   tvRes.DataController.Values[i, 2] := tvFull.DataController.Values[index, 3];
   tvRes.DataController.Values[i, 3] := tvFull.DataController.Values[index, 4];
-  tvFull.DataController.DeleteRecord(index);
+  //tvFull.DataController.DeleteRecord(index);
   if tvFull.DataController.RowCount = 0 then
     tvFull.DataController.FocusedRecordIndex := -1;
-  tvRes.EndUpdate;
-  tvFull.EndUpdate;
+  finally tvRes.EndUpdate; end;
+  finally tvFull.EndUpdate; end;
 
   btnNext.Enabled := tvRes.DataController.RowCount > 1;
 end;
@@ -203,19 +223,12 @@ end;
 procedure TfNewList.AddToFavoritesClick(Sender: TObject);
 var
   s: string;
-  n: integer;
+//  rs: integer;
 begin
-//  vgSettings.
-  n := vgSettings.Tag;
-  vgSettings.InplaceEditor.PostEditValue;
- //(vgSettings.RowByName('vgitag') as TcxEditorRow).
-
- s := (vgSettings.RowByName('vgitag') as TcxEditorRow)
-      .Properties.Value;
   vgSettings.InplaceEditor.PostEditValue;
   s := FullResList[0].FormatTagString(
     VarToStr((vgSettings.RowByName('vgitag') as TcxEditorRow).Properties.DisplayTexts[0]),
-    FullResList[n].HTTPRec.TagTemplate);
+   fCurrItem.HTTPRec.TagTemplate);
 
   if trim(s) = '' then
     Exit;
@@ -231,18 +244,22 @@ begin
   begin
     FLoggedOn := true;
     if ResetRelogin then
+    begin
+      SetConSettings(FullResList);
       FullResList.StartJob(JOB_LOGIN)
-    else
+    end else
       SendMsg;
   end
   else
   begin
+    pcMain.ActivePage := tsSettings;
+    Application.MainForm.ActiveControl := vgSettings;
+
     if tvRes.ViewData.RowCount < 3 then
       tvRes.Controller.FocusedRowIndex := 1
     else
       tvRes.Controller.FocusedRowIndex := 0;
-    pcMain.ActivePage := tsSettings;
-    Application.MainForm.ActiveControl := vgSettings;
+
     vgSettings.RowByName('vgitag').Focused := true;
   end;
 end;
@@ -255,7 +272,9 @@ begin
     FLoggedOn := false;
   end else
     if pcMain.ActivePage = tsSettings then
-      pcMain.ActivePage := tsList;
+      pcMain.ActivePage := tsList
+    else
+      SendMsg(true);
 end;
 
 procedure TfNewList.COPY1Click(Sender: TObject);
@@ -268,7 +287,7 @@ begin
       clipboard.AsText := VarToStr(tvFull.Controller.FocusedItem.EditValue);
 end;
 
-procedure TfNewList.CreateSettings(n: Integer);
+procedure TfNewList.CreateSettings(rs: TResource);
 var
   c: TcxCategoryRow;
   r: TcxCustomRow;
@@ -277,12 +296,22 @@ var
 //  t: tcxMyEditRepositoryComboBoxItem;
 
 begin
-  if vgSettings.Rows.Count > 0 then
+  if (vgSettings.Rows.Count > 0) and Assigned(fCurrItem) then
     SaveSettings;
   vgSettings.BeginUpdate;
   vgSettings.ClearRows;
-  vgSettings.Tag := n;
-  if n = 0 then
+
+  if Assigned(rs) then
+  begin
+    fCurrItem := rs;
+    vgSettings.Tag := Integer(fCurrItem);
+  end else
+  begin
+    fCurrItem := FullResList[0];
+    vgSettings.Tag := Integer(FullResList);
+  end;
+
+  if not Assigned(rs) then
   begin
     c := dm.CreateCategory(vgSettings,'vgimain',lang('_MAINCONFIG_'));
 
@@ -292,29 +321,33 @@ begin
     with (dm.ertagedit.Properties as TcxCustomEditProperties) do
     begin
       OnButtonClick := OnTagstringButtonClick;
-      Buttons[3].Visible := false;
+      Buttons[2].Visible := false;
     end;
 
-    dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftPathText,c,FullResList[n].NameFormat);
+    dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftPathText,c,fCurrItem.NameFormat);
+     // := Integer(FullResList);
+
     dm.CreateField(vgSettings,'vgisdalf',lang('_SDALF_'),'',ftCheck,c,GlobalSettings.Downl.SDALF);
   end
   else
-  with FullResList[n] do begin
+  with fCurrItem do begin
+
     c := dm.CreateCategory(vgSettings,'vgimain',lang('_MAINCONFIG_') + ' ' +
-      FullResList[n].Name);
+      fCurrItem.Name);
 
     dm.CreateField(vgSettings,'vgiinherit',lang('_INHERIT_'),'',ftCheck,c,Inherit);
 
     s := VarToStr(Fields['tag']);
-    if (s = ''){ or Inherit} then
-      s := FullResList[n].FormatTagString(VarToStr(FullResList[0].Fields['tag']),
+    if (s = '') or Inherit then
+      if VarToStr(FullResList[0].Fields['tag']) <> '' then
+      s := fCurrItem.FormatTagString(VarToStr(FullResList[0].Fields['tag']),
         FullResList[0].HTTPRec.TagTemplate);
 
-    with dm.ertagedit.Properties,FullResList[n].HTTPRec do
+    with dm.ertagedit.Properties,fCurrItem.HTTPRec do
     begin
       Spacer := TagTemplate.Spacer;
       Separator := TagTemplate.Separator;
-      Isolator := Tagtemplate.Isolator;
+      Isolator := TagTemplate.Isolator;
     end;
 
     dm.CreateField(vgSettings,'vgitag',lang('_TAGSTRING_'),'',ftTagText,c,s);
@@ -322,7 +355,7 @@ begin
     with (dm.ertagedit.Properties as TcxCustomEditProperties) do
     begin
       OnButtonClick := OnTagstringButtonClick;
-      Buttons[3].Visible := FulLResList[n].CheatSheet <> '';
+      Buttons[2].Visible := fCurrItem.CheatSheet <> '';
     end;
 
     s := NameFormat;
@@ -337,16 +370,16 @@ begin
 
     r := nil;
 
-    if FullResList[n].Fields.Count > d then
+    if fCurrItem.Fields.Count > d then
     begin
       if not Assigned(c) then
         c := dm.CreateCategory(vgSettings,'vgieditional',lang('_EDITIONALCONFIG_'));
 
-      with FullResList[n].Fields do
+      with fCurrItem.Fields do
         for i := d to Count - 1 do
           if Items[i].restype <> ftNone then
           begin
-            with FullResList[n].Fields.Items[i]^ do
+            with fCurrItem.Fields.Items[i]^ do
               if InMulti then
                 dm.CreateField(vgSettings,'evgi' + resname,restitle,resitems,restype,r,resvalue)
               else
@@ -355,9 +388,9 @@ begin
     end;
   end;
 
-  dm.ertagedit.Properties.Spacer := FullResList[n].HTTPRec.TagTemplate.Spacer;
-  dm.ertagedit.Properties.Separator := FullResList[n].HTTPRec.TagTemplate.Separator;
-  dm.ertagedit.Properties.Isolator := FullResList[n].HTTPRec.TagTemplate.Isolator;
+  dm.ertagedit.Properties.Spacer := fCurrItem.HTTPRec.TagTemplate.Spacer;
+  dm.ertagedit.Properties.Separator := fCurrItem.HTTPRec.TagTemplate.Separator;
+  dm.ertagedit.Properties.Isolator := fCurrItem.HTTPRec.TagTemplate.Isolator;
 
   vgSettings.EndUpdate;
 end;
@@ -366,13 +399,15 @@ procedure TfNewList.erAuthButtonPropertiesButtonClick(Sender: TObject;
   AButtonIndex: Integer);
 var
   n: integer;
+  r: tResource;
 begin
   n := tvRes.DataController.Values[tvRes.DataController.FocusedRecordIndex,0];
+  r := Pointer(n);
   Application.CreateForm(TfLogin, fLogin);
   fLogin.Execute(n,
-    Format(lang('_LOGINON_'),[FullResList[n].Name]),
-    nullstr(FullResList[n].Fields['login']),
-    nullstr(FullResList[n].Fields['password']),
+    Format(lang('_LOGINON_'),[r.Name]),
+    nullstr(r.Fields['login']),
+    nullstr(r.Fields['password']),
     LoginCallback
     );
 end;
@@ -385,9 +420,9 @@ end;
 
 procedure TfNewList.ExecCheatSheetClick(Sender: TObject);
 begin
-  if FullResList[vgSettings.Tag].CheatSheet <> '' then
+  if fCurrItem.CheatSheet <> '' then
     ShellExecute(0,nil,
-      PCHAR(FullResList[vgSettings.Tag].CheatSheet),
+      PCHAR(fCurrItem.CheatSheet),
       nil,nil,SW_SHOWNORMAL);
 end;
 
@@ -425,7 +460,7 @@ begin
     JOB_LOGIN:
     begin
       SetIntrfEnabled(false);
-      lTip.Caption := lang('_LOGGINGIN_');
+      lTip.Caption := Format(lang('_LOGGINGIN_'),[btnPrevious.Caption]);
     end;
     JOB_STOPLIST:
     begin
@@ -443,7 +478,7 @@ end;
 
 procedure TfNewList.LoadItems;
 
-  procedure fillRec(DataController:TcxGridDataController; RecordIndex,ItemOffset: integer);
+  procedure fillRec(r: TResourceList; DataController:TcxGridDataController; RecordIndex,ItemOffset: integer);
   var
     s: ANSIString;
     n: integer;
@@ -452,16 +487,16 @@ procedure TfNewList.LoadItems;
     begin
       n := RecordCount;
       RecordCount := RecordCount + 1;
-      Values[n,ItemOffset] := RecordIndex;
+      Values[n,ItemOffset] := Integer(r[RecordIndex]);
       try
-        if FullResList[RecordIndex].IconFile <> '' then
+        if r[RecordIndex].IconFile <> '' then
         begin
-          FileToString(rootdir + '\resources\icons\' + FullResList[RecordIndex]
+          FileToString(rootdir + '\resources\icons\' + r[RecordIndex]
             .IconFile, s);
           Values[n,ItemOffset+1] := s;
         end;
-        Values[n,ItemOffset+2] := FullResList[RecordIndex].Name;
-        Values[n,ItemOffset+3] := FullResList[RecordIndex].Short;
+        Values[n,ItemOffset+2] := r[RecordIndex].Name;
+        Values[n,ItemOffset+3] := r[RecordIndex].Short;
       except
       end;
     end;
@@ -473,6 +508,14 @@ var
 
 begin
 //  fPathList := TStringList.Create;
+  if not Assigned(FullResList) then
+  begin
+    FFullResList := TResourceList.Create;
+    vgSettings.Tag := Integer(FFullResList);
+    dm.LoadFullResList(FFullResList);
+    FFullResList.OnError := OnErrorEvent;
+    FFullResList.OnJobChanged := JobStatus;
+  end;
 
   FAutoAdd := false;
   gFull.BeginUpdate;
@@ -492,17 +535,23 @@ begin
 
     for i := 1 to FullResList.Count -1 do
     begin
-      FullResList[i].Fields['tag'] := '';
+
+      fillRec(FullResList,tvFull.DataController,i,1);
       if s.IndexOf(FullResList[i].Name) <> -1 then
-        fillRec(tvRes.DataController,i,0)
-      else
-        fillRec(tvFull.DataController,i,1);
+      begin
+        ActualResList[ActualResList.CopyResource(FullResList[i])].Parent := FullResList[i];
+        fillRec(ActualResList,tvRes.DataController,ActualResList.Count-1,0)
+      end;
     end;
   finally
     s.Free;
   end;
 
   gRes.EndUpdate;
+
+  if tvRes.DataController.RecordCount > 1 then
+    btnNext.Click;
+
   gFull.EndUpdate;
   tvFull.ApplyBestFit(tvFullShort);
 
@@ -513,18 +562,40 @@ procedure TfNewList.pcMainChange(Sender: TObject);
 begin
   with (Sender as TcxPageControl) do
   begin
+
     gRescButton.Visible := ActivePage = tsList;
-    btnPrevious.Enabled := ActivePage = tsSettings;
+    //btnPrevious.Enabled := ActivePage = tsSettings;
     if ActivePage = tsSettings then
+    begin
+      btnPrevious.Caption := lang('_CHANGELIST_');
       btnNext.Caption := lang('_FINISH_')
-    else
-      btnNext.Caption := lang('_NEXTSTEP_');
+    end else
+    begin
+      fCurrItem := nil;
+      btnPrevious.Caption := lang('_CANCEL_');
+      btnNext.Caption := lang('_CONTINUE_');
+    end;
   end;
 end;
 
 procedure TfNewList.Release;
+var
+  i: integer;
 begin
-//  fPathList.Free;
+  for i := 0 to ActualResList.Count -1 do
+  begin
+    if ActualReslist[i].Parent.MainResource = nil then
+      ActualReslist[i].Parent.MainResource := ActualReslist[i];
+
+    ActualReslist[i].MainResource := ActualReslist[i].Parent.MainResource;
+    ActualReslist[i].SetThreadCounter(ActualReslist[i].Parent.ThreadCounter);
+
+    ActualReslist[i].Parent := nil;
+  end;
+
+
+
+  FFullResList.Free;
 end;
 
 procedure TfNewList.RemoveFromFavoritesClick(Sender: TObject);
@@ -532,6 +603,7 @@ begin
   //s := (Sender as TMenuItem).Caption;
   //RemSorted(s,GlobalFavList);
   GlobalFavList.Delete((Sender as TMenuItem).Tag);
+  SaveFavList(GlobalFavlist);
 end;
 
 procedure TfNewList.RemoveItem(index: Integer);
@@ -540,12 +612,14 @@ procedure TfNewList.RemoveItem(index: Integer);
   var
     i: integer;
   begin
-    i := tvFull.DataController.RecordCount;
-    tvFull.DataController.RecordCount := i + 1;
-    tvFull.DataController.Values[i, 1] := tvRes.DataController.Values[index, 0];;
-    tvFull.DataController.Values[i, 2] := tvRes.DataController.Values[index, 1];
-    tvFull.DataController.Values[i, 3] := tvRes.DataController.Values[index, 2];
-    tvFull.DataController.Values[i, 4] := tvRes.DataController.Values[index, 3];
+    //i := tvFull.DataController.RecordCount;
+    //tvFull.DataController.RecordCount := i + 1;
+    //tvFull.DataController.Values[i, 1] := tvRes.DataController.Values[index, 0];;
+    //tvFull.DataController.Values[i, 2] := tvRes.DataController.Values[index, 1];
+    //tvFull.DataController.Values[i, 3] := tvRes.DataController.Values[index, 2];
+    //tvFull.DataController.Values[i, 4] := tvRes.DataController.Values[index, 3];
+    i := tvRes.DataController.Values[index, 0];
+    ActualResList.Remove(Pointer(i));
     tvRes.DataController.DeleteRecord(index);
   end;
 
@@ -558,8 +632,8 @@ begin
   if loop then
     index := Min(1,tvRes.DataController.RecordCount -1);   }
 
-  tvRes.BeginUpdate;
-  tvFull.BeginUpdate;
+  tvFull.BeginUpdate; try
+  tvRes.BeginUpdate; try
 {  while index > tvRes.DataController.RecordCount-2 do
   begin
 
@@ -576,8 +650,8 @@ begin
 
   tvRes.DataController.FocusedRecordIndex :=
     Min(index, tvRes.DataController.RecordCount - 1);
-  tvRes.EndUpdate;
-  tvFull.EndUpdate;
+  finally tvRes.EndUpdate; end;
+  finally tvFull.EndUpdate; end;
   btnNext.Enabled := tvRes.DataController.RowCount > 1;
 end;
 
@@ -585,42 +659,43 @@ procedure TfNewList.ResetFav;
 var
   n: TMenuItem;
 begin
-  pmFavList.Items.Clear;
+  AddFav1.Clear;
   n := tMenuItem.Create(pmFavList);
   n.Caption := lang('_ADDTOFAVORITES_');
   n.OnClick := AddToFavoritesClick;
-  pmFavList.Items.Add(n);
+  AddFav1.Add(n);
   n := tmenuItem.Create(pmFavList);
   n.Caption := '-';
-  pmFavList.Items.Add(n);
-  LoadFavs(pmFavList,SetFavoriteClick);
+  AddFav1.Add(n);
+  LoadFavs(AddFav1,SetFavoriteClick);
+  ResetRemFav;
 end;
 
 procedure TfNewList.OnTagstringButtonClick(Sender: TObject; AButtonIndex: Integer);
 begin
   case AButtonIndex of
     1: ExecAddFavClick(Sender);
-    2: ExecRemFavClick(Sender);
-    3: ExecCheatSheetClick(Sender);
+    //2: ExecRemFavClick(Sender);
+    2: ExecCheatSheetClick(Sender);
   end;
 end;
 
-procedure TfNewList.LoadFavs(pm: TPopupMenu; Event: TNotifyEvent);
+procedure TfNewList.LoadFavs(pm: TMenuItem; Event: TNotifyEvent);
 var
-  i,l: integer;
+  i{,l}: integer;
   n: TMenuItem;
 begin
-  l := vgSettings.Tag;
+  //l := fCurrItem;
   for i := 0 to GlobalFavlist.Count-1 do
   begin
     n := TMenuItem.Create(pm);
     n.Caption :=
-      FullResList[l].FormatTagString(
+      fCurrItem.FormatTagString(
       GlobalFavList[i],
       FullResList[0].HTTPRec.TagTemplate);
     n.OnClick := Event;
     n.Tag := i;
-    pm.Items.Add(n);
+    pm.Add(n);
   end;
 end;
 
@@ -632,13 +707,22 @@ end;
 procedure TfNewList.SaveSet;
 var
   i: integer;
+  slist: tstringlist;
   s: string;
 begin
   if tvRes.DataController.RecordCount > 1 then
   begin
-    s := FullResList[tvRes.DataController.Values[1,0]].Name;
-    for i := 2 to tvRes.DataController.RecordCount-1 do
-      s := s + ',' + FullResList[tvRes.DataController.Values[i,0]].Name;
+    slist := tstringlist.Create; try
+    slist.Add(ActualResList[0].Name);
+    for i := 1 to ActualResList.Count-1 do
+      if slist.IndexOf(ActualResList[i].Name) = -1 then
+        slist.Add(ActualResList[i].Name);
+
+    s := slist[0];
+    for i := 1 to slist.Count -1 do
+      s := s + ',' + slist[i];
+
+    finally slist.Free; end;
   end else
     s := '';
   GlobalSettings.GUI.LastUsedSet := s;
@@ -647,11 +731,11 @@ end;
 
 procedure TfNewList.SaveSettings;
 var
-  i, n, d: Integer;
+  i, {n,} d: Integer;
   r: tcxMyMultiEditorRow;
 begin
-  n := vgSettings.Tag;
-  with FullResList[n] do
+  //n := fCurrItem;
+  with fCurrItem do
   begin
     Fields['tag'] := VarToStr((vgSettings.RowByName('vgitag') as TcxEditorRow)
       .Properties.Value);
@@ -659,10 +743,10 @@ begin
     NameFormat := VarToStr((vgSettings.RowByName('vgidwpath') as TcxEditorRow)
       .Properties.Value);
 
-    if vgSettings.Tag = 0 then
+    if fCurrItem = FullResList[0] then
       GlobalSettings.Downl.SDALF := (vgSettings.RowByName('vgisdalf') as TcxEditorRow)
       .Properties.Value
-    else if vgSettings.Tag > 0 then
+    else {if fCurrItem > 0 then     }
     begin
       Inherit := (vgSettings.RowByName('vgiinherit') as TcxEditorRow)
         .Properties.Value;
@@ -703,8 +787,14 @@ begin
   end;
 end;
 
-procedure TfNewList.SendMsg;
+procedure TfNewList.SendMsg(cancel: boolean);
 begin
+  if cancel then
+  begin
+    PostMessage(Application.MainForm.Handle, CM_CANCELNEWLIST, Integer(Parent), 0);
+    Exit;
+  end;
+
   SaveSet;
   case State of
     lfsNew:
@@ -735,7 +825,10 @@ end;
 
 procedure TfNewList.LoginCallBack(Sender: TObject; N: integer; Login,Password: String;
     const Cancel: boolean);
+var
+  r: tresource;
 begin
+  r := Pointer(n);
   if Cancel then
   begin
     FLoggedOn := false;
@@ -745,8 +838,8 @@ begin
       fLogin.Close;
   end else
   begin
-    FullResList[n].Fields['login'] := Login;
-    FullResList[n].Fields['password'] := Password;
+    r.Fields['login'] := Login;
+    r.Fields['password'] := Password;
     if ResetRelogin(N) then
     begin
       FLoggedOn := true;
@@ -772,13 +865,25 @@ begin
   tvRes.OptionsView.NoDataToDisplayInfoText := lang('_GRIDNODATA_');
   Copy1.Caption := lang('_COPY_');
   Copy2.Caption := Copy1.Caption;
+  AddFav1.Caption := lang('_FAVORITES_');
+  RemFav1.Caption := lang('_REMOVEFROMFAVORITES_');
+  TagList1.Caption := lang('_CREATETAGLIST_');
+end;
+
+procedure TfNewList.TagList1Click(Sender: TObject);
+begin
+
+  //
 end;
 
 procedure TfNewList.tsSettingsShow(Sender: TObject);
 begin
   if tvRes.Controller.FocusedRow = nil then
     tvRes.Controller.FocusedRowIndex := 0;
-  CreateSettings(tvRes.Controller.FocusedRow.Values[0]);
+  if tvRes.Controller.FocusedRow.Values[0] = 0 then
+    CreateSettings(nil)
+  else
+    CreateSettings(Pointer(Integer(tvRes.Controller.FocusedRow.Values[0])));
 end;
 
 procedure TfNewList.tvFullcButtonGetProperties(Sender: TcxCustomGridTableItem;
@@ -845,9 +950,15 @@ end;
 procedure TfNewList.tvResFocusedRecordChanged(Sender: TcxCustomGridTableView;
   APrevFocusedRecord, AFocusedRecord: TcxCustomGridRecord;
   ANewItemRecordFocusingChanged: Boolean);
+var
+  i: integer;
 begin
+  i := AFocusedRecord.Values[0];
   if pcMain.ActivePage = tsSettings then
-    CreateSettings(AFocusedRecord.Values[0]);
+    if i = 0 then
+      CreateSettings(nil)
+    else
+      CreateSettings(Pointer(i))
 end;
 
 initialization

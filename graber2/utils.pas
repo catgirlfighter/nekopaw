@@ -5,7 +5,7 @@ interface
 uses
   {std}
   SysUtils, Classes, Math, Variants, Dialogs, Windows, ShellAPI,
-  ImgList, Controls, Forms,
+  ImgList, Controls, Forms,  Menus,
   {devex}
   cxGridCustomTableView, cxGraphics, cxEdit,
   cxDataUtils, cxGridCommon, cxGridTableView, cxEditRepositoryItems,
@@ -14,7 +14,7 @@ uses
   {graber}
   cxmycombobox, cxmymultirow,
   GraberU, common, OpBase, dxBar, ActnList, IdBaseComponent, IdIntercept,
-  IdInterceptThrottler, Menus;
+  IdInterceptThrottler, MyHTTP;
 
 type
   TFavProc = procedure(Value: String);
@@ -47,7 +47,10 @@ type
     procedure DataModuleCreate(Sender: TObject);
     procedure erCSVListEditPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
+    procedure DataModuleDestroy(Sender: TObject);
     { Private declarations }
+  private
+    FCookie: TMyCookieList;
   protected
     procedure OnGetTagItems(Sender: TObject; SearchWord: string;
       Items: TStrings);
@@ -58,6 +61,8 @@ type
     function CreateField(vg: TcxVerticalGrid; AName,ACaption,ComboItems: string;
       FieldType: TFieldType; Category: TcxCustomRow; DefaultValue: Variant;
       ReadOnly: Boolean = false): TcxCustomRow;
+    procedure LoadFullResList(r: tResourceList);
+    property Cookie: TMyCookieList read FCookie;
     { Public declarations }
   end;
 
@@ -324,6 +329,7 @@ procedure Tdm.DataModuleCreate(Sender: TObject);
 //  r: tresourcestream;
 //  b: tdxBarItemLink;
 begin
+  FCookie := TmyCookieList.Create;
   erPathText.Properties.Items.Text := LoadPathList;
   erPathText.Properties.IncrementalSearch := false;
 
@@ -336,14 +342,14 @@ begin
   begin
     with Add as tcxEditButton do
     begin
-      Kind := bkGlyph;
-      LoadFromRes(Glyph,'XFAVORITE');
+      Kind := bkEllipsis;
+      //LoadFromRes(Glyph,'XFAVORITE');
     end;
-    with Add as tcxEditButton do
-    begin
-      Kind := bkGlyph;
-      LoadFromRes(Glyph,'XREMFAVORITE');
-    end;
+    //with Add as tcxEditButton do
+    //begin
+    //  Kind := bkGlyph;
+    //  LoadFromRes(Glyph,'XREMFAVORITE');
+    //end;
     with Add as tcxEditButton do
     begin
       Kind := bktext;
@@ -360,41 +366,61 @@ begin
   //erPathText.Properties.LookupItems.Text := '';
 end;
 
+procedure Tdm.DataModuleDestroy(Sender: TObject);
+begin
+  FCookie.Free;
+end;
+
 procedure Tdm.EditRepositoryMRUItem1PropertiesButtonClick(Sender: TObject);
 var
   fields: tstringlist;
   items: tstrings;
   n: integer;
   s: string;
+  //r: TResource;
+  //rl: tresourceslist;
+  o: TObject;
 begin
 //  Pos
 //  SameText
-  fields := tstringlist.Create;
-  try
-    FullResList.GetAllPictureFields(fields,true);
-    s := (Sender as tcxMRUEdit).Text;
-    (Sender as tcxMRUEdit).Text :=
-      ExecutePathEditor((Sender as tcxMRUEdit).Text,(Sender as tcxMRUEdit).Properties.Items,nil,fields);
-    (Sender as tcxMRUEdit).PostEditValue;
+  //fields := tstringlist.Create;
+  //try
+  //ShowMessage((Sender as TcxMRUEdit).Parent.ClassName + ' ' + (Sender as TcxMRUEdit).Parent.Name);
+  //(Sender as tcxMRUEdit).
 
-    if s <> (Sender as tcxMRUEdit).Text then
+
+  fields := tstringlist.Create; try
+  o := Pointer(((Sender as TcxMRUEdit).Parent as TcxVerticalGrid).Tag);
+  if o is tresourcelist then
+  begin
+    (o as tresourcelist).GetAllPictureFields(fields,true);
+  end else if o is tresource then
+    fields.Assign((o as tresource).PicFieldList)
+  else
+    exit;
+
+  //fields := r.PicFieldList; //try
+  s := (Sender as tcxMRUEdit).Text;
+  (Sender as tcxMRUEdit).Text :=
+    ExecutePathEditor((Sender as tcxMRUEdit).Text,(Sender as tcxMRUEdit).Properties.Items,nil,fields);
+  (Sender as tcxMRUEdit).PostEditValue;
+
+  if s <> (Sender as tcxMRUEdit).Text then
+  begin
+    items := (Sender as tcxMRUEdit).Properties.Items;
+    n := IndexOfStr(items,(Sender as tcxMRUEdit).Text);
+    if n <> -1 then
+      items.Move(n,0)
+    else
     begin
-      items := (Sender as tcxMRUEdit).Properties.Items;
-      n := IndexOfStr(items,(Sender as tcxMRUEdit).Text);
-      if n <> -1 then
-        items.Move(n,0)
-      else
-      begin
-        if items.Count > 4 then
-          items.Delete(5);
-        items.Insert(0,(Sender as tcxMRUEdit).Text);
-      end;
-      SavePathList(items);
+      if items.Count > 4 then
+        items.Delete(5);
+      items.Insert(0,(Sender as tcxMRUEdit).Text);
     end;
-
-  finally
-    fields.Free;
+    SavePathList(items);
   end;
+
+  finally fields.Free; end;
 end;
 
 procedure Tdm.erCSVListEditPropertiesButtonClick(Sender: TObject;
@@ -448,6 +474,16 @@ begin
   ShellExecute(0,nil,
     PCHAR((Sender as tcxbuttonedit).Text),
     nil,nil,SW_SHOWNORMAL);
+end;
+
+procedure Tdm.LoadFullResList(r: tResourceList);
+begin
+  r.LoadList(resources_dir);
+  LoadResourceSettings(r);
+  r.ThreadHandler.Cookies := FCookie;
+  r.ThreadHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
+  r.DWNLDHandler.Cookies := FCookie;
+  r.DWNLDHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
 end;
 
 end.

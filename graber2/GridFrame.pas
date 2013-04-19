@@ -157,7 +157,7 @@ type
     procedure vGridRecordExpandable(MasterDataRow: TcxGridMasterDataRow;
       var Expandable: Boolean);
     procedure Reset;
-    procedure CreateList;
+    //procedure CreateList;
     // procedure OnPicAdd(APicture: TTPicture);
     // procedure CheckField(ch,s: string; value: variant);
     procedure OnStartJob(Sender: TObject; Action: Integer);
@@ -192,6 +192,7 @@ type
       Pic: TTPicture);
     procedure DeleteMD5Doubles;
     procedure Log(s: string);
+    procedure SetList(l: tResourceList);
     property OnPicChanged: TPictureNotifyEvent read FPicChanged
       write FPicChanged;
     // property OnPageComplete: TNotifyEvent read FPageComplete write FPageComplete;
@@ -367,22 +368,22 @@ begin
     Result := 0;
 end;
 
-procedure TfGrid.CreateList;
-begin
-  { if not Assigned(FFieldList) then
-    FFieldList := TStringList.Create; }
-  if not Assigned(ResList) then
-  begin
-    ResList := TResourceList.Create;
-    ResList.PictureList.OnPicChanged := OnListPicChanged;
-    ResList.OnJobChanged := OnStartJob;
-    ResList.PictureList.OnEndAddList := OnEndPicList;
-    FPicChanged := nil;
-
-  end
-  else
-    ResList.Clear;
-end;
+//procedure TfGrid.CreateList;
+//begin
+//  { if not Assigned(FFieldList) then
+//    FFieldList := TStringList.Create; }
+//  if not Assigned(ResList) then
+//  begin
+//    ResList := TResourceList.Create;
+//    ResList.PictureList.OnPicChanged := OnListPicChanged;
+//    ResList.OnJobChanged := OnStartJob;
+//    ResList.PictureList.OnEndAddList := OnEndPicList;
+//    FPicChanged := nil;
+//
+//  end
+//  else
+//    ResList.Clear;
+//end;
 
 procedure TfGrid.DeleteMD5Doubles;
 var
@@ -465,6 +466,9 @@ var
   n: TListValue;
   clm: TcxGridColumn;
 begin
+  if Assigned(Pic.Parent) then
+    Exit;
+
   for j := 0 to Pic.Meta.Count - 1 do
   begin
     n := Pic.Meta.Items[j];
@@ -1045,6 +1049,21 @@ begin
   vGrid.OptionsView.NoDataToDisplayInfoText := lang('_GRIDNODATA_');
 end;
 
+procedure TfGrid.SetList(l: tResourceList);
+begin
+//  if not Assigned(ResList) then
+//  begin
+    ResList := l;
+    ResList.PictureList.OnPicChanged := OnListPicChanged;
+    ResList.OnJobChanged := OnStartJob;
+    ResList.PictureList.OnEndAddList := OnEndPicList;
+    FPicChanged := nil;
+
+//  end
+//  else
+//    ResList.Clear;
+end;
+
 procedure TfGrid.SetChildColWidths(clone: TcxGridTableView);
 begin
   // FChildSizeColumn.Width := 60;
@@ -1085,7 +1104,6 @@ end;
 procedure TfGrid.SetSettings;
 begin
   SetConSettings(ResList);
-
   bbDALF.Down := GlobalSettings.Downl.SDALF;
   bbAutoUnch.Down := GlobalSettings.Downl.AutoUncheckInvisible;
 end;
@@ -1217,6 +1235,7 @@ begin
       case Pic.Status of
         JOB_NOJOB:
           Values[n, prgc.Index] := null;
+        JOB_DELAY: Values[n, prgc.Index] := 'DELAY';
         JOB_INPROGRESS:
           if (Pic.Size = 0) and (Pic.Linked.Count = 0) then
             Values[n, prgc.Index] := 'START'

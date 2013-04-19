@@ -118,6 +118,8 @@ type
     procedure chlbFullTagsClickCheck(Sender: TObject; AIndex: Integer;
       APrevState, ANewState: TcxCheckBoxState);
     procedure bbDeleteMD5DoublesClick(Sender: TObject);
+    procedure ApplicationEvents1Minimize(Sender: TObject);
+    procedure ApplicationEvents1Deactivate(Sender: TObject);
 
   private
     mFrame: TFrame;
@@ -149,7 +151,7 @@ type
     TabList: TList;
     dsFirstShow: Boolean;
     SttPanel: TMycxTabSheet;
-    FCookie: TMyCookieList;
+    // FCookie: TMyCookieList;
     FCurPic: TTPicture;
     FBalloon: TBalloon;
     { Private declarations }
@@ -338,29 +340,30 @@ procedure Tmf.NEWLIST(var Msg: TMessage);
 var
   n: TMycxTabSheet;
   f: TfNewList;
-
+  l: TResourceList;
 begin
-  if assigned(FullResList.OnJobChanged) then
-  begin
-    MessageDlg(lang('_BUSY_MAIN_LIST_'), mtInformation, [mbOk], 0);
-    Exit;
-  end;
+  // if assigned(FullResList.OnJobChanged) then
+  // begin
+  // MessageDlg(lang('_BUSY_MAIN_LIST_'), mtInformation, [mbOk], 0);
+  // Exit;
+  // end;
 
   n := CreateTab(pcTables);
   n.ImageIndex := 0;
   f := TfNewList.Create(n);
   f.Setlang;
   f.State := lfsNew;
-  FullResList.OnError := f.OnErrorEvent;
-  FullResList.OnJobChanged := f.JobStatus;
+  // FullResList.OnError := f.OnErrorEvent;
+  // FullResList.OnJobChanged := f.JobStatus;
   f.OnError := OnError;
   // f.Tag := integer(n);
   // n.Tag := integer(f);
   n.SecondFrame := f;
-
-  f.LoadItems;
-
   f.Parent := n;
+
+  l := TResourceList.Create;
+  f.ActualResList := l;
+  f.LoadItems;
   pcTables.Change;
   ShowDs;
 end;
@@ -379,8 +382,8 @@ begin
     mErrors.Lines.add(FormatDateTime('hh:nn:ss', Time) + ' ' +
       { Sender.ClassName + ': ' + } Msg);
 
-  if Assigned(mFrame) and (mFrame is tfStart) then
-    MessageDlg(Msg,mtError,[mbOk],0)
+  if assigned(mFrame) and (mFrame is tfStart) then
+    MessageDlg(Msg, mtError, [mbOk], 0)
   else
     dsLogs.AutoHide := false;
 
@@ -396,8 +399,8 @@ begin
     mLog.Lines.add(FormatDateTime('hh:nn:ss', Time) + ' ' +
       { Sender.ClassName + ': ' + } Msg);
 
-  if Assigned(mFrame) and (mFrame is tfStart) then
-//    MessageDlg(Msg,mtError,[mbOk],0)
+  if assigned(mFrame) and (mFrame is tfStart) then
+    // MessageDlg(Msg,mtError,[mbOk],0)
   else
     dsLogs.AutoHide := false;
 
@@ -442,8 +445,8 @@ var
 begin
   if Sender = nil then
     FCurPic := nil
-  else if ((pcTables.ActivePage as TMycxTabSheet).MainFrame <> Sender){ or
-    (FCurPic = a) }then
+  else if ((pcTables.ActivePage as TMycxTabSheet).MainFrame <> Sender) { or
+    (FCurPic = a) } then
     Exit
   else
     FCurPic := a;
@@ -463,18 +466,18 @@ begin
     dm.CreateField(vgCurMain, 'vgiName', lang('_FILENAME_'), '', ftString, nil,
       a.PicName + '.' + a.Ext, true);
     if a.FactFileName = '' then
-      dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '', ftPathText,
-      nil, a.FileName, true)
+      dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '',
+        ftPathText, nil, a.FileName, true)
     else
-      dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '', ftPathText,
-      nil, a.FactFileName, true);
+      dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '',
+        ftPathText, nil, a.FactFileName, true);
 
     for i := 0 to a.Meta.Count - 1 do
       with a.Meta.Items[i] do
         dm.CreateField(vgCurMain, 'avgi' + Name, Name, '', VrType(Value), nil,
           VarToStr(Value), true);
 
-    if Assigned(a.MD5) then
+    if assigned(a.MD5) then
       dm.CreateField(vgCurMain, 'vgiMD5', lang('_MD5_'), '', ftString, nil,
         a.MD5^, true);
 
@@ -598,9 +601,19 @@ begin
 
 end;
 
+procedure Tmf.ApplicationEvents1Deactivate(Sender: TObject);
+begin
+  HideBalloon;
+end;
+
 procedure Tmf.ApplicationEvents1Exception(Sender: TObject; E: Exception);
 begin
   OnError(Sender, E.Message);
+end;
+
+procedure Tmf.ApplicationEvents1Minimize(Sender: TObject);
+begin
+  HideBalloon;
 end;
 
 procedure Tmf.APPLYNEWLIST(var Msg: TMessage);
@@ -608,45 +621,39 @@ var
   n: TMycxTabSheet;
   f: TfNewList;
   f2: tfGrid;
-  i: Integer;
 
 begin
   n := TMycxTabSheet(Msg.WParam);
 
   f := n.SecondFrame as TfNewList; // TfNewList(n.Tag);
   f.ResetItems;
-  SaveResourceSettings;
+  f.ActualResList.ApplyInherit;
+
+  //f.FullResList[0].Name := 'defaultresource';
+  SaveResourceSettings(f.FullResList[0],nil,true);
+  SaveResourceSettings(f.ActualResList);
 
   f2 := tfGrid.Create(n) as tfGrid;
-  f2.CreateList;
+  f2.SetList(f.ActualResList);
+  // f2.CreateList;
   f2.ResList.OnError := OnError;
   f2.OnLog := OnLog;
 
-  if (VarToStr(FullResList[0].Fields['tag']) <> '')
-  then
-    n.Caption := FullResList[0].Fields['tag']
-  else if (f.tvRes.DataController.RecordCount < 3)
-  and (FullResList[f.tvRes.DataController.Values[1, 0]].Fields['tag'] <> '') then
-    n.Caption := FullResList[f.tvRes.DataController.Values[1, 0]].Fields['tag'];
+  if (VarToStr(f.FullResList[0].Fields['tag']) <> '') then
+    n.Caption := f.FullResList[0].Fields['tag']
+  else if (f.ActualResList.Count < 2) and
+    (VarToStr(f.ActualResList[0].Fields['tag']) <> '') then
+    n.Caption := f.ActualResList[0].Fields['tag'];
 
   f2.ResList.OnPageComplete := DoRefreshResInfo;
-  // f2.OnTagUpdate := RefreshTags;
-
-  with f.tvRes.DataController do
-    for i := 0 to RecordCount - 1 do
-      if Values[i, 0] <> 0 then
-        f2.ResList.CopyResource(FullResList[Values[i, 0]]);
-
-  FullResList.OnError := OnError;
-  FullResList.OnJobChanged := nil;
 
   f.Release;
   FreeAndNil(n.SecondFrame);
   f2.Reset;
   n.MainFrame := f2;
   f2.Parent := n;
-  f2.ResList.ThreadHandler.Cookies := FCookie;
-  f2.ResList.DWNLDHandler.Cookies := FCookie;
+  f2.ResList.ThreadHandler.Cookies := dm.Cookie;
+  f2.ResList.DWNLDHandler.Cookies := dm.Cookie;
   f2.OnPicChanged := DoPicInfo;
   f2.SetSettings;
   f2.Setlang;
@@ -746,8 +753,8 @@ var
 begin
   n := Pointer(Msg.WParam);
   // FreeAndNil(n.SecondFrame);
-  FullResList.OnError := OnError;
-  FullResList.OnJobChanged := nil;
+  // FullResList.OnError := OnError;
+  // FullResList.OnJobChanged := nil;
   CloseTab(n);
 end;
 
@@ -873,8 +880,8 @@ begin
     if Msg.LParam = 0 then
     begin
       ChangeTags;
-      if ((pcTables.ActivePage as tmycxTabSheet).MainFrame
-      as tfGrid).vGrid.DataController.RecordCount > 0 then
+      if ((pcTables.ActivePage as TMycxTabSheet).MainFrame as tfGrid)
+        .vGrid.DataController.RecordCount > 0 then
         ShowBalloon;
     end;
   end;
@@ -921,8 +928,10 @@ procedure Tmf.UPDATECHECK(var Msg: TMessage);
 begin
   lUPD.Hide;
   case Msg.WParam of
-    -1: CheckUpdates;
-    0: OnError(Self,'Update check is failed: ' + TUPDThread(msg.LParam).Error);
+    - 1:
+      CheckUpdates;
+    0:
+      OnError(Self, 'Update check is failed: ' + TUPDThread(Msg.LParam).Error);
     1:
       if MessageDlg(lang('_NEWUPDATES_'), mtConfirmation, [mbYes, mbNo], 0)
         = mrYes then
@@ -1120,8 +1129,8 @@ begin
     for i := 0 to BarManager.ItemCount - 1 do
       if BarManager.Items[i] is TdxBarButton then
         (BarManager.Items[i] as TdxBarButton).PaintStyle :=
-          psCaptionGlyph else if BarManager.Items[i] is tdxBarSubItem then
-          (BarManager.Items[i] as tdxBarSubItem).ShowCaption := true;
+          psCaptionGlyph else if BarManager.Items[i] is TdxBarSubItem then
+          (BarManager.Items[i] as TdxBarSubItem).ShowCaption := true;
 
       for j := 0 to pcTables.PageCount - 1 do
         if pcTables.Pages[j] is TMycxTabSheet then
@@ -1143,8 +1152,8 @@ begin
     for i := 0 to BarManager.ItemCount - 1 do
       if BarManager.Items[i] is TdxBarButton then
         (BarManager.Items[i] as TdxBarButton).PaintStyle :=
-          psStandard else if BarManager.Items[i] is tdxBarSubItem then
-          (BarManager.Items[i] as tdxBarSubItem).ShowCaption := false;
+          psStandard else if BarManager.Items[i] is TdxBarSubItem then
+          (BarManager.Items[i] as TdxBarSubItem).ShowCaption := false;
 
       for j := 0 to pcTables.PageCount - 1 do
         if pcTables.Pages[j] is TMycxTabSheet then
@@ -1176,7 +1185,7 @@ end;
 
 procedure Tmf.LOGMODECHANGED(var Msg: TMessage);
 begin
-  SetLang;
+  Setlang;
 end;
 
 procedure Tmf.StartUpdate;
@@ -1247,14 +1256,9 @@ begin
           Relise;
     if (t as TMycxTabSheet).SecondFrame is TfNewList then
     begin
-      FullResList.OnError := OnError;
-      FullResList.OnJobChanged := nil;
+      ((t as TMycxTabSheet).SecondFrame as TfNewList).ActualResList.Free;
+      ((t as TMycxTabSheet).SecondFrame as TfNewList).Release;
     end;
-    { f := (t as tMycxTabSheet).MainFrame;
-      if f is TfNewList then
-      begin
-      PostMessage(Handle, CM_CANCELNEWLIST, Integer(t), 0)
-      end; }
     FreeAndNil(f);
   end;
 
@@ -1343,8 +1347,7 @@ begin
   // Bhint.Description := 'derp';
   // Bhint.ShowHint(ClientToScreen(bmbMain.ItemLinks[2].ItemRect.BottomRight));
 
-  if not GlobalSettings.Tips or
-  not Active or not Visible then
+  if not GlobalSettings.Tips or not Active or not Visible then
     Exit;
 
   if assigned(FBalloon) then
@@ -1403,8 +1406,8 @@ begin
   SttPanel.Caption := lang('_SETTINGS_');
 
   f := TfSettings.Create(SttPanel);
-  FullResList.OnError := f.OnErrorEvent;
-  FullResList.OnJobChanged := f.JobStatus;
+  // FullResList.OnError := f.OnErrorEvent;
+  // FullResList.OnJobChanged := f.JobStatus;
   f.OnError := OnError;
   f.Setlang;
   f.CreateResources;
@@ -1436,7 +1439,7 @@ begin
   // f.Tag := integer(SttPanel);
   SttPanel.MainFrame := f;
   // SttPanel.Tag := integer(f);
-  f.ResetButons;
+  f.ResetButtons;
   f.Parent := SttPanel;
   ShowDs;
 end;
@@ -1480,17 +1483,12 @@ begin
   Setlang;
   // pcTables.OnPageClose := OnTabClose;
   FBalloon := nil;
-  FullResList.OnError := OnError;
+  // FullResList.OnError := OnError;
   dsFirstShow := true;
   SttPanel := nil;
-  FCookie := TMyCookieList.Create;
-  FullResList.ThreadHandler.Cookies := FCookie;
-  FullResList.ThreadHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
-  FullResList.DWNLDHandler.Cookies := FCookie;
-  FullResList.DWNLDHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
 
-  mFrame := TfStart.Create(Self);
-  (mFrame as TfStart).Setlang;
+  mFrame := tfStart.Create(Self);
+  (mFrame as tfStart).Setlang;
   mFrame.Parent := Self;
 
   TabList := TList.Create;
@@ -1518,7 +1516,7 @@ begin
   if assigned(SttPanel) then
     SttPanel.Free;
   TabList.Free;
-  FCookie.Free;
+  // FCookie.Free;
 end;
 
 procedure Tmf.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -1561,8 +1559,8 @@ begin
     pcTables.HideTabs := false;
     dpLog.Visible := true;
     dpErrors.Visible := true;
-    mFrame := TfStart.Create(Self);
-    (mFrame as TfStart).Setlang;
+    mFrame := tfStart.Create(Self);
+    (mFrame as tfStart).Setlang;
     mFrame.Parent := Self;
   end;
 end;

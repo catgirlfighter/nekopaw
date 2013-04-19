@@ -3,17 +3,18 @@ unit OpBase;
 interface
 
 uses Windows, SysUtils, Messages, GraberU, INIFiles, Classes, Common,
-MyHTTP, MyINIFile, Dialogs;
+MyHTTP, MyINIFile, Dialogs, Forms;
 
 var
-  FullResList: TResourceList;
+//  FullResList: TResourceList;
   TagDump: TPictureTagList;
   GlobalSettings: TSettingsRec;
   IgnoreList,AddFields: TDSArray;
-  GlobalFavList: TStringList;
+  GlobalFavList,ResourceGroupsList: TStringList;
   rootdir: string;
   profname: string = 'default.ini';
   langname: string = '';
+  resources_dir: string;
   ShowSettings: boolean;
 
 {  TProxyRec = record
@@ -56,7 +57,9 @@ type
 
 procedure LoadProfileSettings;
 procedure SaveProfileSettings;
-procedure SaveResourceSettings(AINI: TINIFile = nil);
+procedure LoadResourceSettings(r: TResourceList);
+procedure SaveResourceSettings(r: TResource; AINI: TINIFile = nil; default: boolean = false); overload;
+procedure SaveResourceSettings(r: TResourceList; AINI: TINIFile = nil); overload;
 procedure SaveGUISettings(values: tGUIValues);
 procedure FillDSArray(const a1: TDSArray; var a2: TDSArray);
 function CopyDSArray(const a: TDSArray): TDSArray;
@@ -77,15 +80,15 @@ implementation
 
 uses LangString, EncryptStrings, AES;
 
-var
-  erclass: terrorclass;
+//var
+//  erclass: terrorclass;
 
 procedure terrorclass.OnError(Sender: TObject; Msg: string);
 begin
   MessageDLG('Error in initiation: ' + Msg,mtError,[mbOk],0);
 end;
 
-procedure LoadResourceSettings;
+procedure LoadResourceSettings(r: TResourceList);
 var
   i,j,n: integer;
   pref,s: string;
@@ -94,30 +97,30 @@ begin
   INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
   try
     pref := 'resource-';
-    n := FullResList[0].Fields.Count;
+    n := r[0].Fields.Count;
 
-    FullResList[0].NameFormat := INI.ReadString('defaultresource','NameFormat','$rootdir$\pics\$tag$\');
+    r[0].NameFormat := INI.ReadString('defaultresource','NameFormat','$rootdir$\pics\$tag$\');
 
-    for i := 1 to FullResList.Count -1 do
+    for i := 1 to r.Count -1 do
     begin
-      FullResList[i].Inherit := INI.ReadBool(pref+FullResList[i].Name,'Inherit',true);
-      if not FullResList[i].Inherit then
+      r[i].Inherit := INI.ReadBool(pref+r[i].Name,'Inherit',true);
+      if not r[i].Inherit then
       begin
-        FullResList[i].NameFormat := INI.ReadString(pref+FullResList[i].Name,'NameFormat','');
+        r[i].NameFormat := INI.ReadString(pref + r[i].Name,'NameFormat','');
       end;
 
-      FullResList[i].Fields['login'] := INI.ReadString(pref+FullResList[i].Name,'login','');
-      s := INI.ReadString(pref+FullResList[i].Name,'password','');
+      r[i].Fields['login'] := INI.ReadString(pref + r[i].Name,'login','');
+      s := INI.ReadString(pref + r[i].Name,'password','');
       if s <> '' then
-        FullResList[i].Fields['password'] := trim(DecryptString(s,KeyString),#0);
+        r[i].Fields['password'] := trim(DecryptString(s,KeyString),#0);
 
-      for j := n to FullResList[i].Fields.Count-1 do
-        if FullResList[i].Fields.Items[j].restype <> ftNone then
+      for j := n to r[i].Fields.Count-1 do
+        if r[i].Fields.Items[j].restype <> ftNone then
         begin
-           FullResList[i].Fields.Items[j].resvalue :=
-              strnull(INI.ReadString(pref+FullResList[i].Name,
-              FullResList[i].Fields.Items[j].resname,
-              FullResList[i].Fields.Items[j].resvalue));
+           r[i].Fields.Items[j].resvalue :=
+              strnull(INI.ReadString(pref + r[i].Name,
+              r[i].Fields.Items[j].resname,
+              r[i].Fields.Items[j].resvalue));
         end;
 
     end;
@@ -126,10 +129,10 @@ begin
   end;
 end;
 
-procedure SaveResourceSettings(AINI: TINIFile = nil);
+procedure SaveResourceSettings(r: TResource; AINI: TINIFile = nil; default: boolean = false);
 var
-  i,j,n: integer;
-  pref,s: string;
+  j{,n}: integer;
+  rname,s: string;
   INI: TINIFile;
 begin
   if Assigned(AINI) then
@@ -137,46 +140,59 @@ begin
   else
     INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
   try
-    pref := 'resource-';
-    n := FullResList[0].Fields.Count;
+    if default then
+      rName := 'defaultresource'
+    else
+      rName := 'resource-' + r.Name;
+    INI.WriteBool(rName,'Inherit',r.Inherit);
 
-    INI.WriteString('defaultresource','NameFormat',FullResList[0].NameFormat);
-
-    for i := 1 to FullResList.Count-1 do
+    if not r.Inherit then
     begin
-      //if FullResList[n].Inherit then
-      INI.WriteBool(pref+FullResList[i].Name,'Inherit',FullResList[i].Inherit);
-
-      if not FullResList[i].Inherit then
-      begin
-        INI.WriteBool(pref+FullResList[i].Name,'Inherit',FullResList[i].Inherit);
-        INI.WriteString(pref+FullResList[i].Name,'NameFormat',FullResList[i].NameFormat);
-      end else
-      begin
-        INI.DeleteKey(pref+FullResList[i].Name,'Inherit');
-        INI.DeleteKey(pref+FullResList[i].Name,'NameFormat');
-      end;
-
-      s := nullstr( FullResList[i].Fields['login']);
-      if s<>'' then
-        INI.WriteString(pref+FullResList[i].Name,'Login',s)
-      else
-        INI.DeleteKey(pref+FullResList[i].Name,'Login');
-
-      s := nullstr(FullResList[i].Fields['password']);
-      if s<>'' then
-        INI.WriteString(pref+FullResList[i].Name,'Password',EncryptString(s,KeyString))
-      else
-        INI.DeleteKey(pref+FullResList[i].Name,'Password');
-
-      for j := n to FullResList[i].Fields.Count-1 do
-        if not(FullResList[i].Fields.Items[j].restype in [ftNone,ftMultiEdit]) then
-        begin
-          INI.WriteString(pref+FullResList[i].Name,
-            FullResList[i].Fields.Items[j].resname,
-            nullstr(FullResList[i].Fields.Items[j].resvalue));
-        end;
+      INI.WriteBool(rName,'Inherit',r.Inherit);
+      INI.WriteString(rName,'NameFormat',r.NameFormat);
+    end else
+    begin
+      INI.DeleteKey(rName,'Inherit');
+      INI.DeleteKey(rName,'NameFormat');
     end;
+
+    s := nullstr(r.Fields['login']);
+    if s<>'' then
+      INI.WriteString(rName,'Login',s)
+    else
+      INI.DeleteKey(rName,'Login');
+
+    s := nullstr(r.Fields['password']);
+    if s<>'' then
+      INI.WriteString(rName,'Password',EncryptString(s,KeyString))
+    else
+      INI.DeleteKey(rName,'Password');
+
+    for j := 1 to r.Fields.Count-1 do
+      if not(r.Fields.Items[j].restype in [ftNone,ftMultiEdit]) then
+      begin
+        INI.WriteString(rName,
+          r.Fields.Items[j].resname,
+          nullstr(r.Fields.Items[j].resvalue));
+      end;
+  finally
+    if not Assigned(AINI) then
+      INI.Free;
+  end;
+end;
+
+procedure SaveResourceSettings(r: TResourceList; AINI: TINIFile = nil);
+var
+  i: integer;
+  INI: TINIFile;
+begin
+  if Assigned(AINI) then
+    INI := AINI
+  else
+    INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+  try
+    for i := 0 to r.Count-1 do
+      SaveResourceSettings(r[i],AINI);
   finally
     if not Assigned(AINI) then
       INI.Free;
@@ -200,8 +216,11 @@ begin
     dlu := INI.ReadInteger('settings','delupd',0);
     if dlu = 1 then
     begin
-      if FileExists(IncludeTrailingPathDelimiter(rootdir) + 'NPUpdater.exe') then
+      while FileExists(IncludeTrailingPathDelimiter(rootdir) + 'NPUpdater.exe') do
+      begin
         DeleteFile(IncludeTrailingPathDelimiter(rootdir) + 'NPUpdater.exe');
+        Application.ProcessMessages;
+      end;
       INI.DeleteKey('settings','delupd');
     end;
   finally
@@ -390,8 +409,8 @@ begin
       for i := 0 to length(ignorelist)-1 do
         INI.WriteString('IgnoreList',IgnoreList[i][0],IgnoreList[i][1]);
 
-      if Assigned(FullResList) then
-        SaveResourceSettings(INI);
+      //if Assigned(FullResList) then
+      //  SaveResourceSettings(INI);
 
     end;
   finally
@@ -586,7 +605,7 @@ end;
 
 initialization
 
-erclass := terrorclass.Create;
+//erclass := terrorclass.Create;
 
 rootdir := ExtractFileDir(paramstr(0));
 
@@ -601,15 +620,16 @@ end;
 
 CreateLangINI(IncludeTrailingPathDelimiter(rootdir)+IncludeTrailingPathDelimiter('languages')+langname+'.ini');
 
-FullResList := TResourceList.Create;
-FullResList.OnError := erclass.OnError;
-FullResList.LoadList(IncludeTrailingPathDelimiter(rootdir) + 'resources');
+//FullResList := TResourceList.Create;
+//FullResList.OnError := erclass.OnError;
+//FullResList.LoadList(IncludeTrailingPathDelimiter(rootdir) + 'resources');
+resources_dir := IncludeTrailingPathDelimiter(rootdir) + 'resources';
 
 TagDump := TPictureTagList.Create;
 if FileExists(IncludeTrailingPathDelimiter(rootdir) + 'tagdump.txt') then
   TagDump.LoadListFromFile(IncludeTrailingPathDelimiter(rootdir) + 'tagdump.txt');
 
-LoadResourceSettings;
+//LoadResourceSettings;
 
 GlobalFavList := TStringlist.Create;
 
@@ -620,9 +640,10 @@ LoadFavList(GlobalFavlist);
 
 finalization
 
+ResourceGroupsList.Free;
 GlobalFavList.Free;
-FullResList.Free;
+//FullResList.Free;
 TagDump.Free;
-erclass.Free;
+//erclass.Free;
 
 end.

@@ -127,6 +127,7 @@ object fPathEditor: TfPathEditor
   object cbPath: TcxMRUEdit
     Left = 8
     Top = 48
+    Properties.AutoSelect = False
     Properties.OnButtonClick = bBrowseClick
     TabOrder = 10
     Text = 'cbPath'

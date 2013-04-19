@@ -84,6 +84,7 @@ procedure SaveStrToFile(S, FileName: String; Add: boolean = false);
 function GreatestCommonFactor(a,b: Word): Word;
 procedure AddSorted(Value: String; List: TStrings);
 procedure RemSorted(Value: String; List: TStrings);
+function isolate(s: string; symbol: char): string;
 //function BatchReplaceStr(AText: String; AFromText,AToText: Array Of String): String;
 //function ReplaceStrMask(AText,AMaskText,AFromText,AToText: String): String;
 
@@ -207,6 +208,8 @@ const
   C_SEP = ';';
   C_SPC = '&';
   C_NUM = '#';
+  C_HEX1 = 'X';
+  C_HEX2 = 'x';
   N_MLN = 7;
   N_MNC = 252;
 var
@@ -290,14 +293,14 @@ begin
             else
               t := -1;
             end;
-          'X', 'x':
+          C_HEX1, C_HEX2:
             case t of
               0:
                 t := 1;
               1:
                 ;
               2:
-                if i - spc <> 3 then
+                if not (i - spc in [2,3]) then
                   t := -1;
             else
               t := -1;
@@ -2154,6 +2157,21 @@ begin
   except on e: Exception do begin
     e.Message := e.Message + ' (value = ' + Value + ')'; raise;
   end; end;
+end;
+
+function isolate(s: string; symbol: char): string;
+var
+  i: integer;
+begin
+  i := PosEx(symbol,s);
+
+  while i > 0 do
+  begin
+    Insert(symbol,s,i);
+    i := PosEx(symbol,s,i + 2);
+  end;
+
+  Result := s;
 end;
 
 end.
