@@ -1,4 +1,4 @@
-<item file="Graber2.exe"  archive="Graber2.zip"    version=57 />
+<item file="Graber2.exe"  archive="Graber2.zip"    version=58 />
 <item file="versionlog.txt"                        version=-1 />
 
 <item file="resources\danbooru.tmpl"               version=22 />
@@ -24,8 +24,8 @@
 <item file="resources\neko.booru.org.cfg"          version=0 />
 <item file="resources\nihonomaru.com.cfg"          version=0 />
 <item file="resources\safebooru.org.cfg"           version=0 />
-<item file="resources\chan.sankakucomplex.com.cfg" version=4 />
-<item file="resources\idol.sankakucomplex.com.cfg" version=4 />
+<item file="resources\chan.sankakucomplex.com.cfg" version=5 />
+<item file="resources\idol.sankakucomplex.com.cfg" version=5 />
 <item file="resources\seiga.nicovideo.jp.cfg"      version=1 />
 <item file="resources\cosplay.paheal.net.cfg"      version=4 />
 <item file="resources\rule34.paheal.net.cfg"       version=5 />
@@ -85,5 +85,5 @@
 
 <item file="resources\icons\ponibooru.413chan.net.bmp"   version=0 deleted=1 />
 
-<item file="languages\English.ini" version=25 />
-<item file="languages\Russian.ini" version=25 />
+<item file="languages\English.ini" version=26 />
+<item file="languages\Russian.ini" version=26 />
