@@ -22,8 +22,6 @@ const
   CM_CANCELSETTINGS = WM_USER + 10;
   CM_STARTJOB = WM_USER + 11;
   CM_ENDJOB = WM_USER + 12;
-  // CM_UPDATE = WM_USER + 13;
-  // CM_UPDATEPROGRESS = WM_USER + 14;
   CM_LANGUAGECHANGED = WM_USER + 15;
   CM_WHATSNEW = WM_USER + 16;
   CM_STYLECHANGED = WM_USER + 17;
@@ -57,8 +55,8 @@ const
 
   SAVEFILE_VERSION = 0;
 
-  LIST_SCRIPT = 'listscript';
-  DOWNLOAD_SCRIPT = 'dwscript';
+  LIST_SCRIPT = 'listscript';  //default section for getting list script
+  DOWNLOAD_SCRIPT = 'dwscript'; //default section for download picture script
 
 type
 
@@ -165,21 +163,9 @@ type
     PicDelay: integer;
   end;
 
-  { TListValue = class(TObject)
-    private
-    FName: String;
-    FValue: Variant;
-    public
-    constructor Create;
-    property Name: String read FName write FName;
-    property Value: Variant read FValue write FValue;
-    end; }
-
   TPicChange = (pcProgress, pcSize, pcLabel, pcDelete, pcChecked, pcData);
 
   TPicChanges = Set of TPicChange;
-
-  // PTagedListValue = ^TTagedListValue;
 
   TTagedListValue = class(TObject)
   private
@@ -258,30 +244,6 @@ type
     property VariantType: TVarType read FVariantType;
   end;
 
-  { TPictureValueState = (pvsNone, pvsKey, pvsNoduble);
-
-    TPictureValue = class(TListValue)
-    private
-    FState: TPictureValueState;
-    public
-    constructor Create;
-    property State: TPictureValueState read FState write FState;
-    end;
-
-    TPictureValueList = class(TValueList)
-    protected
-    function Get(Index: integer): TPictureValue;
-    procedure SetValue(ItemName: String; Value: Variant); override;
-    function FindItem(ItemName: String): TPictureValue;
-    function GetState(ItemName: String): TPictureValueState;
-    procedure SetState(ItemName: String; Value: TPictureValueState);
-    public
-    property Items[Index: integer]: TPictureValue read Get;
-    property ItemByName[ItemName: String]: TPictureValue read FindItem;
-    property State[ItemName: String]: TPictureValueState read GetState
-    write SetState;
-    end; }
-
   TScriptSection = class;
   TScriptItemList = class;
 
@@ -330,10 +292,7 @@ type
 
   TScriptSection = class(TScriptItem)
   private
-    // FParent: String;
     FParametres: TValueList;
-    // FDeclorations: TValueList;
-    // FConditions: TScriptSectionList;
     FChildSections: TScriptItemList;
     FNoParam: Boolean;
     FInUse: Boolean;
@@ -348,8 +307,6 @@ type
     procedure Assign(s: TScriptItem); override;
     function Empty: Boolean;
     property Parameters: TValueList read FParametres;
-    // property Conditions: TScriptSectionList read FConditions;
-    // property Declorations: TValueList read FDeclorations;
     property ChildSections: TScriptItemList read FChildSections;
     property NoParameters: Boolean read FNoParam write FNoParam;
     property InUse: Boolean read FInUse;
@@ -426,7 +383,6 @@ type
     FFields: TResourceFields;
     FDownloadRec: TDownloadRec;
     FHTTPRec: THTTPRec;
-    // FPictureList: TPictureList;
     FPicList: TPictureList;
     FLPicList: TPictureList;
     FSectors: TValueList;
@@ -445,11 +401,6 @@ type
     FPicsAdded: Boolean;
     FURLList: TArrayOfString;
     FLogMode: Boolean;
-    // FPicLink: TTPicture;
-    // FTagList: TStringList;
-    // FPicList: TList;
-    // FAddPic: Boolean;
-    // FCookie: TCookieList;
   protected
     procedure SetInitialScript(Value: TScriptSection);
     procedure SetBeforeScript(Value: TScriptSection);
@@ -526,7 +477,6 @@ type
 
   TThreadHandler = class(TThreadList)
   private
-    // FQueue: TResourceLinkList;
     FCount: integer;
     FFinishThreads: Boolean;
     FFinishQueue: Boolean;
@@ -690,10 +640,7 @@ type
     property FileName: String read FFileName write FFileName;
     property FactFileName: String read FFactFileName write FFactFileName;
     property Ext: String read FExt;
-    // property md5: TMD5Digest read FMD5;
-    // property MD5String: String read GetMD5String;
     property PicName: String read FPicName write SetPicName;
-    // property Orig: TTPicture read FOrig write FOrig;
     property Resource: TResource read FResource write FResource;
     property Size: Int64 read FSize write FSize;
     property Pos: Int64 read FPos write FPos;
@@ -702,8 +649,6 @@ type
     property BookMark: integer read FBookMark write FBookMark;
     property PostProcessed: Boolean read FPostProc write FPostProc;
     property MD5: PVariant read FMD5;
-    // property MD5Double: Boolean read FMD5Double;
-    // property Obj: TObject read FObj write FObj;
   end;
 
   TPicCounter = record
@@ -3783,13 +3728,8 @@ begin
 end;
 
 procedure TResourceList.SetMaxThreadCount(Value: integer);
-{ var
-  i: integer; }
 begin
   FMaxThreadCount := Value;
-  { for i := 0 to Count -1 do
-    if Items[i].JobFinished then
-    Items[i].MaxThreadCount := Value; }
 end;
 
 procedure TResourceList.SetOnPageComplete(Value: TNotifyEvent);
@@ -4875,7 +4815,7 @@ begin
             s := gVal(Value);
             tmp := nVal(s);
             if s = '' then
-              Result := TrimEx(Clc(tmp), [#9, #10, #13, ' '])
+              Result := SysUtils.Trim(Clc(tmp))
             else
             begin
               s := Clc(s);
@@ -5253,8 +5193,8 @@ begin
     FPicture.OnPicChanged(FPicture, FPicture.Changes);
 end;
 
-procedure TDownloadThread.ProcHTTP;
-var
+procedure TDownloadThread.ProcHTTP; //process PAGE request with text content
+var                                 //used if need to parse content
   Result: TStringStream;
   tmp, Url: string;
   Post: TStringList;
@@ -5295,22 +5235,18 @@ begin
 
           if FHTTPRec.PageDelay > 0 then
           begin
-
-            CSData.Enter; try
-            ms := MilliSecondsBetween(FResource.ThreadCounter.LastPageTime,Date + Time);
-            finally CSData.Leave; end;
-
-            while ms < FHTTPRec.PageDelay do
+            while true do
             begin
-              sleep(FHTTPRec.PageDelay - ms);
               CSData.Enter; try
-              ms := MilliSecondsBetween(FResource.ThreadCounter.LastPageTime,Date + Time);
+                ms := MilliSecondsBetween(FResource.ThreadCounter.LastPageTime,Date + Time);
+                if ms >= FHTTPRec.PageDelay then
+                begin
+                  FResource.ThreadCounter.LastPageTime := Date + Time;
+                  Break;
+                end;
               finally CSData.Leave; end;
+              sleep(FHTTPRec.PageDelay - ms);
             end;
-
-            CSData.Enter; try
-            FResource.ThreadCounter.LastPageTime := Date + Time;
-            finally CSData.Leave; end;
           end;
 
 
@@ -5428,7 +5364,7 @@ begin
   end;
 end;
 
-procedure TDownloadThread.ProcPic;
+procedure TDownloadThread.ProcPic; //used to download and save BINARY data, like pictures
 const
   buff_size = 11;
 
@@ -5459,24 +5395,37 @@ begin
   begin
     try
 
+      //feature to add childs to album
+      //common version - if picture download error occurs, must be executed
+      //script to check childs for picture (it is not a picture, but album)
+      //check realisation in pixiv.net.csg
+
+      //after try to get picture iteration resets
+      //and if new iteration get new pictures in list, then
+      //new pictures must be added as childs and thread must be released
+
       if Assigned(FLPicList) and (FPicList.Count > 0) then
       begin
-        CSData.Enter;
-        try
+        CSData.Enter; try
           FLPicList.AddPicList(FPicList, FPicture);
           FPicsAdded := true;
-        finally
-          CSData.Leave;
-        end;
-
+        finally CSData.Leave; end;
         Break;
       end;
+
+      //feature to try diffirent exts, if it's unknown from start
 
       if (FHTTPRec.TryExt <> '') and not Assigned(m) then
         FExt := CopyTo(FHTTPRec.TryExt, ',', [], [], true);
 
+      //creating file
+      //if "get ext by content" enabled then memorystream must by assigned
       if not(FHTTPRec.PicTemplate.ExtFromHeader and not Assigned(m)) then
       begin
+
+        //feature to make name by template, like %filename%.%ext%
+        //need if you can't make name for picture in getting list
+
         if (FHTTPRec.PicTemplate.Name <> '') then
           FName := ReplaceStr(FPicture.FileName, FHTTPRec.PicTemplate.Name,
             FPicture.PicName)
@@ -5505,7 +5454,7 @@ begin
               FPicture.Pos; }
             f := TFileStream.Create(FName, FmOpenRead or fmShareDenyWrite);
             try
-              FPicture.MakeMD5(f);
+              FPicture.MakeMD5(f);  //if file exists, create MD5 for it
             finally
               f.Free;
             end;
@@ -5513,7 +5462,7 @@ begin
             FPicture.Pos := 0;
             FPicture.Changes := [pcSize, pcProgress, pcData];
             FPicture.FactFileName := FName;
-            Synchronize(PicChanged);
+            Synchronize(PicChanged); //call picture changed to change it in visible table
             // FCS.Leave;
             Exit;
           end;
@@ -5522,6 +5471,11 @@ begin
             CreateDirExt(fdir);
 
           f := TFileStream.Create(FName, fmCreate);
+
+          //feature to get ext AFTER it downloaded
+          //some resources uses wrong ext or not use it at all
+          //this feature allows to get ext by content
+          //if feature enabled, picture downloaded to the memory, and after it to the drive
 
           if FHTTPRec.PicTemplate.ExtFromHeader and Assigned(m) and
             (m.Size = FPicture.Size) then
@@ -5540,8 +5494,9 @@ begin
       end;
 
       try
-        // HTTP.Request.ContentRangeStart := f.Size;
         HTTP.Request.Referer := FHTTPRec.Referer;
+
+        //checkproto - allows to make full urls from short '//:url/page','/page' and other using referer
 
         if FExt = '' then
           Url := CheckProto(HTTPRec.Url, HTTPRec.Referer)
@@ -5549,8 +5504,8 @@ begin
           Url := CheckProto(ReplaceStr(HTTPRec.Url, FHTTPRec.PicTemplate.Ext,
             FExt), HTTPRec.Referer);
 
-        if SameText(Copy(Url, 1, 6), 'https:') then
-        begin
+        if SameText(Copy(Url, 1, 6), 'https:') then //enable SSL for HTTPS
+        begin                                       // OpenSSL must be installed
           FHTTP.IOHandler := FSSLHandler;
           FHTTP.ConnectTimeout := 0;
           FHTTP.ReadTimeout := 0;
@@ -5558,10 +5513,15 @@ begin
         else
           FHTTP.IOHandler := nil;
 
+        //Delay feature for retarted resources
+        //not really queue, threads just get his work by "who faster" rule
+
         if FHTTPRec.PicDelay > 0 then
         begin
           CSData.Enter; try
-          ms := MilliSecondsBetween(FResource.ThreadCounter.LastPicTime,Date + Time);
+            ms := MilliSecondsBetween(FResource.ThreadCounter.LastPicTime,Date + Time);
+            if ms >= FHTTPRec.PicDelay  then
+              FResource.ThreadCounter.LastPicTime := Date + Time;
           finally CSData.Leave; end;
 
           if ms < FHTTPRec.PicDelay then
@@ -5570,18 +5530,25 @@ begin
             FPicture.Changes := [pcProgress];
             Synchronize(PicChanged);
 
-            while ms < FHTTPRec.PicDelay do
+            while true do
             begin
-              sleep(FHTTPRec.PicDelay - ms);
-              CSData.Enter; try
-              ms := MilliSecondsBetween(FResource.ThreadCounter.LastPicTime,Date + Time);
+              Sleep(FHTTPRec.PicDelay - ms);
+              CSData.Enter; try //critical sections prevent from collisions and "the same time checking"
+                ms := MilliSecondsBetween(FResource.ThreadCounter.LastPicTime,Date + Time);
+                if ms < FHTTPRec.PicDelay  then
+                  Continue
+                else
+                begin
+                  FResource.ThreadCounter.LastPicTime := Date + Time;
+                  Break;
+                end;
               finally CSData.Leave; end;
             end;
           end;
 
-          CSData.Enter; try
-          FResource.ThreadCounter.LastPicTime := Date + Time
-          finally CSData.Leave; end;
+          //CSData.Enter; try
+          //FResource.ThreadCounter.LastPicTime := Date + Time
+          //finally CSData.Leave; end;
         end;
 
         FPicture.Status := JOB_INPROGRESS;
@@ -5589,17 +5556,12 @@ begin
         Synchronize(PicChanged);
 
         if FHTTPRec.PicTemplate.ExtFromHeader and not Assigned(m) then
-        begin
+        begin  //if ext from content enabled and picture not downloded to the memory
           m := tMemoryStream.Create;
           try
             HTTP.Request.ContentRangeStart := 1;
             HTTP.Request.ContentRangeEnd := buff_size;
-            // with HTTP.Request.Ranges.Add do
-            // begin
-            // StartPos := 1;
-            // EndPos := buff_size;
-            // end;
-            HTTP.Get(Url, m);
+            HTTP.Get(Url, m);  //get BINARY to the memory
 
             if ReturnValue = THREAD_FINISH then
             begin
@@ -5608,7 +5570,7 @@ begin
               Break;
             end;
 
-            m.Position := 0;
+            m.Position := 0;              //read ext from BINARY
             m.Read(buff[0], buff_size);
             FExt := ImageFormat(@buff[0]);
 
@@ -5636,29 +5598,22 @@ begin
             // m.Free;
           end;
         end
-        else
+        else  //direct download to the file on drive
           HTTP.Get(Url, f);
         // HTTP.Disconnect;
 
         if ReturnValue = THREAD_FINISH then
           FJob := JOB_CANCELED;
 
-
-        // FPicture.Changes := [pcSize, pcProgress];
-        // Synchronize(PicChanged);
-
-        if FPicture.Size <> f.Size then
-        begin
+        if FPicture.Size <> f.Size then //if downloaded file size not equal with "internet" file size
+        begin                           //then is error (server inerrupted downloading without messages)
           f.Free;
           FPicture.Size := 0;
           FPicture.Pos := 0;
           DeleteFile(FName);
           if (ReturnValue = THREAD_FINISH) then
-            // begin
-            // FPicture.Changes := [pcSize, pcProgress];
-            // Synchronize(PicChanged);
-            // end
-          else if (FRetries < FMaxRetries) then
+            //nothing there, derp
+          else if (FRetries < FMaxRetries) then //retries feature
           begin
             inc(FRetries);
             Continue;
@@ -5670,7 +5625,7 @@ begin
         begin
           FPicture.MakeMD5(f);
           f.Free;
-          FPicture.FactFileName := FName;
+          FPicture.FactFileName := FName; //saving "real" name, file name on the drive
         end;
 
         Break;
@@ -5686,7 +5641,7 @@ begin
           if (ReturnValue = THREAD_FINISH) then
             Break;
 
-          if e.LastError = 10054 then
+          if e.LastError = 10054 then  //if is "disconnect gracefully" error then just disconnect and try again
             try
               HTTP.Disconnect
             except
@@ -5715,7 +5670,7 @@ begin
             Continue;
 
           if (HTTP.ResponseCode <> 404) and (FRetries < FMaxRetries) then
-            inc(FRetries)
+            inc(FRetries)  //404 not need to retry
           else if FHTTPRec.TryExt <> '' then
             FRetries := 0
           else
@@ -5749,7 +5704,7 @@ begin
   FPostProc.Process(SE, DE, FE, VE, VE);
 end;
 
-procedure TDownloadThread.ProcLogin;
+procedure TDownloadThread.ProcLogin; //login process, simple version of ProcHTTP
 var
   Url: string;
   poststr: string;

@@ -158,7 +158,7 @@ begin
 
     s := nullstr(r.Fields['login']);
     if s<>'' then
-      INI.WriteString(rName,'Login',s)
+      INI.WriteString(rName,'Login','"' + s + '"')
     else
       INI.DeleteKey(rName,'Login');
 
@@ -173,7 +173,7 @@ begin
       begin
         INI.WriteString(rName,
           r.Fields.Items[j].resname,
-          nullstr(r.Fields.Items[j].resvalue));
+          '"' + nullstr(r.Fields.Items[j].resvalue) + '"');
       end;
   finally
     if not Assigned(AINI) then
