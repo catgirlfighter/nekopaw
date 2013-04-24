@@ -375,12 +375,14 @@ end;
 procedure TTagList.GetList(Tags: array of string; AAttrs: array of TAttrList;
   AList: TTagList);
 var
-  i,j,l: integer;
+  i,j,l,lx: integer;
   b: boolean;
   s: string;
   t: ttag;
 begin
   //Tag := lowercase(Tag);
+  lx := 0;
+
   if length(Tags) <> length(AAttrs) then
     raise Exception.Create('Incorrect tags and parameters count');
     for i := 0 to Count -1 do
@@ -388,7 +390,10 @@ begin
       begin
         b := false;
 
-        for l := 0 to Length(Tags)-1 do
+        if lx = Length(Tags) then
+          lx := 0;
+
+        for l := lx to Length(Tags)-1 do
           if SameText(Items[i].Name,Tags[l])
           and not(AAttrs[l].NoParameters{ and (Items[i].Attrs.Count > 0)}) then
           begin
@@ -407,14 +412,16 @@ begin
 
             if b then
             begin
+              lx := l + 1;
               t := AList.CopyTag(Items[i]);
               t.Tag := AAttrs[l].Tag;
               Break;
             end;
-          end;
+          end else
+            Break;
 
-        if not b then
-          Items[i].Childs.GetList(Tags,AAttrs,AList);
+        //if not b then
+        //  Items[i].Childs.GetList(Tags,AAttrs,AList);
       end;
 end;
 

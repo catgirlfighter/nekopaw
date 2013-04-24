@@ -1810,8 +1810,8 @@ var
   Retvar: TDateTime;
   Tmp,
     Fmt, Data, Mask, Spec: string;
-  Year, Month, Day, Hour,
-    Minute, Second, MSec: word;
+  Year, Month, Day, Hour, Minute, Second: integer;
+  MSec: word;
   AmPm: integer;
   fs: TFormatSettings;
 begin
@@ -1850,10 +1850,10 @@ begin
           Break; // End of specifier string
         Spec := Mask + Fmt[ii];
 
-        if (Spec = 'DD') or (Spec = 'DDD') or (Spec = 'DDDD') or
-          (Spec = 'MM') or (Spec = 'MMM') or (Spec = 'MMMM') or
+        if (Spec = 'D') or (Spec = 'DD') or (Spec = 'DDD') or (Spec = 'DDDD') or
+          (Spec = 'M') or (Spec = 'MM') or (Spec = 'MMM') or (Spec = 'MMMM') or
           (Spec = 'YY') or (Spec = 'YYY') or (Spec = 'YYYY') or
-          (Spec = 'HH') or (Spec = 'NN') or (Spec = 'SS') or
+          (Spec = 'H') or (Spec = 'HH') or (Spec = 'NN') or (Spec = 'SS') or
           (Spec = 'ZZ') or (Spec = 'ZZZ') or
           (Spec = 'AP') or (Spec = 'AM') or (Spec = 'AMP') or
           (Spec = 'AMPM') then
@@ -1872,6 +1872,19 @@ begin
       if (Mask <> '') and (length(Data) > 0) then
       begin
         // Day 1..31
+
+        if (Mask = 'D') then
+        begin
+          Day := StrToIntDef(trim(copy(Data, 1, 2)), -1);
+
+          if day = -1 then
+          begin
+            Day := StrToIntDef(copy(Data, 1, 1), 0);
+            delete(Data, 1, 1);
+          end else
+            delete(Data, 1, 2);
+        end;
+
         if (Mask = 'DD') then
         begin
           Day := StrToIntDef(trim(copy(Data, 1, 2)), 0);
@@ -1897,6 +1910,19 @@ begin
         end;
 
         // Month 1..12
+
+        if (Mask = 'M') then
+        begin
+          Month := StrToIntDef(trim(copy(Data, 1, 2)), -1);
+
+          if Month = -1 then
+          begin
+            Month := StrToIntDef(copy(Data, 1, 1), 0);
+            delete(Data, 1, 1);
+          end else
+            delete(Data, 1, 2);
+        end;
+
         if (Mask = 'MM') then
         begin
           Month := StrToIntDef(trim(copy(Data, 1, 2)), 0);
@@ -1952,6 +1978,18 @@ begin
         end;
 
         // Hours
+        if (Mask = 'H') then
+        begin
+          Hour := StrToIntDef(trim(copy(Data, 1, 2)), -1);
+
+          if Hour = -1 then
+          begin
+            Hour := StrToIntDef(copy(Data, 1, 1), 0);
+            delete(Data, 1, 1);
+          end else
+            delete(Data, 1, 2);
+        end;
+
         if Mask = 'HH' then
         begin
           Hour := StrToIntDef(trim(copy(Data, 1, 2)), 0);
@@ -2011,6 +2049,9 @@ begin
       inc(i);
     end;
   end;
+
+  if (AmPm <> 0) and (Hour = 12) then
+    Hour := 0;
 
   if AmPm = 1 then
     Hour := Hour + 12;

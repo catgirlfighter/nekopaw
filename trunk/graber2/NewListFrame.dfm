@@ -59,6 +59,7 @@ object fNewList: TfNewList
     object lTip: TcxLabel
       Left = 266
       Top = 5
+      Transparent = True
     end
   end
   object gRes: TcxGrid

@@ -194,7 +194,7 @@ var
 implementation
 
 uses StartFrame, NewListFrame, LangString, SettingsFrame, GridFrame, utils,
-  AboutForm, Whatsnewform, win7taskbar, LoginForm;
+  AboutForm, win7taskbar, LoginForm, Newsv2Form;
 {$R *.dfm}
 
 procedure TMycxTabSheet.OnTimer(Sender: TObject);
@@ -1080,7 +1080,9 @@ end;
 
 procedure Tmf.WHATSNEW(var Msg: TMessage);
 begin
-  ShowWhatsNew;
+  if FileExists(IncludeTrailingPathDelimiter(rootdir) + 'versionlog.txt') then
+    ShowNews(IncludeTrailingPathDelimiter(rootdir) + 'versionlog.txt');
+  //ShowWhatsNew;
 end;
 
 procedure Tmf.STYLECHANGED(var Msg: TMessage);
@@ -1139,11 +1141,6 @@ begin
             if assigned(MainFrame) then
               if MainFrame is tfGrid then
                 (MainFrame as tfGrid).SetMenus;
-            { for i := 0 to (MainFrame as tfGrid).BarManager.ItemCount -1 do
-              if (MainFrame as tfGrid).BarManager.Items[i] is tdxBarButton then
-              ((MainFrame as tfGrid).BarManager.Items[i] as tdxBarButton).PaintStyle := psCaptionGlyph
-              else if (MainFrame as tfGrid).BarManager.Items[i] is tdxBarSubItem  then
-              ((MainFrame as tfGrid).BarManager.Items[i] as tdxBarSubItem).ShowCaption := true; }
           end;
 
   end
@@ -1162,11 +1159,6 @@ begin
             if assigned(MainFrame) then
               if MainFrame is tfGrid then
                 (MainFrame as tfGrid).SetMenus;
-            { for i := 0 to (MainFrame as tfGrid).BarManager.ItemCount -1 do
-              if (MainFrame as tfGrid).BarManager.Items[i] is tdxBarButton then
-              ((MainFrame as tfGrid).BarManager.Items[i] as tdxBarButton).PaintStyle := psStandard
-              else if (MainFrame as tfGrid).BarManager.Items[i] is tdxBarSubItem  then
-              ((MainFrame as tfGrid).BarManager.Items[i] as tdxBarSubItem).ShowCaption := false; }
           end;
   end;
 end;
