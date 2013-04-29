@@ -29,6 +29,7 @@ $gui_images_part = '';
 	$thread.url = "$main.url+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)+'&pid='+$thread.counter";
 }
 ?$source = 'gui'{
+	$thread.xmlcontent = 'html';
 	$thread.url = "$main.url+'index.php?page=post&s=list&tags='+@httpencode($tag)";
 	$thread.xml = 'fpgui';
 	$thread.execute();
