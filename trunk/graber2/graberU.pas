@@ -55,8 +55,8 @@ const
 
   SAVEFILE_VERSION = 0;
 
-  LIST_SCRIPT = 'listscript';  //default section for getting list script
-  DOWNLOAD_SCRIPT = 'dwscript'; //default section for download picture script
+  LIST_SCRIPT = 'listscript'; // default section for getting list script
+  DOWNLOAD_SCRIPT = 'dwscript'; // default section for download picture script
 
 type
 
@@ -116,6 +116,7 @@ type
     IsNew: Boolean;
     MenuCaptions: Boolean;
     Tips: Boolean;
+    UseDist: boolean;
   end;
 
   TScriptsRec = record
@@ -836,8 +837,9 @@ type
     FJobList: TJobList;
     FOnPageComplete: TNotifyEvent;
     FTemplateFile: String;
-    //FLastPageTime: TDateTime;
-    //FLastPicTime: TDateTime;
+    FKeywordList: TStringList;
+    // FLastPageTime: TDateTime;
+    // FLastPicTime: TDateTime;
     // procedure SetMaxThreadCount(Value: integer);
     // procedure SetSpacer(Value: Char);
     { FPerPageMode: Boolean; }
@@ -863,12 +865,13 @@ type
     procedure CreatePicJob(t: TDownloadThread);
     procedure CreateLoginJob(t: TDownloadThread);
     function FormatTagString(Tag: String; OldFormat: TTagTemplate): String;
+    function RestoreTagString(Tag: String; NewFormat: TTagTemplate): String;
     procedure CreatePostProcJob(t: TDownloadThread);
     procedure ApplyInherit(R: TResource);
     procedure SetThreadCounter(Value: pThreadCounter);
     procedure FreeThreadCounter;
-    function PageDelayed: boolean;
-    function PicDelayed: boolean;
+    function PageDelayed: Boolean;
+    function PicDelayed: Boolean;
     property CheatSheet: String read FCheatSheet write FCheatSheet;
     property FileName: String read FFileName;
     property Name: String read FResName write FResName;
@@ -914,8 +917,9 @@ type
     property Short: String read FShort;
     property OnPageComplete: TNotifyEvent read FOnPageComplete
       write FOnPageComplete;
-    //property LastPageTime: TDateTime read FLastPageTime;
-    //property LastPicTime: TDateTime read FLastPicTime;
+    property KeywordList: TStringList read FKeywordList;
+    // property LastPageTime: TDateTime read FLastPageTime;
+    // property LastPicTime: TDateTime read FLastPicTime;
     // property TagsSpacer: Char read fSpacer write fSpacer;
   end;
 
@@ -970,6 +974,7 @@ type
     FStopPicsTick: DWORD;
     FCanceled: Boolean;
     FLogMode: Boolean;
+    fUseDist: boolean;
     procedure SetOnPageComplete(Value: TNotifyEvent);
     procedure SetOnError(Value: TLogEvent);
     function GetPicsFinished: Boolean;
@@ -1000,6 +1005,7 @@ type
     function ItemByName(AName: String): TResource;
     function PostProcessFinished: Boolean;
     procedure ApplyInherit;
+    procedure HandleKeywordList;
     property ThreadHandler: TThreadHandler read FThreadHandler;
     property DWNLDHandler: TThreadHandler read FDwnldHandler;
     procedure LoadList(Dir: String);
@@ -1027,9 +1033,11 @@ type
       write SetOnPageComplete;
     property Canceled: Boolean read FCanceled write FCanceled;
     property LogMode: Boolean read FLogMode write SetLogMode;
+    property UseDistribution: Boolean read fUseDist write fUseDist;
   end;
 
 function strFind(Value: string; List: TStringList; var index: integer): Boolean;
+function tagFmt(Spacer, Separator, Isolator: String): TTagTemplate;
 
 implementation
 
@@ -2307,6 +2315,7 @@ procedure TResource.ApplyInherit(R: TResource);
 var
   p: TResource;
   n: integer;
+  i: integer;
 begin
   p := R.Parent;
 
@@ -2317,11 +2326,18 @@ begin
   if FInherit then
   begin
     // FFields.Assign(R.Parent.Fields, laOr);
-
-    n := p.Fields.FindField('tag');
-    if (n > -1) and (VarToStr(p.Fields.Items[n].resvalue) <> '') then
-      FFields['tag'] := FormatTagString(VarToStr(p.Fields.Items[n].resvalue),
-        p.HTTPRec.TagTemplate);
+    if (fKeywordList.Count = 0) then
+    begin
+      if (p.KeywordList.Count = 0) then
+      begin
+        n := p.Fields.FindField('tag');
+        if (n > -1) and (VarToStr(p.Fields.Items[n].resvalue) <> '') then
+          FFields['tag'] := FormatTagString(VarToStr(p.Fields.Items[n].resvalue),
+            p.HTTPRec.TagTemplate);
+      end else
+        for i := 0 to p.KeywordList.Count-1 do
+          fKeywordList.Add(FormatTagString(p.KeywordList[i],p.HTTPRec.TagTemplate));
+    end;
 
     FNameFormat := p.NameFormat;
   end
@@ -2329,13 +2345,17 @@ begin
   begin
     FNameFormat := NameFormat;
 
-    if VarToStr(FFields['tag']) = '' then
-    begin
-      n := p.Fields.FindField('tag');
-      if n > -1 then
-        FFields['tag'] := FormatTagString(VarToStr(p.Fields.Items[n].resvalue),
-          p.HTTPRec.TagTemplate);
-    end;
+    if (VarToStr(FFields['tag']) = '')
+    and (fkeyWordList.Count = 0) then
+      if (p.KeywordList.Count = 0) then
+      begin
+        n := p.Fields.FindField('tag');
+        if (n > -1) and (VarToStr(p.Fields.Items[n].resvalue) <> '') then
+          FFields['tag'] := FormatTagString(VarToStr(p.Fields.Items[n].resvalue),
+            p.HTTPRec.TagTemplate);
+      end else
+        for i := 0 to p.KeywordList.Count-1 do
+          fKeyWordList.Add(FormatTagString(p.KeywordList[i],p.HTTPRec.TagTemplate));
   end;
 end;
 
@@ -2382,8 +2402,10 @@ end;
 function TResource.CanAddThread: Boolean;
 begin
   with FThreadCounter^ do
-    Result := (not FKeepQueue or (CurrentResource = nil) or (CurrentResource = Self))
-    and ((MaxThreadCount = 0) or (MaxThreadCount > 0) and (CurrThreadCount < MaxThreadCount));
+    Result := (not FKeepQueue or (CurrentResource = nil) or
+      (CurrentResource = Self)) and
+      ((MaxThreadCount = 0) or (MaxThreadCount > 0) and
+      (CurrThreadCount < MaxThreadCount));
 end;
 
 constructor TResource.Create;
@@ -2403,6 +2425,7 @@ begin
   FFields.AddField('tag', '', ftString, null, '', false);
   FFields.AddField('login', '', ftNone, null, '', false);
   FFields.AddField('password', '', ftNone, null, '', false);
+  FKeywordList := TStringList.Create;
   FSectors := TValueList.Create;
   FPicFieldList := TStringList.Create;
   FInitialScript := nil;
@@ -2444,6 +2467,7 @@ begin
   FPictureList.Free;
   FSectors.Free;
   FFields.Free;
+  FKeywordList.Free;
   FPicFieldList.Free;
   if Assigned(FInitialScript) then
     FInitialScript.Free;
@@ -2465,17 +2489,9 @@ end;
 function TResource.FormatTagString(Tag: String;
   OldFormat: TTagTemplate): String;
 var
-  // a: array of string;
   s: string;
-  // c: char;
 begin
-  // SetLength(a,0);
   Result := '';
-
-  // if OldFormat.Isolator = '' then
-  // c := #0
-  // else
-  // c := OldFormat.Isolator[1];
 
   while Tag <> '' do
   begin
@@ -2487,6 +2503,26 @@ begin
       Result := Result + FHTTPRec.TagTemplate.Separator +
         FHTTPRec.TagTemplate.Isolator + ReplaceStr(s, OldFormat.Spacer,
         FHTTPRec.TagTemplate.Spacer) + FHTTPRec.TagTemplate.Isolator;
+  end;
+end;
+
+function TResource.RestoreTagString(Tag: String;
+  NewFormat: TTagTemplate): String;
+var
+  s: string;
+begin
+  Result := '';
+
+  while Tag <> '' do
+  begin
+    s := GetNextS(Tag, FHTTPRec.TagTemplate.Separator, FHTTPRec.TagTemplate.Isolator);
+    if Result = '' then
+      Result := NewFormat.Isolator + ReplaceStr(s, FHTTPRec.TagTemplate.Spacer,
+        NewFormat.Spacer) + NewFormat.Isolator
+    else
+      Result := Result + NewFormat.Separator +
+        NewFormat.Isolator + ReplaceStr(s, FHTTPRec.TagTemplate.Spacer,
+        NewFormat.Spacer) + NewFormat.Isolator;
   end;
 end;
 
@@ -3220,14 +3256,16 @@ begin
   FResName := ChangeFileExt(ExtractFileName(FName), '');
 end;
 
-function TResource.PageDelayed: boolean;
+function TResource.PageDelayed: Boolean;
 begin
-  Result := MillisecondsBetween(ThreadCounter.LastPageTime,Date + Time) < FHTTPRec.PageDelay;
+  Result := MillisecondsBetween(ThreadCounter.LastPageTime, Date + Time) <
+    FHTTPRec.PageDelay;
 end;
 
-function TResource.PicDelayed: boolean;
+function TResource.PicDelayed: Boolean;
 begin
-  Result := MillisecondsBetween(ThreadCounter.LastPicTime,Date + Time) < FHTTPRec.PicDelay;
+  Result := MillisecondsBetween(ThreadCounter.LastPicTime, Date + Time) <
+    FHTTPRec.PicDelay;
 end;
 
 function TResource.PicJobComplete(t: TDownloadThread): integer;
@@ -3512,7 +3550,7 @@ end;
 
 function TResourceList.CreateDWNLDJob(t: TDownloadThread): Boolean;
 var
-  R,DR: TResource;
+  R, DR: TResource;
   i: integer;
   n: integer;
 
@@ -3521,6 +3559,9 @@ var
     i: integer;
 
   begin
+    if not fUseDist then
+      dec(n);
+
     for i := n + 1 to Count - 1 do
     begin
       if (FMode = rmNormal) and not Items[i].PictureList.eol or
@@ -3563,8 +3604,10 @@ begin
       and not R.PictureList.posteol) then
     begin
       case FMode of
-        rmPostProcess: R.CreatePostProcJob(t);
-        rmNormal: R.CreatePicJob(t);
+        rmPostProcess:
+          R.CreatePostProcJob(t);
+        rmNormal:
+          R.CreatePicJob(t);
       end;
 
       Result := true;
@@ -3582,8 +3625,10 @@ begin
       and not R.PictureList.posteol) then
     begin
       case FMode of
-        rmPostProcess: R.CreatePostProcJob(t);
-        rmNormal: R.CreatePicJob(t);
+        rmPostProcess:
+          R.CreatePostProcJob(t);
+        rmNormal:
+          R.CreatePicJob(t);
       end;
 
       Result := true;
@@ -3632,7 +3677,7 @@ end;
 
 function TResourceList.CreateJob(t: TDownloadThread): Boolean;
 var
-  R,DR: TResource;
+  R, DR: TResource;
   i: integer;
 
 begin
@@ -3669,21 +3714,31 @@ begin
       end
       else
     else if (not(FPageMode and not R.NextPage) and
-      (not R.JobInitiated or (not R.JobList.eol))) and R.CanAddThread then
-      if not R.PageDelayed or (R.ThreadCounter.CurrThreadCount = 0) then
-      begin
-        R.CreateJob(t);
-        R.NextPage := false;
-        Result := true;
-        inc(FQueueIndex);
-        Exit;
-      end else
-      if not Assigned(DR)
-      or (R.ThreadCounter.LastPageTime < DR.ThreadCounter.LastPageTime) then
-      begin
-        DR := R;
-        inc(FQueueIndex);
-      end;
+      (not R.JobInitiated or (not R.JobList.eol)))
+      and R.CanAddThread then
+        if not R.PageDelayed or (R.ThreadCounter.CurrThreadCount = 0) then
+        begin
+          R.CreateJob(t);
+          R.NextPage := false;
+          Result := true;
+
+          if fUseDist then
+            FQueueIndex := i + 1
+          else
+            fQueueIndex := i;
+
+          Exit;
+        end
+        else if not Assigned(DR) or
+          (R.ThreadCounter.LastPageTime < DR.ThreadCounter.LastPageTime) then
+        begin
+          DR := R;
+
+          if fUseDist then
+            FQueueIndex := i + 1
+          else
+            fQueueIndex := i;
+        end;
   end;
 
   // from start to current
@@ -3692,21 +3747,31 @@ begin
     begin
       R := Items[i];
       if (not(FPageMode and not R.NextPage) and
-        (not R.JobInitiated or (not R.JobList.eol))) and R.CanAddThread then
-      if not R.PageDelayed or (R.ThreadCounter.CurrThreadCount = 0) then
-      begin
-        R.CreateJob(t);
-        R.NextPage := false;
-        Result := true;
-        inc(FQueueIndex);
-        Exit;
-      end else
-      if not Assigned(DR)
-      or (R.ThreadCounter.LastPageTime < DR.ThreadCounter.LastPageTime) then
-      begin
-        DR := R;
-        inc(FQueueIndex);
-      end;
+        (not R.JobInitiated or (not R.JobList.eol)))
+        and R.CanAddThread then
+          if not R.PageDelayed or (R.ThreadCounter.CurrThreadCount = 0) then
+          begin
+            R.CreateJob(t);
+            R.NextPage := false;
+            Result := true;
+
+            if fUseDist then
+              FQueueIndex := i + 1
+            else
+              fQueueIndex := i;
+
+            Exit;
+          end
+          else if not Assigned(DR) or
+            (R.ThreadCounter.LastPageTime < DR.ThreadCounter.LastPageTime) then
+          begin
+            DR := R;
+
+            if fUseDist then
+              FQueueIndex := i + 1
+            else
+              fQueueIndex := i;
+          end;
     end;
 
   // if no task then result = false
@@ -3716,7 +3781,7 @@ begin
     DR.CreateJob(t);
     DR.NextPage := false;
     Result := true;
-    //inc(FQueueIndex);
+    // inc(FQueueIndex);
     Exit;
   end;
 
@@ -3761,6 +3826,27 @@ end;
 function TResourceList.GetPicsFinished: Boolean;
 begin
   Result := (DWNLDHandler.Count = 0) or (FMode = rmPostProcess);
+end;
+
+procedure TResourceList.HandleKeywordList;
+ var
+  i,j,l: integer;
+  n: integer;
+begin
+//at first handle "general" keyword list
+
+  n := Count -1;
+  for i := 0 to n do
+    if (Items[i].KeywordList.Count> 0)then
+    begin
+      Items[i].fields['tag'] := Items[i].KeywordList[0];
+      for j := 1 to Items[i].KeywordList.Count-1 do
+      begin
+        l := CopyResource(Items[i]);
+        Items[l].Fields['tag'] := Items[i].KeywordList[j];
+        Items[l].Parent := Items[i].Parent;
+      end;
+    end;
 end;
 
 function TResourceList.ItemByName(AName: String): TResource;
@@ -3951,10 +4037,11 @@ begin
         begin
           with Items[i] do
           begin
-            if (ThreadCounter.DefinedMaxThreadCount > 0)
-            and (ThreadCounter.DefinedMaxThreadCount < MaxThreadCount) then
-              ThreadCounter.MaxThreadCount :=  ThreadCounter.DefinedMaxThreadCount
-             else
+            if (ThreadCounter.DefinedMaxThreadCount > 0) and
+              (ThreadCounter.DefinedMaxThreadCount < MaxThreadCount) then
+              ThreadCounter.MaxThreadCount :=
+                ThreadCounter.DefinedMaxThreadCount
+            else
               ThreadCounter.MaxThreadCount := MaxThreadCount;
             { if Inherit then
               PictureList.NameFormat := PicFileFormat; }
@@ -3980,10 +4067,11 @@ begin
           if Items[i].Relogin then
             with Items[i] do
             begin
-              if (ThreadCounter.DefinedMaxThreadCount > 0)
-              and (ThreadCounter.DefinedMaxThreadCount < MaxThreadCount) then
-                ThreadCounter.MaxThreadCount :=  ThreadCounter.DefinedMaxThreadCount
-               else
+              if (ThreadCounter.DefinedMaxThreadCount > 0) and
+                (ThreadCounter.DefinedMaxThreadCount < MaxThreadCount) then
+                ThreadCounter.MaxThreadCount :=
+                  ThreadCounter.DefinedMaxThreadCount
+              else
                 ThreadCounter.MaxThreadCount := MaxThreadCount;
               StartJob(JobType);
             end;
@@ -4544,6 +4632,7 @@ procedure TDownloadThread.VE(Value: String; var Result: Variant;
 var
   t: ttag;
   s, tmp: string;
+  p1,p2,p3: string;
   n, n2, i: integer;
   c: Char;
 begin
@@ -4569,6 +4658,8 @@ begin
           tmp := GetNextS(s, '%');
           Result := FPicture.Meta[s];
         end
+        else if SameText(Value, 'main.checkcookie') then
+          Result := HTTPRec.CookieStr
         else if SameText(Value, 'picture.haveparent') then
           Result := Assigned(FPicture.Parent)
         else if SameText(Value, 'main.url') then
@@ -4653,6 +4744,15 @@ begin
             s := gVal(Value);
             Result := trim(ExtractFileExt(Clc(nVal(s))), '.');
           end
+          else if SameText(s, 'charinset') then
+          begin
+            s := gVal(Value);
+
+            p1 := clc(nVal(s));
+            p2 := clc(nVal(s));
+            p3 := clc(nVal(s));
+            Result := CharInSet(p1[1],[p2[1]..p3[1]]);
+          end
           else if SameText(s, 'changename') then
           begin
             s := gVal(Value);
@@ -4717,7 +4817,7 @@ begin
           else if SameText(s, 'length') then
           begin
             s := gVal(Value);
-            Result := length(VartoStr(Clc(nVal(s))));
+            Result := length(VarToStr(Clc(nVal(s))));
           end
           else if SameText(s, 'pos') then
           begin
@@ -4815,7 +4915,7 @@ begin
             s := gVal(Value);
             tmp := nVal(s);
             if s = '' then
-              Result := SysUtils.Trim(Clc(tmp))
+              Result := SysUtils.trim(Clc(tmp))
             else
             begin
               s := Clc(s);
@@ -4919,7 +5019,7 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
           if v1 = 'csv' then
           begin
             v1 := CopyTo(s, ',', ['""'], ['()'], true); // GetNextS(s, ',');
-            v1 := trim(CalcValue(v1, VE, LinkedObj));
+            v1 := ReplaceStr(trim(CalcValue(v1, VE, LinkedObj)),#13#10,' ');
             v2 := trim(CopyTo(s, ',', ['""'], ['()'], true));
             if v2 = '' then
               del := #0
@@ -4933,8 +5033,8 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
             while v1 <> '' do
             begin
               s := GetNextS(v1, del, ins);
-              // FTagList.Add(s);
-              FPicList.Tags.Add(s, FPicture, FHTTPRec.TagTemplate.Spacer);
+              if s <> '' then
+                FPicList.Tags.Add(s, FPicture, FHTTPRec.TagTemplate.Spacer);
               // FPicture.Tags.Add(FPictureList.Tags.Add(s,nil));
             end;
           end;
@@ -5193,8 +5293,8 @@ begin
     FPicture.OnPicChanged(FPicture, FPicture.Changes);
 end;
 
-procedure TDownloadThread.ProcHTTP; //process PAGE request with text content
-var                                 //used if need to parse content
+procedure TDownloadThread.ProcHTTP; // process PAGE request with text content
+var // used if need to parse content
   Result: TStringStream;
   tmp, Url: string;
   Post: TStringList;
@@ -5237,22 +5337,26 @@ begin
           begin
             while true do
             begin
-              CSData.Enter; try
-                ms := MilliSecondsBetween(FResource.ThreadCounter.LastPageTime,Date + Time);
+              CSData.Enter;
+              try
+                ms := MillisecondsBetween(FResource.ThreadCounter.LastPageTime,
+                  Date + Time);
                 if ms >= FHTTPRec.PageDelay then
                 begin
                   FResource.ThreadCounter.LastPageTime := Date + Time;
                   Break;
                 end;
-              finally CSData.Leave; end;
+              finally
+                CSData.Leave;
+              end;
               sleep(FHTTPRec.PageDelay - ms);
             end;
           end;
 
-
           if FHTTPRec.Method = hmPost then
           begin
-            Post := TStringList.Create; try
+            Post := TStringList.Create;
+            try
               if FHTTPRec.Post = '' then
               begin
                 GetPostStrings(Url, Post);
@@ -5264,8 +5368,11 @@ begin
                 GetPostStrings(tmp, Post);
               end;
               FHTTP.Post(Url, Post, Result);
-            finally Post.Free; end;
-          end else
+            finally
+              Post.Free;
+            end;
+          end
+          else
           begin
             FHTTP.Get(Url, Result);
             // Result.Write(s[1],length(s))
@@ -5326,8 +5433,8 @@ begin
             debug_name := IntToStr(FJobIDX);
 
           FXML.TagList.ExportToFile(ExtractFilePath(paramstr(0)) + 'log\' +
-            debug_name);
-          SaveStrToFile(Url + #13#10 + Result.DataString,
+            debug_name, [tcsContent,tcsHelp]);
+          SaveStrToFile('<!-- ' + Url + '-->' + #13#10 + Result.DataString,
             ExtractFilePath(paramstr(0)) + 'log\' + debug_name + '.src');
         end;
         // ---- //
@@ -5364,7 +5471,8 @@ begin
   end;
 end;
 
-procedure TDownloadThread.ProcPic; //used to download and save BINARY data, like pictures
+procedure TDownloadThread.ProcPic;
+// used to download and save BINARY data, like pictures
 const
   buff_size = 11;
 
@@ -5395,36 +5503,39 @@ begin
   begin
     try
 
-      //feature to add childs to album
-      //common version - if picture download error occurs, must be executed
-      //script to check childs for picture (it is not a picture, but album)
-      //check realisation in pixiv.net.csg
+      // feature to add childs to album
+      // common version - if picture download error occurs, must be executed
+      // script to check childs for picture (it is not a picture, but album)
+      // check realisation in pixiv.net.csg
 
-      //after try to get picture iteration resets
-      //and if new iteration get new pictures in list, then
-      //new pictures must be added as childs and thread must be released
+      // after try to get picture iteration resets
+      // and if new iteration get new pictures in list, then
+      // new pictures must be added as childs and thread must be released
 
       if Assigned(FLPicList) and (FPicList.Count > 0) then
       begin
-        CSData.Enter; try
+        CSData.Enter;
+        try
           FLPicList.AddPicList(FPicList, FPicture);
           FPicsAdded := true;
-        finally CSData.Leave; end;
+        finally
+          CSData.Leave;
+        end;
         Break;
       end;
 
-      //feature to try diffirent exts, if it's unknown from start
+      // feature to try diffirent exts, if it's unknown from start
 
       if (FHTTPRec.TryExt <> '') and not Assigned(m) then
         FExt := CopyTo(FHTTPRec.TryExt, ',', [], [], true);
 
-      //creating file
-      //if "get ext by content" enabled then memorystream must by assigned
+      // creating file
+      // if "get ext by content" enabled then memorystream must by assigned
       if not(FHTTPRec.PicTemplate.ExtFromHeader and not Assigned(m)) then
       begin
 
-        //feature to make name by template, like %filename%.%ext%
-        //need if you can't make name for picture in getting list
+        // feature to make name by template, like %filename%.%ext%
+        // need if you can't make name for picture in getting list
 
         if (FHTTPRec.PicTemplate.Name <> '') then
           FName := ReplaceStr(FPicture.FileName, FHTTPRec.PicTemplate.Name,
@@ -5454,7 +5565,7 @@ begin
               FPicture.Pos; }
             f := TFileStream.Create(FName, FmOpenRead or fmShareDenyWrite);
             try
-              FPicture.MakeMD5(f);  //if file exists, create MD5 for it
+              FPicture.MakeMD5(f); // if file exists, create MD5 for it
             finally
               f.Free;
             end;
@@ -5462,7 +5573,8 @@ begin
             FPicture.Pos := 0;
             FPicture.Changes := [pcSize, pcProgress, pcData];
             FPicture.FactFileName := FName;
-            Synchronize(PicChanged); //call picture changed to change it in visible table
+            Synchronize(PicChanged);
+            // call picture changed to change it in visible table
             // FCS.Leave;
             Exit;
           end;
@@ -5472,10 +5584,10 @@ begin
 
           f := TFileStream.Create(FName, fmCreate);
 
-          //feature to get ext AFTER it downloaded
-          //some resources uses wrong ext or not use it at all
-          //this feature allows to get ext by content
-          //if feature enabled, picture downloaded to the memory, and after it to the drive
+          // feature to get ext AFTER it downloaded
+          // some resources uses wrong ext or not use it at all
+          // this feature allows to get ext by content
+          // if feature enabled, picture downloaded to the memory, and after it to the drive
 
           if FHTTPRec.PicTemplate.ExtFromHeader and Assigned(m) and
             (m.Size = FPicture.Size) then
@@ -5496,7 +5608,7 @@ begin
       try
         HTTP.Request.Referer := FHTTPRec.Referer;
 
-        //checkproto - allows to make full urls from short '//:url/page','/page' and other using referer
+        // checkproto - allows to make full urls from short '//:url/page','/page' and other using referer
 
         if FExt = '' then
           Url := CheckProto(HTTPRec.Url, HTTPRec.Referer)
@@ -5504,8 +5616,8 @@ begin
           Url := CheckProto(ReplaceStr(HTTPRec.Url, FHTTPRec.PicTemplate.Ext,
             FExt), HTTPRec.Referer);
 
-        if SameText(Copy(Url, 1, 6), 'https:') then //enable SSL for HTTPS
-        begin                                       // OpenSSL must be installed
+        if SameText(Copy(Url, 1, 6), 'https:') then // enable SSL for HTTPS
+        begin // OpenSSL must be installed
           FHTTP.IOHandler := FSSLHandler;
           FHTTP.ConnectTimeout := 0;
           FHTTP.ReadTimeout := 0;
@@ -5513,16 +5625,20 @@ begin
         else
           FHTTP.IOHandler := nil;
 
-        //Delay feature for retarted resources
-        //not really queue, threads just get his work by "who faster" rule
+        // Delay feature for retarted resources
+        // not really queue, threads just get his work by "who faster" rule
 
         if FHTTPRec.PicDelay > 0 then
         begin
-          CSData.Enter; try
-            ms := MilliSecondsBetween(FResource.ThreadCounter.LastPicTime,Date + Time);
-            if ms >= FHTTPRec.PicDelay  then
+          CSData.Enter;
+          try
+            ms := MillisecondsBetween(FResource.ThreadCounter.LastPicTime,
+              Date + Time);
+            if ms >= FHTTPRec.PicDelay then
               FResource.ThreadCounter.LastPicTime := Date + Time;
-          finally CSData.Leave; end;
+          finally
+            CSData.Leave;
+          end;
 
           if ms < FHTTPRec.PicDelay then
           begin
@@ -5532,23 +5648,27 @@ begin
 
             while true do
             begin
-              Sleep(FHTTPRec.PicDelay - ms);
-              CSData.Enter; try //critical sections prevent from collisions and "the same time checking"
-                ms := MilliSecondsBetween(FResource.ThreadCounter.LastPicTime,Date + Time);
-                if ms < FHTTPRec.PicDelay  then
+              sleep(FHTTPRec.PicDelay - ms);
+              CSData.Enter;
+              try // critical sections prevent from collisions and "the same time checking"
+                ms := MillisecondsBetween(FResource.ThreadCounter.LastPicTime,
+                  Date + Time);
+                if ms < FHTTPRec.PicDelay then
                   Continue
                 else
                 begin
                   FResource.ThreadCounter.LastPicTime := Date + Time;
                   Break;
                 end;
-              finally CSData.Leave; end;
+              finally
+                CSData.Leave;
+              end;
             end;
           end;
 
-          //CSData.Enter; try
-          //FResource.ThreadCounter.LastPicTime := Date + Time
-          //finally CSData.Leave; end;
+          // CSData.Enter; try
+          // FResource.ThreadCounter.LastPicTime := Date + Time
+          // finally CSData.Leave; end;
         end;
 
         FPicture.Status := JOB_INPROGRESS;
@@ -5556,12 +5676,12 @@ begin
         Synchronize(PicChanged);
 
         if FHTTPRec.PicTemplate.ExtFromHeader and not Assigned(m) then
-        begin  //if ext from content enabled and picture not downloded to the memory
+        begin // if ext from content enabled and picture not downloded to the memory
           m := tMemoryStream.Create;
           try
             HTTP.Request.ContentRangeStart := 1;
             HTTP.Request.ContentRangeEnd := buff_size;
-            HTTP.Get(Url, m);  //get BINARY to the memory
+            HTTP.Get(Url, m); // get BINARY to the memory
 
             if ReturnValue = THREAD_FINISH then
             begin
@@ -5570,7 +5690,7 @@ begin
               Break;
             end;
 
-            m.Position := 0;              //read ext from BINARY
+            m.Position := 0; // read ext from BINARY
             m.Read(buff[0], buff_size);
             FExt := ImageFormat(@buff[0]);
 
@@ -5598,22 +5718,23 @@ begin
             // m.Free;
           end;
         end
-        else  //direct download to the file on drive
+        else // direct download to the file on drive
           HTTP.Get(Url, f);
         // HTTP.Disconnect;
 
         if ReturnValue = THREAD_FINISH then
           FJob := JOB_CANCELED;
 
-        if FPicture.Size <> f.Size then //if downloaded file size not equal with "internet" file size
-        begin                           //then is error (server inerrupted downloading without messages)
+        if FPicture.Size <> f.Size then
+        // if downloaded file size not equal with "internet" file size
+        begin // then is error (server inerrupted downloading without messages)
           f.Free;
           FPicture.Size := 0;
           FPicture.Pos := 0;
           DeleteFile(FName);
           if (ReturnValue = THREAD_FINISH) then
-            //nothing there, derp
-          else if (FRetries < FMaxRetries) then //retries feature
+            // nothing there, derp
+          else if (FRetries < FMaxRetries) then // retries feature
           begin
             inc(FRetries);
             Continue;
@@ -5625,7 +5746,8 @@ begin
         begin
           FPicture.MakeMD5(f);
           f.Free;
-          FPicture.FactFileName := FName; //saving "real" name, file name on the drive
+          FPicture.FactFileName := FName;
+          // saving "real" name, file name on the drive
         end;
 
         Break;
@@ -5641,7 +5763,8 @@ begin
           if (ReturnValue = THREAD_FINISH) then
             Break;
 
-          if e.LastError = 10054 then  //if is "disconnect gracefully" error then just disconnect and try again
+          if e.LastError = 10054 then
+          // if is "disconnect gracefully" error then just disconnect and try again
             try
               HTTP.Disconnect
             except
@@ -5670,7 +5793,7 @@ begin
             Continue;
 
           if (HTTP.ResponseCode <> 404) and (FRetries < FMaxRetries) then
-            inc(FRetries)  //404 not need to retry
+            inc(FRetries) // 404 not need to retry
           else if FHTTPRec.TryExt <> '' then
             FRetries := 0
           else
@@ -5704,7 +5827,8 @@ begin
   FPostProc.Process(SE, DE, FE, VE, VE);
 end;
 
-procedure TDownloadThread.ProcLogin; //login process, simple version of ProcHTTP
+procedure TDownloadThread.ProcLogin;
+// login process, simple version of ProcHTTP
 var
   Url: string;
   poststr: string;
@@ -7095,7 +7219,10 @@ var
         d := 2;
       end
       else if SameText(s, 'tag') then
+        with pic.tags do
         Value := VarToStr(Pic.Resource.Fields['tag'])
+        //Pic.Resource.RestoreTagString
+        //  (VarToStr(Pic.Resource.Fields['tag']), tagFmt(Spacer, Separator, Isolator))
       else if SameText(s, 'tags') then
       begin
         if p = '' then
@@ -7862,6 +7989,13 @@ begin
       raise;
     end;
   end;
+end;
+
+function tagFmt(Spacer, Separator, Isolator: String): TTagTemplate;
+begin
+  Result.Spacer := Spacer;
+  Result.Separator := Separator;
+  Result.Isolator := Isolator;
 end;
 
 initialization

@@ -12,6 +12,9 @@ object Form1: TForm1
   Font.Style = []
   OldCreateOrder = False
   OnCreate = FormCreate
+  DesignSize = (
+    447
+    298)
   PixelsPerInch = 96
   TextHeight = 13
   object Button1: TButton
@@ -28,8 +31,10 @@ object Form1: TForm1
     Top = 111
     Width = 431
     Height = 155
+    Anchors = [akLeft, akTop, akRight, akBottom]
     Lines.Strings = (
-      'Memo1')
+      'derp <a href="de"rp" /> << </a>')
+    ScrollBars = ssBoth
     TabOrder = 1
   end
   object Button3: TButton

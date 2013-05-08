@@ -38,7 +38,7 @@ var
 implementation
 
 {$R *.dfm}
-uses common;
+uses common, MyXMLParser;
 
 procedure TForm1.ApplicationEvents1Message(var Msg: tagMSG;
   var Handled: Boolean);
@@ -116,14 +116,25 @@ end;
 
 procedure TForm1.Button5Click(Sender: TObject);
 var
-  h: tmyidhttp;
+  //h: tmyidhttp;
+  xml: tMyXMLParser;
+  s: tstringlist;
 begin
-  memo1.Text := CheckProto(edit1.Text,'https://herp.derp/hurr/durr/durr.html');
+  xml := tMyXMLParser.Create; try
+    s := tstringlist.Create; try
+      s.LoadFromFile(ExtractFilePath(paramstr(0))+'test.html');
+      xml.Parse(s.Text,true);
+      s.Text := xml.TagList.Text;
+      s.SaveToFile(ExtractFilePath(paramstr(0))+'result.html');
+      xml.Parse(memo1.Text,true);
+      memo1.Text := xml.TagList.Text;
+    finally s.Free end;
+  finally xml.Free; end;
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  Msg_TaskbarButtonCreated := RegisterWindowMessage('TaskbarButtonCreated');
+  //Msg_TaskbarButtonCreated := RegisterWindowMessage('TaskbarButtonCreated');
 end;
 
 

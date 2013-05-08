@@ -628,6 +628,7 @@ begin
   f := n.SecondFrame as TfNewList; // TfNewList(n.Tag);
   f.ResetItems;
   f.ActualResList.ApplyInherit;
+  f.ActualResList.HandleKeywordList;
 
   //f.FullResList[0].Name := 'defaultresource';
   SaveResourceSettings(f.FullResList[0],nil,true);
@@ -787,7 +788,8 @@ begin
       try
         for i := 0 to ResList.Count - 1 do
         begin
-          c := dm.CreateField(vgTagsMain, 'vgT' + IntTOStr(i), ResList[i].Name,
+          c := dm.CreateField(vgTagsMain, 'vgT' + IntTOStr(i), ResList[i].Name
+            + '(' + VarToStr(ResList[i].Fields['tag'] + ')'),
             '', ftString, nil, ifn(ResList.ListFinished,
             ifn(ResList.PicsFinished, '', // if pics
             IntTOStr(ResList[i].PictureList.PicCounter.FSH + ResList[i]
