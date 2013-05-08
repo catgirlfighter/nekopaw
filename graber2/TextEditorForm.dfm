@@ -53,5 +53,14 @@ object fTextEdit: TfTextEdit
       ModalResult = 2
       TabOrder = 1
     end
+    object btnClear: TcxButton
+      Left = 320
+      Top = 6
+      Width = 75
+      Height = 25
+      Caption = 'btnClear'
+      TabOrder = 2
+      OnClick = btnClearClick
+    end
   end
 end

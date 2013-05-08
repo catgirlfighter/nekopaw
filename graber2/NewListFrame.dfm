@@ -304,6 +304,7 @@ object fNewList: TfNewList
   object pmFavList: TPopupMenu
     AutoHotkeys = maManual
     AutoPopup = False
+    OnPopup = pmFavListPopup
     Left = 264
     Top = 152
     object AddFav1: TMenuItem

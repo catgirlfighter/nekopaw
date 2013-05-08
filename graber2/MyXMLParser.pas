@@ -11,6 +11,7 @@ type
     Name: String;
     Value: String;
     Compare: Char;
+    qtype: boolean;
   end;
 
   TAttrs = array of TAttr;
@@ -28,7 +29,8 @@ type
     procedure Assign(AAttrs: TAttrList);
     property Attribute[AValue: Integer]: TAttr read GetAttr; default;
     property Count: Integer read GetCount;
-    procedure Add(AName: String; AValue: String; FCompVal: Char = #0);
+    procedure Add(AName: String; AValue: String; ACompVal: Char = #0;
+      AQType: Boolean = false);
     procedure Clear;
     function Value(AName: String): String;
     function IndexOf(AName: String): Integer;
@@ -41,11 +43,12 @@ type
 
   TTagList = class;
 
-  TTagKind = (tkTag,tkText);
+  TTagKind = (tkTag,tkInstruction,tkDeclaration,tkComment,tkText);
 
   TTextKind = (txkFullWithTags,txkFull,txkCurrent);
 
   TTagState = (tsNormal,tsOnlyText,tsClosable);
+  TContentState = (csUnknown,csEmpty,csContent);
 
   TTag = class(TObject)
   private
@@ -58,6 +61,7 @@ type
     FClosed: boolean;
     FTag: Integer;
     fState: TTagState;
+    fCState: tContentState;
   protected
     procedure SetName(Value: String);
     procedure SetText(Value: String);
@@ -76,7 +80,11 @@ type
     property Closed: Boolean read FClosed write FClosed;
     property Tag: Integer read FTag write FTag;
     property State: TTagState read fState write fState;
+    property ContentState: tContentState read fCState write fCState;
   end;
+
+  tTagCommentStates = (tcsContent,tcsHelp);
+  tTagCommentState = set of tTagCommentStates;
 
   TTagList = class(TList)
     protected
@@ -87,9 +95,10 @@ type
       procedure GetList(Tags: array of string; AAttrs: array of TAttrList;
         AList: TTagList); overload;
       procedure CopyList(AList: TTagList; Parent: TTag);
-      procedure ExportToFile(fname: string);
+      procedure ExportToFile(fname: string; Comments: tTagCommentState);
       function FirstItemByName(tagname: string): ttag;
-    function Text: String;
+      function Text(Comments: tTagCommentState): String; overload;
+      function Text: String; overload;
       property Items[ItemName: integer]: TTag read Get; default;
       function CreateChild(Parent: TTag; AName: String = '';
         TagKind: TTagKind = tkTag): TTag;
@@ -109,7 +118,7 @@ type
     FTagList: TTagList;
   protected
     procedure CheckHTMLTag(tag: ttag);
-    function CheckHTMLStat(tag: string): boolean;
+    function CheckHTMLStat(tag: string): TContentState;
   public
     procedure JSON(starttag: string; const S: TStrings); overload;
     procedure JSON(starttag: string; S: String); overload;
@@ -232,7 +241,10 @@ end;
 
 {*********** JSON ********************}
 
-procedure WriteList(List: TTagList; var s: String);
+procedure WriteList(List: TTagList; var s: String; Comments: tTagCommentState);
+const
+  qbool: array[Boolean] of String = ('"','''');
+
 var
   i,j: integer;
   tmp: string;
@@ -241,19 +253,44 @@ begin
   begin
     if List[i].Kind = tkText then
       s := s + List[i].Name
-    else
+    else if(List[i].Kind = tkComment) then
+      if tcsContent in Comments then
+        s := s + '<!--' + List[i].Name + '-->'
+      else
+    else if List[i].Kind = tkDeclaration then
+      s := s + '<!' + List[i].Name + '>'
+    else if List[i].Kind = tkInstruction then
+    begin
+      tmp := List[i].Name;
+      for j := 0 to List[i].Attrs.Count-1 do
+          tmp := tmp + ' ' + List[i].Attrs[j].Name + '=' + qbool[List[i].Attrs[j].qtype]
+          + List[i].Attrs[j].Value + qbool[List[i].Attrs[j].qtype];
+      s := s + '<?' + tmp + '?>';
+    end else
     begin
       tmp := '<' + List[i].Name;
       for j := 0 to List[i].Attrs.Count-1 do
-          tmp := tmp + ' ' + List[i].Attrs[j].Name + '="'
-          + List[i].Attrs[j].Value + '"';
-      if not List[i].Closed and (List[i].Childs.Count = 0) then
-        s := s + (tmp + ' />')
+          tmp := tmp + ' ' + List[i].Attrs[j].Name + '=' + qbool[List[i].Attrs[j].qtype]
+          + List[i].Attrs[j].Value + qbool[List[i].Attrs[j].qtype];
+      if not List[i].Closed and (List[i].Childs.Count = 0)
+      and not (List[i].ContentState in [csContent]) then
+        s := s + tmp + ' />'
       else
       begin
         s := s + (tmp + '>');
-        WriteList(List[i].Childs,s);
-        s := s + ('</' + List[i].Name + '>');
+        WriteList(List[i].Childs,s,Comments);
+
+        if (tcsHelp in Comments) and (List[i].Attrs.Count > 0) then
+        begin
+          s := s + '</' + List[i].Name + '><!--';
+
+          for j := 0 to List[i].Attrs.Count-1 do
+            s := s + ' ' + List[i].Attrs[j].Name + '=' + qbool[List[i].Attrs[j].qtype]
+            + List[i].Attrs[j].Value + qbool[List[i].Attrs[j].qtype];
+          s := s + ' -->';
+
+        end else
+          s := s + '</' + List[i].Name + '>';
       end;
     end;
   end;
@@ -275,10 +312,15 @@ begin
   end;
 end;
 
-function TTagList.Text: String;
+function TTagList.Text(Comments: tTagCommentState): String;
 begin
   Result := '';
-  WriteList(Self,Result);
+  WriteList(Self,Result,Comments);
+end;
+
+function TTagList.Text: String;
+begin
+  Result := Text([tcsContent]);
 end;
 
 function TTagList.Get(ItemIndex: Integer): TTag;
@@ -428,6 +470,12 @@ end;
 function TTagList.CreateChild(Parent: TTag; AName: String = '';
   TagKind: TTagKind = tkTag): TTag;
 begin
+  if (TagKind in [tkText]) and (AName = '') then
+  begin
+    Result := nil;
+    Exit;
+  end;
+
   Result := TTag.Create(AName,TagKind);
   Result.Parent := Parent;
   if Parent <> nil then
@@ -436,7 +484,7 @@ begin
     Add(Result);
 end;
 
-procedure TTagList.ExportToFile(fname: string);
+procedure TTagList.ExportToFile(fname: string; Comments: tTagCommentState);
 
 var
   s: tstringlist;
@@ -445,7 +493,7 @@ begin
   st := '';
   s := tstringlist.Create;
   try
-    WriteList(Self,st);
+    WriteList(Self,st,Comments);
     s.Text := st;
     s.SaveToFile(fname,TEncoding.UTF8);
   finally
@@ -503,6 +551,7 @@ begin
   FAttrList := TAttrList.Create;
   FTag := 0;
   fState := tsnormal;
+  fCState := csUnknown;
 end;
 
 destructor TTag.Destroy;
@@ -606,14 +655,19 @@ begin
   Result := FNoParam and not(Count > 0);
 end;
 
-procedure TAttrList.Add(AName: String; AValue: String; FCompVal: Char = #0);
+procedure TAttrList.Add(AName: String; AValue: String; ACompVal: Char = #0;
+  AQType: Boolean = false);
 begin
+  if AName = '' then
+    Exit;
+
   SetLength(FAttrs, length(FAttrs) + 1);
   with FAttrs[length(FAttrs) - 1] do
   begin
     Name := AName;
     Value := AValue;
-    Compare := FCompVal;
+    Compare := ACompVal;
+    QType := AQType;
   end;
 //  FNoParam := false;
 end;
@@ -686,240 +740,89 @@ begin
   inherited;
 end;
 
+procedure tMyXMLParser.Parse(S: String; html: boolean = false);
 
-procedure TMyXMLParser.Parse(S: String; html: boolean = false);
 var
-  FTag: TTag;
+  i: integer; //counter
+  l: integer; //string length
+  qt: byte; //0 - no quotes, 1 - ", 2 - '
+  istag: byte; //0 - not a tag, 1 - searching tag bounds, 2 - creating tag
+  lbr,rbr: integer;//< and > pos
+  lstart: integer;// start copy position, is first symbol after tag ends
+  ps,pe: integer; //param's start and end
+  tps,tpe: integer; //remembered start and end of parameter before equal sign,
+                    //little fix to avoid stupid
+                    //using of isolator symbols inside isolated strings
+  vs,ve: integer; //value's start and end
+  qtp: integer;   //quote pos, need to know, which type used last time
+  eq: integer; //equal sign pos
+  isparam: boolean; //true - param part, false - value part;
+  comm: byte; //is comment
+  instr: boolean; //is xml instructions
+  closetag: boolean; //is tag closing
 
-  function parsetag(adata: string): boolean;
+  fTag: tTag; // current tag
+  tmpTag: ttag; //temporary tag
 
-    function trimquotes(S: string): string;
-    begin
-      S := trim(S);
-      if (length(S) > 0) and CharInSet(S[1], ['"', '''']) then
-        delete(S, 1, 1);
-      if (length(S) > 0) and CharInSet(S[length(S)], ['"', '''']) then
-        delete(S, length(S), 1);
-      Result := S;
-    end;
-
-  var
-    tagname: string;
-    lastattr, attrparams: string;
-    Attrs: TAttrList;
-    i, li, l, state: Integer;
-    stat: Integer;
-    tmptag: ttag;
+  procedure tag_separate;
   begin
-    Attrs := TAttrList.Create;
-    lastattr := '';
-    tagname := '';
-    stat := 1;
-//    adata := StringReplace(adata, #13, '', [rfReplaceAll]);
-//    adata := StringReplace(adata, #10, ' ', [rfReplaceAll]);
-//    adata := StringReplace(adata, #9, ' ', [rfReplaceAll]);
-    // adata := REPLACE(adata,'  ',' ',false,true);
-    adata := adata + ' ';
-    li := 1;
-    l := length(adata);
-    state := 0;
-    for i := 1 to l do
+    if (istag <> 0) and (comm = 0) then //if is tag creating mode
     begin
-      if li > i then
-        continue;
-      case adata[i] of
-        '/':
-          case state of
-            0:
-              if tagname = '' then
-                if i = l - 1 then
-                begin
-                  tagname := copy(adata, li, i - li);
-                  stat := 0;
-                end else
-                begin
-                  li := i + 1;
-                  stat := -1;
-                  Break;
-                end
-              else
-              begin
-                if (lastattr <> '') then
-                  Attrs.Add(lastattr, attrparams);
-                lastattr := copy(adata, li, i - li);
-                attrparams := '';
-                if (lastattr <> '') then
-                  Attrs.Add(lastattr, attrparams);
-                stat := 0;
-                Break;
-              end;
-            1:
-              if (i = l - 1) and
-                ((state = 1) and (CharInSet(adata[i - 1], [' ', '"', ''''])) or
-                (state = 0)) then
-              begin
-                attrparams := trimquotes(copy(adata, li, i - li));
-                Attrs.Add(lastattr, attrparams);
-                stat := 0;
-                Break;
-              end;
-          end;
-        ' ',#13,#10,#9:
-          case state of
-            0:
-              begin
-                if (tagname = '') then
-                begin
-                  tagname := copy(adata, li, i - li);
-                  if (length(tagname) = 0)
-                  or (length(tagname) > 0) and CharInSet(tagname[1], ['!']) then
-                  begin
-                    stat := 2;
-                    Break;
-                  end;
-                end
-                else
-                begin
-                  if lastattr <> '' then
-                    Attrs.Add(lastattr, attrparams);
-                  lastattr := copy(adata, li, i - li);
-                  attrparams := '';
-                  if lastattr = '/' then
-                  begin
-                    stat := 0;
-                    Break;
-                  end;
-                end;
-                li := i + 1;
-                while (li < l) and (adata[li] = ' ') do
-                  inc(li);
-              end;
-            1:
-              begin
-                state := 0;
-                attrparams := trimquotes(copy(adata, li, i - li));
-                if (i = l) and (lastattr<>'') then
-                  Attrs.Add(lastattr, attrparams);
-                li := i + 1;
-                while (li < l) and (adata[li] = ' ') do
-                  inc(li);
-              end;
-          end;
-        '=':
-          if (tagname <> '') and (state = 0) then
-          begin
-            state := 1;
-            if (li <> i) and (lastattr <> '') then
-              Attrs.Add(lastattr, attrparams);
-            lastattr := copy(adata, li, i - li);
-            attrparams := '';
-            li := i + 1;
-            while (li < l) and (adata[li] = ' ') do
-              inc(li);
-          end;
-        '"':
-          if tagname <> '' then
-            case state of
-              1:
-                state := 2;
-              2:
-                state := 1;
-            end;
-        '''':
-          if tagname <> '' then
-            case state of
-              1:
-                state := 3;
-              3:
-                state := 1;
-            end;
-      end;
-    end;
 
-    if (stat = 1) and CheckHTMLStat(tagname) then
-      stat := 0;
-
-    case stat of
-      - 1:
+      if isparam then
       begin
-        result := not(Assigned(ftag) and (FTag.State = tsOnlyText))
-                  or SameText(copy(adata, li, length(adata) - li),Ftag.Name);
-        if result then
-        begin
-          if Assigned(FOnEndTag) then
-            //FOnEndTag(copy(adata, li, length(adata) - li));
-            FOnEndTag(FTag);
+        if (pe < lbr) and (istag = 2) and not closetag then  //create tag if it is tag name (first param)
+          if Assigned(fTag) then
+            fTag := fTag.Childs.CreateChild(fTag,copy(s,ps,i-ps),tkTag)
+          else
+            fTag := fTagList.CreateChild(fTag,copy(s,ps,i-ps),tkTag);
 
-          if Assigned(FTag) then
+        if Assigned(ftag) and closetag then  //if is tag closing
+        begin                  //find what we closing, and return to it's parent
+
+          if (fTag.State in [tsOnlyText])                //if is text only mode
+          and not SameText(ftag.Name,copy(s, ps, i - ps)) then //and close tag not the same as current tag
+            istag := 0                               //just leave tag without actions
+          else
           begin
-            tmptag := FTag.FindParent(copy(adata, li, length(adata) - li),true);
+            tmptag := FTag.FindParent(copy(s, ps, i - ps),true);
             if Assigned(tmptag) then
             begin
-              tmptag.Closed := true;
+              tmptag.Closed := true; //mark as "we are closed it with our hand"
+                                     //not all tags closes by us, some of them just thrown opened
+                                     //using it we can handle it
               FTag := tmptag.Parent;
-              //FTag := FTag.Parent;
             end;
+            closetag := false;
+            if istag = 1 then //if is searching mode then not need to go into create mode
+              istag := 0;
           end;
-        end;
-      end;
-      0:
+        end;// else
+          //  closetag := false;
+
+        if pe < ps then
+          pe := i - 1;
+          
+      end else if (vs > eq) then
       begin
-        result := not (Assigned(ftag) and (FTag.State = tsOnlyText));
-        if result then
-        begin
-          FTag := TagList.CreateChild(FTag);
-          FTag.Name := tagname;
-          FTag.Attrs.Assign(Attrs);
-          //Attrs.Free;
-
-          if Assigned(FOnEmptyTag) then
-            //FOnEmptyTag(tagname, Attrs);
-            FOnEmptyTag(FTag);
-
-          //FTag.Closed := true;
-          FTag := FTag.Parent;
-        end;
+        if (ve < eq) then
+          ve := i - 1;
+        isparam := true;
       end;
-      1:
-      begin
-        result := not (Assigned(ftag) and (FTag.State = tsOnlyText));
-        if result then
-        begin
-          FTag := TagList.CreateChild(FTag);
-          FTag.Name := tagname;
-          FTag.Attrs.Assign(Attrs);
-
-          if html then
-            CheckHTMLTag(FTag);
-
-          //Attrs.Free;
-
-          if Assigned(FOnStartTag) then
-            //FOnStartTag(tagname, Attrs);
-            FOnStartTag(FTag);
-        end;
-      end;
-      else result := false;
+      
     end;
-    Attrs.Free;
+
   end;
 
-  function checkstr(S: string): boolean;
-  var
-    i: Integer;
-  begin
-    S := trim(S);
-    Result := true;
-    for i := 1 to length(S) do
-      if not CharInSet(S[i], [' ', #13, #10]) then
-        Exit;
-    Result := false;
+  procedure attr_add; //create parameter procedure
+  begin               //usualy call after SECOND parameter called or in the end of tag
+    if (istag = 2) and (vs > eq)
+    and (tps > lbr) and (tpe < eq) then
+      if (qtp > eq) and (s[qtp] = '''') then
+        ftag.Attrs.Add(copy(s,tps,tpe-tps+1),copy(s,vs,ve-vs+1),#0,true)
+      else
+        ftag.Attrs.Add(copy(s,tps,tpe-tps+1),copy(s,vs,ve-vs+1),#0,false);
   end;
-
-var
-  i, li, l, state,intag: Integer;
-  txt: string;
-  sr: string;
 
 begin
   if not Assigned(FTagList) then
@@ -927,170 +830,335 @@ begin
   else
     FTagList.Clear;
 
-  FTag := nil;
+  i := 1; l := length(s); lstart := 1;
+  qt := 0; eq := 0;
+  istag := 0;
+  lbr := 0; rbr := 0;
+  ps := 0; pe := 0;
+  qtp := 0;
+  vs := 0; ve := 0;
+  fTag := nil;
+  comm := 0;
+  instr := false;
+  closetag := false;
 
-//  try
-    S := DeleteFromTo(S,'<!--','-->',true,true);
-    txt := '';
-    state := 0;
-    intag := 0;
-    l := length(S);
-    i := 1;
-    li := 1;
-    while true do
-    begin
-      while (i <= l) and (S[i] <> '<')
-      or ((i < l) and CharInSet(s[i+1],[' ',#13,#10,#9])) do
-        inc(i);
-      txt := copy(S, li, i - li);
-      if trim(txt) <> '' then
-      begin
-        if Assigned(FTag) then
-          FTag.Childs.CreateChild(FTag,txt,tkText);
-        if Assigned(FOnContent) and (checkstr(txt)) then
-          FOnContent(FTag,txt);
-      end;
-      inc(i);
-      li := i;
-      if i >= l then
-        Break;
-      while (i <= l) and ((S[i] <> '>') or (state <> 0) or (intag > 0)) do
-      begin
-        case S[i] of
-          '<': if Assigned(ftag) and (ftag.State = tsOnlyText) then
-                Break
-               else
-                inc(intag);
-          '>': dec(intag);
-          '"':
-            case state of
-              0:
-                state := 1;
-              1:
-                state := 0;
-            end;
-          '''':
-            case state of
-              0:
-                state := 2;
-              2:
-                state := 0;
-            end;
-        end;
-        inc(i)
-      end;
-
-      if i > l then
-        Break
-      else if Assigned(ftag) and (ftag.State = tsOnlyText) and (s[i] = '<') then
-        Continue;
-
-      sr := copy(S, li, i - li);
-      if parsetag(sr) then
-      begin
-        inc(i);
-        li := i;
-      end else
-      begin
-        i := li;
-        li := li - 1;
-      end;
-    end;
-{  finally
-    FTag.Free;
-  end;   }
-end;
-
-(*
-procedure TMyXMLParser.Parse(S: String);
-var
-  part: string;
-  Parent: TTag;
-  Child: TTag;
-  state: integer;
-  val,attrname: string;
-
-  procedure AddChild(Child,Parent: TTag);
+  while i <= l do
   begin
-    if Assigned(Child) then
-      if Assigned(Parent) then
-        Parent.Childs.Add(Child)
-      else
-        TagList.Add(Child);
-  end;
-
-begin
-  Child := nil;
-  while s <> '' do
-  begin
-    Part := CopyTo(S,'<',[],true); //text
-    if (part <> '') then
-    begin
-      Child := TTag.Create(part,tkText);
-      AddChild(Child,Parent);
-    end;
-
-    Part := CopyTo(S,'>',['''''','""'],true);  //tag
-    if (Part <> '') then
-    begin
-      state := 0;
-      val := trim(CopyTo(part,' ',['''''','""'],true));
-      if (val <> '') then
-      if val[1] = '!' then
+    case s[i] of
+      '<':           //left bracket starts tag
       begin
-        if part <> '' then
-          Child := TTag.Create(val + ' ' + part,tkText)
-        else
-          Child := TTag.Create(val);
-        AddChild(Child,Parent);
-      end
-      else
+        if qt = 0 then //ignore isolated brackets
         begin
-          Child := ttag.Create(val);
-          AddChild(Child,Parent);
-          while part <> '' do
-          begin
-            val := CopyTo(part,' ',['''''','""'],true);
-            if val <> '' then
-              case state of
-                0:
-                  if val = '=' then
-                    state := 1
-                  else
-                  begin
-                    if attrname <> '' then
-                      Child.Attrs.Add(attrname,'');
-                    attrname := val;
-                  end;
-                1:
-                  begin
-                    if attrname <> '' then
-                      Child.Attrs.Add(attrname,val)
-                    else
-                      raise Exception.Create('XML parse error: unknown parameter for value '
-                        + val);
-                  end;
+
+          case istag of
+            0:
+            begin
+              if not Assigned(fTag) //if is "OnlyText" State (ex. javascript content)
+              or not (fTag.State in [tsOnlyText])
+              or (i < l) and (s[i+1] = '/') then
+              begin
+                istag := 1;  //if is non-tag then going to "searching tag" mode
+                lbr := i;
+                ps := 0; pe := 0; tps := 0; tpe := 0;
+                vs := 0; ve := 0;
+                isparam := true;
+                instr := false;
               end;
+            end;
+            1: if comm = 0 then lbr := i;//if multiple '<' then all previous will be ignored (and going to the non-tag part)
+                                         //it happens in bad xml and we're need to solve it somehow
+            2:
+            begin
+              isparam := true; //next text will be param
+              ps := 0; pe := 0; tps := 0; tpe := 0;
+              vs := 0; ve := 0;
+              instr := false;
+              //comm := false;
+            end;
           end;
         end;
+      end;
+      '>':          //right bracket ends tag
+      begin
+        if qt = 0 then   //ignore isolated brackets
+        begin
+          //rbr := i;
+          case istag of
+            1:
+            begin
+              if ps > lbr then
+              begin
+                rbr := i;
+
+                if Assigned(fTag) then //add all non-tag text to the current tag
+                  fTag.Childs.CreateChild(fTag,copy(s, lstart, lbr - lstart),tkText)
+                else
+                  fTagList.CreateChild(nil,copy(s, lstart, lbr - lstart),tkText);
+
+                tag_separate;
+
+                if istag = 1 then //can be changed in tag_separate if is tag closing
+                begin            
+
+                  istag := 2; //if is searching tag mode then going to creating tag mode
+                  i := lbr - 1;
+                end else
+                  if not Assigned(fTag)
+                  or not (fTag.State in [tsOnlyText])
+                  or fTag.Closed then
+                    lstart := i + 1;
+              end else if comm > 0 then
+              begin
+
+                if (comm = 3) and ((i - lbr) > 5) then
+                  if (s[i-1] = '-') and (s[i-2] = '-') then
+                  begin
+                    rbr := i;
+
+                    if Assigned(fTag) then //add all non-tag text to the current tag
+                    begin
+                      fTag.Childs.CreateChild(fTag,copy(s, lstart, lbr - lstart),tkText);
+                      fTag.Childs.CreateChild(fTag,copy(s, lbr + 4, i - lbr - 6),tkComment);
+                    end else
+                    begin
+                      fTagList.CreateChild(nil,copy(s, lstart, lbr - lstart),tkText);
+                      fTagList.CreateChild(nil,copy(s, lbr + 4, i - lbr - 6),tkComment);
+                    end;
+
+                    comm := 0;
+                    istag := 0;
+                    lstart := i + 1;
+                  end else
+                else
+                begin
+                  rbr := i;
+
+                  if Assigned(fTag) then //add declaration string
+                  begin
+                    fTag.Childs.CreateChild(fTag,copy(s, lstart, lbr - lstart),tkText);
+                    fTag.Childs.CreateChild(fTag,copy(s, lbr + 2, i - lbr -2),tkDeclaration)
+                  end else
+                  begin
+                    fTagList.CreateChild(nil,copy(s, lstart, lbr - lstart),tkText);
+                    fTagList.CreateChild(nil,copy(s, lbr + 2, i - lbr -2),tkDeclaration);
+                  end;
+
+                  comm := 0;
+                  istag := 0;
+                  lstart := i + 1;
+                end;
+              end else
+                istag := 0;
+            end;
+            2:
+            begin
+              tag_separate;
+              if not closetag then
+              begin
+                attr_add;
+                if HTML then
+                  CheckHTMLTag(fTag);
+                if (ps > lbr) then
+                  if (S[ps] = '?') and instr then
+                  begin
+                    fTag.Kind := tkInstruction;
+                    fTag := fTag.Parent;
+                  end else if (S[ps] = '/') 
+                  and not (fTag.ContentState in [csContent])
+                  or (fTag.ContentState in [csEmpty])
+                   then//if empty tag then
+                    fTag := fTag.Parent;               //return to the parent
+              end;
+
+              istag := 0;  //if is creating tag mode then exit to the non-tag mode
+
+              lstart := i + 1;
+            end;
+          end;
+        end;
+      end;
+      '/':  //means end of tag,if in the start of tag, then "end of the tag's content"
+      begin //if in the end, then "end of the tag without content" aka "empty tag"
+
+        if istag <> 0 then
+          if (qt = 0) and (comm = 0) then  //not quoted
+
+            if lbr + 1 = i then   //if in the start
+            begin
+              closetag := true; //mark it as is tag closing
+              ps := i + 1; //next text must be param
+            end
+            else begin            //mark it as parameter to check it comming in the end
+              tag_separate;
+              ps := i; pe := i;
+            end;
+
+      end;
+      ' ',#13,#10,#9: //separator symbol, separate parameters
+      begin
+        if (istag <> 0) and (comm = 0) then
+          if (ps = 0) then
+          if (istag = 1) then //if param start is separator, then is invalid tag
+            istag := 0
+          else
+            i := rbr
+          else if (qt = 0) then //if is not quoted
+           tag_separate;
+      end;
+      '=': //means next text will be value of previous parameter
+      begin
+        if (istag <> 0) then
+          if (qt = 0) and (comm = 0) then
+            if (ps = 0) or closetag then //if param start is separator, then is invalid tag
+              if istag = 1 then
+                istag := 0
+              else
+                i := rbr
+            else //if is not quoted
+            begin
+              tag_separate;
+
+              attr_add;
+
+              eq := i;
+              
+              if tps <> ps then
+              begin              
+                tps := ps; tpe := pe;
+                isparam := false;
+              end;
+
+            end;
+      end;
+      '?': //if is first symbol of the tag then is xml instructions
+      begin
+      
+        if istag <> 0 then
+          if (qt = 0) and (comm = 0) then  //not quoted
+
+            if lbr + 1 = i then   //if in the start
+            begin
+              instr := true; //mark it as is xml instruction
+              ps := i + 1; //next text must be param
+            end
+
+            else             //if not in the start then
+            begin            //mark it as parameter to check it comming in the end
+              tag_separate;
+              ps := i; pe := i;
+            end;
+            
+      end;
+      '!': //if is first symbol of the tag  then is can be comment
+      begin
+        if istag <> 0 then
+          if qt = 0 then  //not quoted
+
+            if lbr + 1 = i then   //if in the start
+            begin
+              //comm := 1; //mark it as is comment start
+              if ((l - i) > 1) and (s[i+1] = '-')
+              and (s[i+2] = '-') then
+                comm := 3
+              else
+                comm := 1;
+            end
+            //
+            //else             //if not in the start then
+            //begin            //mark it as parameter to check it comming in the end
+           //   tag_separate;
+           //   ps := i; pe := i;
+           // end;
+      end;
+      //'-': //possible part of comment declaration
+      //begin
+      //  if istag <> 0 then
+      //    if qt = 0 then  //not quoted
+      //      if (comm = 1) and (s[i-1] = '!')
+      //      or (comm = 2) and (s[i-1] = '-') then
+      //        inc(comm);
+      //end;
+      '"': // bracket 1
+      begin
+        if (istag <> 0) and (comm = 0) then
+          case qt of
+            0:
+            if (vs < eq) then begin //if value not assigned
+              qtp := i;
+              qt := 1;
+              vs := i + 1;
+            end else if (qtp > eq) and (s[qtp] = s[i]) then //else it is broken value assign (with isol symbols inside)
+              ve := i - 1;
+            1:
+            begin
+              qt := 0;
+              ve := i - 1;
+            end;
+          end;
+      end;
+      '''': //bracket 2
+      begin
+        if (istag <> 0) and (comm = 0)  then
+          case qt of
+            0:
+            if (vs < eq) then begin
+              qtp := i;
+              qt := 2;
+              vs := i + 1;
+            end else if (qtp > eq) and (s[qtp] = s[i]) then
+              ve := i - 1;
+            2:
+            begin
+              qt := 0;
+              ve := i - 1;
+            end;
+          end;
+      end;
+      else
+      begin
+        if (istag <> 0) and (qt = 0) and (comm = 0) then
+          if isparam then
+            if (ps < lbr) or (ps  <=  pe) then
+              ps := i
+            else
+          else
+            if (vs < eq) then
+              vs := i;
+
+      end;
     end;
 
+    inc(i);
   end;
 
+  if l > rbr then
+    if Assigned(fTag) then
+      fTag.Childs.CreateChild(fTag,copy(s, rbr + 1, l - rbr),tkText)
+    else
+      fTagList.CreateChild(nil,copy(s, rbr + 1, l - rbr),tkText)
+
 end;
-*)
 
 procedure TMyXMLParser.CheckHTMLTag(tag: ttag);
 begin
-  if SameText(tag.Name,'script') then
-    tag.State := tsOnlyText
-  {else
-  if SameText(tag.Name,'td')
-  or SameText(tag.Name,'tr') then
-    tag.State := tsClosable;   }
+  if Assigned(tag) then
+    if SameText(tag.Name,'script') then
+      tag.State := tsOnlyText
+    else if SameText(tag.Name,'link')
+    or SameText(tag.Name,'br')
+    or SameText(tag.Name,'hr')
+    or SameText(tag.Name,'meta')
+    or SameText(tag.Name,'img')
+    or SameText(tag.Name,'input')
+    then
+      Tag.ContentState := csEmpty
+    else if SameText(tag.Name,'a') then
+      Tag.ContentState := csContent;
+    //else
+    //  Tag.ContentState := csUnknown;
 end;
 
-function TMyXMLParser.CheckHTMLStat(tag: string): boolean;
+function TMyXMLParser.CheckHTMLStat(tag: string): TContentState;
 begin
   if SameText(tag,'link')
   or SameText(tag,'br')
@@ -1099,9 +1167,11 @@ begin
   or SameText(tag,'img')
   or SameText(tag,'input')
   then
-    result := true
+    result := csEmpty
+  else if SameText(tag,'a') then
+    result := csContent
   else
-    result := false;
+    result := csUnknown;
 end;
 
 procedure TMyXMLParser.JSON(starttag: string; S: String);

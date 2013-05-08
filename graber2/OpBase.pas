@@ -3,7 +3,7 @@ unit OpBase;
 interface
 
 uses Windows, SysUtils, Messages, GraberU, INIFiles, Classes, Common,
-MyHTTP, MyINIFile, Dialogs, Forms;
+MyHTTP, MyINIFile, Dialogs, Forms, Variants;
 
 var
 //  FullResList: TResourceList;
@@ -16,35 +16,6 @@ var
   langname: string = '';
   resources_dir: string;
   ShowSettings: boolean;
-
-{  TProxyRec = record
-    UseProxy: boolean;
-    Host: string;
-    Port: longint;
-    Auth: boolean;
-    Login: string;
-    Password: string;
-    SavePWD: boolean;
-  end;
-
-  TDownloadRec = record
-    ThreadCount: integer;
-    Retries: integer;
-    Interval: integer;
-    BeforeU: boolean;
-    BeforeP: boolean;
-    AfterP: boolean;
-    Debug: boolean;
-  end;
-
-  TSettingsRec = record
-    Proxy: TProxyRec;
-    Downl: TDownloadRec;
-    OneInstance: boolean;
-    TrayIcon: boolean;
-    HideToTray: boolean;
-    SaveConfirm: boolean;
-  end;}
 
 type
   terrorclass = class
@@ -173,7 +144,7 @@ begin
       begin
         INI.WriteString(rName,
           r.Fields.Items[j].resname,
-          '"' + nullstr(r.Fields.Items[j].resvalue) + '"');
+          '"' + vartostr(nullstr(r.Fields.Items[j].resvalue)) + '"');
       end;
   finally
     if not Assigned(AINI) then
@@ -246,6 +217,7 @@ begin
       langname := INI.ReadString('settings','language','');
       MenuCaptions := INI.ReadBool('settings','menucaptions',false);
       Tips := INI.ReadBool('settings','tips',true);
+      UseDist := INI.ReadBool('settings','dist',true);
 
       ShowSettings := langname = '';
 
@@ -372,6 +344,8 @@ begin
       INI.WriteString('Settings','SkinName',SkinName);
       INI.WriteBool('Settings','MenuCaptions',MenuCaptions);
       INI.WriteBool('Settings','Tips',Tips);
+      INI.WriteBool('Settings','Dist',UseDist);
+
       with Downl do
       begin
         INI.WriteInteger('Download','ThreadCount',ThreadCount);
@@ -601,6 +575,7 @@ begin
   r.PictureList.IgnoreList := CopyDSArray(IgnoreList);
 
   r.LogMode := GLOBAL_LOGMODE;
+  r.UseDistribution := GlobalSettings.useDist;
 end;
 
 initialization

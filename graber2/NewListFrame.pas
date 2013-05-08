@@ -96,6 +96,7 @@ type
     procedure COPY1Click(Sender: TObject);
     procedure COPY2Click(Sender: TObject);
     procedure TagList1Click(Sender: TObject);
+    procedure pmFavListPopup(Sender: TObject);
   private
     { Private declarations }
     FOnError: TLogEvent;
@@ -137,7 +138,7 @@ type
 
 implementation
 
-uses OpBase, LangString, utils, LoginForm;
+uses OpBase, LangString, utils, LoginForm, TextEditorForm;
 
 {$R *.dfm}
 
@@ -315,13 +316,21 @@ begin
   begin
     c := dm.CreateCategory(vgSettings,'vgimain',lang('_MAINCONFIG_'));
 
-    s := VarToStr(FullResList[0].Fields['tag']);
+    if FullResList[0].KeywordList.Count > 0 then
+      s := '<list>'
+    else
+      s := VarToStr(FullResList[0].Fields['tag']);
     dm.CreateField(vgSettings,'vgitag',lang('_TAGSTRING_'),'',ftTagText,c,s);
 
     with (dm.ertagedit.Properties as TcxCustomEditProperties) do
     begin
       OnButtonClick := OnTagstringButtonClick;
       Buttons[2].Visible := false;
+      if FullResList[0].KeywordList.Count > 0 then
+      begin
+        ReadOnly := true;
+      end else
+        ReadOnly := false;
     end;
 
     dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftPathText,c,fCurrItem.NameFormat);
@@ -337,9 +346,14 @@ begin
 
     dm.CreateField(vgSettings,'vgiinherit',lang('_INHERIT_'),'',ftCheck,c,Inherit);
 
-    s := VarToStr(Fields['tag']);
-    if (s = '') or Inherit then
-      if VarToStr(FullResList[0].Fields['tag']) <> '' then
+    if keywordList.Count > 0 then
+      s := '<list>'
+    else
+      s := VarToStr(Fields['tag']);
+
+    if ((s = '') or Inherit) and (keywordList.Count = 0)
+    and (FullResList[0].keywordList.Count = 0)
+    and (VarToStr(FullResList[0].Fields['tag']) <> '') then
       s := fCurrItem.FormatTagString(VarToStr(FullResList[0].Fields['tag']),
         FullResList[0].HTTPRec.TagTemplate);
 
@@ -356,6 +370,11 @@ begin
     begin
       OnButtonClick := OnTagstringButtonClick;
       Buttons[2].Visible := fCurrItem.CheatSheet <> '';
+      if KeywordList.Count > 0 then
+      begin
+        ReadOnly := true;
+      end else
+        ReadOnly := false;
     end;
 
     s := NameFormat;
@@ -445,7 +464,6 @@ begin
     AProperties := erAuthButton.Properties;
   // ARecord.Values[2] := ARecord.Values[0];
 end;
-
 procedure TfNewList.OnErrorEvent(Sender: TObject; Msg: String);
 begin
   if FLoggedOn then
@@ -576,6 +594,14 @@ begin
       btnNext.Caption := lang('_CONTINUE_');
     end;
   end;
+end;
+
+procedure TfNewList.pmFavListPopup(Sender: TObject);
+begin
+  if fCurrItem.KeywordList.Count > 0 then
+    TagList1.Caption := lang('_CHANGETAGLIST_')
+  else
+    TagList1.Caption := lang('_CREATETAGLIST_')
 end;
 
 procedure TfNewList.Release;
@@ -872,8 +898,39 @@ end;
 
 procedure TfNewList.TagList1Click(Sender: TObject);
 begin
+  fTextEdit.mText.Lines.BeginUpdate; try
+  fTextEdit.mText.Lines.Assign(fCurrItem.KeywordList);
+  finally fTextEdit.mText.Lines.EndUpdate; end;
+  if fTextEdit.Execute then
+  begin
+    fCurrItem.KeywordList.Assign(fTextEdit.mText.Lines);
+    if fCurrItem.KeywordList.Count > 0 then
+    begin
+      (vgSettings.RowByName('vgitag') as TcxEditorRow)
+      .Properties.RepositoryItem.Properties.ReadOnly := true;
+      //(vgSettings.RowByName('vgitag') as TcxEditorRow).inProperties.Values[0] := '<list>';
+      //(vgSettings.RowByName('vgitag') as TcxEditorRow).Properties.
+      //vgSettings.InplaceEditor.RepositoryItem
+      //vgSettings.InplaceEditor.RepositoryItem.Properties.ReadOnly := true;
+      vgSettings.InplaceEditor.EditValue := '<list>';
+      vgSettings.InplaceEditor.PostEditValue;
+      vgSettings.InplaceEditor.InternalProperties.ReadOnly := true;
+    end else
+    begin
+      (vgSettings.RowByName('vgitag') as TcxEditorRow)
+      .Properties.RepositoryItem.Properties.ReadOnly := false;
+      vgSettings.InplaceEditor.InternalProperties.ReadOnly := false;
+      vgSettings.InplaceEditor.EditValue := '';
+      vgSettings.InplaceEditor.PostEditValue;
+      //(vgSettings.RowByName('vgitag') as TcxEditorRow)
+      //.Properties.Value := '';
+      //(vgSettings.RowByName('vgitag') as TcxEditorRow).Properties.
+    end;
 
-  //
+    //(vgSettings.RowByName('vgitag') as TcxEditorRow)
+     // .Properties.Value readonly := true;
+    //(Sender as tcxbuttonedit).PostEditValue;
+  end;
 end;
 
 procedure TfNewList.tsSettingsShow(Sender: TObject);

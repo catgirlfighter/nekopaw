@@ -14,7 +14,9 @@ type
     Panel1: TPanel;
     btnOk: TcxButton;
     btnCancel: TcxButton;
+    btnClear: TcxButton;
     procedure FormCreate(Sender: TObject);
+    procedure btnClearClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -32,6 +34,11 @@ uses OpBase, LangString;
 
 {$R *.dfm}
 
+procedure TfTextEdit.btnClearClick(Sender: TObject);
+begin
+  mText.Clear;
+end;
+
 function TfTextEdit.Execute: boolean;
 begin
   ShowModal;
@@ -48,6 +55,7 @@ begin
   Caption := lang('_TEXTEDITOR_');
   btnOk.Caption := lang('_OK_');
   btnCancel.Caption := lang('_CANCEL_');
+  btnClear.Caption := lang('_CLEAR_');
 end;
 
 end.

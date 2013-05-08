@@ -103,6 +103,7 @@ type
     cxLabel6: TcxLabel;
     chbTips: TcxCheckBox;
     chbLogMode: TcxCheckBox;
+    chbUseDistr: TcxCheckBox;
     procedure btnOkClick(Sender: TObject);
     procedure chbProxyPropertiesEditValueChanged(Sender: TObject);
     procedure chbProxyAuthPropertiesEditValueChanged(Sender: TObject);
@@ -207,6 +208,7 @@ begin
     end;
 
     Tips := chbTips.Checked;
+    UseDist := chbUseDistr.Checked;
 
   end;
 
@@ -458,6 +460,7 @@ begin
     chbMenuCaptions.Checked := MenuCaptions;
     chbTips.Checked := Tips;
     chbLogMode.Checked := GLOBAL_LOGMODE;
+    chbuseDistr.Checked := UseDist;
 {    resnames := tstringlist.Create;
     skinnames := tstringlist.Create;
     try
@@ -551,6 +554,7 @@ begin
   chbTips.Caption := lang('_SHOWTIPS_');
   lHELP.Caption := lang('_HELP_');
   chbLogMode.Caption := lang('_LOGMODE_');
+  chbuseDistr.Caption := lang('_USERESDISTR_');
 end;
 
 procedure TfSettings.tlListFocusedNodeChanged(Sender: TcxCustomTreeList;
