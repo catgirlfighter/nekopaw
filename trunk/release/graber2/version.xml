@@ -1,7 +1,7 @@
 <item file="Graber2.exe"  archive="Graber2.zip"    version=65 />
 <item file="versionlog.txt"                        version=-1 />
 
-<item file="resources\danbooru.tmpl"               version=23 />
+<item file="resources\danbooru.tmpl"               version=24 />
 <item file="resources\danbooru2.tmpl"              version=0  />
 <item file="resources\gelbooru.tmpl"               version=13 />
 
