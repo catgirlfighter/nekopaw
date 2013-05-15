@@ -1,0 +1,168 @@
+*preinstalled=0
+
+;template of danbooru engine
+
+[main]
+$main.cheatsheet = "http://danbooru.donmai.us/help/cheatsheet";
+$picture.template.name = '%filename%';
+$picture.template.ext = '%ext%';
+
+$picture.fields(
+	url:s:$$URL,
+	preview:s:$$PREVIEW,
+	sample_url:s:$$SAMPLE,
+	post_url:s:$$POSTURL,
+	width:i:$$WIDTH,
+	height:i:$$HEIGHT,
+	rating:s:$$RATING,
+	id:i:$$ID,
+	author:s:$$AUTHOR,
+	score:i:$$SCORE,
+	posted:d:$$POSTED,
+	md5:s:$$MD5,
+	source:s:$$SOURCE,
+	aspect_ratio:f:$$ASPECTRATIO,
+	album_id:i,
+	album:s,
+	album_url:s);
+$pictime = '@vartime("en-US",@text,"yyyy-mm-ddxhh:nn:ssxxxxxx")'; 
+$userstring = 'user[name]';
+$pwdstring = 'user[password]';
+$main.checkcookie = 'login';
+$main.login = '$main.url+"user/authenticate?"+$userstring+"="+$login+"&"+$pwdstring+"="+$password+"&commit=Login"';
+$maxpage = 1000;
+
+@addfield("src","Source","indexlistbox",0,"Posts","Pools","Pool ID");
+
+[listscript]
+
+;API mode
+;non-JSON
+
+$thread.xmlcontent = 'xml';
+
+;POSTS
+?$src = 0 {
+	$thread.url = "$main.url+'posts.xml?limit=100&tags='+@httpencode($tag)";
+	$thread.xml = 'listxml';
+	$thread.execute();
+	$thread.url = "$main.url+'posts.xml?limit=100&tags='+@httpencode($tag)+'&page='+$thread.counter+1";
+}
+
+;POOLS
+?$src = 1{
+	$thread.url = "$main.url+'pools.xml?search[name_matches]='+@httpencode($tag)";
+	$thread.xml = 'poolxml';
+	$thread.execute();
+}
+
+;POOL ID
+?$src = 2{
+	$thread.url = "$main.url+'pools/'+@httpencode($tag)+'.xml'";
+	$thread.xml = 'poolxml';
+	$thread.execute();
+}
+
+[dwscript]
+$thread.url = $picture%url;
+
+?@isempty($thread.url)!0{
+	$thread.url = "'" + $picture%post_url + ".xml'";
+	$thread.xml = 'postxml';
+	$thread.execute();
+	$thread.url = $picture%url;
+}
+
+$thread.referer = $picture%post_url;
+
+[listxml]
+
+^post{
+	$ext = "";
+	@addpicture(%url="");
+	^created-at   { %posted=@calc($pictime); }
+	^file-ext     { $ext = @text; }
+	^id           { %id = @text; }
+	^image-height { %height = @text; }
+	^image-width  { %width = @text; }
+	^md5          { %md5 = @text; }
+	^rating       { %rating = @text; }
+	^score        { %score = @text; }
+	^tag-string   { %tags = "csv(@text,' ')"; }
+	^uploader-name{ %author = @text; }
+	^source       { %source = @trim(@text); }
+
+	%url = $main.url + "data/" + $picture%md5 + "." + $ext;
+	%post_url = $main.url + "posts/" + $picture%id;
+	%sample_url = $main.url + "data/sample/sample-" + $picture%md5 + ".jpg";
+	%preview = $main.url + "data/preview/" + $picture%md5 + ".jpg";
+	%aspect_ratio = @ifempty($picture%width,0)/@ifempty($picture%height,1);
+
+	$picture.displaylabel = $picture%url;
+	$picture.filename = $picture%md5 + "." + $ext;
+}
+
+^total_count{
+	$thread.count=@min($maxpage,@text/100+1);
+	$thread.result=@text;
+}
+
+[postxml]
+
+^post{
+	$ext = "";
+	^created-at   { %posted=@calc($pictime); }
+	^file-ext     { $ext = @text; }
+	^id           { %id = @text; }
+	^image-height { %height = @text; }
+	^image-width  { %width = @text; }
+	^md5          { %md5 = @text; }
+	^rating       { %rating = @text; }
+	^score        { %score = @text; }
+	^tag-string   { %tags = "csv(@text,' ')"; }
+	^uploader-name{ %author = @text; }
+	^source       { %source = @trim(@text); }
+
+	%url = $main.url + "data/" + $picture%md5 + "." + $ext;
+	%post_url = $main.url + "posts/" + $picture%id;
+	%sample_url = $main.url + "data/sample/sample-" + $picture%md5 + ".jpg";
+	%preview = $main.url + "data/preview/" + $picture%md5 + ".jpg";
+	%aspect_ratio = @ifempty($picture%width,0)/@ifempty($picture%height,1);
+
+	$picture.filename = $picture%md5 + "." + $ext;
+}
+
+[poolxml]
+^pool{
+	$posted = '';
+	$pool_id = 0;
+	$pool_name = '';	
+	^created-at{ $posted=@calc($pictime);  }
+	^id{ $pool_id = @trim(@text); }
+	^name{ $pool_name = @replace(" ","_",@text); }
+	@addpicture(
+		%album_url = $main.url + 'pools/' + $pool_id,
+		%album_id = $pool_id,
+		%album = $pool_name,
+		%posted = $posted
+	);
+	^post-ids{
+		$fulltext =@text;
+		$n0 = 0;
+		$n = @getnextpos($fulltext,$n0 + 1," ","");
+		:$n!0{
+			$val = @getvalue($fulltext,$n0,$n,"");
+			
+			@addchild(
+				%post_url = $main.url + "posts/" + $val,
+				%album_url = $main.url + 'pools/' + $pool_id,
+				%album_id = $pool_id,
+				%album = $pool_name
+			);
+			
+			$n0 = $n;
+			$n = @getnextpos($fulltext,$n0 + 1," ","");
+			$child.filename = '%filename%.%ext%';
+		}
+	}
+}
