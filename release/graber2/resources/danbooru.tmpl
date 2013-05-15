@@ -19,7 +19,10 @@ $picture.fields(
 	posted:d:$$POSTED,
 	md5:s:$$MD5,
 	source:s:$$SOURCE,
-	aspect_ratio:f:$$ASPECTRATIO);
+	aspect_ratio:f:$$ASPECTRATIO,
+	album_id:i,
+	album:s,
+	album_url:s);
 $pictime = '@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy")'; 
 $fileurl = '#file_url';
 $previewurl = '#preview_url';
@@ -33,6 +36,7 @@ $pwdstring = 'user[password]';
 $main.checkcookie = 'login';
 $main.login = '$main.url+"user/authenticate?"+$userstring+"="+$login+"&"+$pwdstring+"="+$password+"&commit=Login"';
 $maxpage = 1000;
+$pool_post_per_page = 24;
 
 $picture.template.ext = '%ext%';
 $tryext = 0;
@@ -43,36 +47,51 @@ $gui_images_dir = '';
 $gui_thumbs_part = '';
 $gui_images_part = '';
 
+
+@addfield("src","Source","indexlistbox",0,"Posts","Pool ID");
+
 [listscript]
 
 ;unknown ext mode;
 ?$tryext=1{$thread.tryext = "jpg,gif,png,swf";};
 
 ;XML API mode
-?$GUImode=0{
+?($GUImode=0){
 	$thread.url = "$main.url+'post/index.'+$fpxml+'?limit=100&tags='+@httpencode($tag)";
 	$thread.jsonitem = 'post';
 
-	;non-JSON firstpage
-	?$fpxml!'json'{
-		?$pbp=0{ $thread.xml = 'firstpagexml'; }
-		?$pbp!0{ $thread.xml = 'listxml'; }
+	;non-Pools
+	?$src=0{
+		;non-JSON firstpage
+		?$fpxml!'json'{
+			?$pbp=0{ $thread.xml = 'firstpagexml'; }
+			?$pbp!0{ $thread.xml = 'listxml'; }
+		}
+
+		;JSON firstpage
+		?$fpxml='json'{
+			$thread.xml = 'listxml';	
+		}
+
+		$thread.xmlcontent = $fpxml;
+		$thread.execute();
+		$thread.xml = 'listxml';
+		$thread.xmlcontent = $lxml;
+		$thread.url = "$main.url+'post/index.'+$fpxml+'?limit=100&tags='+@httpencode($tag)+'&page='+$thread.counter+1";
 	}
 
-	;JSON firstpage
-	?$fpxml='json'{
-		$thread.xml = 'listxml';	
+	;Pools
+	?$src=1{
+		$thread.xmlcontent = 'xml';
+		$thread.xml = 'poolxml';
+		$thread.url = "'"+$main.url+"pool/show.xml?id="+@httpencode($tag)+"'";
+		@thread.execute;
+		$thread.url = "'"+$main.url+"pool/show.xml?id="+@httpencode($tag)+"&page='+$thread.counter+1";		
 	}
-
-	$thread.xmlcontent = $fpxml;
-	$thread.execute();
-	$thread.xml = 'listxml';
-	$thread.xmlcontent = $lxml;
-	$thread.url = "$main.url+'post/index.'+$fpxml+'?limit=100&tags='+@httpencode($tag)+'&page='+$thread.counter+1";
 }
 
 ;GUI HTML mode
-?$GUImode!0{
+?($src=0)&($GUImode!0){
 	$thread.xmlcontent = 'html';
 	$thread.url = "$main.url+'post?tags='+@httpencode($tag)";
 	$thread.xml = "listgui";
@@ -147,6 +166,41 @@ $ok = 0;
 
 ?($pbp=1)&($ok=1){
 	$thread.count = $thread.counter + 2; 
+}
+
+[poolxml]
+
+^pool{
+	$thread.count=@min($maxpage,#post_count/$pool_post_per_page+1);
+	$thread.result=#post_count;
+
+	$pool_id = #id;
+	$pool_name = @replace(" ","_",#name);
+	$pool_url = $main.url + 'pool/show?id=' + #id;
+	^post{
+		@addpicture(
+			%url=@calc($fileurl),
+			%preview=@calc($previewurl),
+			%sample_url=@calc($sampleurl),
+			%post_url=$main.url+'post/show/'+#id,
+			%width=#width,
+			%height=#height,
+			%rating=#rating,
+			%id=#id,
+			%author=#author,
+			%score=#score,
+			%posted=@calc($pictime),
+			%md5=#md5,
+			%source=#source,
+			%aspect_ratio=@ifempty(#width,0)/@ifempty(#height,1),
+			%tags=csv(#tags," "),
+			%album_url = $pool_url,
+			%album_id = $pool_id,
+			%album = $pool_name
+		);
+		?$tryext=1{$picture.filename = @changeext("%ext%",@emptyname(@calc($fileurl)));}
+		?$tryext=0{$picture.filename = @emptyname(@calc($fileurl));}
+	}
 }
 
 [listgui]
