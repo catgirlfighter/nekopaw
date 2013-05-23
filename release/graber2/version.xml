@@ -3,7 +3,7 @@
 
 <item file="resources\danbooru.tmpl"               version=24 />
 <item file="resources\danbooru2.tmpl"              version=0  />
-<item file="resources\gelbooru.tmpl"               version=13 />
+<item file="resources\gelbooru.tmpl"               version=14 />
 
 <item file="resources\analbooru.com.cfg"           version=1 />
 <item file="resources\anime-pictures.net.cfg"      version=3 />
