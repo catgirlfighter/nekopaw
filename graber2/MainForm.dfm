@@ -86,6 +86,8 @@ object mf: Tmf
             Properties.Options = [pcoGoDialog]
             OnCanCloseEx = pcTablesCanCloseEx
             OnChange = pcTablesChange
+            ExplicitLeft = 2
+            ExplicitTop = -4
             ClientRectBottom = 243
             ClientRectRight = 419
             ClientRectTop = 0

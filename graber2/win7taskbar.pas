@@ -65,6 +65,19 @@ var
 implementation
 //////////////////////////////////////////////////////////////////////////////
 
+function GetWineAvail: boolean;
+var H: cardinal;
+begin
+  Result := False;
+  H := LoadLibrary('ntdll.dll');
+  if H > 0 then
+  begin
+  Result := Assigned(GetProcAddress(H, 'wine_get_version'));
+  FreeLibrary(H);
+  end;
+end;
+
+
 const
   TBPF_NOPROGRESS = 0;
   TBPF_INDETERMINATE = 1;
