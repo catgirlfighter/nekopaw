@@ -249,7 +249,7 @@ type
   TScriptItemList = class;
 
   TScriptItemKind = (sikNone, sikProcedure, sikDecloration, sikSection,
-    sikCondition, sikGroup);
+    sikCondition, sikCycle, sikGroup);
 
   TScriptEvent = function(const Item: TScriptSection;
     const Parametres: TValueList; var LinkedObj: TObject): Boolean of object;
@@ -1155,7 +1155,12 @@ begin
         if ((tmp = varOleStr) or (tmp = varString) or (tmp = varUString)) then
         begin
           vt := VarToWideStr(rstr);
-          VRESULT := VarR8FromStr(vt, VAR_LOCALE_USER_DEFAULT, 0, vt2);
+
+          if pos(' ',SysUtils.trim(rstr)) = 0 then
+            VRESULT := VarR8FromStr(vt, VAR_LOCALE_USER_DEFAULT, 0, vt2)
+          else
+            VRESULT := 1;
+
           if (VRESULT <> VAR_OK) or (b) then
             rstr := '''' + doubles(rstr, '''') + ''''
           else
@@ -1886,7 +1891,7 @@ begin
             raise Exception.Create('Script read error: ' +
               'Can''t find { after ' + Copy(s, i, 15));
 
-          tmp := TrimEx(Copy(s, i + 1, n - i - 1), EmptyS);
+          tmp := SysUtils.Trim(Copy(s, i + 1, n - i - 1));
 
           Child := TScriptSection.Create;
           // Child.Parent := Parent;
@@ -1895,6 +1900,44 @@ begin
           Child.Name := tmp;
 
           i := n + 1;
+
+          n := CharPos(s, '}', isl, brk, i);
+
+          if n = 0 then
+          begin
+            Child.Free;
+            { raise Exception.Create(Format(lang('_SCRIPT_READ_ERROR_'),
+              [Format(lang('_INCORRECT_DECLORATION_'), [IntToStr(i)])])); }
+            raise Exception.Create('Script read error: ' +
+              'Can''t find } after ' + Copy(s, i, 15));
+          end;
+
+          Child.ParseValues(Copy(s, i, n - i));
+          FChildSections.Add(Child);
+
+          i := n + 1;
+        end;
+      ':':
+        begin
+          n := CharPos(s, '{', isl, brk, i + 1);
+
+          if n = 0 then
+            { raise Exception.Create(Format(lang('_SCRIPT_READ_ERROR_'),
+              [Format(lang('_INCORRECT_DECLORATION_'), [IntToStr(i)])])); }
+            raise Exception.Create('Script read error: ' +
+              'Can''t find { after ' + Copy(s, i, 15));
+
+          tmp := TrimEx(Copy(s, i + 1, n - i - 1), EmptyS);
+
+          Child := TScriptSection.Create;
+          // Child.Parent := Parent;
+          Child.Kind := sikCycle;
+          Child.Parameters.Assign(Parameters);
+          Child.Name := tmp;
+
+          i := n + 1;
+
+          //Child.Parameters.)/
 
           n := CharPos(s, '}', isl, brk, i);
 
@@ -1985,11 +2028,10 @@ procedure TScriptSection.Process(const SE: TScriptEvent;
 
 var
   Calced: TValueList;
-  i, j: integer;
+  i, j,loopcounter: integer;
   Lnk: TObject;
   Obj: TObject;
   cont: Boolean;
-
 begin
   if InUse then
     Exit;
@@ -2058,6 +2100,22 @@ begin
                   if CalcValue(ChildSections[i].Name, VE, Obj) then
                     (ChildSections[i] as TScriptSection).Process(SE, DE, FE, VE,
                       PVE, Obj);
+              sikCycle:
+                if (length(ChildSections[i].Name) > 0) then
+                begin
+                  loopcounter := 0;
+                  while CalcValue(ChildSections[i].Name, VE, Obj) do
+                  begin
+                    if loopcounter = MAXINT then
+                      raise Exception.Create('Cycle is reached iteration maximum ' +
+                      '(' + IntToStr(MAXINT) + ': ' + ChildSections[i].Name);
+
+                    (ChildSections[i] as TScriptSection).Process(SE, DE, FE, VE,
+                      PVE, Obj);
+
+                    inc(loopcounter);
+                  end;
+                end;
               sikProcedure:
                 DE(ChildSections[i].Name, ChildSections[i].Value, Obj);
               sikDecloration:
@@ -4632,7 +4690,7 @@ procedure TDownloadThread.VE(Value: String; var Result: Variant;
 var
   t: ttag;
   s, tmp: string;
-  p1,p2,p3: string;
+  p1,p2,p3,p4: string;
   n, n2, i: integer;
   c: Char;
 begin
@@ -4693,9 +4751,13 @@ begin
           s := TrimEx(CopyTo(Value, '('), [#13, #10, #9, ' ']);
           if SameText(s, 'text') then
             if Assigned(LinkedObj) and (LinkedObj is ttag) then
-              Result := TrimEx(ClearHTML((LinkedObj as ttag).GetText(txkCurrent,
-                false)), [' ', #13, #10])
-            else
+            begin
+              //Result := TrimEx(ClearHTML((LinkedObj as ttag).GetText(txkCurrent,
+              //  false)), [' ', #13, #10])  ;
+              s := TrimEx(ClearHTML((LinkedObj as ttag).GetText(txkCurrent,
+                false)), [' ', #13, #10]);
+              Result := s;
+            end else
               Result := ''
           else if SameText(s, 'calc') then
             Result := Clc(trim(Clc(gVal(Value)), ''''))
@@ -4871,6 +4933,10 @@ begin
             s := gVal(Value);
             Result := DeleteTo(Clc(nVal(s)), Clc(nVal(s)), false, true);
           end
+          else if SameText(s,'detelebackto') then
+          begin
+
+          end
           else if SameText(s, 'deletefromto') then
           begin
             s := gVal(Value);
@@ -4968,8 +5034,39 @@ begin
               end;
             end;
           end
+          else if SameText(s, 'getnextpos') then
+          begin
+            s := gVal(Value);
+            p1 := Clc(nVal(s));
+            p2 := Clc(nVal(s));
+            p3 := Clc(nVal(s));
+            p4 := Clc(nVal(s));
+            if StrToInt(p2) > length(p1) then
+              Result := 0
+            else
+            begin
+              if p3 = '' then
+                p3 := ';';
+
+              n := CharPos(p1,p3[1],[p3],[],StrToInt(p2));
+              if n = 0 then
+                Result := length(p1) + 1
+              else
+                Result := n;
+            end;
+          end
+          else if SameText(s, 'getvalue') then
+          begin
+            s := gVal(Value);
+            p1 := Clc(nVal(s));
+            p2 := Clc(nVal(s));
+            p3 := Clc(nVal(s));
+            p4 := Clc(nVal(s));
+            s :=  Copy(p1,StrToInt(p2) + 1,StrToInt(p3) - StrToInt(p2) - 1);
+            Result := Copy(p1,StrToInt(p2) + 1,StrToInt(p3) - StrToInt(p2) - 1);
+          end
           else
-            raise Exception.Create('unknown method: ' + c + Value);
+            raise Exception.Create('unknown method: ' + c + s);
         end;
       '%':
         begin
@@ -5053,7 +5150,7 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
   procedure ProcValue(const Name: String; Value: Variant);
   var
     // p: TTPicture;
-    s, v1, v2, r1, r2, r3: string;
+    s, v1, v2, r1, r2, r3, r4: string;
     n: integer;
     fcln: TTPicture;
     sl: TStringList;
@@ -5221,6 +5318,51 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
     else if Name[1] = '%' then
       if Assigned(FPicture) then
         if SameText(Name, '%tags') then
+        begin
+          //if Job in [JOB_PICS, JOB_POSTPROCESS] then
+          //begin
+          //  CSData.Enter;
+          //  FLPicList.Tags.Add(CalcValue(Value, VE, LinkedObj), FPicture);
+          //  CSData.Leave;
+          //end
+          //else
+          //  FPicList.Tags.Add(CalcValue(Value, VE, LinkedObj), FPicture)
+
+          s := lowercase(Value);
+          v1 := CopyTo(s, '(', ['""'], ['()'], true);
+          s := CopyTo(s, ')', ['""'], ['()'], true);
+          if v1 = 'csv' then
+          begin
+            v1 := CopyTo(s, ',', ['""'], ['()'], true); // GetNextS(s, ',');
+            v1 := ReplaceStr(trim(CalcValue(v1, VE, LinkedObj)),#13#10,' ');
+            v2 := trim(CopyTo(s, ',', ['""'], ['()'], true));
+            if v2 = '' then
+              r1 := #0
+            else
+              r1 := VarToStr(CalcValue(v2, VE, LinkedObj))[1];
+            v2 := trim(CopyTo(s, ',', ['""'], ['()'], true));
+            if v2 = '' then
+              r2 := #0
+            else
+              r2 := VarToStr(CalcValue(v2, VE, LinkedObj))[1];
+            while v1 <> '' do
+            begin
+              s := GetNextS(v1, r1, r2);
+              if s <> '' then
+                if Job in [JOB_PICS, JOB_POSTPROCESS] then
+                begin
+                  CSData.Enter;
+                // V
+                  FLPicList.Tags.Add(s, FPicture, FHTTPRec.TagTemplate.Spacer);
+                  CSData.Leave;
+                end else
+                // V
+                  FPicList.Tags.Add(s, FPicture, FHTTPRec.TagTemplate.Spacer);
+
+              // FPicture.Tags.Add(FPictureList.Tags.Add(s,nil));
+            end;
+          end;
+        end
         else
           FPicture.Meta[trim(name, '%')] := Value
       else
@@ -5504,13 +5646,13 @@ begin
     try
 
       // feature to add childs to album
-      // common version - if picture download error occurs, must be executed
+      // common version - if a picture download error occurs, must be executed
       // script to check childs for picture (it is not a picture, but album)
       // check realisation in pixiv.net.csg
 
       // after try to get picture iteration resets
       // and if new iteration get new pictures in list, then
-      // new pictures must be added as childs and thread must be released
+      // new pictures must be added as childs and thread job must be finished
 
       if Assigned(FLPicList) and (FPicList.Count > 0) then
       begin
