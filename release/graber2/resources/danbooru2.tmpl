@@ -102,7 +102,7 @@ $thread.referer = $picture%post_url;
 	$picture.filename = $picture%md5 + "." + $ext;
 }
 
-^total_count{
+^total-count{
 	$thread.count=@min($maxpage,@text/100+1);
 	$thread.result=@text;
 }
