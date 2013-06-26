@@ -1,4 +1,4 @@
-<item file="Graber2.exe"  archive="Graber2.zip"    version=66 />
+<item file="Graber2.exe"  archive="Graber2.zip"    version=67 />
 <item file="versionlog.txt"                        version=-1 />
 
 <item file="resources\danbooru.tmpl"               version=24 />
@@ -33,7 +33,7 @@
 <item file="resources\cosplay.paheal.net.cfg"      version=4 />
 <item file="resources\rule34.paheal.net.cfg"       version=6 />
 <item file="resources\rule63.paheal.net.cfg"       version=5 />
-<item file="resources\pixiv.net.cfg"               version=13 />
+<item file="resources\pixiv.net.cfg"               version=14 />
 <item file="resources\rmart.org.cfg"               version=8 />
 <item file="resources\tbib.org.cfg"                version=0 />
 <item file="resources\tentaclerape.net.cfg"        version=2 />
