@@ -25,6 +25,12 @@ $picture.fields(
 	album_id:i,
 	album:s,
 	album_url:s);
+
+$picture.exif.author = "%author";
+$picture.exif.theme = "%album"; 
+$picture.exif.comment = "%post_url";
+$picture.exif.keywords = "@picture.tags(';')";
+
 $pictime = '@vartime("en-US",@text,"yyyy-mm-ddxhh:nn:ssxxxxxx")'; 
 $userstring = 'user[name]';
 $pwdstring = 'user[password]';
