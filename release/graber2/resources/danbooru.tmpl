@@ -23,6 +23,13 @@ $picture.fields(
 	album_id:i,
 	album:s,
 	album_url:s);
+
+
+$picture.exif.author = "%author";
+$picture.exif.theme = "%album"; 
+$picture.exif.comment = "%post_url";
+$picture.exif.keywords = "@picture.tags(';')";
+
 $pictime = '@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy")'; 
 $fileurl = '#file_url';
 $previewurl = '#preview_url';

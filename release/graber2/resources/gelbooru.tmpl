@@ -7,6 +7,10 @@ $main.cheatsheet = "http://gelbooru.com/index.php?page=help&topic=cheatsheet";
 
 $picture.fields(url,preview,sample_url,post_url,width:i,height:i,rating,id:i,posted:d,md5,score:i,source,aspect_ratio:f,album);
 
+$picture.exif.theme = "%album"; 
+$picture.exif.comment = "%post_url";
+$picture.exif.keywords = "@picture.tags(';')";
+
 @addfield("src","Source","indexlistbox",0,"Posts","Pool ID");
 
 $main.checkcookie = 'user_id';
