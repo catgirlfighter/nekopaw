@@ -1,4 +1,4 @@
-#summary Описание графического интерфейса пользователя (работа с клиентом в целом)
+#summary Graphical User Interface description (Work with client in summary)
 #labels Featured,Phase-Deploy
 
 = Первый экран =
