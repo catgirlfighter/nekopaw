@@ -1,7 +1,32 @@
 #summary Graphical User Interface description (Work with client in summary)
 #labels Featured,Phase-Deploy
 
+= Preamble =
+
+First and main rule of this application is 
+
+==== "It's not to search content, but to download" =====
+
+This is means you're using an app to download content from know resources. And in this way this is means if you getting errors or nothing from resources you're DO NOT know - it's your own problem, not app's.
+
+Resources are too different from each other, and there is no way to make only ONE way to download from all of them a the same time. They're have different search rules, keywords, storing methods and other. So, you must to know, how to work with resource you're that using.
+
+= Contents =
+ * <a href="#First_Screen">First screen</a>
+ * New list screen
+ * Downloading
+ * Filter features
+ * Settings
+  * Interface
+  * Threads
+  * Proxy
+  * Doubles
+ * Name formatting
+  * string-number format
+  * datetime format
+
 = First screen =
+
 After application launch by default it automatically checks for updates. If updates will be found, pop up a window with suggestion to update an application. You can disable updates check in settings.
 
 
@@ -43,14 +68,14 @@ To add new tab (and to start new list) you need to click "new list" from main me
 On the bottom of table you can see supporting information:
  * *ON AIR* - work in progress;
  * *TTL* - total amount of items;
- * *IGN* - ignored dublicates;
+ * *IGN* - ignored duplicates;
  * *TBL* - time sued to add item to the table (ms);
- * *DBL* - time used to add item to the massive (including dublicate search, ms).
+ * *DBL* - time used to add item to the massive (including duplicate search, ms).
 
 = Filter features =
 
 All fields that can be filtered have their own data types.<br />
-In this way, for number-fileds you can chose "less" or "more" conditions, but for string-fields you can only chose "equal" or "contains". For "contains" condition you must use rules like in SQL:
+In this way, for number-fields you can chose "less" or "more" conditions, but for string-fields you can only chose "equal" or "contains". For "contains" condition you must use rules like in SQL:
  * symbol "%" means it doesn't matter which text instead of this symbol, ex.: "%sup" - will be searched all words ending with "sup"; "f%k" - starting with "f" and ending with "k";
  * symbol "`_`" means skipping an one symbol. ex.: pic00`_` - there will be searched all pictures, where only last symbol can by any.
 
@@ -70,19 +95,19 @@ When downloading in progress, "Downloaded", "Size" and "Progress" fields will ap
 
 === Threads ===
 
- * *List threads count* - thread count for geathering a pictures from pages;
+ * *List threads count* - thread count for gathering a pictures from pages;
  * *Threads per resource* (checkbox) - limit number of threads for each separate resource;
  * *Threads per resource*  - maximum thread count for each resource (if checkbox is marked);
  * *Pictures thread count* - thread count for picture downloading;
  * *Retries count* - how much time thread will try to download picture again after error;
  * *Speed* - maximum download speed (for whole application);
- * *Use load distribution by resources* - threads will by distributed between all resources in list (kinda queue), it will help to distribute preasure on resources. If disabled - pictures will be downloaded in order of adding to list;
+ * *Use load distribution by resources* - threads will by distributed between all resources in list (kinda queue), it will help to distribute pressure on resources. If disabled - pictures will be downloaded in order of adding to list;
 
 === Proxy ===
 Proxy settings.
 
 === Doubles ===
-Rules to filter doubles of pictures from list. Every rule working independently (like "OR" condition), and to count picture as a double must be fullfiled at last one of them. But every rule have it's own list of conditions. Conditions designer avalable to edit existing rule or create new. In it you need to point, what added picture fields (left side) should compare with gathered pictures fields (right side). Condition "url = url OR url = source" will look like this:
+Rules to filter doubles of pictures from list. Every rule working independently (like "OR" condition), and to count picture as a double must be fulfilled at last one of them. But every rule have it's own list of conditions. Conditions designer avalable to edit existing rule or create new. In it you need to point, what added picture fields (left side) should compare with gathered pictures fields (right side). Condition "url = url OR url = source" will look like this:
 
 || url || url ||
 || || source ||
@@ -96,14 +121,14 @@ For any API-based boards (like danbooru or gelbooru) is enough to create md5=md5
 
 *resources* - there you can preset typical settings for each resource (or for all using inheriting from "general).
 
-= Name formating =
+= Name formatting =
 
 Using variables is not required, but it can help to name a file or distribute files by directories more clearly. In common situation is enough to chose directory to save, then by default will be used format $fname$<($fn$)>.$ext$. Default format will be used every time if after generating name is empty.
 
 
 || *variable* || *description* || *example* ||
 || *$ext$* || file extension || jpeg, gif ||
-|| *$fname$* || default file name (from url), without extansion || b6b3a54dc0c3984e75cc1134dbc844bd5b45d145 ||
+|| *$fname$* || default file name (from url), without extension || b6b3a54dc0c3984e75cc1134dbc844bd5b45d145 ||
 || *$fn$* || sequence number in situation, when name is already exists. Zero (0) if do not use isolation <> || name, name1, name2 ||
 || *$fnn`[`(N)`]`$* || sequence number inside of directory. You can dublicate number N time in a row (helpful to create branched structure) || $fnn$`_`$fname$: 1`_`name.jpg, 2`_`anothername.png<br />$fnn(2)$\$fnn$): 1\1.jpg, 1\2.jpg, 2\1.jpg ||
 || *$nn$* || sequence number in list ||
@@ -114,7 +139,7 @@ Using variables is not required, but it can help to name a file or distribute fi
 || *$tags`[`(N)`]`$* || picture's tags. N - tags count, all by default. || ||
 || *%{picture's attribute}%* || attribute, obtained during the gathering || id, source, width, rating ||
 
-If variable or attribtue name do not exist, then it will remain in file name.
+If variable or attribute name do not exist, then it will remain in file name.
 || *example* || *result* ||
 || c:\$bname$\$short$ %author% %id% || c:\$bname$\sfbr %author% 123456789<br />c:\$bname$\imto Gidrant 987654321 ||
 
