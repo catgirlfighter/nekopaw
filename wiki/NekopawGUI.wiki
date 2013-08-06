@@ -82,7 +82,7 @@ When downloading in progress, "Downloaded", "Size" and "Progress" fields will ap
 Proxy settings.
 
 === Doubles ===
-rules to filter doubles of pictures from list. Every rule working independently (like "OR" condition), and to count picture as a double must be fullfiled at last one of them. But every rule have it's own list of conditions. Conditions designer avalable to edit existing rule or create new. In it you need to point, what added picture fields (left side) should compare with gathered pictures fields (right side). Condition "url = url OR url = source" will look like this:
+Rules to filter doubles of pictures from list. Every rule working independently (like "OR" condition), and to count picture as a double must be fullfiled at last one of them. But every rule have it's own list of conditions. Conditions designer avalable to edit existing rule or create new. In it you need to point, what added picture fields (left side) should compare with gathered pictures fields (right side). Condition "url = url OR url = source" will look like this:
 
 || url || url ||
 || || source ||
