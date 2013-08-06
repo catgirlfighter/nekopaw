@@ -9,7 +9,7 @@ First and main rule of this application is
 
 This is means you're using an app to download content from know resources. And in this way this is means if you getting errors or nothing from resources you're DO NOT know - it's your own problem, not app's.
 
-Resources are too different from each other, and there is no way to make only ONE way to download from all of them a the same time. They're have different search rules, keywords, storing methods and other. So, you must to know, how to work with resource you're that using.
+Resources are too different from each other, and there is no way to make only ONE way to download from all of them a the same time. They're have different search rules, keywords, storing methods and other. So, you must to know, how to work with resource you're using.
 
 = Contents =
  * [#First_screen First screen]
