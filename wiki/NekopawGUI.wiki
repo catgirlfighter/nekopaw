@@ -1,161 +1,175 @@
 #summary Graphical User Interface description (Work with client in summary)
 #labels Featured,Phase-Deploy
 
-= Первый экран =
-При запуске программы по дефолту происходит автоматическая проверка на обновления. Если обновления будут обнаружены, появится окно, предлагающее скачать их. Проверку можно отключить в настройках.
+= First screen =
+After application launch by default it automatically checks for updates. If updates will be found, pop up a window with suggestion to update an application. You can disable updates check in settings.
 
-Кнопки:<br />
-Новый список - создание нового проекта;<br />
-Загрузить список - не работает;<br />
-Настройки - настройки работы программы.<br />
-Выход - выход.
 
-= Страница составления списка =
+=== Buttons ===
+ * *New list* - create a new list;
+ * *Load list* - don't work right now;
+ * *Settings* - well, app settings;
+ * *Exit* - Exit.
 
-Появляется при нажатии "Новый список".<br />
-Справа находится список борд, которые можно добавить. Слева - находящиеся в списке.<br />
-Чтобы добавить элемент в список, нужно нажать кнопку со стрелкой в списке борд. Так же можно убрать элементы из текущего списка.<br />
-Чтобы продолжить настройку надо нажать кнопку "След. шаг". Для возвращения на предыдущий экран "Пред. шаг".<br />
-Появится панель настроек борд. Пункт "Основное" в списке борд является глобальным и распространяется на все борды в списке, у которых не отключен чекбокс "Наследовать настройки".<br />
-Для завершения списка нужно нажать "Завершить".
+= New list screen =
 
-= Закачка =
+Appears after clicking "New List".
 
-Получение списка начинается сразу же после завершения списка.<br />
-Появляется главное меню и панель деталей слева.<br />
-Получение списка можно прервать, для этого надо нажать "Остановить загрузку списка" на главном меню.<br />
-Когда получение списка будет завершено, можно начать закачку изображений. Для этого надо нажать "Начать закачку изображений". Для прерывания "Остановить закачку изображений".<br />
-Качаться будут только отмеченные галочкой изображения.<br />
-Пункт "Столбцы" позволяет добавлять и убирать поля с аттрибутами изображений".<br />
-"Фильтр" включает настройку фильтра.<br />
-"Выбрать" и "убрать" позволяет выполнить массовую расстановку галочек в списке. Можно выбрать "Все", "Выделенные" и "Отфильтрованные, а также "Инвертировать" выбранное.
+On the right side located list of resources that you can add. On the left side - list of added items.
+To add item you need to click a button with arrow, also you can remove items from the current list.
 
-Для добавления закладки (и начала нового списка) нужно нажать "Новый список" на главном меню. Для закрытия списка есть крестик в правом углу на панели вкладок.
+To the next step of list making you need to click a "Continue" button. For return click a "Change list" button.
 
-Внизу под таблицей указывается вспомогательная информация:<br />
-- ON AIR значит, что идет процесс скачки;<br />
-- TTL - всего в списке;<br />
-- IGN - количество проигнорированных изображений в соотвествии с правилами игнорирования (поиска дублей);<br />
-- TBL - время, затраченное на добавление элементов в таблицу;<br />
-- DBL - время, затраченное на добавление элементов в массив (включая поиск дублей).
+After clicking "Continue" button a resource settings panel will appear. "General" item in the list is global for all list's items, if you're don't want to inherit settings from it you need to uncheck "Inherit configuration" flag for other resources in list.
 
-= Возможности фильтра =
+To finish list click "Finish".
 
-Все поля, по которым можно фильтровать, имеют свой тип данных.<br />
-Таким образом числовые поля (напр. размеры, рейтинги и даты) можно выбирать в диопазоне "больше" или "меньше".<br />
-Для строчных же полей работают только "равно" либо "содержит текст". Правила для "содержит" как у ключевого слова like из SQL:<br />
-Знак "%" значит, что не важно, что содержится в данном промежутке.Пример: %sup - значит, что будут искаться все строки, кончающиеся на sup. А%ть - будут искаться все строки, которые начинаются на "а" и кончаются на "ть".<br />
-Знак "`_`" значит пропуск символа, т.е. не важно, какой символ содержится в одном знаке вместо "`_`". Пример: pic00`_` - в этом случае будут браться все строки, у которых только последний знак может быть любым.
+After you made your first list, next time the constructor will skip the first (select resource) part and will suggest to use last time used set again. To change it just click "change list" button.
 
-Во время скачки появляются дополнительные поля "Загружено", "Размер" и "Прогресс". Если отфильтровать поле "Загружено" по содержимому (т.е. = не пустое), то можно отслеживать все качающиеся в данные момент изображения, т.к. в поле "Загружено" отображается, сколько скачано на данный момент, и все остальное время поле пустое.
+= Downloading =
 
-= Настройки =
+List gathering will start just after list creation. You can interrupt list gathering by clicking a "Stop getting list" button on the main menu.
 
-*Интерфейс*<br />
-Язык - язык интерфейса;<br />
-Проверять обновления при запуске - автоматически проверять на наличие обновлений при запуске программы;<br />
-Проверить обновления сейчас - при клике по пункту будет произведена проверка на наличие новых обновлений.
+After finished gathering you can start download pictures. For it you need to click "Start download pictures" button. To interrupt it click a "stop pictures downloading". Will be downloaded only marked by checkbox pictures.
 
-*Потоки*<br />
-Количество потоков списка - количество потоков, использующихся при получении списка изображений;<br />
-Ограничение на ресурс - ограничивать ли количество потоков на каждый отдельный ресурс;<br />
-Количество потоков на ресурс - если ограничение выше включено, то ограничивает количество потоков на каждый ресурс указанным числом;<br />
-Количество потоков изображений - количество потоков, качающих изображения;<br />
-Количество попыток - количество попыток скачать изображение или страницу. Некоторые ошибки не дают возможности повторить попытку, например 404 (не существует).
+"Fields" menu allows you to add or remove picture's attributes to the table.
 
-*Прокси* - настройки подключения HTTP-прокси.
+"Filter" execute filter's settings.
 
-*Даблы* - раздел с правилами поиска дубликатов изображений. Каждое правило в списке работает независимо (как по правило ИЛИ), и для того, чтобы изображение посчиталось дублем, должно выполниться хотя бы одно из них. В свою очередь, каждое правило имеет список условий. Редактор условий доступен при редактировании имеющегося или создании нового правила. В этом редакторе нужно указать, какое поле добавляемого изображения (левая часть) с какими полями имеющихся изображений будет сравниваться (правая часть). Условие вида "url = url или url = source" в редакторе условий будет выглядеть так:
+"Check" and "Uncheck" allows to execute massive marking of pictures. You can select "all","selected" or "filtered", also you can "invert" marking.
+
+To add new tab (and to start new list) you need to click "new list" from main menu.
+
+On the bottom of table you can see supporting information:
+ * *ON AIR* - work in progress;
+ * *TTL* - total amount of items;
+ * *IGN* - ignored dublicates;
+ * *TBL* - time sued to add item to the table (ms);
+ * *DBL* - time used to add item to the massive (including dublicate search, ms).
+
+= Filter features =
+
+All fields that can be filtered have their own data types.<br />
+In this way, for number-fileds you can chose "less" or "more" conditions, but for string-fields you can only chose "equal" or "contains". For "contains" condition you must use rules like in SQL:
+ * symbol "%" means it doesn't matter which text instead of this symbol, ex.: "%sup" - will be searched all words ending with "sup"; "f%k" - starting with "f" and ending with "k";
+ * symbol "`_`" means skipping an one symbol. ex.: pic00`_` - there will be searched all pictures, where only last symbol can by any.
+
+When downloading in progress, "Downloaded", "Size" and "Progress" fields will appear. If you will filter field "Downloaded" by content (i.e. = not empty), you can watch all downloading pictures by this moment.
+
+= Settings =
+
+=== Interface ===
+ * *Language* - interface language;
+ * *Check updates on application started* - automatically check for updates when application started;
+ * *Check updates now* - well, click it to check for updates now;
+ * *Appearance* - list of build-in skins. Not really big list;
+ * *Use "Look-n-feel" style* - application will try to inherit style from your OS;
+ * *Show menu items captions* - enable or disable captions for menu items on grid screen;
+ * *Show tips* - only one tip existing is where "download" button is located. Uncheck to disable;
+ * *Log mode* - save some special data to log file (rootdir\log).
+
+=== Threads ===
+
+ * *List threads count* - thread count for geathering a pictures from pages;
+ * *Threads per resource* (checkbox) - limit number of threads for each separate resource;
+ * *Threads per resource*  - maximum thread count for each resource (if checkbox is marked);
+ * *Pictures thread count* - thread count for picture downloading;
+ * *Retries count* - how much time thread will try to download picture again after error;
+ * *Speed* - maximum download speed (for whole application);
+ * *Use load distribution by resources* - threads will by distributed between all resources in list (kinda queue), it will help to distribute preasure on resources. If disabled - pictures will be downloaded in order of adding to list;
+
+=== Proxy ===
+Proxy settings.
+
+=== Doubles ===
+rules to filter doubles of pictures from list. Every rule working independently (like "OR" condition), and to count picture as a double must be fullfiled at last one of them. But every rule have it's own list of conditions. Conditions designer avalable to edit existing rule or create new. In it you need to point, what added picture fields (left side) should compare with gathered pictures fields (right side). Condition "url = url OR url = source" will look like this:
 
 || url || url ||
 || || source ||
 
-т.е. для того, чтобы получилось условие ИЛИ поле с названием поля изображения нужно оставить пустым. Чтобы создать правило "url = url и url = source" необходимо вместо пустого поля указать url еще раз
+ie to get condition "OR" you need to leave first field empty. To get condition "url = url AND url = source) you need to put field name again instead of empty one:
 
 || url || url ||
 || url || source ||
 
-Для любых API-борд достаточно создать правило md5=md5. С теми же бордами, у которых нет API (и нет возможности узнать хеш-сумму до скачки изображения на винт) придется поизвращаться. Так или иначе, если изображение не имеет поля, по которому происходит проверка, то правило с этим полем будет проигнорировано.
+For any API-based boards (like danbooru or gelbooru) is enough to create md5=md5 rule. For all other is much harder. Any way, if picture haven't a field, what should be compared, then rule will be ignored.
 
-*Ресурсы* - здесь можно предустановить типичные настройки для каждого отдельного ресурса (или сразу для всех путем наследование от "основных").
+*resources* - there you can preset typical settings for each resource (or for all using inheriting from "general).
 
-Чтобы указать "основные", типичные для всех ресурсов, настройки, нужно кликнуть на название раздела.<br />
-Чтобы отключить наследования "основных" настроек отключите опцию "наследовать конфигурацию".<br />
-Так же для каждого ресурса можно указать логин и пароль, с которыми можно авторизоваться на ресурсе.
+= Name formating =
 
-= Форматирование имени файла =
-Указывать переменные не обязательно, но при они могут помочь назвать файл или распределить файлы по папкам более внятно. В обычном случае достаточно просто указать путь для сохранения, тогда по умолчанию будет использоваться формат $fname$<($fn$)>.$ext$. Формат по умолчанию будет использоваться и в том случае, если имя файла после его создания оказалось пустым.
-|| *переменная* || *описание* || *пример* ||
-|| *$ext$* || расширение изображения || jpeg, gif ||
-|| *$fname$* || полученное имя файла при получении списка, без расширения || b6b3a54dc0c3984e75cc1134dbc844bd5b45d145 ||
-|| *$fn$* || порядковый номер в том случае, если имя уже занято. Ставится 0 если не использовать изоляцию <> || name, name1, name2 ||
-|| *$fnn`[`(N)`]`$* || Порядковый номер внутри директори. Есть возможность дублировать номер N раз подряд (полезно, напр. для создания разветвленной структуры) || $fnn$`_`$fname$: 1`_`name.jpg, 2`_`anothername.png<br />$fnn(2)$\$fnn$): 1\1.jpg, 1\2.jpg, 2\1.jpg ||
-|| *$nn$* || порядковый номер в списке ||
-|| *$rname$* || имя ресурса || safebooru.org ||
-|| *$rootdir$* || каталог, в котором находится программа, без завершающего знака "\" || ||
-|| *$short$* || сокращенное имя ресурса || sfbr, glbr, imto ||
-|| *$tag$* || ключевые слова, которые указаны в поле "тэг" || ||
-|| *$tags`[`(N)`]`$* || тэги изображения. N - количество тэгов, по умолчанию все. Строка ограничена 200 символами, обычная длинна имени файла ~245 символов, так что лучше не увлекаться || ||
-|| *%{Атрибут изображения}%* || атрибут, полученный при получении списка || id, source, width, rating ||
+Using variables is not required, but it can help to name a file or distribute files by directories more clearly. In common situation is enough to chose directory to save, then by default will be used format $fname$<($fn$)>.$ext$. Default format will be used every time if after generating name is empty.
 
-Если имя переменной или аттрибута не существует, то оно останется в имени файла.
-|| *Пример* || *Результат* ||
+
+|| *variable* || *description* || *example* ||
+|| *$ext$* || file extension || jpeg, gif ||
+|| *$fname$* || default file name (from url), without extansion || b6b3a54dc0c3984e75cc1134dbc844bd5b45d145 ||
+|| *$fn$* || sequence number in situation, when name is already exists. Zero (0) if do not use isolation <> || name, name1, name2 ||
+|| *$fnn`[`(N)`]`$* || sequence number inside of directory. You can dublicate number N time in a row (helpful to create branched structure) || $fnn$`_`$fname$: 1`_`name.jpg, 2`_`anothername.png<br />$fnn(2)$\$fnn$): 1\1.jpg, 1\2.jpg, 2\1.jpg ||
+|| *$nn$* || sequence number in list ||
+|| *$rname$* || resource name || safebooru.org ||
+|| *$rootdir$* || application root directory, without ending path delimiter "\" || ||
+|| *$short$* || short resource name || sfbr, glbr, imto ||
+|| *$tag$* || keywords posted in "tags" field || ||
+|| *$tags`[`(N)`]`$* || picture's tags. N - tags count, all by default. || ||
+|| *%{picture's attribute}%* || attribute, obtained during the gathering || id, source, width, rating ||
+
+If variable or attribtue name do not exist, then it will remain in file name.
+|| *example* || *result* ||
 || c:\$bname$\$short$ %author% %id% || c:\$bname$\sfbr %author% 123456789<br />c:\$bname$\imto Gidrant 987654321 ||
 
-Чтобы избежать появления нежелательных тэгов можно их "изолировать" треугольными скобками.
-|| *Пример* || *Результат* ||
+To avoid unwanted keywords you can isolate it using triangular brackets:
+
+|| *example* || *result* ||
 || c:\<$bname$\>$short$< %author%> %id% || c:\sfbr 123456789<br />c:\imto Gidrant 987654321 ||
 
-Изоляция так же действует на все символы, находящиеся внутри, т.е. можно сделать конструкцию типа: %id%< page%page%>.$ext$.
-Изолировать можно и несколько имен, в этом случае текст остается если удается подставить хотя бы 1 имя. То, что подставить не удалось, удаляются.
+Also isolation affects all symbols inside, ie you can make construction like %id%< page%page%>.$ext$.
+You can isolate few names, in this case text remain if one of it can be inserted. Those, that can't be inserted, will be deleted.
 
-Теперь можно так же создавать формат отображения для ключей. Если это дата, то будет использовать формат даты-времени, для всех остальных используется строчно-числовой. Задается формат через двоеточее после имени ключа.
+Also now is possible to use display format for keys. If is a date, then will be used datetime format, for all other will be used string-number format. It sets using a colon after key name.
 
-|| *Пример* || *Исходное* || *Результат* ||
+|| *example* || *source* || *result* ||
 || $nn:.2x$ || 15 || 0F ||
 || %posted:yyyy-mm-dd% || 31.12.2012 || 2011-12-31 ||
 || %width:.6d% || 1024 || 001024 ||
 
-Как понять, что надо подставлять, чтобы добиться нужного результата:
-=== Строко-числовой формат ===
+How do you know what you need to use to achieve the desired result:
+=== string-number format ===
 *`[`-`]``[`Width`]``[`.Precision`]`Type*
-
-*Width* - минимальная длинна строки (заполняется пробелами).
-
-*Precision* - ведущие нули (заполняется нулями, напр. 000123). В дробных числах нули заполняются с обратной стороны (напр. 1.2300).
-
-*Type* - тип значения.
-|| *Тип* || *Расшифровка* || *Пример* || *Тип* || *Расшифровка* || *Пример* ||
+ * *Width* - minimal length of string (filled with spaces).
+ * *Precision* - leading zeros (filled with zeros, ex. 000123). Fractional numbers filled with zeros from the back (ex. 1.2300).
+ * *Type* - value type.
+|| *type* || *description* || *example* || *type* || *description* || *example* ||
 || *d* || Decimal || -123 || *e* || Exponent || 1.23456780000000E+004 ||
 || *f* || Fixed || 12345.68 || *g* || General || 12345.678 ||
 || *n* || Number || 12,345,68 || *m* || Money || $12,345.68 (12 345,68р.) ||
 || *p* || Pointer || 0069FC90 || *s* || String || Hello ||
 || *u* || Unsigned decimal || 123 || *x* || Hexadecimal || 8C ||
 
-=== Формат даты и времени ===
-|| *ключ* || *описание* || *ключ* || *описание* || 
-|| *y* || Год из 2-х последних цифр (без ведущего 0) || *m* || Номер месяца (без ведущего 0) ||
-|| *yy* || Год из 2-х последних цифр (с ведущим 0) || *mm* || Номер месяца из 2х цифр ||
-|| *yyyy* || Год из 4-х цифр || *mmm* || Месяц используя *`ShortMonthNames`* ||
-|| *d* || День (без ведущего 0) || *mmmm* || Месяц используя *`LongMonthNames`* ||
-|| *dd* || День (с ведущим 0) || *h* || час (без ведущего 0) ||
-|| *ddd* || День используя *`ShortDayNames`* || *hh* || час (с ведущим 0) ||
-|| *dddd* || День используя *`LongDayNames`* || *n* || минуты (без ведущего 0) ||
-|| *ddddd* || Число в *`ShortDateFormat`* || *nn* || минуты (с ведущим 0) ||
-|| *dddddd* || Число в *`LongDateFormat`* || *s* || секунды (без ведущего 0) ||
-|| *t* || Время используя *`ShortTimeFormat`* || *ss* || секунды (с ведущим 0) ||
-|| *tt* || Время используя *`LongTimeFormat`* || *c* || *`ShortDateFormat`* + *`LongTimeFormat`* ||
-|| *am/pm* || Используется после h : выдаёт 12 часов + am/pm || */* || Заменяется на *`DateSeparator`* ||
-|| *a/p* || Используется после h : выдаёт 12 часов + a/p || *:* || Заменяется на *`TimeSeparator`* ||
-|| *ampm* || Как a/p но используя *`TimeAMString`*,*`TimePMString`* || || ||
+=== datetime format ===
+|| *key* || *description* || *key* || *description* || 
+|| *y* || Year last 2 digits (without leading zero) || *m* || Month number (without leading zero) ||
+|| *yy* || Year last 2 digits (with leading zero) || *mm* ||Month number as 2 digits ||
+|| *yyyy* ||  Year as 4 digits || *mmm* || Month using *`ShortMonthNames`* ||
+|| *d* || Day (without leading zero) || *mmmm* || Month using *`LongMonthNames`* ||
+|| *dd* || Day (with leading zero) || *h* || Hour (without leading zero) ||
+|| *ddd* || Month using *`ShortDayNames`* || *hh* || Hour (with leading zero) ||
+|| *dddd* || Month using *`LongDayNames`* || *n* || Minutes (without leading zero) ||
+|| *ddddd* || Day using *`ShortDateFormat`* || *nn* || Minutes (with leading zero) ||
+|| *dddddd* || Day using *`LongDateFormat`* || *s* || Seconds (without leading zero) ||
+|| *t* || Time using *`ShortTimeFormat`* || *ss* || Seconds (with leading zero) ||
+|| *tt* || Time using *`LongTimeFormat`* || *c* || *`ShortDateFormat`* + *`LongTimeFormat`* ||
+|| *am/pm* || Use after h : gives 12 hours + am/pm || */* || Substituted by *`DateSeparator`* value ||
+|| *a/p* || Use after h : gives 12 hours + a/p || *:* ||  Substituted by *`TimeSeparator`* value ||
+|| *ampm* || As a/p but using *`TimeAMString`*,*`TimePMString`* || || ||
 
 
-В дополнение к этому форматированию, различные из вышеупомянутых вариантов затрагиваются следующими переменными, с их значением по умолчанию (умолчания определяются ОС):
+In addition to this formatting, different from the above options are affected by the following variables with their default value (default is determined by the OS):
 
-|| *Название* || *Пример* || *Название* || *Пример* ||
+|| *name* || *example* || *name* || *example* ||
 || *`DateSeparator`* || . || *`TimeSeparator`* || : ||
 || *`ShortDateFormat`* || dd/mm/yyyy || *`LongDateFormat`* || dd mmm yyyy ||
 || *`TimeAMString`* || AM || *`TimePMString`* || PM ||
 || *`ShortTimeFormat`* || hh:nn || *`LongTimeFormat`* || hh:nn:ss ||
-|| *`ShortMonthNames`* || Янв Фев ... || *`LongMonthNames`* || Январь, Февраль ... ||
-|| *`ShortDayNames`* || Воск, Пон ... || *`LongDayNames`* || Воскресенье, Понедельник ... ||
+|| *`ShortMonthNames`* || Jan Feb ... || *`LongMonthNames`* || January, February ... ||
+|| *`ShortDayNames`* || Sun, Mon ... || *`LongDayNames`* || Sunday, Monday ... ||
