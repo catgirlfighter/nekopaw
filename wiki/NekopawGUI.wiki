@@ -13,17 +13,17 @@ Resources are too different from each other, and there is no way to make only ON
 
 = Contents =
  * [#First_screen First screen]
- * New list screen
- * Downloading
- * Filter features
- * Settings
-  * Interface
-  * Threads
-  * Proxy
-  * Doubles
- * Name formatting
-  * string-number format
-  * datetime format
+ * [#New_list_screen New list screen]
+ * [#Downloading Downloading]
+ * [#Filter_features Filter features]
+ * [#Settings Settings]
+  * [#Interface Interface]
+  * [#Threads Threads]
+  * [#Proxy Proxy]
+  * [#Doubles Doubles]
+ * [#Name_formatting Name formatting]
+  * [#string-number_format string-number format]
+  * [#datetime_format datetime format]
 
 = First screen =
 
