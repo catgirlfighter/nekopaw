@@ -17,6 +17,7 @@ type
     procedure bOkClick(Sender: TObject);
   private
     UPDServ: String;
+    CHKServ: String;
     fName: string;
     t: TUPDThread;
     { Private declarations }
@@ -108,6 +109,7 @@ begin
   t := TUPDThread.Create;
   t.MsgHWND := Self.Handle;
   t.ListURL := UPDServ;
+  t.CheckURL := CHKServ;
   t.Job := UPD_DOWNLOAD_UPDATES;
   t.FreeOnTerminate := false;
   SetEvent(t.Event);
@@ -120,6 +122,8 @@ begin
   INI := TINIFIle.Create(extractfilepath(paramstr(0)) + 'settings.ini');
   UPDServ := INI.ReadString('settings','updserver',
     'http://nekopaw.googlecode.com/svn/trunk/release/graber2/');
+  CHKServ := INI.ReadString('settings','chkserver',
+    'http://nekopaw.googlecode.com/');
   INI.WriteInteger('settings','delupd',1);
   INI.Free;
 end;

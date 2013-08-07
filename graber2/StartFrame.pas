@@ -11,7 +11,7 @@ uses
   cxContainer, cxEdit, dxSkinsCore, cxHeader, cxImage,
   cxButtons, dxGDIPlusClasses,
   {graber2}
-  common, XPMan;
+  common;
 
 const
   IconWidth = 300;
@@ -27,7 +27,6 @@ type
     bSettings: TcxButton;
     iIcon: TImage;
     bExit: TcxButton;
-    XPManifest1: TXPManifest;
     procedure FrameResize(Sender: TObject);
     procedure bNewClick(Sender: TObject);
     procedure bExitClick(Sender: TObject);

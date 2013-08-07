@@ -12,6 +12,7 @@ object Form1: TForm1
   Font.Style = []
   OldCreateOrder = False
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   DesignSize = (
     447
     298)
@@ -32,8 +33,6 @@ object Form1: TForm1
     Width = 431
     Height = 155
     Anchors = [akLeft, akTop, akRight, akBottom]
-    Lines.Strings = (
-      'derp <a href="de"rp" /> << </a>')
     ScrollBars = ssBoth
     TabOrder = 1
   end

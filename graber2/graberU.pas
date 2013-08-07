@@ -2,10 +2,10 @@ unit graberU;
 
 interface
 
-uses Classes, Messages, Windows, SysUtils, SyncObjs, Variants, VarUtils,
+uses Classes, Types, Messages, Windows, SysUtils, SyncObjs, Variants, VarUtils,
   IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP,
   MyXMLParser, DateUtils, IdException, MyHTTP, IdHTTPHeaderInfo, StrUtils, DB,
-  IdStack, IdSSLOpenSSL, Math, Dialogs;
+  IdStack, IdSSLOpenSSL, Math, Dialogs, CCR.EXIF;
 
 const
   UNIQUE_ID = 'GRABER2LOCK';
@@ -59,10 +59,19 @@ const
   DOWNLOAD_SCRIPT = 'dwscript'; // default section for download picture script
 
 type
-
   TArrayOfString = array of string;
   TBoolProcedureOfObject = procedure(Value: Boolean = false) of object;
   TLogEvent = procedure(Sender: TObject; Msg: String) of object;
+
+  tEXIFRec = record
+    UseEXIF: Boolean;
+    Author: String;
+    Title: String;
+    Theme: String;
+    Score: String;
+    Keywords: String;
+    Comment: String;
+  end;
 
   TProxyRec = record
     UseProxy: Boolean;
@@ -105,6 +114,7 @@ type
     Downl: TDownloadRec;
     // Formats: TFormatRec;
     AutoUPD: Boolean;
+    CHKServ: String;
     UPDServ: String;
     OneInstance: Boolean;
     TrayIcon: Boolean;
@@ -116,7 +126,8 @@ type
     IsNew: Boolean;
     MenuCaptions: Boolean;
     Tips: Boolean;
-    UseDist: boolean;
+    UseDist: Boolean;
+    WriteEXIF: Boolean;
   end;
 
   TScriptsRec = record
@@ -154,6 +165,7 @@ type
     Encoding: TEncoding;
     PicTemplate: TPicNameTemplate;
     TagTemplate: TTagTemplate;
+    EXIFTemplate: tEXIFRec;
     Method: THTTPMethod;
     { Counter, } Count: integer;
     Theor: Word;
@@ -223,7 +235,7 @@ type
     procedure SetValue(ItemName: String; Value: Variant);
     procedure Assign(List: TValueList; AOperator: TListAssignOp = laCopy);
     function GetLink(ItemName: String): PVariant;
-    procedure SetLink(ItemName: String; Value: PVariant);
+    procedure SetLink(ItemName: String; Value: PVariant); // Dispose OLD VALUE
   public
     property Items[ItemIndex: integer]: TListValue read Get;
     property Values[ItemName: String]: Variant read GetValue
@@ -241,6 +253,7 @@ type
   public
     function FindPosition(Value: Variant; var i: integer): Boolean;
     function Add(Value: Variant; Pos: integer): PVariant;
+    destructor Destroy; override;
     property ValueType: DB.TFieldType read FType write SetValueType;
     property VariantType: TVarType read FVariantType;
   end;
@@ -252,7 +265,8 @@ type
     sikCondition, sikCycle, sikGroup);
 
   TScriptEvent = function(const Item: TScriptSection;
-    const Parametres: TValueList; var LinkedObj: TObject): Boolean of object;
+    const parameters: TValueList; LinkedObj: TObject;
+      var ResultObj: TObject): Boolean of object;
 
   TValueEvent = procedure(ItemName: String; var Result: Variant;
     var LinkedObj: TObject) of object;
@@ -288,12 +302,13 @@ type
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
     function Add(Section: TScriptSection; Obj: TObject): integer;
+    destructor Destroy; override;
     property Items[Index: integer]: PWorkItem read Get;
   end;
 
   TScriptSection = class(TScriptItem)
   private
-    FParametres: TValueList;
+    Fparameters: TValueList;
     FChildSections: TScriptItemList;
     FNoParam: Boolean;
     FInUse: Boolean;
@@ -307,7 +322,7 @@ type
     procedure Clear;
     procedure Assign(s: TScriptItem); override;
     function Empty: Boolean;
-    property Parameters: TValueList read FParametres;
+    property Parameters: TValueList read Fparameters;
     property ChildSections: TScriptItemList read FChildSections;
     property NoParameters: Boolean read FNoParam write FNoParam;
     property InUse: Boolean read FInUse;
@@ -320,6 +335,7 @@ type
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
     procedure Assign(s: TScriptItemList);
+    destructor Destroy; override;
     property Items[Index: integer]: TScriptItem read Get; default;
   end;
 
@@ -357,6 +373,7 @@ type
     function AddField(resname: string; restitle: string; restype: TFieldType;
       resvalue: Variant; resitems: String; InMulti: Boolean): integer;
     function FindField(resname: String): integer;
+    destructor Destroy; override;
     property Items[Index: integer]: PResourceField read Get { write Put };
     property Values[ItemName: String]: Variant read GetValue
       write SetValue; default;
@@ -411,8 +428,8 @@ type
     procedure SeFields(Value: TResourceFields);
     procedure DoJobComplete;
     procedure DoFinish;
-    function SE(const Item: TScriptSection; const Parameters: TValueList;
-      var LinkedObj: TObject): Boolean;
+    function SE(const Item: TScriptSection; const parameters: TValueList;
+      LinkedObj: TObject; var ResultObj: TObject): Boolean;
     procedure VE(Value: String; var Result: Variant; var LinkedObj: TObject);
     procedure DE(ItemName: String; ItemValue: Variant; LinkedObj: TObject);
     procedure FE(const Item: TScriptSection; LinkedObj: TObject);
@@ -427,6 +444,7 @@ type
     function AddURLToList(s: String): integer;
     procedure ProcPost;
     function TrackRedirect(Url: String): String;
+    procedure WriteEXIF(s: tStream);
   public
     procedure Execute; override;
     constructor Create;
@@ -556,6 +574,8 @@ type
       List: Boolean = false): String; overload;
     function AsString(cnt: integer = 0; List: Boolean = false): String;
       overload;
+    function AsString(Separator, Isolator, Spacer: string; cnt: integer = 0;
+      List: Boolean = false): String; overload;
     property Spacer: String read fSpacer write fSpacer;
     property Isolator: String read fIsolator write fIsolator;
     property Separator: String read fSeparator write fSeparator;
@@ -606,6 +626,7 @@ type
     FDisplayLabel: String;
     FPicName: String;
     FFileName: String;
+    FNameRemake: Boolean;
     FFactFileName: String;
     FExt: String;
     FSize: Int64;
@@ -613,6 +634,7 @@ type
     FPicChange: TPicChangeEvent;
     FChanges: TPicChanges;
     FBookMark: integer;
+    FIndex: integer;
     FPostProc: Boolean;
     FMD5: PVariant;
     // FMD5Double: boolean;
@@ -648,8 +670,10 @@ type
     property OnPicChanged: TPicChangeEvent read FPicChange write FPicChange;
     property Changes: TPicChanges read FChanges write FChanges;
     property BookMark: integer read FBookMark write FBookMark;
+    property Index: integer read FIndex write FIndex;
     property PostProcessed: Boolean read FPostProc write FPostProc;
     property MD5: PVariant read FMD5;
+    property NeedNameRemake: Boolean read FNameRemake write FNameRemake;
   end;
 
   TPicCounter = record
@@ -780,6 +804,7 @@ type
     function NextJob(Status: integer): integer;
     function LastJob(Status: integer): integer;
     function eol: Boolean;
+    destructor Destroy; override;
     property Items[Index: integer]: PJobRec read Get; default;
     procedure Reset;
     procedure Clear; override;
@@ -789,7 +814,25 @@ type
     property OkCount: integer read FOkCount;
   end;
 
-  pThreadCounter = ^tThreadCounter;
+  tGeneralSettings = record
+    MaxThreadCount: integer;
+    PicDelay: integer;
+    PageDelay: integer end;
+
+    pThreadCounter = ^tThreadCounter;
+
+    tThreadCounter = record DefinedSettings: tGeneralSettings;
+    UserSettings: tGeneralSettings;
+    UseUserSettings: Boolean;
+    MaxThreadCount: integer;
+    CurrThreadCount: integer;
+    PictureThreadCount: integer;
+    // PageDelay: integer;
+    // PicDelay: integer;
+    CurrentResource: TResource;
+    LastPageTime: TDateTime;
+    LastPicTime: TDateTime;
+  end;
 
   TResource = class(TObject)
   private
@@ -838,6 +881,7 @@ type
     FOnPageComplete: TNotifyEvent;
     FTemplateFile: String;
     FKeywordList: TStringList;
+    // fUseUserSettings: Boolean;
     // FLastPageTime: TDateTime;
     // FLastPicTime: TDateTime;
     // procedure SetMaxThreadCount(Value: integer);
@@ -918,19 +962,13 @@ type
     property OnPageComplete: TNotifyEvent read FOnPageComplete
       write FOnPageComplete;
     property KeywordList: TStringList read FKeywordList;
+    // property UseUserSettings: Boolean read fUseUserSettings write fUseUserSettings;
+    // property DefinedSettings: tGeneralSettings read fDefinedSettings write fDefinedSettings;
+    // property UserSettings: tGeneralSettings read fUserSettings write fUserSettings;
+
     // property LastPageTime: TDateTime read FLastPageTime;
     // property LastPicTime: TDateTime read FLastPicTime;
     // property TagsSpacer: Char read fSpacer write fSpacer;
-  end;
-
-  tThreadCounter = record
-    DefinedMaxThreadCount: integer;
-    MaxThreadCount: integer;
-    CurrThreadCount: integer;
-    PictureThreadCount: integer;
-    CurrentResource: TResource;
-    LastPageTime: TDateTime;
-    LastPicTime: TDateTime;
   end;
 
   TResourceLinkList = class(TList)
@@ -950,31 +988,22 @@ type
   private
     FThreadHandler: TThreadHandler;
     FDwnldHandler: TThreadHandler;
-    // FOnAddPicture: TPictureEvent;
     FJobChanged: TActionNotifyEvent;
-    // FOnEndJob: TActionNotifyEvent;
-    // FOnBeginPicList: TNotifyEvent;
-    // FOnEndPicList: TNotifyEvent;
     FQueueIndex: integer;
     FPicQueue: integer;
     FPageMode: Boolean;
     FMode: TResourceMode;
-    // FFinished: Boolean;
-    // FOnLog: TLogEvent;
     FOnError: TLogEvent;
     FMaxThreadCount: integer;
-    // FIgnoreList: TDSArray;
     FListFileFormat: String;
-    // FPicChanged: TPicChangeEvent;
     FPictureList: TPictureList;
-    // FPicFileFormat: String;
-    // procedure SetPicFileFormat(Value: String);
     FOnResPageComplete: TNotifyEvent;
     FStopTick: DWORD;
     FStopPicsTick: DWORD;
     FCanceled: Boolean;
     FLogMode: Boolean;
-    fUseDist: boolean;
+    fUseDist: Boolean;
+    fWriteEXIF: Boolean;
     procedure SetOnPageComplete(Value: TNotifyEvent);
     procedure SetOnError(Value: TLogEvent);
     function GetPicsFinished: Boolean;
@@ -983,8 +1012,6 @@ type
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
     procedure JobFinished(R: TResource);
     procedure PicJobFinished(R: TResource);
-    // procedure AddToQueue(R: TResource);
-    // procedure SetOnPictureAdd(Value: TPictureEvent);
     procedure OnHandlerFinished(Sender: TObject);
     function CreateJob(t: TDownloadThread): Boolean;
     function GetListFinished: Boolean;
@@ -1006,6 +1033,7 @@ type
     function PostProcessFinished: Boolean;
     procedure ApplyInherit;
     procedure HandleKeywordList;
+    procedure HandleParentLinks;
     property ThreadHandler: TThreadHandler read FThreadHandler;
     property DWNLDHandler: TThreadHandler read FDwnldHandler;
     procedure LoadList(Dir: String);
@@ -1034,6 +1062,7 @@ type
     property Canceled: Boolean read FCanceled write FCanceled;
     property LogMode: Boolean read FLogMode write SetLogMode;
     property UseDistribution: Boolean read fUseDist write fUseDist;
+    property WriteEXIF: Boolean read fWriteEXIF write fWriteEXIF;
   end;
 
 function strFind(Value: string; List: TStringList; var index: integer): Boolean;
@@ -1070,7 +1099,7 @@ function CalcValue(s: Variant; VE: TValueEvent; Lnk: TObject;
 const
   op = ['(', ')', '+', '-', '<', '>', '=', '!', '*', '/', '\', '&', ',', '?',
     '~', '|', ' ', #9, #13, #10];
-  p = ['$', '#', '@'];
+  p = ['$', '%', '#', '@'];
   isl: array [0 .. 1] of string = ('""', '''''');
 var
   n1, n2: integer;
@@ -1085,6 +1114,7 @@ var
 
 begin
   rsv := s;
+
   if Assigned(VE) then
   begin
     n1 := CharPos(s, ';', isl, []);
@@ -1156,8 +1186,8 @@ begin
         begin
           vt := VarToWideStr(rstr);
 
-          if pos(' ',SysUtils.trim(rstr)) = 0 then
-            VRESULT := VarR8FromStr(vt, VAR_LOCALE_USER_DEFAULT, 0, vt2)
+          if Pos(' ', SysUtils.trim(rstr)) = 0 then
+            VRESULT := VarR8FromStr(@vt[1], VAR_LOCALE_USER_DEFAULT, 0, vt2)
           else
             VRESULT := 1;
 
@@ -1232,7 +1262,12 @@ begin
 end;
 
 destructor TTagedList.Destroy;
+//var
+//  i: integer;
 begin
+  //for i := 0 to Count-1 do
+  //  Items[i].Free;
+  Clear;
   inherited;
 end;
 
@@ -1386,7 +1421,9 @@ end;
 
 procedure TListValue.SetLink(Value: PVariant);
 begin
-  Dispose(PVariant( inherited Value));
+  if FMy then
+    Dispose(PVariant( inherited Value));
+
   inherited Value := Value;
   FMy := false;
 end;
@@ -1581,6 +1618,12 @@ begin
   end;
 end;
 
+destructor TMetaList.Destroy;
+begin
+  Clear;
+  inherited;
+end;
+
 function TMetaList.FindPosition(Value: Variant; var i: integer): Boolean;
 var
   Hi, Lo: integer;
@@ -1698,6 +1741,12 @@ end;
 
 // TWorkList
 
+destructor TWorkList.Destroy;
+begin
+  Clear;
+  Inherited;
+end;
+
 function TWorkList.Get(Index: integer): PWorkItem;
 
 begin
@@ -1743,11 +1792,8 @@ constructor TScriptSection.Create;
 begin
   inherited;
   FName := '';
-  FParametres := TValueList.Create;
-  FParametres.NoDouble := false;
-  // FDeclorations := TValueList.Create;
-  // FDeclorations.NoDouble := false;
-  // FConditions := TScriptSectionList.Create;
+  Fparameters := TValueList.Create;
+  Fparameters.NoDouble := false;
   FChildSections := TScriptItemList.Create;
   FNoParam := false;
   FInUse := false;
@@ -1755,9 +1801,7 @@ end;
 
 destructor TScriptSection.Destroy;
 begin
-  FParametres.Free;
-  // FDeclorations.Free;
-  // FConditions.Free;
+  Fparameters.Free;
   FChildSections.Free;
   inherited;
 end;
@@ -1891,7 +1935,7 @@ begin
             raise Exception.Create('Script read error: ' +
               'Can''t find { after ' + Copy(s, i, 15));
 
-          tmp := SysUtils.Trim(Copy(s, i + 1, n - i - 1));
+          tmp := SysUtils.trim(Copy(s, i + 1, n - i - 1));
 
           Child := TScriptSection.Create;
           // Child.Parent := Parent;
@@ -1937,7 +1981,7 @@ begin
 
           i := n + 1;
 
-          //Child.Parameters.)/
+          // Child.Parameters.)/
 
           n := CharPos(s, '}', isl, brk, i);
 
@@ -2028,8 +2072,8 @@ procedure TScriptSection.Process(const SE: TScriptEvent;
 
 var
   Calced: TValueList;
-  i, j,loopcounter: integer;
-  Lnk: TObject;
+  i, j, loopcounter: integer;
+  ALnk,Lnk: TObject;
   Obj: TObject;
   cont: Boolean;
 begin
@@ -2037,33 +2081,40 @@ begin
     Exit;
 
   FInUse := true;
-
+  ALnk := nil; try
+  lnk := LinkedObj;
   try
-    Lnk := LinkedObj;
+    //Lnk := LinkedObj; //try
 
     if Assigned(SE) then
     begin
-      Calced := TValueList.Create;
+      Calced := TValueList.Create; try
       try
         Calced.Assign(Parameters);
 
         if Assigned(PVE) then
           for i := 0 to Calced.Count - 1 do
-            Calced.Items[i].Value := CalcValue(Calced.Items[i].Value, PVE, Lnk);
+            Calced.Items[i].Value := CalcValue(Calced.Items[i].Value, PVE, LinkedObj);
 
-        cont := SE(Self, Calced, Lnk);
-      except
-        on e: Exception do
-        begin
-          FreeAndNil(Calced);
-          e.Message := ('Script section item parametres calculation error: ' +
-            e.Message);
-          raise;
-        end;
-      end;
+        cont := SE(Self, Calced, LinkedObj, Alnk);
+
+        if Assigned(ALnk) then
+          Lnk := ALnk;
+
+        //Lnk.Free;
+        //Exit;
+      except on e: Exception do begin
+        e.Message := ('Script section item parameters calculation error: ' +
+          e.Message);
+        cont := false;
+        raise;
+      end; end;
+      finally Calced.Free; end;
     end
     else
       cont := true;
+
+    //try
 
     if cont then
     begin
@@ -2075,7 +2126,6 @@ begin
             Items[i].Section.Process(SE, DE, FE, VE, PVE, Items[i].Obj)
       else
       begin
-
         if (Kind <> sikNone) and Assigned(Lnk) and (Lnk is TList) and
           ((Lnk as TList).Count > 0) then
         begin
@@ -2107,8 +2157,9 @@ begin
                   while CalcValue(ChildSections[i].Name, VE, Obj) do
                   begin
                     if loopcounter = MAXINT then
-                      raise Exception.Create('Cycle is reached iteration maximum ' +
-                      '(' + IntToStr(MAXINT) + ': ' + ChildSections[i].Name);
+                      raise Exception.Create
+                        ('Cycle is reached iteration maximum ' + '(' +
+                        IntToStr(MAXINT) + ': ' + ChildSections[i].Name);
 
                     (ChildSections[i] as TScriptSection).Process(SE, DE, FE, VE,
                       PVE, Obj);
@@ -2136,8 +2187,7 @@ begin
 
     end;
 
-    if Assigned(FE) then
-      FE(Self, Lnk);
+    finally if Assigned(FE) then FE(Self, ALnk); end;
 
   finally
     FInUse := false;
@@ -2156,7 +2206,7 @@ begin
 
       // FParent := s.Parent;
       FNoParam := (s as TScriptSection).NoParameters;
-      FParametres.Assign((s as TScriptSection).Parameters);
+      Fparameters.Assign((s as TScriptSection).Parameters);
       // FKind := s.Kind;
       // FDeclorations.Assign(s.Declorations);
       // FConditions.Assign(s.Conditions);
@@ -2223,6 +2273,12 @@ begin
       p.Assign(s[i]);
       Add(p);
     end;
+end;
+
+destructor TScriptItemList.Destroy;
+begin
+  Clear;
+  inherited;
 end;
 
 function TScriptItemList.Get(Index: integer): TScriptItem;
@@ -2334,6 +2390,12 @@ begin
   Reset;
 end;
 
+destructor TJobList.Destroy;
+begin
+  inherited Clear;
+  inherited;
+end;
+
 function TJobList.eol: Boolean;
 begin
   Result := not(FCursor < Count);
@@ -2384,17 +2446,20 @@ begin
   if FInherit then
   begin
     // FFields.Assign(R.Parent.Fields, laOr);
-    if (fKeywordList.Count = 0) then
+    if (FKeywordList.Count = 0) then
     begin
       if (p.KeywordList.Count = 0) then
       begin
         n := p.Fields.FindField('tag');
         if (n > -1) and (VarToStr(p.Fields.Items[n].resvalue) <> '') then
-          FFields['tag'] := FormatTagString(VarToStr(p.Fields.Items[n].resvalue),
+          FFields['tag'] :=
+            FormatTagString(VarToStr(p.Fields.Items[n].resvalue),
             p.HTTPRec.TagTemplate);
-      end else
-        for i := 0 to p.KeywordList.Count-1 do
-          fKeywordList.Add(FormatTagString(p.KeywordList[i],p.HTTPRec.TagTemplate));
+      end
+      else
+        for i := 0 to p.KeywordList.Count - 1 do
+          FKeywordList.Add(FormatTagString(p.KeywordList[i],
+            p.HTTPRec.TagTemplate));
     end;
 
     FNameFormat := p.NameFormat;
@@ -2403,17 +2468,20 @@ begin
   begin
     FNameFormat := NameFormat;
 
-    if (VarToStr(FFields['tag']) = '')
-    and (fkeyWordList.Count = 0) then
-      if (p.KeywordList.Count = 0) then
-      begin
-        n := p.Fields.FindField('tag');
-        if (n > -1) and (VarToStr(p.Fields.Items[n].resvalue) <> '') then
-          FFields['tag'] := FormatTagString(VarToStr(p.Fields.Items[n].resvalue),
-            p.HTTPRec.TagTemplate);
-      end else
-        for i := 0 to p.KeywordList.Count-1 do
-          fKeyWordList.Add(FormatTagString(p.KeywordList[i],p.HTTPRec.TagTemplate));
+    if (VarToStr(FFields['tag']) = '') then
+      if (FKeywordList.Count = 0) then
+        if (p.KeywordList.Count = 0) then
+        begin
+          n := p.Fields.FindField('tag');
+          if (n > -1) and (VarToStr(p.Fields.Items[n].resvalue) <> '') then
+            FFields['tag'] :=
+              FormatTagString(VarToStr(p.Fields.Items[n].resvalue),
+              p.HTTPRec.TagTemplate);
+        end
+        else
+          for i := 0 to p.KeywordList.Count - 1 do
+            FKeywordList.Add(FormatTagString(p.KeywordList[i],
+              p.HTTPRec.TagTemplate));
   end;
 end;
 
@@ -2453,8 +2521,13 @@ begin
   FHTTPRec.TryExt := R.HTTPRec.TryExt;
   FHTTPRec.Encoding := R.HTTPRec.Encoding;
   FHTTPRec.PicTemplate := R.HTTPRec.PicTemplate;
-  FHTTPRec.PageDelay := R.HTTPRec.PageDelay;
-  FHTTPRec.PicDelay := R.HTTPRec.PicDelay;
+  FHTTPRec.EXIFTemplate := R.HTTPRec.EXIFTemplate;
+  // FHTTPRec.PageDelay := R.HTTPRec.PageDelay;
+  // FHTTPRec.PicDelay := R.HTTPRec.PicDelay;
+
+  // fUseUserSettings := R.UseUserSettings;
+  // fUserSettings := R.UserSettings;
+  // fDefinedSettings := R.DefinedSettings;
 end;
 
 function TResource.CanAddThread: Boolean;
@@ -2500,6 +2573,7 @@ begin
   FHTTPRec.TagTemplate.Separator := ' ';
   FHTTPRec.TagTemplate.Isolator := '';
   FHTTPRec.Encoding := TEncoding.UTF8;
+  FHTTPRec.EXIFTemplate.UseEXIF := false;
   // FAddToQueue := nil;
   // FJobFinished := false;
   // FPerpageMode := false;
@@ -2507,7 +2581,21 @@ begin
   FNextPage := false;
   FKeepQueue := false;
   FThreadCounter := nil;
-  // FDefinedMaxThreadCount := 0;
+  // fUseUserSettings := false;
+
+  // with fUserSettings do
+  // begin
+  // MaxThreadCount := 0;
+  // PageDelay := 0;
+  // PicDelay := 0;
+  // end;
+
+  // with fDefinedSettings do
+  // begin
+  // MaxThreadCount := 0;
+  // PageDelay := 0;
+  // PicDelay := 0;
+  // end;
 
   FJobList := TJobList.Create;
   with FScripts do
@@ -2537,7 +2625,7 @@ begin
     FXMLScript.Free;
   if Assigned(FPicScript) then
     FPicScript.Free;
-  if Self = FMainResource then
+  if fMainResource = nil then
     FreeThreadCounter;
   { if Assigned(FPictureList) then
     FPictureList.Free; }
@@ -2573,14 +2661,15 @@ begin
 
   while Tag <> '' do
   begin
-    s := GetNextS(Tag, FHTTPRec.TagTemplate.Separator, FHTTPRec.TagTemplate.Isolator);
+    s := GetNextS(Tag, FHTTPRec.TagTemplate.Separator,
+      FHTTPRec.TagTemplate.Isolator);
     if Result = '' then
       Result := NewFormat.Isolator + ReplaceStr(s, FHTTPRec.TagTemplate.Spacer,
         NewFormat.Spacer) + NewFormat.Isolator
     else
-      Result := Result + NewFormat.Separator +
-        NewFormat.Isolator + ReplaceStr(s, FHTTPRec.TagTemplate.Spacer,
-        NewFormat.Spacer) + NewFormat.Isolator;
+      Result := Result + NewFormat.Separator + NewFormat.Isolator +
+        ReplaceStr(s, FHTTPRec.TagTemplate.Spacer, NewFormat.Spacer) +
+        NewFormat.Isolator;
   end;
 end;
 
@@ -2664,15 +2753,32 @@ begin
   case JobType of
     JOB_LIST:
       begin
+
+        if (ThreadCounter.DefinedSettings.MaxThreadCount > 0) and
+          ((ThreadCounter.DefinedSettings.MaxThreadCount <
+          ThreadCounter.MaxThreadCount) or
+          (ThreadCounter.MaxThreadCount = 0)) then
+          ThreadCounter.MaxThreadCount :=
+            ThreadCounter.DefinedSettings.MaxThreadCount;
+
+        if ThreadCounter.UseUserSettings and
+          (ThreadCounter.UserSettings.MaxThreadCount > 0) and
+          ((ThreadCounter.DefinedSettings.MaxThreadCount <
+          ThreadCounter.MaxThreadCount) or
+          (ThreadCounter.MaxThreadCount = 0)) then
+          ThreadCounter.MaxThreadCount :=
+            ThreadCounter.UserSettings.MaxThreadCount;
+
+        FHTTPRec.PageDelay := ThreadCounter.DefinedSettings.PageDelay;
+
+        if ThreadCounter.UseUserSettings and
+          (ThreadCounter.UserSettings.PageDelay > FHTTPRec.PageDelay) then
+          FHTTPRec.PageDelay := ThreadCounter.UserSettings.PageDelay;
+
         FJobList.Reset;
 
         if (FJobList.Count > 0) and (FJobList.AllFinished(false)) then
           Exit;
-
-        // FCurrThreadCount := 0;
-        // FJobFinished := false;
-
-        // FHTTPRec.Counter := FJobList.FinishCursor;
 
         FJobInitiated := FJobList.Count > 0;
 
@@ -2691,6 +2797,9 @@ begin
       end;
     JOB_LOGIN:
       begin
+
+        ThreadCounter.MaxThreadCount := 1;
+
         if FScripts.Login <> '' then
         begin
           if not Assigned(FInitialScript) then
@@ -2703,12 +2812,17 @@ begin
       end;
     JOB_PICS:
       begin
+
+        FHTTPRec.PicDelay := ThreadCounter.DefinedSettings.PicDelay;
+
+        if ThreadCounter.UseUserSettings then
+          if ThreadCounter.UserSettings.PicDelay > FHTTPRec.PicDelay then
+            FHTTPRec.PicDelay := ThreadCounter.UserSettings.PicDelay;
+
         FPictureList.Reset;
 
         if (FPictureList.Count = 0) or (FPictureList.AllFinished(false)) then
           Exit;
-
-        // FPictureThreadCount := 0;
 
         if not Assigned(FPicScript) then
           FPicScript := TScriptSection.Create;
@@ -2952,11 +3066,13 @@ procedure TResource.DeclorationEvent(ItemName: String; ItemValue: Variant;
     else if SameText(ItemName, '$main.pagebypage') then
       FHTTPRec.PageByPage := ItemValue
     else if SameText(ItemName, '$main.threadcount') then
-      FThreadCounter.DefinedMaxThreadCount := ItemValue
+      ThreadCounter.DefinedSettings.MaxThreadCount := ItemValue
     else if SameText(ItemName, '$main.pagedelay') then
-      FHTTPRec.PageDelay := ItemValue
+      // FHTTPRec.PageDelay := ItemValue
+      ThreadCounter.DefinedSettings.PageDelay := ItemValue
     else if SameText(ItemName, '$main.picdelay') then
-      FHTTPRec.PicDelay := ItemValue
+      // FHTTPRec.PicDelay := ItemValue
+      ThreadCounter.DefinedSettings.PicDelay := ItemValue
     else if SameText(ItemName, '$main.keepqueue') then
       FKeepQueue := ItemValue
     else if SameText(ItemName, '$picture.template.name') then
@@ -2985,8 +3101,20 @@ procedure TResource.DeclorationEvent(ItemName: String; ItemValue: Variant;
         raise Exception.Create('Unknown encoding: ' + ItemValue)
     else if SameText(ItemName, '$tags.isolator') then
       if length(ItemValue) > 0 then
-        FHTTPRec.TagTemplate.Isolator := VarToStr(ItemValue)
+        fHTTPRec.TagTemplate.Isolator := VarToStr(ItemValue)
       else
+    else if SameText(ItemName, '$picture.exif.author') then
+      fHTTPRec.EXIFTemplate.Author := ItemValue
+    else if SameText(ItemName, '$picture.exif.title') then
+      fHTTPRec.EXIFTemplate.Title := ItemValue
+    else if SameText(ItemName, '$picture.exif.theme') then
+      fHTTPRec.EXIFTemplate.Theme := ItemValue
+    else if SameText(ItemName, '$picture.exif.score') then
+      fHTTPRec.EXIFTemplate.Score := ItemValue
+    else if SameText(ItemName, '$picture.exif.keywords') then
+      fHTTPRec.EXIFTemplate.Keywords := ItemValue
+    else if SameText(ItemName, '$picture.exif.comment') then
+      fHTTPRec.EXIFTemplate.Comment := ItemValue
     else if SameText(ItemName, '$main.template') then
     begin
       s := StringFromFile(ExtractFilePath(FTemplateFile) + ItemValue);
@@ -3277,41 +3405,41 @@ begin
 
   GetSectors(s, FSectors);
 
-  mainscript := nil;
+  //mainscript := nil;
 
   if not Assigned(FThreadCounter) then
   begin
     New(FThreadCounter);
-    FThreadCounter.DefinedMaxThreadCount := 0;
+    // FThreadCounter.DefinedMaxThreadCount := 0;
     FThreadCounter.MaxThreadCount := 0;
     FThreadCounter.CurrThreadCount := 0;
     FThreadCounter.PictureThreadCount := 0;
     FThreadCounter.CurrentResource := nil;
     FThreadCounter.LastPageTime := 0;
     FThreadCounter.LastPicTime := 0;
-  end;
 
-  try
-    mainscript := TScriptSection.Create;
-    mainscript.ParseValues(Sectors['main']);
-    mainscript.Process(nil, DeclorationEvent, nil, nil);
-  except
-    on e: Exception do
-    begin
-      if Assigned(mainscript) then
-        mainscript.Free;
-      if Assigned(FOnError) then
-        FOnError(Self, 'Resource load error (' + FName + '): ' + e.Message)
-      else
-      begin
-        e.Message := 'Resource load error (' + FName + '): ' + e.Message;
-        raise;
+    FThreadCounter.DefinedSettings.MaxThreadCount := 0;
+    FThreadCounter.DefinedSettings.PicDelay := 0;
+    FThreadCounter.DefinedSettings.PageDelay := 0;
+
+    FThreadCounter.UserSettings.MaxThreadCount := 0;
+    FThreadCounter.UserSettings.PicDelay := 0;
+    FThreadCounter.UserSettings.PageDelay := 0;   
+  end;      
+
+  mainscript := TScriptSection.Create; try try
+      mainscript.ParseValues(Sectors['main']);
+      mainscript.Process(nil, DeclorationEvent, nil, nil);
+    except on e: Exception do
+      begin 
+          e.Message := 'Resource load error (' + FName + '): ' + e.Message;
+          raise;
       end;
     end;
-  end;
+  finally mainscript.Free; end;
 
   FFileName := FName;
-  FResName := ChangeFileExt(ExtractFileName(FName), '');
+  FResName := ChangeFileExt(ExtractFileName(FName), '');  
 end;
 
 function TResource.PageDelayed: Boolean;
@@ -3608,7 +3736,7 @@ end;
 
 function TResourceList.CreateDWNLDJob(t: TDownloadThread): Boolean;
 var
-  R, DR: TResource;
+  R{, DR}: TResource;
   i: integer;
   n: integer;
 
@@ -3645,7 +3773,7 @@ var
   end;
 
 begin
-  DR := R;
+  //DR := R;
 
   // queue of tasks
 
@@ -3772,8 +3900,39 @@ begin
       end
       else
     else if (not(FPageMode and not R.NextPage) and
-      (not R.JobInitiated or (not R.JobList.eol)))
-      and R.CanAddThread then
+      (not R.JobInitiated or (not R.JobList.eol))) and R.CanAddThread then
+      if not R.PageDelayed or (R.ThreadCounter.CurrThreadCount = 0) then
+      begin
+        R.CreateJob(t);
+        R.NextPage := false;
+        Result := true;
+
+        if fUseDist then
+          FQueueIndex := i + 1
+        else
+          FQueueIndex := i;
+
+        Exit;
+      end
+      else if not Assigned(DR) or
+        (R.ThreadCounter.LastPageTime < DR.ThreadCounter.LastPageTime) then
+      begin
+        DR := R;
+
+        if fUseDist then
+          FQueueIndex := i + 1
+        else
+          FQueueIndex := i;
+      end;
+  end;
+
+  // from start to current
+  if FMode = rmNormal then
+    for i := 0 to FQueueIndex - 1 do
+    begin
+      R := Items[i];
+      if (not(FPageMode and not R.NextPage) and
+        (not R.JobInitiated or (not R.JobList.eol))) and R.CanAddThread then
         if not R.PageDelayed or (R.ThreadCounter.CurrThreadCount = 0) then
         begin
           R.CreateJob(t);
@@ -3783,7 +3942,7 @@ begin
           if fUseDist then
             FQueueIndex := i + 1
           else
-            fQueueIndex := i;
+            FQueueIndex := i;
 
           Exit;
         end
@@ -3795,41 +3954,8 @@ begin
           if fUseDist then
             FQueueIndex := i + 1
           else
-            fQueueIndex := i;
+            FQueueIndex := i;
         end;
-  end;
-
-  // from start to current
-  if FMode = rmNormal then
-    for i := 0 to FQueueIndex - 1 do
-    begin
-      R := Items[i];
-      if (not(FPageMode and not R.NextPage) and
-        (not R.JobInitiated or (not R.JobList.eol)))
-        and R.CanAddThread then
-          if not R.PageDelayed or (R.ThreadCounter.CurrThreadCount = 0) then
-          begin
-            R.CreateJob(t);
-            R.NextPage := false;
-            Result := true;
-
-            if fUseDist then
-              FQueueIndex := i + 1
-            else
-              fQueueIndex := i;
-
-            Exit;
-          end
-          else if not Assigned(DR) or
-            (R.ThreadCounter.LastPageTime < DR.ThreadCounter.LastPageTime) then
-          begin
-            DR := R;
-
-            if fUseDist then
-              FQueueIndex := i + 1
-            else
-              fQueueIndex := i;
-          end;
     end;
 
   // if no task then result = false
@@ -3887,24 +4013,40 @@ begin
 end;
 
 procedure TResourceList.HandleKeywordList;
- var
-  i,j,l: integer;
+var
+  i, j, l: integer;
   n: integer;
 begin
-//at first handle "general" keyword list
+  // at first handle "general" keyword list
 
-  n := Count -1;
+  n := Count - 1;
   for i := 0 to n do
-    if (Items[i].KeywordList.Count> 0)then
+    if (Items[i].KeywordList.Count > 0) then
     begin
-      Items[i].fields['tag'] := Items[i].KeywordList[0];
-      for j := 1 to Items[i].KeywordList.Count-1 do
+      Items[i].Fields['tag'] := Items[i].KeywordList[0];
+      for j := 1 to Items[i].KeywordList.Count - 1 do
       begin
         l := CopyResource(Items[i]);
         Items[l].Fields['tag'] := Items[i].KeywordList[j];
         Items[l].Parent := Items[i].Parent;
       end;
     end;
+end;
+
+procedure TResourceList.HandleParentLinks;
+var
+  i: integer;
+begin
+  for i := 0 to Count -1 do
+  begin
+    if Items[i].Parent.MainResource = nil then
+      Items[i].Parent.MainResource := Items[i]
+    else
+      Items[i].MainResource := Items[i].Parent.MainResource;
+    Items[i].SetThreadCounter(Items[i].Parent.ThreadCounter);
+
+    Items[i].Parent := nil;
+  end;
 end;
 
 function TResourceList.ItemByName(AName: String): TResource;
@@ -3921,10 +4063,16 @@ begin
 end;
 
 destructor TResourceList.Destroy;
+//var
+//  i: integer;
 begin
   FThreadHandler.Free;
   FDwnldHandler.Free;
   FPictureList.Free;
+
+//  for i := 0 to Count -1 do
+//    Items[i].Free;
+  Clear;
   inherited;
 end;
 
@@ -3935,7 +4083,7 @@ var
   p: TMetaList;
   s, n: string;
 begin
-  f := TStringList.Create;
+  f := TStringList.Create; try
   if Count < 1 then
     Exit;
   f.Assign(Items[0].PicFieldList);
@@ -3976,7 +4124,7 @@ begin
   end;
 
   // l.Free;
-  f.Free;
+  finally f.Free; end;
 end;
 
 procedure TResourceList.JobFinished(R: TResource);
@@ -4095,14 +4243,7 @@ begin
         begin
           with Items[i] do
           begin
-            if (ThreadCounter.DefinedMaxThreadCount > 0) and
-              (ThreadCounter.DefinedMaxThreadCount < MaxThreadCount) then
-              ThreadCounter.MaxThreadCount :=
-                ThreadCounter.DefinedMaxThreadCount
-            else
-              ThreadCounter.MaxThreadCount := MaxThreadCount;
-            { if Inherit then
-              PictureList.NameFormat := PicFileFormat; }
+            ThreadCounter.MaxThreadCount := MaxThreadCount;
             StartJob(JobType);
             if not FPageMode and (not JobList.eol) then
               ThreadHandler.CheckIdle;
@@ -4124,15 +4265,8 @@ begin
         for i := 0 to Count - 1 do
           if Items[i].Relogin then
             with Items[i] do
-            begin
-              if (ThreadCounter.DefinedMaxThreadCount > 0) and
-                (ThreadCounter.DefinedMaxThreadCount < MaxThreadCount) then
-                ThreadCounter.MaxThreadCount :=
-                  ThreadCounter.DefinedMaxThreadCount
-              else
-                ThreadCounter.MaxThreadCount := MaxThreadCount;
+              // ThreadCounter.MaxThreadCount := 1;
               StartJob(JobType);
-            end;
         FMode := rmLogin;
         ThreadHandler.CreateThreads;
         ThreadHandler.CheckIdle;
@@ -4157,6 +4291,7 @@ begin
             // MaxThreadCount := MaxThreadCount;
             { if Inherit then
               PictureList.NameFormat := PicFileFormat; }
+            Items[i].fHTTPRec.EXIFTemplate.UseEXIF := WriteEXIF;
             StartJob(JobType);
             if not FPictureList.eol then
               FDwnldHandler.CheckIdle
@@ -4316,7 +4451,7 @@ begin
       end;
     until FindNext(a) <> 0;
 
-  end;
+  end;     
 end;
 
 procedure TResourceList.SetLogMode(Value: Boolean);
@@ -4398,13 +4533,8 @@ begin
 
           end
           else
-          begin
-            // if (FHTTPRec.Count = 0) and (FHTTPRec.Counter = 0) then
-            // FHTTPRec.Counter := 1;
-
             if Job = JOB_LIST THEN
               ProcHTTP;
-          end;
 
           if Job = JOB_PICS then
             ProcPic;
@@ -4513,6 +4643,7 @@ begin
   FSSLHandler.Free;
   FHTTP.Free;
   FPicList.Free;
+  FSectors.Free;
   inherited;
 end;
 
@@ -4528,7 +4659,8 @@ begin
 end;
 
 function TDownloadThread.SE(const Item: TScriptSection;
-  const Parameters: TValueList; var LinkedObj: TObject): Boolean;
+    const parameters: TValueList; LinkedObj: TObject;
+    var ResultObj: TObject): Boolean;
 
   function copytag(s: ttag): ttag;
   begin
@@ -4544,14 +4676,10 @@ var
   i, j: integer;
   a: array of TAttrList;
   Tags: array of string;
-  // tmp: string;
+  //tmp: ttag;
 begin
-  { if Assigned(LinkedObj) then
-    tmp := LinkedObj.ClassName; }
-  if { ((Item.Kind = sikSection) and (Item.Name<>'') or (Item.Kind <> sikSection))
-    and } Assigned(LinkedObj) and
-    ((LinkedObj is TTagList) or (LinkedObj is ttag))
-  { and ((LinkedObj as TTag).Tag = 0)) } then
+  if Assigned(LinkedObj) and
+    ((LinkedObj is TTagList) or (LinkedObj is ttag)) then
   begin
     if (LinkedObj is ttag) then
       if (LinkedObj as ttag).Tag = 0 then
@@ -4568,112 +4696,99 @@ begin
     else
       s := LinkedObj as TTagList;
 
-    l := TTagList.Create;
-    try
-      {
-        if (LinkedObj is TTagList) then
-        s := LinkedObj as TTagList
-        else
-        s := (LinkedObj as TTag).Childs;
-      }
-      case Item.Kind of
-        sikSection:
-          begin
-            SetLength(a, 1);
+    //l := nil;
+    //tmp := ttag.Create('derp',tktext);
 
-            a[0] := TAttrList.Create;
-            try
-              for i := 0 to Parameters.Count - 1 do
-                a[0].Add(Copy(Parameters.Items[i].Name, 1,
-                  length(Parameters.Items[i].Name) - 1),
-                  VarToStr(Parameters.Items[i].Value),
-                  Parameters.Items[i].Name[length(Parameters.Items[i].Name)]);
-
-              // if Item.NoParameters then
-              // a[0].NoParameters := Item.NoParameters;
-
-              a[0].NoParameters := Item.NoParameters;
-              s.GetList(Item.Name, a[0], l);
-            finally
-              a[0].Free;
-              SetLength(a, 0);
-            end;
-
-            LinkedObj := l;
-
-            Result := l.Count > 0;
-          end;
-        sikGroup:
-          begin
-            SetLength(Tags, Item.ChildSections.Count);
-            SetLength(a, Item.ChildSections.Count);
-
-            for j := 0 to Item.ChildSections.Count - 1 do
-              a[j] := nil;
-
-            try
-              for j := 0 to Item.ChildSections.Count - 1 do
-                with (Item.ChildSections[j] as TScriptSection) do
-                begin
-                  // Tags[j] :=  Item.ChildSections[j].ClassName;
-                  Tags[j] := Name;
-                  a[j] := TAttrList.Create;
-                  a[j].Tag := integer(Item.ChildSections[j]);
-
-                  for i := 0 to Parameters.Count - 1 do
-                    a[j].Add(Copy(Parameters.Items[i].Name, 1,
-                      length(Parameters.Items[i].Name) - 1),
-                      VarToStr(CalcValue(Parameters.Items[i].Value, VE,
-                      LinkedObj)), Parameters.Items[i].Name
-                      [length(Parameters.Items[i].Name)]);
-
-                  a[j].NoParameters := NoParameters;
-                end;
-
-              s.GetList(Tags, a, l);
-              // j := 0;
-              // while j < l.Count-1 do
-              // begin
-              // l.Insert(j,Item);
-              // inc(j,2);
-              // end;
-
-            finally
-              for j := 0 to Item.ChildSections.Count - 1 do
-                if Assigned(a[j]) then
-                  a[j].Free;
-
-              SetLength(Tags, 0);
-              SetLength(a, 0);
-            end;
-
-            p := TWorkList.Create;
-            try
-              for j := 0 to l.Count - 1 do
-                p.Add(TScriptSection(l[j].Tag), copytag(l[j]));
-
-              LinkedObj := p;
-              Result := p.Count > 0;
-              l.Free;
-            except
-              on e: Exception do
-              begin
-                p.Free;
-                raise;
-              end;
-            end;
-          end;
-      else
-        Result := true;
-      end;
-    except
-      on e: Exception do
+    //l.Add(tmp);
+    //l := nil;
+    case Item.Kind of
+      sikSection:
       begin
-        if Assigned(l) then
-          l.Free;
-        raise;
+        l := TTagList.Create; try
+          SetLength(a, 1);
+
+          a[0] := TAttrList.Create;
+          try
+            for i := 0 to Parameters.Count - 1 do
+              a[0].Add(Copy(Parameters.Items[i].Name, 1,
+                length(Parameters.Items[i].Name) - 1),
+                VarToStr(Parameters.Items[i].Value),
+                Parameters.Items[i].Name[length(Parameters.Items[i].Name)]);
+
+            // if Item.NoParameters then
+            // a[0].NoParameters := Item.NoParameters;
+
+            a[0].NoParameters := Item.NoParameters;
+            s.GetList(Item.Name, a[0], l);
+          finally
+            a[0].Free;
+            SetLength(a, 0);
+          end;
+
+          ResultObj := l;
+
+          Result := l.Count > 0;
+        except l.Free; raise; end;
       end;
-    end;
+      sikGroup:
+      begin
+        l := TTagList.Create; try
+
+        SetLength(Tags, Item.ChildSections.Count);
+        SetLength(a, Item.ChildSections.Count);
+
+        for j := 0 to Item.ChildSections.Count - 1 do
+          a[j] := nil;
+
+        for j := 0 to Item.ChildSections.Count - 1 do
+          with (Item.ChildSections[j] as TScriptSection) do
+          begin
+            // Tags[j] :=  Item.ChildSections[j].ClassName;
+            Tags[j] := Name;
+            a[j] := TAttrList.Create;
+            a[j].Tag := integer(Item.ChildSections[j]);
+
+            for i := 0 to Parameters.Count - 1 do
+              a[j].Add(Copy(Parameters.Items[i].Name, 1,
+                length(Parameters.Items[i].Name) - 1),
+                VarToStr(CalcValue(Parameters.Items[i].Value, VE,
+                LinkedObj)), Parameters.Items[i].Name
+                [length(Parameters.Items[i].Name)]);
+
+            a[j].NoParameters := NoParameters;
+          end;
+
+        try
+
+          s.GetList(Tags, a, l);
+
+        finally
+          for j := 0 to length(a) - 1 do
+            if Assigned(a[j]) then
+              a[j].Free;
+
+          SetLength(Tags, 0);
+          SetLength(a, 0);
+        end;
+
+        p := TWorkList.Create;
+        try
+          for j := 0 to l.Count - 1 do
+            p.Add(TScriptSection(l[j].Tag), copytag(l[j]));
+
+          ResultObj := p;
+          Result := p.Count > 0;
+
+        except on e: Exception do begin
+          p.Free;
+          Result := false;
+          raise;
+        end; end;
+
+        finally l.Free; end;
+      end;
+      else Result := true;
+    end;  //case Item.Kind
   end
   else
     Result := true;
@@ -4690,7 +4805,7 @@ procedure TDownloadThread.VE(Value: String; var Result: Variant;
 var
   t: ttag;
   s, tmp: string;
-  p1,p2,p3,p4: string;
+  p1, p2, p3, p4: string;
   n, n2, i: integer;
   c: Char;
 begin
@@ -4749,15 +4864,23 @@ begin
       '@':
         begin
           s := TrimEx(CopyTo(Value, '('), [#13, #10, #9, ' ']);
-          if SameText(s, 'text') then
+          if SameText(s, 'picture.tags') then
+          begin
+            if not Assigned(FPicture) then
+              raise Exception.Create('Picture not assigned');
+
+            Result := FPicture.Tags.AsString(Clc(gVal(Value)),'',' ');
+          end
+          else if SameText(s, 'text') then
             if Assigned(LinkedObj) and (LinkedObj is ttag) then
             begin
-              //Result := TrimEx(ClearHTML((LinkedObj as ttag).GetText(txkCurrent,
-              //  false)), [' ', #13, #10])  ;
+              // Result := TrimEx(ClearHTML((LinkedObj as ttag).GetText(txkCurrent,
+              // false)), [' ', #13, #10])  ;
               s := TrimEx(ClearHTML((LinkedObj as ttag).GetText(txkCurrent,
                 false)), [' ', #13, #10]);
               Result := s;
-            end else
+            end
+            else
               Result := ''
           else if SameText(s, 'calc') then
             Result := Clc(trim(Clc(gVal(Value)), ''''))
@@ -4810,10 +4933,10 @@ begin
           begin
             s := gVal(Value);
 
-            p1 := clc(nVal(s));
-            p2 := clc(nVal(s));
-            p3 := clc(nVal(s));
-            Result := CharInSet(p1[1],[p2[1]..p3[1]]);
+            p1 := Clc(nVal(s));
+            p2 := Clc(nVal(s));
+            p3 := Clc(nVal(s));
+            Result := CharInSet(p1[1], [p2[1] .. p3[1]]);
           end
           else if SameText(s, 'changename') then
           begin
@@ -4933,7 +5056,7 @@ begin
             s := gVal(Value);
             Result := DeleteTo(Clc(nVal(s)), Clc(nVal(s)), false, true);
           end
-          else if SameText(s,'detelebackto') then
+          else if SameText(s, 'detelebackto') then
           begin
 
           end
@@ -4992,7 +5115,7 @@ begin
             Result := TrimEx(Clc(gVal(Value)), ['(', ')'])
           else if SameText(s, 'JSONTime') then
           begin
-            if (LinkedObj is ttag) then
+            if Assigned(LinkedObj) and (LinkedObj is ttag) then
               with (LinkedObj as ttag) do
               begin
                 s := gVal(Value);
@@ -5048,7 +5171,7 @@ begin
               if p3 = '' then
                 p3 := ';';
 
-              n := CharPos(p1,p3[1],[p3],[],StrToInt(p2));
+              n := CharPos(p1, p3[1], [p3], [], StrToInt(p2));
               if n = 0 then
                 Result := length(p1) + 1
               else
@@ -5062,8 +5185,9 @@ begin
             p2 := Clc(nVal(s));
             p3 := Clc(nVal(s));
             p4 := Clc(nVal(s));
-            s :=  Copy(p1,StrToInt(p2) + 1,StrToInt(p3) - StrToInt(p2) - 1);
-            Result := Copy(p1,StrToInt(p2) + 1,StrToInt(p3) - StrToInt(p2) - 1);
+            s := Copy(p1, StrToInt(p2) + 1, StrToInt(p3) - StrToInt(p2) - 1);
+            Result := Copy(p1, StrToInt(p2) + 1,
+              StrToInt(p3) - StrToInt(p2) - 1);
           end
           else
             raise Exception.Create('unknown method: ' + c + s);
@@ -5085,6 +5209,81 @@ begin
     end;
   end;
   // tmp := VarToStr(Result); //for watching
+end;
+
+procedure TDownloadThread.WriteEXIF(s: tStream);
+var
+  buff: array [0 .. 10] of byte;
+  // ext: string;
+  EXIF: tExifData;
+  v: variant;
+  r: TObject;
+begin
+  if not fHTTPRec.EXIFTemplate.UseEXIF then
+    Exit;
+
+  s.Position := 0;
+  s.Read(buff[0], 11);
+
+  if ImageFormat(@buff[0]) = 'jpeg' then
+  begin
+    s.Position := 0;
+    EXIF := tExifData.Create;
+    try
+      EXIF.LoadFromGraphic(s);
+      r := nil;
+
+      with fHTTPRec.EXIFTemplate do
+      begin
+        if Author <> '' then begin
+          //VE(Author,v,r);
+          EXIF.Author := VarToStr(CalcValue(Author,VE,r));
+        end;
+
+        if Title <> '' then begin
+          //VE(Title,v,r);
+          EXIF.Title := VarToStr(CalcValue(Title,VE,r));
+        end;
+
+        if Theme <> '' then begin
+          //VE(Theme,v,r);
+          EXIF.Subject := VarToStr(CalcValue(Theme,VE,r));
+        end;
+        if Comment <> '' then begin
+          //Comment VE(Comment,v,r);
+          EXIF.Comments := VarToStr(CalcValue(Comment,VE,r));
+        end;
+
+        if keywords <> '' then begin
+          //VE(Keywords,v,r);
+          EXIF.Keywords := VarToStr(CalcValue(Keywords,VE,r));
+        end;
+
+        if Score <> '' then begin
+          v := VarToStr(CalcValue(Score,VE,r));
+          case Integer(v) of
+            0: EXIF.UserRating := urUndefined;
+            1: EXIF.UserRating := urOneStar;
+            2: EXIF.UserRating := urTwoStars;
+            3: EXIF.UserRating := urThreeStars;
+            4: EXIF.UserRating := urFourStars;
+            5: EXIF.UserRating := urFiveStars;
+            else
+              if v > 5 then
+                EXIF.UserRating := urFiveStars
+              else
+                EXIF.UserRating := urUndefined;
+          end;
+        end;
+
+        EXIF.SaveToGraphic(s);
+      end;
+
+    finally
+      EXIF.Free;
+    end;
+  end;
+
 end;
 
 procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
@@ -5111,12 +5310,12 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
         if SameText(Name, '%tags') then
         begin
           s := lowercase(Value);
-          v1 := CopyTo(s, '(', ['""'], ['()'], true);
-          s := CopyTo(s, ')', ['""'], ['()'], true);
+          v1 := trim(CopyTo(s, '(', ['""'], ['()'], true));
+          s := trim(CopyTo(s, ')', ['""'], ['()'], true));
           if v1 = 'csv' then
           begin
             v1 := CopyTo(s, ',', ['""'], ['()'], true); // GetNextS(s, ',');
-            v1 := ReplaceStr(trim(CalcValue(v1, VE, LinkedObj)),#13#10,' ');
+            v1 := ReplaceStr(trim(CalcValue(v1, VE, LinkedObj)), #13#10, ' ');
             v2 := trim(CopyTo(s, ',', ['""'], ['()'], true));
             if v2 = '' then
               del := #0
@@ -5150,7 +5349,7 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
   procedure ProcValue(const Name: String; Value: Variant);
   var
     // p: TTPicture;
-    s, v1, v2, r1, r2, r3, r4: string;
+    s, v1, v2, r1, r2, r3 { , r4 } : string;
     n: integer;
     fcln: TTPicture;
     sl: TStringList;
@@ -5205,7 +5404,10 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
       else
         raise Exception.Create('Picture not assigned')
     else if SameText(Name, '$picture.displaylabel') then
-      FPicture.DisplayLabel := Value
+    begin
+      FPicture.DisplayLabel := Value;
+      FPicture.Changes := FPicture.Changes + [pcLabel];
+    end
     else if SameText(Name, '$picture.filename') then
       FPicture.PicName := Value
     else if SameText(Name, '$child.filename') then
@@ -5222,9 +5424,9 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
       FHTTP.HandleRedirects := Value
     else if SameText(Name, '@picture.makename') then
       if Job in [JOB_PICS, JOB_POSTPROCESS] then
-        if not Assigned(FPicture.Parent) then
-          FLPicList.MakePicFileName(FPicture.BookMark - 1, FLPicList.NameFormat)
-        else
+        // if not Assigned(FPicture.Parent) then
+        FLPicList.MakePicFileName(FPicture.Index, FLPicList.NameFormat)
+        // else
       else
     else if SameText(Name, '@createcookie') then
     begin
@@ -5319,14 +5521,14 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
       if Assigned(FPicture) then
         if SameText(Name, '%tags') then
         begin
-          //if Job in [JOB_PICS, JOB_POSTPROCESS] then
-          //begin
-          //  CSData.Enter;
-          //  FLPicList.Tags.Add(CalcValue(Value, VE, LinkedObj), FPicture);
-          //  CSData.Leave;
-          //end
-          //else
-          //  FPicList.Tags.Add(CalcValue(Value, VE, LinkedObj), FPicture)
+          // if Job in [JOB_PICS, JOB_POSTPROCESS] then
+          // begin
+          // CSData.Enter;
+          // FLPicList.Tags.Add(CalcValue(Value, VE, LinkedObj), FPicture);
+          // CSData.Leave;
+          // end
+          // else
+          // FPicList.Tags.Add(CalcValue(Value, VE, LinkedObj), FPicture)
 
           s := lowercase(Value);
           v1 := CopyTo(s, '(', ['""'], ['()'], true);
@@ -5334,7 +5536,7 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
           if v1 = 'csv' then
           begin
             v1 := CopyTo(s, ',', ['""'], ['()'], true); // GetNextS(s, ',');
-            v1 := ReplaceStr(trim(CalcValue(v1, VE, LinkedObj)),#13#10,' ');
+            v1 := ReplaceStr(trim(CalcValue(v1, VE, LinkedObj)), #13#10, ' ');
             v2 := trim(CopyTo(s, ',', ['""'], ['()'], true));
             if v2 = '' then
               r1 := #0
@@ -5352,16 +5554,23 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
                 if Job in [JOB_PICS, JOB_POSTPROCESS] then
                 begin
                   CSData.Enter;
-                // V
+                  // V
                   FLPicList.Tags.Add(s, FPicture, FHTTPRec.TagTemplate.Spacer);
                   CSData.Leave;
-                end else
-                // V
+                end
+                else
+                  // V
                   FPicList.Tags.Add(s, FPicture, FHTTPRec.TagTemplate.Spacer);
 
               // FPicture.Tags.Add(FPictureList.Tags.Add(s,nil));
             end;
           end;
+        end
+        else if Job in [JOB_PICS, JOB_POSTPROCESS] then
+        begin
+          CSData.Enter;
+          FLPicList.AddPicMeta(FPicture, trim(name, '%'), Value);
+          CSData.Leave;
         end
         else
           FPicture.Meta[trim(name, '%')] := Value
@@ -5397,7 +5606,7 @@ procedure TDownloadThread.FE(const Item: TScriptSection; LinkedObj: TObject);
 begin
   if (Item.Kind in [sikSection, sikGroup]) and Assigned(LinkedObj) and
     (LinkedObj is TTagList) or (LinkedObj is TWorkList) then
-    LinkedObj.Free;
+    LinkedObj. Free;
 end;
 
 procedure TDownloadThread.IdHTTPWorkBegin(ASender: TObject;
@@ -5465,8 +5674,8 @@ begin
           if SameText(Copy(Url, 1, 6), 'https:') then
           begin
             FHTTP.IOHandler := FSSLHandler;
-            FHTTP.ConnectTimeout := 0;
-            FHTTP.ReadTimeout := 0;
+            // FHTTP.ConnectTimeout := 0;
+            // FHTTP.ReadTimeout := 0;
           end
           else
             FHTTP.IOHandler := nil;
@@ -5566,6 +5775,7 @@ begin
           FXML.JSON(FHTTPRec.JSONItem, Result.DataString)
         else
           raise Exception.Create('unknown method: ' + FHTTPRec.ParseMethod);
+
         // ----  //
 
         if LogMode then
@@ -5575,7 +5785,7 @@ begin
             debug_name := IntToStr(FJobIDX);
 
           FXML.TagList.ExportToFile(ExtractFilePath(paramstr(0)) + 'log\' +
-            debug_name, [tcsContent,tcsHelp]);
+            debug_name, [tcsContent, tcsHelp]);
           SaveStrToFile('<!-- ' + Url + '-->' + #13#10 + Result.DataString,
             ExtractFilePath(paramstr(0)) + 'log\' + debug_name + '.src');
         end;
@@ -5619,17 +5829,38 @@ const
   buff_size = 11;
 
 var
-  debug_name: string;
+  //debug_name: string;
   f: TFileStream;
-  m: tMemoryStream;
+  //m: tMemoryStream;
   buff: array [0 .. 10] of byte;
   // Range: TIdEntityRange;
   fdir: string;
   FExt: string;
-  FName: string;
+  tmp,FName: string;
   Url: string;
-
   ms: Int64;
+  not_resume: boolean;
+
+
+  function makeName: String;
+  begin
+
+    // feature to make name by template, like %filename%.%ext%
+    // need if you can't make name for picture in getting list
+    if (FHTTPRec.PicTemplate.Name <> '') then
+      Result := ReplaceStr(FPicture.FileName, FHTTPRec.PicTemplate.Name,
+        FPicture.PicName)
+    else
+      Result := FPicture.FileName;
+
+    if (FHTTPRec.PicTemplate.Ext <> '') then
+      if (FExt = '') then
+        Result := ReplaceStr(Result, FHTTPRec.PicTemplate.Ext, FPicture.Ext)
+      else
+        Result := ReplaceStr(Result, FHTTPRec.PicTemplate.Ext, FExt);
+  end;
+
+
 begin
   if HTTPRec.Url = '' then
   begin
@@ -5637,6 +5868,7 @@ begin
     Exit;
   end;
 
+  not_resume := false;
   f := nil;
   FRetries := 0;
   FExt := '';
@@ -5668,83 +5900,74 @@ begin
 
       // feature to try diffirent exts, if it's unknown from start
 
-      if (FHTTPRec.TryExt <> '') and not Assigned(m) then
+      if (FHTTPRec.TryExt <> ''){ and not Assigned(m) }then
         FExt := CopyTo(FHTTPRec.TryExt, ',', [], [], true);
 
       // creating file
       // if "get ext by content" enabled then memorystream must by assigned
-      if not(FHTTPRec.PicTemplate.ExtFromHeader and not Assigned(m)) then
-      begin
 
-        // feature to make name by template, like %filename%.%ext%
-        // need if you can't make name for picture in getting list
+      if FHTTPRec.PicTemplate.ExtFromHeader
+      or FPicture.NeedNameRemake then
+        FName := IncludeTrailingPathDelimiter(FindExistingDir(ExtractFileDir(FPicture.FileName)))
+        + GetGUIDString + '.tmp'
+      else
+        FName := makeName;
 
-        if (FHTTPRec.PicTemplate.Name <> '') then
-          FName := ReplaceStr(FPicture.FileName, FHTTPRec.PicTemplate.Name,
-            FPicture.PicName)
-        else
-          FName := FPicture.FileName;
+      fdir := ExtractFileDir(FName);
 
-        if (FHTTPRec.PicTemplate.Ext <> '') then
-          if (FExt = '') then
-            FName := ReplaceStr(FName, FHTTPRec.PicTemplate.Ext, FPicture.Ext)
+      FCSFiles.Enter;
+      try
+
+        if ExtractFileName(FName) = '' then
+        begin
+          SetHTTPError(HTTPRec.Url + ': can not get file name');
+          Exit;
+        end
+        else if fileexists(FName) then
+          if FHTTPRec.PicTemplate.ExtFromHeader then
+            raise Exception.Create(HTTPRec.Url +': ' +
+              ExtractFileName(FName) +  ' WTF random name exists???')
           else
-            FName := ReplaceStr(FName, FHTTPRec.PicTemplate.Ext, FExt);
-
-        fdir := ExtractFileDir(FPicture.FileName);
-
-        FCSFiles.Enter;
-        try
-
-          if ExtractFileName(FName) = '' then
           begin
-            SetHTTPError(HTTPRec.Url + ': can not get file name');
-            Exit;
-          end
-          else if fileexists(FName) then
-          begin
-            { FPicture.Size := 1;
-              FPicture.Pos; }
-            f := TFileStream.Create(FName, FmOpenRead or fmShareDenyWrite);
-            try
-              FPicture.MakeMD5(f); // if file exists, create MD5 for it
-            finally
-              f.Free;
-            end;
+            //f := TFileStream.Create(FName, FmOpenRead or fmShareDenyWrite);
+            //try
+            //  FPicture.MakeMD5(f); // if file exists, create MD5 for it
+            //finally
+            //  f.Free;
+            //end;
+
             FPicture.Size := 0;
             FPicture.Pos := 0;
-            FPicture.Changes := [pcSize, pcProgress, pcData];
+            FPicture.Changes := FPicture.Changes + [pcSize, pcProgress, pcData];
             FPicture.FactFileName := FName;
-            Synchronize(PicChanged);
             // call picture changed to change it in visible table
-            // FCS.Leave;
+            Synchronize(PicChanged);
             Exit;
           end;
 
-          if not DirectoryExists(fdir) then
-            CreateDirExt(fdir);
+        if not DirectoryExists(fdir) then
+          CreateDirExt(fdir);
 
-          f := TFileStream.Create(FName, fmCreate);
+        // feature to get ext AFTER it downloaded
+        // some resources uses wrong ext or not use it at all
+        // this feature allows to get ext by content
+        // if feature enabled, picture downloaded to the memory, and after it to the drive
 
-          // feature to get ext AFTER it downloaded
-          // some resources uses wrong ext or not use it at all
-          // this feature allows to get ext by content
-          // if feature enabled, picture downloaded to the memory, and after it to the drive
+        f := TFileStream.Create(FName, fmCreate);
 
-          if FHTTPRec.PicTemplate.ExtFromHeader and Assigned(m) and
-            (m.Size = FPicture.Size) then
-          begin
-            m.SaveToStream(f);
-            FPicture.MakeMD5(m);
-            m.Free;
-            f.Free;
-            FPicture.FactFileName := FName;
-            Break;
-          end;
+        //if FHTTPRec.PicTemplate.ExtFromHeader and Assigned(m) and
+        //  (m.Size = FPicture.Size) then
+        //begin
+        //  FPicture.MakeMD5(m);
+        //  WriteEXIF(m);
+        //  m.SaveToStream(f);
+        //  m.Free;
+        //  FPicture.FactFileName := FName;
+        //  Break;
+        //end;
 
-        finally
-          FCSFiles.Leave;
-        end;
+      finally
+        FCSFiles.Leave;
       end;
 
       try
@@ -5761,8 +5984,8 @@ begin
         if SameText(Copy(Url, 1, 6), 'https:') then // enable SSL for HTTPS
         begin // OpenSSL must be installed
           FHTTP.IOHandler := FSSLHandler;
-          FHTTP.ConnectTimeout := 0;
-          FHTTP.ReadTimeout := 0;
+          // FHTTP.ConnectTimeout := 0;
+          // FHTTP.ReadTimeout := 0;
         end
         else
           FHTTP.IOHandler := nil;
@@ -5785,7 +6008,7 @@ begin
           if ms < FHTTPRec.PicDelay then
           begin
             FPicture.Status := JOB_DELAY;
-            FPicture.Changes := [pcProgress];
+            FPicture.Changes := FPicture.Changes + [pcProgress];
             Synchronize(PicChanged);
 
             while true do
@@ -5814,80 +6037,130 @@ begin
         end;
 
         FPicture.Status := JOB_INPROGRESS;
-        FPicture.Changes := [pcSize, pcProgress];
+        FPicture.Changes := FPicture.Changes + [pcSize, pcProgress];
         Synchronize(PicChanged);
 
-        if FHTTPRec.PicTemplate.ExtFromHeader and not Assigned(m) then
-        begin // if ext from content enabled and picture not downloded to the memory
-          m := tMemoryStream.Create;
-          try
-            HTTP.Request.ContentRangeStart := 1;
-            HTTP.Request.ContentRangeEnd := buff_size;
-            HTTP.Get(Url, m); // get BINARY to the memory
+        //if FHTTPRec.PicTemplate.ExtFromHeader and not Assigned(m) then
+        //begin // if ext from content enabled and picture not downloded to the memory
+        //  m := tMemoryStream.Create;
+        //  try
+        //    HTTP.Request.ContentRangeStart := 1;
+        //    HTTP.Request.ContentRangeEnd := buff_size;
+        //    HTTP.Get(Url, m); // get BINARY to the memory
+        //
+        //    if ReturnValue = THREAD_FINISH then
+        //    begin
+        //      m.Free;
+        //      FJob := JOB_CANCELED;
+        //      Break;
+        //    end;
+        //
+        //    m.Position := 0; // read ext from BINARY
+        //    m.Read(buff[0], buff_size);
+        //    FExt := ImageFormat(@buff[0]);
+        //
+        //    if FExt = '' then
+        //    begin
+        //      if LogMode then
+        //      begin
+        //        debug_name := ValidFName(emptyname(Url));
+        //        if debug_name = '' then
+        //          debug_name := IntToStr(FJobIDX);
+        //        m.SaveToFile(ExtractFilePath(paramstr(0)) + 'log\' + debug_name
+        //          + '.bin');
+        //      end;
+        //
+        //      FreeAndNil(m);
+        //      SetHTTPError(HTTPRec.Url + ': can not get file extension');
+        //      Break;
+        //    end
+        //    else
+        //      Continue;
+        //  finally
+        //    HTTP.Request.ContentRangeStart := -1;
+        //    HTTP.Request.ContentRangeEnd := -1;
+        //    // HTTP.Request.Ranges.Clear;
+        //    // m.Free;
+        //  end;
+        //end
+        //else // direct download to the file on drive
 
-            if ReturnValue = THREAD_FINISH then
-            begin
-              m.Free;
-              FJob := JOB_CANCELED;
-              Break;
-            end;
-
-            m.Position := 0; // read ext from BINARY
-            m.Read(buff[0], buff_size);
-            FExt := ImageFormat(@buff[0]);
-
-            if FExt = '' then
-            begin
-              if LogMode then
-              begin
-                debug_name := ValidFName(emptyname(Url));
-                if debug_name = '' then
-                  debug_name := IntToStr(FJobIDX);
-                m.SaveToFile(ExtractFilePath(paramstr(0)) + 'log\' + debug_name
-                  + '.bin');
-              end;
-
-              FreeAndNil(m);
-              SetHTTPError(HTTPRec.Url + ': can not get file extension');
-              Break;
-            end
-            else
-              Continue;
-          finally
-            HTTP.Request.ContentRangeStart := -1;
-            HTTP.Request.ContentRangeEnd := -1;
-            // HTTP.Request.Ranges.Clear;
-            // m.Free;
-          end;
-        end
-        else // direct download to the file on drive
-          HTTP.Get(Url, f);
-        // HTTP.Disconnect;
+        HTTP.Get(Url, f);
 
         if ReturnValue = THREAD_FINISH then
           FJob := JOB_CANCELED;
 
         if FPicture.Size <> f.Size then
         // if downloaded file size not equal with "internet" file size
-        begin // then is error (server inerrupted downloading without messages)
-          f.Free;
-          FPicture.Size := 0;
-          FPicture.Pos := 0;
-          DeleteFile(FName);
-          if (ReturnValue = THREAD_FINISH) then
+        //begin // then is error (server inerrupted downloading without messages)
+          //f.Free;
+          //FPicture.Size := 0;
+          //FPicture.Pos := 0;
+          //DeleteFile(FName);
+          //if (ReturnValue = THREAD_FINISH) then
             // nothing there, derp
-          else if (FRetries < FMaxRetries) then // retries feature
-          begin
-            inc(FRetries);
-            Continue;
-          end
-          else
-            SetHTTPError(HTTPRec.Url + ': incorrect filesize');
-        end
+          //else if (FRetries < FMaxRetries) then // retries feature
+          //begin
+          //  inc(FRetries);
+          //  Continue;
+          //end
+          //else
+          raise  exception.Create(HTTPRec.Url + ': incorrect filesize')
+        //end
         else
         begin
+
+          if FHTTPRec.PicTemplate.ExtFromHeader
+          or FPicture.NeedNameRemake then
+          begin
+            f.Position := 0; // read ext from BINARY
+            f.Read(buff[0], buff_size);
+            FExt := ImageFormat(@buff[0]);
+            if FExt = '' then
+            begin
+              not_resume := true;
+              raise exception.Create(HTTPRec.Url + ': can not get file extension');
+            end;
+          end;
+
           FPicture.MakeMD5(f);
+          try WriteEXIF(f); except not_resume := true; raise; end;
           f.Free;
+
+          if FHTTPRec.PicTemplate.ExtFromHeader
+          or FPicture.NeedNameRemake then
+          begin
+            if FPicture.NeedNameRemake then
+              FLPicList.MakePicFileName(FPicture.Index, FLPicList.NameFormat);
+
+            tmp := makeName;
+
+            if FileExists(tmp) then
+            begin
+              DeleteFile(FName);
+              FPicture.Size := 0;
+              FPicture.Pos := 0;
+              FPicture.Changes := FPicture.Changes + [pcSize, pcProgress, pcData];
+              FPicture.FactFileName := tmp;
+              // call picture changed to change it in visible table
+              Synchronize(PicChanged);
+              Exit;
+            end;
+
+            fdir := ExtractFileDir(tmp);
+
+            if not DirectoryExists(fdir) then
+              CreateDirExt(fdir);
+
+            if not RenameFile(FName,tmp) then
+            begin
+              DeleteFile(FName);
+              raise Exception.Create(SysErrorMessage(GetLastError));
+            end;
+
+            FName := tmp;
+          end;
+
           FPicture.FactFileName := FName;
           // saving "real" name, file name on the drive
         end;
@@ -5897,7 +6170,7 @@ begin
       except
         on e: EIdSocketError do
         begin
-          f.Free;
+          FreeAndNil(f);
           DeleteFile(FName);
           FPicture.Size := 0;
           FPicture.Pos := 0;
@@ -5906,12 +6179,12 @@ begin
             Break;
 
           if e.LastError = 10054 then
-          // if is "disconnect gracefully" error then just disconnect and try again
+            // if is "disconnect gracefully" error then just disconnect and try again
             try
               HTTP.Disconnect
             except
             end
-          else if (FRetries < FMaxRetries) then
+          else if not not_resume and (FRetries < FMaxRetries) then
             inc(FRetries)
           else
           begin
@@ -5921,7 +6194,7 @@ begin
         end;
         on e: Exception do
         begin
-          f.Free;
+          FreeAndNil(f);
           DeleteFile(FName);
           FPicture.Size := 0;
           FPicture.Pos := 0;
@@ -5929,12 +6202,16 @@ begin
           if (ReturnValue = THREAD_FINISH) then
             Break;
 
-          FErrorScript.Process(SE, DE, FE, VE, VE);
+          if not not_resume then
+          begin FHTTPRec.TryAgain := false;
+            FErrorScript.Process(SE, DE, FE, VE, VE);
 
-          if FHTTPRec.TryAgain then
-            Continue;
+            if FHTTPRec.TryAgain then
+              Continue;
+          end;
 
-          if (HTTP.ResponseCode <> 404) and (FRetries < FMaxRetries) then
+          if not not_resume and (HTTP.ResponseCode <> 404)
+          and (FRetries < FMaxRetries) then
             inc(FRetries) // 404 not need to retry
           else if FHTTPRec.TryExt <> '' then
             FRetries := 0
@@ -5945,14 +6222,17 @@ begin
           end;
         end;
       end; // on http except
+
+
+
     except
       on e: Exception do
       begin
         if Assigned(f) then
         begin
-          f.Free;
-          if fileexists(FPicture.FileName) then
-            DeleteFile(FPicture.FileName);
+          FreeAndNil(f);
+          if fileexists(FName) then
+            DeleteFile(FName);
         end;
         FPicture.Size := 0;
         FPicture.Pos := 0;
@@ -5960,6 +6240,7 @@ begin
         Break;
       end;
     end; // on other except
+
   end; // while true
 
 end;
@@ -5988,8 +6269,8 @@ begin
     if SameText(Copy(Url, 1, 6), 'https:') then
     begin
       FHTTP.IOHandler := FSSLHandler;
-      FHTTP.ConnectTimeout := 0;
-      FHTTP.ReadTimeout := 0;
+      // FHTTP.ConnectTimeout := 0;
+      // FHTTP.ReadTimeout := 0;
     end
     else
       FHTTP.IOHandler := nil;
@@ -6068,11 +6349,12 @@ end;
 function TDownloadThread.TrackRedirect(Url: String): String;
 begin
   try
-    FHTTP.HandleRedirects := false;
-    try
+    //FHTTP.HTTPOptions := [hoNoProtocolErrorException];
+    FHTTP.HandleRedirects := false; try
       Result := Url;
+
       try
-        FHTTP.Head(Result);
+        FHTTP.Head(Result,[404,302]);
       except
         on e: EIdConnClosedGracefully do
         begin
@@ -6327,6 +6609,17 @@ begin
   Result := AsString(fmt, cnt, List);
 end;
 
+function TPictureTagLinkList.AsString(Separator, Isolator, Spacer: string; cnt: integer = 0;
+  List: Boolean = false): String;
+var
+  fmt: TTagTemplate;
+begin
+  fmt.Separator := Separator;
+  fmt.Spacer := Spacer;
+  fmt.Isolator := Isolator;
+  Result := AsString(fmt,cnt,List);
+end;
+
 // TPictureTagList
 
 constructor TPictureTagList.Create;
@@ -6335,9 +6628,12 @@ begin
 end;
 
 destructor TPictureTagList.Destroy;
+//var
+//  i: integer;
 begin
-  { for i := 0 to Count - 1 do
-    Items[i].Free; }
+//   for i := 0 to Count - 1 do
+//    Items[i].Free;
+  Clear;
   inherited;
 end;
 
@@ -6492,6 +6788,7 @@ end;
 constructor TTPicture.Create;
 begin
   inherited;
+  FNameRemake := false;
   FChecked := false;
   FRemoved := false;
   FStatus := JOB_NOJOB;
@@ -6531,7 +6828,7 @@ var
   i: integer;
   v: Variant;
 begin
-  v := MD5DigestToStr(MD5Stream(s));
+  v := lowercase(MD5DigestToStr(MD5Stream(s)));
   m := FList.Meta.Items[0].Value;
 
   if not m.FindPosition(v, i) then
@@ -6854,7 +7151,7 @@ begin
             begin
               Items[i].Status := JOB_INPROGRESS;
               FLastJobIdx := i;
-              FCursor := i;
+              // FCursor := i;
               Break;
             end;
           end
@@ -6864,7 +7161,7 @@ begin
           Items[i].Status := JOB_INPROGRESS;
           Result := Items[i];
           FLastJobIdx := i;
-          FCursor := i + 1;
+          // FCursor := i + 1;
           Break;
         end;
 
@@ -7054,13 +7351,13 @@ begin
           t.BookMark := FParentsCount;
 
           for j := 0 to APicList[i].Linked.Count - 1 do
-            if not CheckDoubles(APicList[i].Linked[j]) then
-            begin
-              ch := CopyPicture(APicList[i].Linked[j], true);
-              ch.BookMark := j + 1;
-              t.Linked.Add(ch);
-              ch.Parent := t;
-            end;
+          // if not CheckDoubles(APicList[i].Linked[j]) then
+          begin
+            ch := CopyPicture(APicList[i].Linked[j], true);
+            ch.BookMark := j + 1;
+            t.Linked.Add(ch);
+            ch.Parent := t;
+          end;
         end
         else if APicList[i].Parent = ParentPic then
         begin
@@ -7137,12 +7434,14 @@ begin
     i := FParentsCount + FChildsCount;
     Insert(i, Result);
     inc(FChildsCount);
+    Result.Index := i;
   end
   else
   begin
     i := FParentsCount;
     Insert(i, Result);
     inc(FParentsCount);
+    Result.Index := i;
   end;
 
   Result.Resource := Pic.Resource;
@@ -7347,6 +7646,15 @@ var
           else
             Value := 0;
         end
+      else if SameText(s, 'md5') then
+        if not Assigned(Pic.MD5) then
+        begin
+          Pic.NeedNameRemake := true;
+          Value := '$md5$';
+          //Result := false;
+          //Exit;
+        end else
+          Value := Pic.MD5^
       else if SameText(s, 'rname') then
         Value := Pic.Resource.Name
       else if SameText(s, 'short') then
@@ -7361,10 +7669,10 @@ var
         d := 2;
       end
       else if SameText(s, 'tag') then
-        with pic.tags do
-        Value := VarToStr(Pic.Resource.Fields['tag'])
-        //Pic.Resource.RestoreTagString
-        //  (VarToStr(Pic.Resource.Fields['tag']), tagFmt(Spacer, Separator, Isolator))
+        with Pic.Tags do
+          //Value := VarToStr(Pic.Resource.Fields['tag'])
+          Value := Pic.Resource.RestoreTagString
+           (VarToStr(Pic.Resource.Fields['tag']), tagFmt(Spacer, Separator, Isolator))
       else if SameText(s, 'tags') then
       begin
         if p = '' then
@@ -7737,11 +8045,12 @@ begin
   // if FCursor < AFrom then
   // Exit
   // else
-  FCursor := AFrom;
+  if AFrom < FCursor then
+    FCursor := AFrom;
   for i := FCursor to Count - 1 do
-    if ((Items[i].Status = JOB_NOJOB) or (Items[i].Status = JOB_INPROGRESS) and
+    if (((Items[i].Status = JOB_NOJOB) or (Items[i].Status = JOB_INPROGRESS) and
       (Items[i].Linked.Count > 0) and not Items[i].Linked.eol) and
-      (Items[i].Checked) then
+      (Items[i].Checked)) and (not Assigned(Items[i].Parent) or ChildMode) then
     begin
       FCursor := i;
       Exit;
@@ -7840,6 +8149,12 @@ begin
 
 end;
 
+destructor TResourceFields.Destroy;
+begin
+  Clear;
+  inherited;
+end;
+
 function TResourceFields.FindField(resname: String): integer;
 var
   i: integer;
@@ -7855,10 +8170,15 @@ begin
 end;
 
 procedure TResourceFields.Notify(Ptr: Pointer; Action: TListNotification);
+var
+  p: PResourceField;
 begin
   case Action of
     lnDeleted:
-      Dispose(Ptr);
+    begin
+      p := ptr;
+      Dispose(p);
+    end;
   end;
 end;
 

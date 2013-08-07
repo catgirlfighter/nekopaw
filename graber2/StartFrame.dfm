@@ -1,8 +1,8 @@
 object fStart: TfStart
   Left = 0
   Top = 0
-  Width = 451
-  Height = 304
+  Width = 619
+  Height = 408
   Align = alClient
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -12,6 +12,8 @@ object fStart: TfStart
   ParentFont = False
   TabOrder = 0
   OnResize = FrameResize
+  ExplicitWidth = 451
+  ExplicitHeight = 304
   object iIcon: TImage
     Left = 32
     Top = 85
@@ -55,9 +57,5 @@ object fStart: TfStart
     Caption = 'bExit'
     TabOrder = 3
     OnClick = bExitClick
-  end
-  object XPManifest1: TXPManifest
-    Left = 240
-    Top = 48
   end
 end

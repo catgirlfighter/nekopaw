@@ -334,9 +334,8 @@ begin
     end;
 
     dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftPathText,c,fCurrItem.NameFormat);
-     // := Integer(FullResList);
-
     dm.CreateField(vgSettings,'vgisdalf',lang('_SDALF_'),'',ftCheck,c,GlobalSettings.Downl.SDALF);
+    dm.CreateField(vgSettings,'vgiexif',lang('_WRITEEXIF_'),'',ftCheck,c,GlobalSettings.WriteEXIF);
   end
   else
   with fCurrItem do begin
@@ -405,6 +404,21 @@ begin
                 r := dm.CreateField(vgSettings,'evgi' + resname,restitle,resitems,restype,c,resvalue);
           end;
     end;
+
+    c := dm.CreateCategory(vgSettings,'vgispecial',lang('_SPECIALSETTINGS_'));
+    if not Parent.ThreadCounter.UseUserSettings then
+      c.Expanded := false;
+
+
+    dm.CreateField(vgSettings,'vgiinheritstt',lang('_OWNSETTINGS_'),'',ftCheck,c,
+      Parent.ThreadCounter.UseUserSettings);
+    dm.CreateField(vgSettings,'vgithreadcount',lang('_THREAD_COUNT_'),'',ftNumber,c,
+      Parent.ThreadCounter.UserSettings.MaxThreadCount);
+    dm.CreateField(vgSettings,'vgithreaddelay',lang('_QUERY_DELAY_'),'',ftNumber,c,
+      Parent.ThreadCounter.UserSettings.PageDelay);
+    dm.CreateField(vgSettings,'vgipicdelay',lang('_PIC_DELAY_'),'',ftNumber,c,
+      Parent.ThreadCounter.UserSettings.PicDelay);
+
   end;
 
   dm.ertagedit.Properties.Spacer := fCurrItem.HTTPRec.TagTemplate.Spacer;
@@ -526,7 +540,7 @@ var
 
 begin
 //  fPathList := TStringList.Create;
-  if not Assigned(FullResList) then
+ if not Assigned(FullResList) then
   begin
     FFullResList := TResourceList.Create;
     vgSettings.Tag := Integer(FFullResList);
@@ -611,9 +625,10 @@ begin
   for i := 0 to ActualResList.Count -1 do
   begin
     if ActualReslist[i].Parent.MainResource = nil then
-      ActualReslist[i].Parent.MainResource := ActualReslist[i];
+      ActualReslist[i].Parent.MainResource := ActualReslist[i]
+    else
+      ActualReslist[i].MainResource := ActualReslist[i].Parent.MainResource;
 
-    ActualReslist[i].MainResource := ActualReslist[i].Parent.MainResource;
     ActualReslist[i].SetThreadCounter(ActualReslist[i].Parent.ThreadCounter);
 
     ActualReslist[i].Parent := nil;
@@ -770,9 +785,12 @@ begin
       .Properties.Value);
 
     if fCurrItem = FullResList[0] then
+    begin
       GlobalSettings.Downl.SDALF := (vgSettings.RowByName('vgisdalf') as TcxEditorRow)
-      .Properties.Value
-    else {if fCurrItem > 0 then     }
+      .Properties.Value;
+      GlobalSettings.WriteEXIF := (vgSettings.RowByName('vgiexif') as TcxEditorRow)
+      .Properties.Value;
+    end else {if fCurrItem > 0 then     }
     begin
       Inherit := (vgSettings.RowByName('vgiinherit') as TcxEditorRow)
         .Properties.Value;
@@ -809,6 +827,18 @@ begin
             end;
 
           end;
+
+      Parent.ThreadCounter.UseUserSettings :=
+        (vgSettings.RowByName('vgiinheritstt') as TcxEditorRow).Properties.Value;
+
+      Parent.ThreadCounter.UserSettings.MaxThreadCount :=
+        (vgSettings.RowByName('vgithreadcount') as TcxEditorRow).Properties.Value;
+
+      Parent.ThreadCounter.UserSettings.PageDelay :=
+        (vgSettings.RowByName('vgithreaddelay') as TcxEditorRow).Properties.Value;
+
+      Parent.ThreadCounter.UserSettings.PicDelay :=
+        (vgSettings.RowByName('vgipicdelay') as TcxEditorRow).Properties.Value;
     end;
   end;
 end;

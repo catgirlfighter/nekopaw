@@ -183,6 +183,10 @@ object fPathEditor: TfPathEditor
       Caption = '$tags[(N)]$ - tags of picture (N - count)'
       OnClick = N10Click
     end
+    object N11: TMenuItem
+      Caption = '$md5$ - file'#39's md5 hash-summ'
+      OnClick = N11Click
+    end
   end
   object pmFields: TPopupMenu
     Left = 288

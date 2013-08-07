@@ -23,7 +23,7 @@ unit md5;
 
 interface
 
-uses Windows, SysUtils, Classes;
+uses WinAPI.Windows, System.SysUtils, System.Classes;
 
 type
   { Тип TMD5Digest используется для получения

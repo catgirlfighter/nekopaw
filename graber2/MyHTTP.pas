@@ -3,7 +3,7 @@ unit MyHTTP;
 interface
 
 uses IdHTTP, IdInterceptThrottler, Classes, SysUtils, SyncObjs, Strutils,
-  Variants, Common, MyIdURI;
+  Variants, Common, IdURI, MyIdURI;
 
 type
   TMyCookieList = class(TStringList)
@@ -22,6 +22,18 @@ type
       //property Lines[index:integer]: String read Get;
   end;
 
+  TOnSetCookies = procedure(AURL: String; ARequest: TIdHTTPRequest) of object;
+  TOnProcessCookies = procedure(ARequest: TIdHTTPRequest; AResponse: TIdHTTPResponse) of object;
+
+  //TIDHTTPHelper = class helper for TIdHTTP
+  //protected
+  //  FOnSetCookies: TOnSetCookies;
+  //  FOnProcessCookies: TOnProcessCookies;
+  //public
+  //  property OnSetCookies: TOnSetCookies read FOnSetCookies write FOnSetCookies;
+  //  property OnProcessCookies: TOnProcessCookies read FOnProcessCookies write FOnProcessCookies;
+  //end;
+
   TMyIdHTTP = class(TIdCustomHTTP)
     private
       FCookieList: TMyCookieList;
@@ -39,6 +51,7 @@ type
       procedure ReadCookies(url: string; AResponse: TIdHTTPResponse);
       procedure WriteCookies(url: string; ARequest: TIdHTTPRequest);
       property CookieList: TMyCookieList read FCookieList write SetCookieList;
+      procedure Head(AURL: string; AIgnoreReplies: array of SmallInt); overload;
   end;
 
   function CreateHTTP{(AOwner: TComponent)}: TMyIdHTTP;
@@ -101,6 +114,8 @@ begin
   Result.HandleRedirects := true;
   Result.AllowCookies := False;
   Result.Request.UserAgent :=  'Mozilla/5.0 (Windows NT 6.1; rv:18.0) Gecko/20100101 Firefox/18.0';
+  Result.ConnectTimeout := 10000;
+  Result.ReadTimeout := 10000;
 //  Result.Request.AcceptLanguage := 'en-us,en;q=0.8';
 //  Result.Request.AcceptEncoding := 'gzip, deflate';
 //  Result.Request.Accept := 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
@@ -318,6 +333,11 @@ begin
   finally
     FCS.Leave;
   end;
+end;
+
+procedure TMyIdHTTP.Head(AURL: string; AIgnoreReplies: array of SmallInt);
+begin
+  DoRequest(Id_HTTPMethodHead, AURL, nil, nil,AIgnoreReplies);
 end;
 
 function TMyIdHTTP.Get(AURL: string; AResponse: TStream): string;

@@ -86,8 +86,6 @@ object mf: Tmf
             Properties.Options = [pcoGoDialog]
             OnCanCloseEx = pcTablesCanCloseEx
             OnChange = pcTablesChange
-            ExplicitLeft = 2
-            ExplicitTop = -4
             ClientRectBottom = 243
             ClientRectRight = 419
             ClientRectTop = 0
@@ -520,9 +518,5 @@ object mf: Tmf
     UseSkins = False
     Left = 368
     Top = 96
-  end
-  object XPManifest1: TXPManifest
-    Left = 504
-    Top = 224
   end
 end

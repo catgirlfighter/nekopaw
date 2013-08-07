@@ -43,13 +43,14 @@ type
 
   tcxMyComboBox = class(cxDropDownEdit.TcxComboBox)
   private
+    fSelectedFromList: Boolean;
     function GetActiveProperties: TcxMyComboBoxProperties;
     function GetProperties: TcxMyComboBoxProperties;
     procedure SetProperties(Value: TcxMyComboBoxProperties);
   protected
     function GetWord(s: string; var sstart: integer;
       slen: integer; full: boolean = false): string;
-    function ChangeWord(wrd: string): integer;
+    function ChangeWord(wrd: string; includesep: boolean = false): integer;
     procedure HandleSelectItem(Sender: TObject); override;
     procedure DoEditKeyPress(var Key: Char); override;
     procedure MaskEditPressKey(var Key: Char);
@@ -235,7 +236,7 @@ begin
   //result := astart + length(wrd);
 end;
 
-function tcxMyComboBox.ChangeWord(wrd: string): integer;
+function tcxMyComboBox.ChangeWord(wrd: string; includesep: boolean = false): integer;
 var
   s: string;
   n,i,j,astart,aend,sStart: integer;
@@ -307,8 +308,16 @@ begin
   else
     result := '';  }
 
-  DataBinding.DisplayValue := copy(s,1,astart) + wrd + copy(s,aend,length(s)-aend+1);
-  result := astart + length(wrd);
+  if includesep then
+  begin
+    DataBinding.DisplayValue := copy(s,1,astart) + wrd + copy(s,aend,length(s)-aend+1)
+      + Properties.Separator;
+    result := astart + length(wrd) + length(Properties.Separator);
+  end else
+  begin
+    DataBinding.DisplayValue := copy(s,1,astart) + wrd + copy(s,aend,length(s)-aend+1);
+    result := astart + length(wrd);
+  end;
 end;
 
 procedure tcxMyComboBox.HandleSelectItem(Sender: TObject); //override;
@@ -317,6 +326,8 @@ var
   ANewEditValue: TcxEditValue;
   AEditValueChanged: Boolean;
   n: integer;
+  sStart: integer;
+  s: string;
 begin
   if (Properties.DropDownListStyle <> lsEditList)
   or not properties.WordMode then
@@ -325,15 +336,32 @@ begin
     Exit;
   end;
 
+  //if ModifiedAfterEnter then
+  //  Exit;
+
 
   ANewEditValue := LookupKeyToEditValue(ILookupData.CurrentKey);
-  AEditValueChanged := not VarEqualsExact(EditValue, ANewEditValue);
+  sStart := SelStart + SelLength;
+  s := GetWord(DisplayValue,sStart,0);
+  AEditValueChanged := not VarEqualsExact(s, ANewEditValue);
+
+  if FLookupDataTextChangedLocked and not AEditValueChanged then
+    Exit;
+
+  //if FSelectedFromList then
+  //begin
+  //  FSelectedFromList := false;
+  //  Exit;
+  //end;
+
   if AEditValueChanged and not DoEditing then
     Exit;
+
   SaveModified;
   LockLookupDataTextChanged;
   try
-    n := ChangeWord(ANewEditValue);
+    n := ChangeWord(ANewEditValue, true);
+    fSelectedFromList := true;
   finally
     UnlockLookupDataTextChanged;
     RestoreModified;
