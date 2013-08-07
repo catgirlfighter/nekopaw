@@ -37,6 +37,7 @@ $pwdstring = 'user[password]';
 $main.checkcookie = 'login';
 $main.login = '$main.url+"user/authenticate?"+$userstring+"="+$login+"&"+$pwdstring+"="+$password+"&commit=Login"';
 $maxpage = 1000;
+$pbp = 0;
 
 @addfield("src","Source","indexlistbox",0,"Posts","Pools","Pool ID");
 
@@ -83,7 +84,10 @@ $thread.referer = $picture%post_url;
 
 [listxml]
 
+$ok = 0;
+
 ^post{
+	$ok = 1;
 	$ext = "";
 	@addpicture(%url="");
 	^created-at   { %posted=@calc($pictime); }
@@ -111,6 +115,10 @@ $thread.referer = $picture%post_url;
 ^total-count{
 	$thread.count=@min($maxpage,@text/100+1);
 	$thread.result=@text;
+}
+
+?($pbp=1)&($ok=1){
+	$thread.count = $thread.counter + 2; 
 }
 
 [postxml]
