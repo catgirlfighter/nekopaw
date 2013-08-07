@@ -448,6 +448,8 @@ var
       if FileExists(s) then
         ShellExecute(0, nil, PCHAR(s){'EXPLORER'}, nil{PCHAR('/select, "' + s + '"')},
         nil, SW_SHOWNORMAL)
+      else if DirectoryExists(s) then
+        ShellExecute(0, nil, PChar(s), nil, nil, SW_SHOWNORMAL)
       else
         MessageDlg(format(lang('_NO_FILE_'),[s]), mtInformation, [mbOk], 0);
     end;

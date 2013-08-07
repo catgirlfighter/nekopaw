@@ -2,11 +2,9 @@
 
 interface
 
-uses Classes, Variants, SysUtils, Math, Forms,
-  StdCtrls, ExtCtrls, ComCtrls,
-  Controls, DateUtils, StrUtils,
-  HTTPApp, ShellAPI, Windows, Graphics, JPEG,
-  GIFImg, PNGImage, VarUtils;
+uses Classes, Variants, SysUtils, Math, Forms, StdCtrls, ExtCtrls, ComCtrls,
+  Controls, DateUtils,StrUtils,
+  HTTPApp, ShellAPI, Windows, Graphics, JPEG, GIFImg, PNGImage, VarUtils;
 
 type
   TArrayOfWord = array of word;
@@ -87,11 +85,8 @@ function GreatestCommonFactor(a,b: Word): Word;
 procedure AddSorted(Value: String; List: TStrings);
 procedure RemSorted(Value: String; List: TStrings);
 function isolate(s: string; symbol: char): string;
-function GetGUIDString: String;
-function FindExistingDir(dir: string): string;
 //function BatchReplaceStr(AText: String; AFromText,AToText: Array Of String): String;
 //function ReplaceStrMask(AText,AMaskText,AFromText,AToText: String): String;
-function PosBack(const SubStr, Str: String; Offset: Integer = 1): Integer;
 
 implementation
 
@@ -102,7 +97,7 @@ const
   _INVALID_TYPECAST_ = 'Invalid typecast for "%s" %s "%s" near #%d in "... %s ..."';
   _INCORRECT_SYMBOL_ = 'Incorrect value "%s" near #%d in "... %s ..."';
 
-function ClearHTML(s: string): string; // yap
+function ClearHTML(s: string): string; // Заебись
 
 type
   tmnemonica = packed record
@@ -934,7 +929,7 @@ end;
 
 function ValidFName(FName: String; bckslsh: boolean; nodrive: boolean): String;
 const
-  n = ['\', '/', ':', '*', '"', '<', '>', '|', '?',#13,#10];
+  n = ['\', '/', ':', '*', '"', '<', '>', '|', '?'];
 var
   i: Integer;
 begin
@@ -1297,7 +1292,7 @@ var
 begin
   // устанавливаем размер записи
   VersionInfo.dwOSVersionInfoSize := SizeOf(TOSVersionInfo);
-  if GetVersionEx(VersionInfo) then
+  if Windows.GetVersionEx(VersionInfo) then
   begin
     with VersionInfo do
     begin
@@ -1693,10 +1688,7 @@ const
                 '*':
                   Result := Result * d;
                 '/':
-                  if (Result = 0) and (d = 0) then
-                    raise Exception.Create('deviding by zero, lol')
-                  else
-                    Result := Result / d;
+                  Result := Result / d;
                 '<':
                   Result := Result < d;
                 '>':
@@ -1770,7 +1762,7 @@ const
           if (tp = varOleStr) or (tp = varString) or (tp = varUString) then
           begin
             vt := VarToWideStr(Result);
-            VRESULT := VarR8FromStr(@vt[1], VAR_LOCALE_USER_DEFAULT, 0, vt2);
+            VRESULT := VarR8FromStr(vt, VAR_LOCALE_USER_DEFAULT, 0, vt2);
             case VRESULT of
               VAR_OK:  // in this case the OS function has put the value into result
                 Result := vt2;
@@ -2221,61 +2213,6 @@ begin
   end;
 
   Result := s;
-end;
-
-function GetGUIDString: String;
-var
-  g: TGUID;
-begin
-  CreateGUID(g);
-  Result := GuidToString(g);
-end;
-
-function FindExistingDir(dir: string): string;
-begin
-  while dir <> '' do
-    if DirectoryExists(dir) then
-    begin
-      Result := dir;
-      Exit;
-    end else
-      dir := ExtractFileDir(ExcludeTrailingBackslash(dir));
-end;
-
-function PosBack(const SubStr, Str: String; Offset: Integer = 1): Integer;
-var
-  I, LIterCnt, L, J, LS: Integer;
-  PSubStr, PS: PChar;
-begin
-  L := Length(SubStr);
-  LS := Length(Str);
-  Offset := LS  - Offset - L + 2;
-  { Calculate the number of possible iterations. Not valid if Offset < 1. }
-  LIterCnt := Offset;
-
-  { Only continue if the number of iterations is positive or zero (there is space to check) }
-  if (Offset > 0) and (LIterCnt >= 0) and (L > 0) then
-  begin
-    PSubStr := @SubStr[1];
-    PS := @Str[1];
-    //Inc(PS, Offset - 1);
-
-    for I := LIterCnt downto 0 do
-    begin
-      J := 0;
-      while (J >= 0) and (J < L) do
-      begin
-        if PS[I + J] = PSubStr[J] then
-          Inc(J)
-        else
-          J := -1;
-      end;
-      if J >= L then
-        Exit(LS - I + 1);
-    end;
-  end;
-
-  Result := 0;
 end;
 
 end.

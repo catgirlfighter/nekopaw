@@ -353,6 +353,10 @@ object fGrid: TfGrid
         item
           Visible = True
           ItemName = 'bbAutoUnch'
+        end
+        item
+          Visible = True
+          ItemName = 'bbWriteEXIF'
         end>
     end
     object bbDALF: TdxBarButton
@@ -370,6 +374,12 @@ object fGrid: TfGrid
       Visible = ivAlways
       ButtonStyle = bsChecked
       OnClick = bbAutoUnchClick
+    end
+    object bbWriteEXIF: TdxBarButton
+      Caption = 'New Button'
+      Category = 0
+      Hint = 'New Button'
+      Visible = ivAlways
     end
   end
   object updTimer: TTimer

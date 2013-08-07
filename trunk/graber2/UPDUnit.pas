@@ -24,6 +24,7 @@ type
     FHWND: HWND;
     FJob: Integer;
     FListURL: String;
+    FCheckURL: String;
     FString: String;
     FEventHandle: THandle;
     procedure IdHTTPWorkBegin(ASender: TObject; AWorkMode: TWorkMode;
@@ -36,6 +37,7 @@ type
     function CheckUpdates(s: string; items: TTagList): boolean;
     procedure DownloadUpdates(items: TTagList; HTTP: TMyIdHTTP);
     property Job: Integer read FJob write FJob;
+    property CheckURL: String read FCheckURL write FCheckURL;
     property ListURL: String read FListURL write FListURL;
     property Error: String read FString write FString;
     property MsgHWND: HWND read FHWND write FHWND;
@@ -257,6 +259,7 @@ begin
     FHTTP.ReadTimeout := 10000;
     ReturnValue := -1;
     try
+      try if FCheckURL <> '' then FHTTP.Get(FCheckURL); except end;
       s := FHTTP.Get(FListURL + 'version.xml');
 
       // checking critical parts

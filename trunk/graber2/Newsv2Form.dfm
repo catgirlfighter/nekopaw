@@ -29,6 +29,7 @@ object fmNewsv2: TfmNewsv2
     OptionsData.CancelOnExit = False
     OptionsData.Editing = False
     OptionsData.Deleting = False
+    OptionsSelection.HideFocusRect = False
     OptionsView.ColumnAutoWidth = True
     OptionsView.Headers = False
     TabOrder = 0

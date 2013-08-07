@@ -4,9 +4,10 @@ interface
 
 uses
   {base}
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Windows, Messages, SysUtils, Variants, Classes,
+  Graphics, Controls, Forms,
   Dialogs, DB, ActnList, ExtCtrls, ImgList, rpVersionInfo,
-  AppEvnts, Types, ShellAPI, Math, XPMan,
+  AppEvnts, Types, ShellAPI, Math,
   StrUtils, {IdBaseComponent, IdIntercept, IdInterceptThrottler,}
   {devex}
   cxPC, cxGraphics, cxControls,
@@ -94,7 +95,6 @@ type
     chlbFullTags: TcxCheckListBox;
     MainBarControl: TdxBarDockControl;
     dxSkinController: TdxSkinController;
-    XPManifest1: TXPManifest;
     chlbtagsfilter: TcxButtonEdit;
     bbAdvanced: TdxBarSubItem;
     bbDeleteMD5Doubles: TdxBarButton;
@@ -463,11 +463,22 @@ begin
     vgCurMain.ClearRows;
     dm.CreateField(vgCurMain, 'vgiRName', lang('_RESNAME_'), '', ftString, nil,
       a.Resource.Name, true);
-    dm.CreateField(vgCurMain, 'vgiName', lang('_FILENAME_'), '', ftString, nil,
-      a.PicName + '.' + a.Ext, true);
-    if a.FactFileName = '' then
-      dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '',
-        ftPathText, nil, a.FileName, true)
+
+    if a.Linked.Count > 0 then
+      dm.CreateField(vgCurMain, 'vgiName', lang('_FILENAME_'), '', ftString, nil,
+        '', true)
+    else
+      dm.CreateField(vgCurMain, 'vgiName', lang('_FILENAME_'), '', ftString, nil,
+        a.PicName + '.' + a.Ext, true);
+
+
+    if (a.FactFileName = '') then
+      if a.Linked.Count > 0 then
+        dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '',
+          ftPathText, nil, ExtractFilePath(a.Linked[0].FileName), true)
+        else
+          dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '',
+            ftPathText, nil, a.FileName, true)
     else
       dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '',
         ftPathText, nil, a.FactFileName, true);
@@ -630,10 +641,6 @@ begin
   f.ActualResList.ApplyInherit;
   f.ActualResList.HandleKeywordList;
 
-  //f.FullResList[0].Name := 'defaultresource';
-  SaveResourceSettings(f.FullResList[0],nil,true);
-  SaveResourceSettings(f.ActualResList);
-
   f2 := tfGrid.Create(n) as tfGrid;
   f2.SetList(f.ActualResList);
   // f2.CreateList;
@@ -648,8 +655,14 @@ begin
 
   f2.ResList.OnPageComplete := DoRefreshResInfo;
 
+  SaveResourceSettings(f.FullResList[0],nil,true);
+
   f.Release;
+
+  SaveResourceSettings(f.ActualResList);
+
   FreeAndNil(n.SecondFrame);
+
   f2.Reset;
   n.MainFrame := f2;
   f2.Parent := n;
@@ -670,6 +683,7 @@ var
 begin
   f := SttPanel.MainFrame as TfSettings;
   SaveProfileSettings;
+  SaveResourceSettings(f.FullResList);
   f.OnClose;
   CloseTab(SttPanel as TcxTabSheet);
   // SttPanel := nil;
@@ -858,6 +872,7 @@ begin
   t.Job := UPD_CHECK_UPDATES;
   t.MsgHWND := Self.Handle;
   t.FreeOnTerminate := true;
+  t.CheckURL := GlobalSettings.CHKServ;
   t.ListURL := GlobalSettings.UPDServ;
   lUPD.Show;
   lUPD.BringToFront;
@@ -930,15 +945,17 @@ procedure Tmf.UPDATECHECK(var Msg: TMessage);
 begin
   lUPD.Hide;
   case Msg.WParam of
-    - 1:
-      CheckUpdates;
+    //- 1: In XE3 cause error
+    //  CheckUpdates;
     0:
       OnError(Self, 'Update check is failed: ' + TUPDThread(Msg.LParam).Error);
     1:
       if MessageDlg(lang('_NEWUPDATES_'), mtConfirmation, [mbYes, mbNo], 0)
         = mrYes then
         StartUpdate;
-  end;;
+    2:; //ALL OK;
+    3: CheckUpdates;
+  end;
 end;
 
 procedure Tmf.updateTab;
@@ -1496,7 +1513,7 @@ begin
   if OpBase.SHOWSETTINGS then
     PostMessage(Handle, CM_SHOWSETTINGS, 0, 0)
   else if GlobalSettings.AutoUPD then
-    PostMessage(Handle, CM_UPDATE, -1, 0);
+    PostMessage(Handle, CM_UPDATE, 3, 0);
   if GlobalSettings.ShowWhatsNew and GlobalSettings.IsNew then
     PostMessage(Handle, CM_WHATSNEW, 0, 0);
 
@@ -1547,12 +1564,13 @@ begin
   if ds.Visible then
   begin
     ds.Hide;
-    dsTags.Hide;
-    dsLogs.Hide;
+    dsLogs.AutoHide := true;
+    //dsTags.Hide;
+    //dsLogs.Hide;
     bmbMain.Visible := false;
     pcTables.HideTabs := false;
-    dpLog.Visible := true;
-    dpErrors.Visible := true;
+    //dpLog.Visible := true;
+    //dpErrors.Visible := true;
     mFrame := tfStart.Create(Self);
     (mFrame as tfStart).Setlang;
     mFrame.Parent := Self;

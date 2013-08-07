@@ -309,6 +309,8 @@ procedure TfSettings.btnApplyClick(Sender: TObject);
 begin
   ApplySettings;
   SaveProfileSettings;
+  SaveResourceSettings(FullResList);
+  //SaveResourceSettings(
 end;
 
 procedure TfSettings.btnCancelClick(Sender: TObject);
@@ -410,7 +412,7 @@ end;
 procedure TfSettings.lCheckNowClick(Sender: TObject);
 begin
   PostMessage(Application.MainForm.Handle, CM_UPDATE,
-    -1, 0);
+  3, 0);
 end;
 
 procedure TfSettings.lHelpClick(Sender: TObject);
@@ -603,7 +605,7 @@ begin
   if vgSettings.Rows.Count > 0 then
     SaveResFields;
 }
-  vgSettings.BeginUpdate;
+  vgSettings.BeginUpdate; try
   vgSettings.ClearRows;
   vgSettings.Tag := Integer(rs);
   if rs = FullResList[0] then
@@ -613,6 +615,7 @@ begin
     dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftPathText,c,rs.NameFormat);
     dm.CreateField(vgSettings,'vgisdalf',lang('_SDALF_'),'',ftCheck,c,GlobalSettings.Downl.SDALF);
     dm.CreateField(vgSettings,'vgiautounch',lang('_AUTOUNCHECKINVISIBLE_'),'',ftCheck,c,GlobalSettings.Downl.AutoUncheckInvisible);
+    dm.CreateField(vgSettings,'vgiexif',lang('_WRITEEXIF_'),'',ftCheck,c,GlobalSettings.WriteEXIF);
   end
   else
   with rs do begin
@@ -657,9 +660,23 @@ begin
                 dm.CreateField(vgSettings,'evgi' + resname,restitle,resitems,restype,r,resvalue)
               else
                 r := dm.CreateField(vgSettings,'evgi' + resname,restitle,resitems,restype,c,resvalue);
+
+      c := dm.CreateCategory(vgSettings,'vgispecial',lang('_SPECIALSETTINGS_'));
+      if not ThreadCounter.UseUserSettings then
+        c.Expanded := false;
+
+      dm.CreateField(vgSettings,'vgiinheritstt',lang('_OWNSETTINGS_'),'',ftCheck,c,
+        ThreadCounter.UseUserSettings);
+      dm.CreateField(vgSettings,'vgithreadcount',lang('_THREAD_COUNT_'),'',ftNumber,c,
+        ThreadCounter.UserSettings.MaxThreadCount);
+      dm.CreateField(vgSettings,'vgithreaddelay',lang('_QUERY_DELAY_'),'',ftNumber,c,
+        ThreadCounter.UserSettings.PageDelay);
+      dm.CreateField(vgSettings,'vgipicdelay',lang('_PIC_DELAY_'),'',ftNumber,c,
+        ThreadCounter.UserSettings.PicDelay);
+
     end;
   end;
-  vgSettings.EndUpdate;
+  finally vgSettings.EndUpdate; end;
 end;
 
 procedure TfSettings.SaveResFields;
@@ -683,6 +700,10 @@ begin
         .Properties.Value;
       GlobalSettings.Downl.AutoUncheckInvisible :=
         (vgSettings.RowByName('vgiautounch') as TcxEditorRow).Properties.Value;
+
+      GlobalSettings.WriteEXIF :=
+        (vgSettings.RowByName('vgiexif') as TcxEditorRow).Properties.Value;
+
     end else
     begin
       Inherit := (vgSettings.RowByName('vgiinherit') as TcxEditorRow)
@@ -721,6 +742,19 @@ begin
                     as TcxEditorRow).Properties.Value;
             end;
           end;
+
+      ThreadCounter.UseUserSettings :=
+        (vgSettings.RowByName('vgiinheritstt') as TcxEditorRow).Properties.Value;
+
+      ThreadCounter.UserSettings.MaxThreadCount :=
+        (vgSettings.RowByName('vgithreadcount') as TcxEditorRow).Properties.Value;
+
+      ThreadCounter.UserSettings.PageDelay :=
+        (vgSettings.RowByName('vgithreaddelay') as TcxEditorRow).Properties.Value;
+
+      ThreadCounter.UserSettings.PicDelay :=
+        (vgSettings.RowByName('vgipicdelay') as TcxEditorRow).Properties.Value;
+
     end;
   end;
 end;

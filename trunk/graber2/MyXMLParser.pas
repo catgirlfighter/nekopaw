@@ -3,9 +3,10 @@ unit MyXMLParser;
 interface
 
 uses
-  Classes, SysUtils, StrUtils, common;
+  Classes, SysUtils;
 
 type
+  TSetOfChar = Set of ANSIChar;
 
   TAttr = record
     Name: String;
@@ -95,10 +96,11 @@ type
       procedure GetList(Tags: array of string; AAttrs: array of TAttrList;
         AList: TTagList); overload;
       procedure CopyList(AList: TTagList; Parent: TTag);
-      procedure ExportToFile(fname: string; Comments: tTagCommentState);
+      procedure ExportToFile(fname: string; Comments: tTagCommentState = []);
       function FirstItemByName(tagname: string): ttag;
       function Text(Comments: tTagCommentState): String; overload;
       function Text: String; overload;
+      destructor Destroy; override;
       property Items[ItemName: integer]: TTag read Get; default;
       function CreateChild(Parent: TTag; AName: String = '';
         TagKind: TTagKind = tkTag): TTag;
@@ -109,7 +111,7 @@ type
   TXMLOnEndTagEvent = procedure(ATag: String) of object;
   TXMLOnContentEvent = procedure(ATag: TTag; AContent: String) of object;
 
-  TMyXMLParser = class(TObject)  //Used old and stupid realisation, yeah
+  TMyXMLParser = class(TObject)  //New realisation little beter then old
   private
     FOnStartTag, FOnEmptyTag, FOnEndTag: TXMLOnTagEvent;
     FOnContent: TXMLOnContentEvent;
@@ -122,12 +124,15 @@ type
   public
     procedure JSON(starttag: string; const S: TStrings); overload;
     procedure JSON(starttag: string; S: String); overload;
+    destructor Destroy; override;
+    constructor Create;
     property OnStartTag: TXMLOnTagEvent read FOnStartTag write FOnStartTag;
     property OnEmptyTag: TXMLOnTagEvent read FOnEmptyTag write FOnEmptyTag;
     property OnEndTag: TXMLOnTagEvent read FOnEndTag write FOnEndTag;
     property OnContent: TXMLOnContentEvent read FOnContent write FOnContent;
-    procedure Parse(S: String; html: boolean = false); overload;
-    procedure Parse(S: TStrings; html: boolean = false); overload;
+    procedure Parse(S: String; html: boolean = false); overload;  //need to make TStream parse
+    procedure Parse(S: TStrings; html: boolean = false); overload; //can be useful to parse direct filestream without loading memory
+    procedure LoadFromFile(FileName: String; html: boolean = false);
     property TagList: TTagList read FTagList;
   end;
 
@@ -136,6 +141,177 @@ type
   procedure JSONParseTag(tag: ttag; TagList: TTagList; S: String);
 
 implementation
+
+{COMMON}
+
+function TrimEx(s: String; ch: Char = ' '): String; overload;
+var
+  i, l: Integer;
+begin
+  l := length(s);
+  i := 1;
+  while (i <= l) and (s[i] = ch) do
+    inc(i);
+  if i > l then
+    Result := ''
+  else
+  begin
+    while s[l] = ch do
+      dec(l);
+    Result := copy(s, i, l - i + 1);
+  end;
+end;
+
+function TrimEx(s: String; ch: TSetOfChar): String; overload;
+var
+  i, l: Integer;
+begin
+  l := length(s);
+  i := 1;
+  while (i <= l) and (CharInSet(s[i], ch)) do
+    inc(i);
+  if i > l then
+    Result := ''
+  else
+  begin
+    while CharInSet(s[l], ch) do
+      dec(l);
+    Result := copy(s, i, l - i + 1);
+  end;
+end;
+
+function CharPos(str: string; ch: Char;
+  Isolators,Brackets: array of string;
+  From: Integer = 1): Integer;
+var
+  i, j: Integer;
+  //n: integer;
+  {s1,}s2: Char;
+  {b1,}b2: array of Char;
+  st,br: TSetOfChar;
+begin
+  st := [];
+  for i := 0 to length(Isolators) - 1 do
+    st := st + [Isolators[i][1]];
+
+  br := [];
+  for i := 0 to length(Brackets) - 1 do
+    br := br + [Brackets[i][1]];
+
+//  setlength(b1,0);
+  setlength(b2,0);
+
+  //n := 0;
+  //s1 := #0;
+  s2 := #0;
+
+  for i := From to length(str) do
+    if s2 <> #0 then
+      if str[i] = s2 then
+        s2 := #0
+      else
+    else if (length(b2) > 0)
+    and (str[i] = b2[length(b2)-1]) then
+      setlength(b2,length(b2)-1)
+//    else
+//     if CharInSet(str[i],br) then
+//      begin
+//        for j := 0 to length(Brackets) - 1 do
+//          if (str[i] = Brackets[j][1]) then
+//          begin
+//            setlength(b2,length(b2)+1);
+//            b2[length(b2)-1] := Brackets[j][2];
+//            break;
+//          end;
+//      end else
+    else if (length(b2) = 0) and (str[i] = ch) then
+    begin
+      Result := i;
+      Exit;
+    end
+    else if CharInSet(str[i], st) then
+    begin
+      for j := 0 to length(Isolators) - 1 do
+        if (str[i] = Isolators[j][1]) then
+        begin
+          //s1 := Isolators[j][1];
+          s2 := Isolators[j][2];
+          break;
+        end;
+      //inc(n);
+    end else if CharInSet(str[i],br) then
+    begin
+      for j := 0 to length(Brackets) - 1 do
+        if (str[i] = Brackets[j][1]) then
+        begin
+          //setlength(b1,length(b1)+1);
+          setlength(b2,length(b2)+1);
+          //b1[length(b1)-1] := Brackets[j][1];
+          b2[length(b2)-1] := Brackets[j][2];
+          break;
+        end;
+    end;
+  Result := 0;
+end;
+
+function CopyTo(var Source: String; ATo: Char; Isl,Brk: array of string; cut: boolean = false): string;
+var
+  i: Integer;
+begin
+  i := CharPos(Source,ATo,Isl,Brk);
+  if i = 0 then
+    Result := copy(Source, 1, length(Source))
+  else
+    Result := copy(Source, 1, i - 1);
+  if cut then
+    if i = 0 then
+      Delete(Source,1,length(Source))
+    else
+      Delete(Source,1,i);
+end;
+
+function GetNextS(var s: string; del: String = ';'; ins: String = ''): string;
+var
+  n: Integer;
+begin
+  Result := '';
+
+  if ins <> #0 then
+    while true do
+    begin
+      n := pos(ins, s);
+      if (n > 0) and (pos(del, s) > n) then
+      begin
+        Result := Result + copy(s, 1, n - 1);
+        Delete(s, 1, n + length(ins) - 1);
+        n := pos(ins, s);
+        case n of
+          0:
+            raise Exception.Create('Can''t find 2nd insulator ''' + ins + ''':'
+              + #13#10 + s);
+          1:
+            Result := Result + copy(s, 1, n + length(ins) - 1);
+        else
+          Result := Result + copy(s, 1, n - 1);
+        end;
+        Delete(s, 1, n + length(ins) - 1);
+      end
+      else
+        break;
+    end;
+
+  n := pos(del, s);
+  if n > 0 then
+  begin
+    Result := Result + copy(s, 1, n - 1);
+    Delete(s, 1, n + length(del) - 1);
+  end
+  else
+  begin
+    Result := Result + s;
+    s := '';
+  end;
+end;
 
 {*********** JSON ********************}
 
@@ -216,7 +392,7 @@ begin
         //tag.Attrs := TAttrList.Create;
       end;
       if tagname = '' then
-        tag.Childs.CreateChild(tag,trim(value,'"'),tkText)
+        tag.Childs.CreateChild(tag,TrimEx(value,'"'),tkText)
       else
         tag.Attrs.Add(tagname,value);
     end;
@@ -299,15 +475,15 @@ end;
 
 procedure TTagList.Notify(Ptr: Pointer; Action: TListNotification);
 var
-  p: TObject;
+  p: TTag;
 
 begin
   case Action of
     lnDeleted:
       begin
           p := Ptr;
-          if p is TTag then
-            p.Free;
+          //if p is TTag then
+          p.Free;
       end;
   end;
 end;
@@ -391,7 +567,7 @@ begin
   for i := 0 to Count -1 do
     if (Items[i].Kind = tkTag) then
       if SameText(Items[i].Name,Tag)
-      and not (Assigned(AAttrs) and AAttrs.NoParameters{ and (Items[i].Attrs.Count > 0)}) then
+      and not (Assigned(AAttrs) and AAttrs.NoParameters and (Items[i].Attrs.Count > 0)) then
       begin
         b := true;
         if Assigned(AAttrs) then
@@ -412,6 +588,7 @@ begin
           Items[i].Childs.GetList(Tag,AAttrs,AList);
       end else
         Items[i].Childs.GetList(Tag,AAttrs,AList);
+
 end;
 
 procedure TTagList.GetList(Tags: array of string; AAttrs: array of TAttrList;
@@ -484,6 +661,12 @@ begin
     Add(Result);
 end;
 
+destructor TTagList.Destroy;
+begin
+  Clear;
+  inherited;
+end;
+
 procedure TTagList.ExportToFile(fname: string; Comments: tTagCommentState);
 
 var
@@ -548,7 +731,7 @@ begin
   Name := AName;
   FKind := AKind;
   FClosed := false;
-  FAttrList := TAttrList.Create;
+  //FAttrList := TAttrList.Create;
   FTag := 0;
   fState := tsnormal;
   fCState := csUnknown;
@@ -825,10 +1008,11 @@ var
   end;
 
 begin
-  if not Assigned(FTagList) then
-    FTagList := TTagList.Create
-  else
-    FTagList.Clear;
+  //if not Assigned(FTagList) then
+  //  FTagList := TTagList.Create
+  //else
+
+  FTagList.Clear;
 
   i := 1; l := length(s); lstart := 1;
   qt := 0; eq := 0;
@@ -1158,6 +1342,19 @@ begin
     //  Tag.ContentState := csUnknown;
 end;
 
+constructor TMyXMLParser.Create;
+begin
+  inherited;
+  FTagList := tTagList.Create;
+end;
+
+destructor TMyXMLParser.Destroy;
+begin
+  //if Assigned(FTagList) then
+  FTagList.Free;
+  inherited;
+end;
+
 function TMyXMLParser.CheckHTMLStat(tag: string): TContentState;
 begin
   if SameText(tag,'link')
@@ -1178,10 +1375,10 @@ procedure TMyXMLParser.JSON(starttag: string; S: String);
 var
   i: integer;
 begin
-  if not Assigned(FTagList) then
-    FTagList := TTagList.Create
-  else
-    FTagList.Clear;
+  //if not Assigned(FTagList) then
+  //  FTagList := TTagList.Create
+  //else
+  FTagList.Clear;
 
   JSONParseTag(nil,FTagList,S);
 
@@ -1198,6 +1395,18 @@ end;
 procedure TMyXMLParser.Parse(S: TStrings; html: boolean = false);
 begin
   Parse(S.Text,html);
+end;
+
+procedure TMyXMLParser.LoadFromFile(FileName: String; html: boolean = false);
+var
+  s: tstringlist;
+begin
+  s := tstringlist.Create; try
+    s.LoadFromFile(FileName);
+    Parse(s,html);
+  finally
+    s.Free;
+  end;
 end;
 
 end.

@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ComCtrls, unit_win7taskbar, AppEvnts, MyHTTP;
+  Dialogs, StdCtrls, ComCtrls, unit_win7taskbar, AppEvnts, MyHTTP,GraberU;
 
 type
   TForm1 = class(TForm)
@@ -25,9 +25,11 @@ type
     procedure Button3Click(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure Button5Click(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
   private
     Msg_TaskbarButtonCreated: Cardinal;
     { Private declarations }
+    l1,l2: TResourceList;
   public
     { Public declarations }
   end;
@@ -115,27 +117,68 @@ begin
 end;
 
 procedure TForm1.Button5Click(Sender: TObject);
-var
+//var
   //h: tmyidhttp;
-  xml: tMyXMLParser;
-  s: tstringlist;
+//  xml: tMyXMLParser;
+//  s: tstringlist;
+var
+  //l1,l2: TResourceList;
+  r: tResource;
+  n: integer;
 begin
-  xml := tMyXMLParser.Create; try
-    s := tstringlist.Create; try
-      s.LoadFromFile(ExtractFilePath(paramstr(0))+'test.html');
-      xml.Parse(s.Text,true);
-      s.Text := xml.TagList.Text;
-      s.SaveToFile(ExtractFilePath(paramstr(0))+'result.html');
-      xml.Parse(memo1.Text,true);
-      memo1.Text := xml.TagList.Text;
-    finally s.Free end;
-  finally xml.Free; end;
+  if Assigned(l2) then
+    if l2.ListFinished then
+    begin
+      FreeAndNil(l2);
+    end else begin
+      memo1.Lines.Add('Job still in progress');
+      Exit;
+    end;
+
+
+    l2 := tResourceList.Create; //try
+    r := l1.ItemByName('safebooru.org');
+    n := l2.CopyResource(r);
+    l2[n].Parent := r;
+    l2.ApplyInherit;
+    l2.HandleKeywordList;
+    l2.HandleParentLinks;
+
+    l2[n].Fields.Values['tag'] := 'blazblue';
+
+    l2.ThreadHandler.ThreadCount := 5;
+    l2.StartJob(JOB_LIST);
+
+
+    //finally
+    //  l2.Free;
+    //end;
+//  xml := tMyXMLParser.Create; try
+//    s := tstringlist.Create; try
+//      s.LoadFromFile(ExtractFilePath(paramstr(0))+'test.html');
+//      xml.Parse(s.Text,true);
+//      s.Text := xml.TagList.Text;
+//      s.SaveToFile(ExtractFilePath(paramstr(0))+'result.html');
+//      xml.Parse(memo1.Text,true);
+//      memo1.Text := xml.TagList.Text;
+//    finally s.Free end;
+//  finally xml.Free; end;
+
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  //Msg_TaskbarButtonCreated := RegisterWindowMessage('TaskbarButtonCreated');
+    l2 := nil;
+    l1 := TResourcelist.Create;
+    l1.LoadList(extractfilepath(paramstr(0)) + '..\..\..\..\compiled\resources');
+    memo1.Lines.Add('Resource count: ' + IntToStr(l1.Count)) ;
+      //Msg_TaskbarButtonCreated := RegisterWindowMessage('TaskbarButtonCreated');
 end;
 
+
+procedure TForm1.FormDestroy(Sender: TObject);
+begin
+  l1.Free;
+end;
 
 end.

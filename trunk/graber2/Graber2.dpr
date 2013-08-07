@@ -1,14 +1,9 @@
 program Graber2;
 
-
-
-
-
-
-
 {$R *.dres}
 
 uses
+  //FastMM4,
   Forms,
   SysUtils,
   common in 'common.pas',

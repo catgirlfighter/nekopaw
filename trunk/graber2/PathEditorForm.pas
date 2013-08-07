@@ -43,6 +43,7 @@ type
     N10: TMenuItem;
     PopupMenu1: TPopupMenu;
     cbPath: TcxMRUEdit;
+    N11: TMenuItem;
     procedure bBrowseClick(Sender: TObject);
     procedure N1Click(Sender: TObject);
     procedure N2Click(Sender: TObject);
@@ -59,6 +60,7 @@ type
     procedure N10Click(Sender: TObject);
     procedure ePathPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
+    procedure N11Click(Sender: TObject);
 
   private
     procedure VarClick(Sender: TObject);
@@ -222,22 +224,27 @@ end;
 procedure TfPathEditor.lHelpClick(Sender: TObject);
 begin
   ShellExecute(Handle,nil,
-    'http://code.google.com/p/nekopaw/wiki/NekopawGUI#Форматирование_имени_файла',
+    'http://code.google.com/p/nekopaw/wiki/NekopawGUI#Name_formating',
     nil,nil,SW_SHOWNORMAL);
 end;
 
 procedure TfPathEditor.lwiki1Click(Sender: TObject);
 begin
   ShellExecute(Handle,nil,
-    'https://code.google.com/p/nekopaw/wiki/NekopawGUI#Формат_даты_и_времени',
+    'https://code.google.com/p/nekopaw/wiki/NekopawGUI#datetime_format',
     nil,nil,SW_SHOWNORMAL);
 end;
 
 procedure TfPathEditor.lwiki2Click(Sender: TObject);
 begin
   ShellExecute(Handle,nil,
-    'https://code.google.com/p/nekopaw/wiki/NekopawGUI#Строко-числовой_формат',
+    'https://code.google.com/p/nekopaw/wiki/NekopawGUI#string-number_format',
     nil,nil,SW_SHOWNORMAL);
+end;
+
+procedure TfPathEditor.N11Click(Sender: TObject);
+begin
+  SetValue('$md5$');
 end;
 
 procedure TfPathEditor.N1Click(Sender: TObject);
@@ -298,6 +305,7 @@ begin
   N8.Caption := '$fn$ - ' + lang('_HINT_FN_');
   N9.Caption := '$fnn[(N)]$ - ' + lang('_HINT_FNN_');
   N10.Caption := '$tags[(N)]$ - ' + lang('_HINT_TAGS_');
+  N11.Caption := '$md5$ - ' + lang('_MD5_');
 end;
 
 procedure TfPathEditor.SetValue(s: string);

@@ -87,6 +87,7 @@ type
     bbAutoUnch: TdxBarButton;
     GridPopup: TcxGridPopupMenu;
     vChildGrid: TcxGridTableView;
+    bbWriteEXIF: TdxBarButton;
     procedure bbColumnsClick(Sender: TObject);
     procedure bbFilterClick(Sender: TObject);
     procedure vGrid1FocusedRecordChanged(Sender: TcxCustomGridTableView;
@@ -193,6 +194,7 @@ type
     procedure DeleteMD5Doubles;
     procedure Log(s: string);
     procedure SetList(l: tResourceList);
+    procedure Recheck(n: integer);
     property OnPicChanged: TPictureNotifyEvent read FPicChanged
       write FPicChanged;
     // property OnPageComplete: TNotifyEvent read FPageComplete write FPageComplete;
@@ -538,6 +540,8 @@ begin
       b := not vGrid.DataController.Values[i, FCheckColumn.Index];
       vGrid.DataController.Values[i, FCheckColumn.Index] := b;
       ResList.PictureList[i].Checked := b;
+      if ResList.PictureList[i].Linked.Count > 0 then
+        Recheck(i);
     end;
     vGrid.DataController.Post(true);
   finally
@@ -946,6 +950,8 @@ begin
     begin
       vGrid.DataController.Values[i, FCheckColumn.Index] := b;
       ResList.PictureList[i].Checked := b;
+      if ResList.PictureList[i].Linked.Count > 0 then
+        Recheck(i);
     end;
     vGrid.DataController.Post(true);
   finally
@@ -964,6 +970,8 @@ begin
       vGrid.DataController.Values[vGrid.ViewData.Rows[i].RecordIndex,
         FCheckColumn.Index] := b;
       ResList.PictureList[vGrid.ViewData.Rows[i].RecordIndex].Checked := b;
+      if ResList.PictureList[i].Linked.Count > 0 then
+        Recheck(i);
     end;
     vGrid.DataController.Post(true);
   finally
@@ -983,6 +991,8 @@ begin
         vGrid.DataController.Values[vGrid.ViewData.Rows[i].RecordIndex,
           FCheckColumn.Index] := b;
         ResList.PictureList[vGrid.ViewData.Rows[i].RecordIndex].Checked := b;
+        if ResList.PictureList[i].Linked.Count > 0 then
+          Recheck(i);
       end;
     vGrid.DataController.Post(true);
   finally
@@ -1039,6 +1049,8 @@ begin
   bbDALF.Hint := bbDALF.Caption;
   bbAutoUnch.Caption := lang('_AUTOUNCHECKINVISIBLE_');
   bbDALF.Hint := bbAutoUnch.Caption;
+  bbWriteEXIF.Caption := lang('_WRITEEXIF_');
+  bbWriteEXIF.Hint := bbWRITEEXIF.Caption;
 
   FResColumn.Caption := lang('_RESNAME_');
   FLabelColumn.Caption := lang('_PICTURELABEL_');
@@ -1124,6 +1136,29 @@ begin
     vGrid.DataController.Post(true);
   finally
     vGrid.EndUpdate;
+  end;
+end;
+
+procedure TfGrid.Recheck(n: integer);
+var
+//  n: Integer;
+  i: Integer;
+begin
+//  if AItem.Index <> FCheckColumn.Index then
+//    Exit;
+//  n := vGrid.DataController.FocusedRecordIndex;
+  if n > -1 then
+  begin
+    ResList.PictureList[n].Checked := vGrid.DataController.Values
+      [n,fCheckColumn.Index];
+    if ResList.PictureList[n].Linked.Count > 0 then
+      for i := 0 to ResList.PictureList[n].Linked.Count - 1 do
+      begin
+        ResList.PictureList[n].Linked[i].Checked := vGrid.DataController.Values
+          [n, fCheckColumn.Index];
+        ResList.PictureList[n].Linked[i].Changes := [pcChecked];
+        updatepic(ResList.PictureList[n].Linked[i]);
+      end;
   end;
 end;
 
@@ -1220,10 +1255,15 @@ begin
     end;
 
     if pcSize in Changes then
+    begin
+      if not (pcProgress in Changes) then
+        Values[n, pc.Index] := null;
+
       if Pic.Size = 0 then
         Values[n, sc.Index] := null
       else
         Values[n, sc.Index] := GetBTString(Pic.Size);
+    end;
 
     if pcProgress in Changes then
     begin
@@ -1453,7 +1493,7 @@ procedure TfGrid.vGridEditValueChanged(Sender: TcxCustomGridTableView;
   AItem: TcxCustomGridTableItem);
 var
   n: Integer;
-  i: Integer;
+  //i: Integer;
 begin
   if AItem.Index <> FCheckColumn.Index then
     Exit;
@@ -1463,13 +1503,14 @@ begin
     ResList.PictureList[n].Checked := vGrid.DataController.Values
       [n, AItem.Index];
     if ResList.PictureList[n].Linked.Count > 0 then
-      for i := 0 to ResList.PictureList[n].Linked.Count - 1 do
-      begin
-        ResList.PictureList[n].Linked[i].Checked := vGrid.DataController.Values
-          [n, AItem.Index];
-        ResList.PictureList[n].Linked[i].Changes := [pcChecked];
-        updatepic(ResList.PictureList[n].Linked[i]);
-      end;
+      Recheck(n);
+//      for i := 0 to ResList.PictureList[n].Linked.Count - 1 do
+//      begin
+//        ResList.PictureList[n].Linked[i].Checked := vGrid.DataController.Values
+//          [n, AItem.Index];
+//        ResList.PictureList[n].Linked[i].Changes := [pcChecked];
+//        updatepic(ResList.PictureList[n].Linked[i]);
+//      end;
   end;
 end;
 
