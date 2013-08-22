@@ -13,6 +13,7 @@
 <item file="resources\derpiboo.ru.cfg"             version=12 />
 <item file="resources\deviantart.com.cfg"          version=11 />
 <item file="resources\donmai.us.cfg"               version=5 />
+<item file="resources\g.e-hentai.org.cfg"          version=0 />
 <item file="resources\e-shuushuu.net.cfg"          version=1 />
 <item file="resources\e621.net.cfg"                version=3 />
 <item file="resources\furaffinity.net.cfg"         version=10 />
@@ -89,6 +90,7 @@
 <item file="resources\icons\comicartcommunity.com.bmp"   version=0 />
 <item file="resources\icons\mgbooru.net.bmp"             version=0 />
 <item file="resources\icons\thedoujin.com.bmp"           version=0 />
+<item file="resources\icons\g.e-hentai.org.bmp"          version=0 />
 
 <item file="resources\icons\ponibooru.413chan.net.bmp"   version=0 deleted=1 />
 
