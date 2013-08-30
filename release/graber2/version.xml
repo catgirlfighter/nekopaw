@@ -1,14 +1,16 @@
 <item file="Graber2.exe"  archive="Graber2.zip"    version=79 />
 <item file="versionlog.txt"                        version=-1 />
 
-<item file="resources\danbooru.tmpl"               version=25 />
+<item file="resources\danbooru.tmpl"               version=26 />
 <item file="resources\danbooru2.tmpl"              version=3  />
 <item file="resources\gelbooru.tmpl"               version=15 />
 
 <item file="resources\analbooru.com.cfg"           version=2 />
 <item file="resources\anime-pictures.net.cfg"      version=4 />
 <item file="resources\behoimi.org.cfg"             version=1 />
+<item file="resources\elderscrollsbooru.booru.org.cfg" version=0 />
 <item file="resources\ii.booru.org.cfg"            version=1 />
+<item file="resources\neko.booru.org.cfg"          version=1 />
 <item file="resources\comicartcommunity.com.cfg"   version=3 />
 <item file="resources\derpiboo.ru.cfg"             version=12 />
 <item file="resources\deviantart.com.cfg"          version=11 />
@@ -16,25 +18,25 @@
 <item file="resources\g.e-hentai.org.cfg"          version=0 />
 <item file="resources\e-shuushuu.net.cfg"          version=1 />
 <item file="resources\e621.net.cfg"                version=3 />
+<item file="resources\exhentai.org.cfg"            version=0 />
 <item file="resources\furaffinity.net.cfg"         version=10 />
 <item file="resources\gelbooru.com.cfg"            version=2 />
 <item file="resources\hentai-foundry.com.cfg"      version=8 />
 <item file="resources\konachan.com.cfg"            version=1 />
-<item file="resources\lolibooru.com.cfg"           version=1 />
+<item file="resources\lolibooru.com.cfg"           version=2 />
 <item file="resources\mangahere.com.cfg"           version=4 />
 <item file="resources\mgbooru.net.cfg"             version=1 />
 <item file="resources\minitokyo.net.cfg"           version=9 />
 <item file="resources\nabyn.com.cfg"               version=5 />
-<item file="resources\neko.booru.org.cfg"          version=1 />
-<item file="resources\nihonomaru.com.cfg"          version=1 />
-<item file="resources\safebooru.org.cfg"           version=1 />
-<item file="resources\chan.sankakucomplex.com.cfg" version=7 />
-<item file="resources\idol.sankakucomplex.com.cfg" version=7 />
 <item file="resources\seiga.nicovideo.jp.cfg"      version=2 />
+<item file="resources\nihonomaru.com.cfg"          version=1 />
+<item file="resources\safebooru.org.cfg"           version=2 />
 <item file="resources\cosplay.paheal.net.cfg"      version=5 />
 <item file="resources\rule34.paheal.net.cfg"       version=7 />
 <item file="resources\rule63.paheal.net.cfg"       version=6 />
 <item file="resources\pixiv.net.cfg"               version=16 />
+<item file="resources\chan.sankakucomplex.com.cfg" version=7 />
+<item file="resources\idol.sankakucomplex.com.cfg" version=7 />
 <item file="resources\rmart.org.cfg"               version=9 />
 <item file="resources\tbib.org.cfg"                version=1 />
 <item file="resources\tentaclerape.net.cfg"        version=3 />
@@ -54,7 +56,7 @@
 <item file="resources\icons\analbooru.com.bmp"           version=0 />
 <item file="resources\icons\wildcritters.ws.bmp"         version=0 />
 <item file="resources\icons\tbib.org.bmp"                version=0 />
-<item file="resources\icons\safebooru.org.bmp"           version=0 />
+<item file="resources\icons\safebooru.org.bmp"           version=0 deleted=1 />
 <item file="resources\icons\rule34.xxx.bmp"              version=0 />
 <item file="resources\icons\nekobooru.net.bmp"           version=0 />
 <item file="resources\icons\konachan.com.bmp"            version=0 />
@@ -66,7 +68,7 @@
 <item file="resources\icons\xbooru.com.bmp"              version=0 />
 <item file="resources\icons\wildcritters.net.bmp"        version=0 />
 <item file="resources\icons\donmai.us.bmp"               version=0 />
-<item file="resources\icons\lolibooru.com.bmp"           version=0 />
+<item file="resources\icons\lolibooru.com.bmp"           version=0 deleted=1 />
 <item file="resources\icons\ii.booru.org.bmp"            version=0 />
 <item file="resources\icons\zerochan.net.bmp"            version=0 />
 <item file="resources\icons\rmart.org.bmp"               version=0 />
@@ -91,6 +93,7 @@
 <item file="resources\icons\mgbooru.net.bmp"             version=0 />
 <item file="resources\icons\thedoujin.com.bmp"           version=0 />
 <item file="resources\icons\g.e-hentai.org.bmp"          version=0 />
+<item file="resources\icons\booru.org.bmp"          version=0 />
 
 <item file="resources\icons\ponibooru.413chan.net.bmp"   version=0 deleted=1 />
 
