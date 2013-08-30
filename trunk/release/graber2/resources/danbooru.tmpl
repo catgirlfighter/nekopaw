@@ -230,7 +230,7 @@ $ok = 0;
 			^a{
 				$post_url = #href;
 
-				^img{
+				^img{?@pos(#src,"download-preview.png")=0{
 					addpicture(
 						%url=@replace($gui_images_part,$gui_thumbs_part,@replace($gui_images_dir,$gui_thumbs_dir,@removevars(#src))),
 						%preview=#src,
@@ -243,7 +243,7 @@ $ok = 0;
 					);
 					?$tryext=1{$picture.filename = @changeext("%ext%",@emptyname($picture%url));}
 					?$tryext=0{$picture.filename = @emptyname(@emptyname($picture%url));}
-				}
+				}}
 			}
 		}
 	}}
