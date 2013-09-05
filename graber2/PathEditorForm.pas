@@ -44,6 +44,8 @@ type
     PopupMenu1: TPopupMenu;
     cbPath: TcxMRUEdit;
     N11: TMenuItem;
+    N12: TMenuItem;
+    N13: TMenuItem;
     procedure bBrowseClick(Sender: TObject);
     procedure N1Click(Sender: TObject);
     procedure N2Click(Sender: TObject);
@@ -61,6 +63,8 @@ type
     procedure ePathPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure N11Click(Sender: TObject);
+    procedure N13Click(Sender: TObject);
+    procedure N12Click(Sender: TObject);
 
   private
     procedure VarClick(Sender: TObject);
@@ -206,6 +210,11 @@ begin
     SetValue('$' + fvars[(sender as TComponent).Tag] + '$');
 end;
 
+procedure TfPathEditor.N12Click(Sender: TObject);
+begin
+  SetValue('$date$');
+end;
+
 procedure TfPathEditor.ePathPropertiesButtonClick(Sender: TObject;
   AButtonIndex: Integer);
 begin
@@ -305,7 +314,9 @@ begin
   N8.Caption := '$fn$ - ' + lang('_HINT_FN_');
   N9.Caption := '$fnn[(N)]$ - ' + lang('_HINT_FNN_');
   N10.Caption := '$tags[(N)]$ - ' + lang('_HINT_TAGS_');
-  N11.Caption := '$md5$ - ' + lang('_MD5_');
+  N11.Caption := '$md5$ - ' + lang('_HINT_MD5_');
+  N12.Caption := '$date$ - ' + lang('_HINT_DATE_');
+  N13.Caption := '$time$ - ' + lang('_HINT_TIME_');
 end;
 
 procedure TfPathEditor.SetValue(s: string);
@@ -316,6 +327,11 @@ begin
   cbPath.SelText := s;
   cbPath.SetFocus;
   //cbPath.SelLength := 0;
+end;
+
+procedure TfPathEditor.N13Click(Sender: TObject);
+begin
+  SetValue('$time$');
 end;
 
 procedure TfPathEditor.N10Click(Sender: TObject);

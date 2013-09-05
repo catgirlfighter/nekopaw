@@ -145,6 +145,10 @@ object fPathEditor: TfPathEditor
       Caption = '$ext$ - file extension'
       OnClick = N3Click
     end
+    object N12: TMenuItem
+      Caption = '$date$ - current date'
+      OnClick = N12Click
+    end
     object N1: TMenuItem
       Caption = '$fname$ - original file name'
       OnClick = N1Click
@@ -158,6 +162,10 @@ object fPathEditor: TfPathEditor
         '$fnn[(N)]$ - sequence number inside derectory (count every N tim' +
         'es)'
       OnClick = N9Click
+    end
+    object N11: TMenuItem
+      Caption = '$md5$ - file'#39's md5 hash-summ'
+      OnClick = N11Click
     end
     object N7: TMenuItem
       Caption = '$nn$ - sequence number in the list'
@@ -183,9 +191,9 @@ object fPathEditor: TfPathEditor
       Caption = '$tags[(N)]$ - tags of picture (N - count)'
       OnClick = N10Click
     end
-    object N11: TMenuItem
-      Caption = '$md5$ - file'#39's md5 hash-summ'
-      OnClick = N11Click
+    object N13: TMenuItem
+      Caption = '$time$ - current time'
+      OnClick = N13Click
     end
   end
   object pmFields: TPopupMenu

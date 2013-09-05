@@ -150,13 +150,15 @@ object fNewList: TfNewList
       ImageIndex = 0
       object gFull: TcxGrid
         Left = 0
-        Top = 0
+        Top = 26
         Width = 261
-        Height = 273
+        Height = 247
         Margins.Right = 0
         Align = alClient
         PopupMenu = pmgFullCopy
         TabOrder = 0
+        ExplicitTop = 0
+        ExplicitHeight = 273
         object tvFull: TcxGridTableView
           OnKeyPress = tvFullKeyPress
           Navigator.Buttons.CustomButtons = <>
@@ -175,6 +177,7 @@ object fNewList: TfNewList
           OptionsCustomize.ColumnMoving = False
           OptionsCustomize.ColumnSorting = False
           OptionsData.Deleting = False
+          OptionsData.DeletingConfirmation = False
           OptionsData.Inserting = False
           OptionsView.ColumnAutoWidth = True
           OptionsView.DataRowHeight = 21
@@ -235,13 +238,20 @@ object fNewList: TfNewList
           Options.DetailFrameWidth = 0
         end
       end
+      object dxBarDockControl1: TdxBarDockControl
+        Left = 0
+        Top = 0
+        Width = 261
+        Height = 26
+        Align = dalTop
+        AllowDocking = False
+        BarManager = dxBarManager
+      end
     end
     object tsSettings: TcxTabSheet
       Caption = 'tsSettings'
       ImageIndex = 1
       OnShow = tsSettingsShow
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0
@@ -321,11 +331,16 @@ object fNewList: TfNewList
     end
   end
   object pmgFullCopy: TPopupMenu
+    OnPopup = pmgFullCopyPopup
     Left = 232
     Top = 80
     object COPY1: TMenuItem
       Caption = '_COPY_'
       OnClick = COPY1Click
+    end
+    object FAVORITE1: TMenuItem
+      Caption = '_FAVORITE_'
+      OnClick = FAVORITE1Click
     end
   end
   object pmgResCopy: TPopupMenu
@@ -334,6 +349,98 @@ object fNewList: TfNewList
     object COPY2: TMenuItem
       Caption = '_COPY_'
       OnClick = COPY2Click
+    end
+  end
+  object dxBarManager: TdxBarManager
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'Tahoma'
+    Font.Style = []
+    Categories.Strings = (
+      'Default')
+    Categories.ItemsVisibles = (
+      2)
+    Categories.Visibles = (
+      True)
+    ImageOptions.Images = dm.il
+    PopupMenuLinks = <>
+    UseSystemFont = True
+    Left = 244
+    Top = 216
+    DockControlHeights = (
+      0
+      0
+      0
+      0)
+    object dxBarManagerBar1: TdxBar
+      AllowClose = False
+      AllowCustomizing = False
+      AllowQuickCustomizing = False
+      AllowReset = False
+      Caption = 'ListBar'
+      CaptionButtons = <>
+      DockControl = dxBarDockControl1
+      DockedDockControl = dxBarDockControl1
+      DockedLeft = 0
+      DockedTop = 0
+      FloatLeft = 461
+      FloatTop = 0
+      FloatClientWidth = 0
+      FloatClientHeight = 0
+      ItemLinks = <
+        item
+          Visible = True
+          ItemName = 'bbFavorite'
+        end
+        item
+          Visible = True
+          ItemName = 'bbAll'
+        end>
+      NotDocking = [dsNone, dsLeft, dsTop, dsRight, dsBottom]
+      OneOnRow = True
+      Row = 0
+      UseOwnFont = False
+      Visible = True
+      WholeRow = True
+    end
+    object bbFavorite: TdxBarButton
+      Caption = 'bbFavorite'
+      Category = 0
+      Hint = 'bbFavorite'
+      Visible = ivAlways
+      ButtonStyle = bsChecked
+      GroupIndex = 1
+      Down = True
+      ImageIndex = 23
+      OnClick = bbFavoriteClick
+    end
+    object bbAll: TdxBarButton
+      Caption = 'bbAll'
+      Category = 0
+      Hint = 'bbAll'
+      Visible = ivAlways
+      ButtonStyle = bsChecked
+      GroupIndex = 1
+      ImageIndex = 11
+      OnClick = bbAllClick
+    end
+    object dxBarSubItem1: TdxBarSubItem
+      Caption = 'New SubItem'
+      Category = 0
+      Visible = ivAlways
+      ItemLinks = <>
+    end
+    object cxBarEditItem1: TcxBarEditItem
+      Align = iaRight
+      Caption = 'New Item'
+      Category = 0
+      Hint = 'New Item'
+      MergeKind = mkMergeByCaption
+      Visible = ivAlways
+      PropertiesClassName = 'TcxLabelProperties'
+      BarStyleDropDownButton = False
+      CanSelect = False
     end
   end
 end
