@@ -55,7 +55,7 @@ begin
       ProgressDone;
     end;
   end;
-  t.Free;
+  //t.Free;
   lLog.ItemIndex := lLog.Items.Count-1;
   bOk.Enabled := true;
 end;
@@ -111,7 +111,7 @@ begin
   t.ListURL := UPDServ;
   t.CheckURL := CHKServ;
   t.Job := UPD_DOWNLOAD_UPDATES;
-  t.FreeOnTerminate := false;
+  t.FreeOnTerminate := true;
   SetEvent(t.Event);
 end;
 
@@ -123,7 +123,7 @@ begin
   UPDServ := INI.ReadString('settings','updserver',
     'http://nekopaw.googlecode.com/svn/trunk/release/graber2/');
   CHKServ := INI.ReadString('settings','chkserver',
-    'http://nekopaw.googlecode.com/');
+    'http://code.google.com/p/nekopaw/');
   INI.WriteInteger('settings','delupd',1);
   INI.Free;
 end;

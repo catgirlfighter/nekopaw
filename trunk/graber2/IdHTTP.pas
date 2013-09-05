@@ -2374,6 +2374,9 @@ var
     LTempResponse: TMemoryStream;
     LTempStream: TStream;
   begin
+    if Request.Method = Id_HTTPMethodHead then
+      Exit;
+
     LTempResponse := TMemoryStream.Create;
     try
       LTempStream := Response.ContentStream;
@@ -2499,8 +2502,10 @@ begin
     if FHTTP.Connected then begin
       // This is a workaround for buggy HTTP 1.1 servers which
       // does not return any body with 302 response code
-      DiscardContent; // may wait a few seconds for any kind of content
-    end;
+      //DiscardContent; // may wait a few seconds for any kind of content
+    end;                          //FEW SECONDS??? YOU MAD??? FUCK YOU
+                                  //RETURN FUCKING TIMEOUT BACK YOU MOTHERFUCKER
+                                  //100ms IS ENOUGH TO EVERYTHING
   end else begin
     //Ciaran, 30th Nov 2004: I commented out the following code.  When a https server
     //sends a disconnect immediately after sending the requested page in an SSL

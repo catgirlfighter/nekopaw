@@ -17,7 +17,7 @@ uses
   {graber2}
   cxmymultirow,cxmycombobox,common, Graberu, cxCheckBox,
   cxExtEditRepositoryItems, cxContainer, cxNavigator, cxGridCustomLayoutView,
-  cxGridCardView;
+  cxGridCardView, dxBar, cxBarEditItem;
 
 type
   TListFrameState = (lfsNew, lfsEdit);
@@ -64,6 +64,14 @@ type
     RemFav1: TMenuItem;
     TagList1: TMenuItem;
     gFullCardView1: TcxGridCardView;
+    dxBarDockControl1: TdxBarDockControl;
+    dxBarManager: TdxBarManager;
+    dxBarManagerBar1: TdxBar;
+    bbFavorite: TdxBarButton;
+    bbAll: TdxBarButton;
+    FAVORITE1: TMenuItem;
+    dxBarSubItem1: TdxBarSubItem;
+    cxBarEditItem1: TcxBarEditItem;
     procedure pcMainChange(Sender: TObject);
     procedure gRescButtonPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
@@ -97,6 +105,10 @@ type
     procedure COPY2Click(Sender: TObject);
     procedure TagList1Click(Sender: TObject);
     procedure pmFavListPopup(Sender: TObject);
+    procedure bbFavoriteClick(Sender: TObject);
+    procedure bbAllClick(Sender: TObject);
+    procedure FAVORITE1Click(Sender: TObject);
+    procedure pmgFullCopyPopup(Sender: TObject);
   private
     { Private declarations }
     FOnError: TLogEvent;
@@ -112,6 +124,8 @@ type
     procedure SetIntrfEnabled(b: boolean);
     procedure LoginCallBack(Sender: TObject; N: integer; Login,Password: String;
     const Cancel: boolean);
+    procedure fillRec(r: TResourceList; DataController:TcxGridDataController; RecordIndex,ItemOffset: integer);
+    procedure refillRecs;
   public
     State: TListFrameState;
     procedure AddItem(index: Integer);
@@ -206,7 +220,7 @@ begin
   tvRes.BeginUpdate; try
   i := tvRes.DataController.RecordCount;
   tvRes.DataController.RecordCount := i + 1;
-  r := ActualResList[ActualResList.CopyResource(FullResList[index + 1])];
+  r := ActualResList[ActualResList.CopyResource(tResource(Integer(tvFull.DataController.Values[index,1])))];
   r.Parent := FullResList[index + 1];
   tvRes.DataController.Values[i, 0] := integer(r); {tvFull.DataController.Values[index, 1];}
   tvRes.DataController.Values[i, 1] := tvFull.DataController.Values[index, 2];
@@ -237,6 +251,16 @@ begin
   AddSorted(s,GlobalFavList);
 
   SaveFavList(GlobalFavList);
+end;
+
+procedure TfNewList.bbAllClick(Sender: TObject);
+begin
+  refillRecs;
+end;
+
+procedure TfNewList.bbFavoriteClick(Sender: TObject);
+begin
+  refillRecs;
 end;
 
 procedure TfNewList.btnNextClick(Sender: TObject);
@@ -280,7 +304,8 @@ end;
 
 procedure TfNewList.COPY1Click(Sender: TObject);
 begin
-  if Assigned(tvFull.Controller.FocusedItem) then
+  if Assigned(tvFull.Controller.FocusedItem)
+  and (tvFull.DataController.RecordCount > 0) then
 
     if (tvRes.Controller.FocusedColumn.Index in [0,2])  then
       clipboard.AsText := VarToStr(tvFull.Controller.FocusedRow.Values[3])
@@ -465,6 +490,21 @@ begin
   pmFavList.Popup(Mouse.CursorPos.X,Mouse.CursorPos.Y);
 end;
 
+procedure TfNewList.FAVORITE1Click(Sender: TObject);
+var
+  r: tResource;
+begin
+  if Assigned(tvFull.Controller.FocusedItem)
+  and (tvFull.DataController.RecordCount > 0) then
+  begin
+    r :=  tResource(Integer(tvFull.Controller.FocusedRow.Values[1]));
+    r.Favorite := not r.Favorite;
+    SaveFavResource(r);
+    if bbFavorite.Down and not r.Favorite then
+      tvFull.Controller.DeleteSelection;
+  end;
+end;
+
 procedure TfNewList.gRescButtonPropertiesButtonClick(Sender: TObject;
   AButtonIndex: Integer);
 begin
@@ -508,31 +548,31 @@ begin
     end;
 end;
 
-procedure TfNewList.LoadItems;
-
-  procedure fillRec(r: TResourceList; DataController:TcxGridDataController; RecordIndex,ItemOffset: integer);
-  var
-    s: ANSIString;
-    n: integer;
+procedure TfNewList.fillRec(r: TResourceList; DataController:TcxGridDataController; RecordIndex,ItemOffset: integer);
+var
+  s: ANSIString;
+  n: integer;
+begin
+  with DataController do
   begin
-    with DataController do
-    begin
-      n := RecordCount;
-      RecordCount := RecordCount + 1;
-      Values[n,ItemOffset] := Integer(r[RecordIndex]);
-      try
-        if r[RecordIndex].IconFile <> '' then
-        begin
-          FileToString(rootdir + '\resources\icons\' + r[RecordIndex]
-            .IconFile, s);
-          Values[n,ItemOffset+1] := s;
-        end;
-        Values[n,ItemOffset+2] := r[RecordIndex].Name;
-        Values[n,ItemOffset+3] := r[RecordIndex].Short;
-      except
+    n := RecordCount;
+    RecordCount := RecordCount + 1;
+    Values[n,ItemOffset] := Integer(r[RecordIndex]);
+    try
+      if r[RecordIndex].IconFile <> '' then
+      begin
+        FileToString(rootdir + '\resources\icons\' + r[RecordIndex]
+          .IconFile, s);
+        Values[n,ItemOffset+1] := s;
       end;
+      Values[n,ItemOffset+2] := r[RecordIndex].Name;
+      Values[n,ItemOffset+3] := r[RecordIndex].Short;
+    except
     end;
   end;
+end;
+
+procedure TfNewList.LoadItems;
 
 var
   i: Integer;
@@ -549,6 +589,7 @@ begin
     FFullResList.OnJobChanged := JobStatus;
   end;
 
+  bbAll.Down := not GlobalSettings.GUI.NewListFavorites;
   FAutoAdd := false;
   gFull.BeginUpdate;
   gRes.BeginUpdate;
@@ -568,7 +609,10 @@ begin
     for i := 1 to FullResList.Count -1 do
     begin
 
-      fillRec(FullResList,tvFull.DataController,i,1);
+      if not bbFavorite.Down
+      or bbFavorite.Down and FullResList[i].Favorite then
+        fillRec(FullResList,tvFull.DataController,i,1);
+
       if s.IndexOf(FullResList[i].Name) <> -1 then
       begin
         ActualResList[ActualResList.CopyResource(FullResList[i])].Parent := FullResList[i];
@@ -616,6 +660,31 @@ begin
     TagList1.Caption := lang('_CHANGETAGLIST_')
   else
     TagList1.Caption := lang('_CREATETAGLIST_')
+end;
+
+procedure TfNewList.pmgFullCopyPopup(Sender: TObject);
+begin
+  if Assigned(tvFull.Controller.FocusedItem)
+  and (tvFull.DataController.RecordCount > 0) then
+    if tResource(Integer(tvFull.Controller.FocusedRow.Values[1])).Favorite then
+      FAVORITE1.Caption := lang('_REMOVEFROMFAVORITES_')
+    else
+      FAVORITE1.Caption := lang('_ADDTOFAVORITES_')
+  else
+    FAVORITE1.Caption := lang('_ADDTOFAVORITES_')
+end;
+
+procedure TfNewList.refillRecs;
+var
+  i: integer;
+begin
+  tvFull.BeginUpdate; try
+  tvFull.DataController.RecordCount := 0;
+  for i := 1 to FullResList.Count -1 do
+    if not bbFavorite.Down
+    or bbFavorite.Down and FullResList[i].Favorite then
+      fillRec(FullResList,tvFull.DataController,i,1);
+  finally tvFull.EndUpdate;  end;
 end;
 
 procedure TfNewList.Release;
@@ -767,6 +836,7 @@ begin
   end else
     s := '';
   GlobalSettings.GUI.LastUsedSet := s;
+  GlobalSettings.GUI.NewListFavorites := bbFavorite.Down;
   SaveGUISettings([gvResSet]);
 end;
 
@@ -916,6 +986,8 @@ procedure TfNewList.SetLang;
 begin
   btnPrevious.Caption := lang('_PREVIOUSSTEP_');
   btnNext.Caption := lang('_NEXTSTEP_');
+  bbFavorite.Caption := lang('_FAVORITES_');
+  bbALL.Caption := lang('_ALL_');
   tvFull.FilterRow.InfoText := lang('_FILTERROWHINT_');
   tvFull.OptionsView.NoDataToDisplayInfoText := lang('_GRIDNODATA_');
   tvRes.OptionsView.NoDataToDisplayInfoText := lang('_GRIDNODATA_');

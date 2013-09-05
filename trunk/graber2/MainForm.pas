@@ -212,17 +212,6 @@ end;
 procedure TMycxTabSheet.SetIcon(AStartFrame: Integer; AEndFrame: Integer = -1;
   Loop: Boolean = false);
 begin
-  // FTimer.Enabled := false;
-
-  { FStartFrame := AStartFrame;
-    FLoop := Loop;
-    if not FTimer.Enabled or FTimer.Enabled and (AEndFrame > -1)
-    and (FCurrentFrame < FStartFrame) then
-    FCurrentFrame := FStartFrame;
-    if (AEndFrame > -1) then
-    FEndFrame := AEndFrame;
-    if (ImageIndex <> FStartFrame) or (AEndFrame > -1) then
-    FTimer.Enabled := true; }
   ImageIndex := FStartFrame;
 end;
 

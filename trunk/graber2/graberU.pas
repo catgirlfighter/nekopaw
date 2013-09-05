@@ -99,6 +99,7 @@ type
   end;
 
   TGUISettings = record
+    NewListFavorites: Boolean;
     FormWidth, FormHeight: integer;
     PanelPage: integer;
     PanelWidth: integer;
@@ -515,7 +516,7 @@ type
     // procedure AddToQueue(R: TResource);
     procedure ThreadTerminate(ASender: TObject);
   public
-    procedure CreateThreads(acount: integer = -1);
+    procedure CreateThreads;
     procedure FinishThreads(Force: Boolean = false);
     constructor Create;
     destructor Destroy; override;
@@ -836,6 +837,8 @@ type
 
   TResource = class(TObject)
   private
+    FFavorite: Boolean;
+    fUserFav: Boolean;
     FCheatSheet: String;
     FFileName: String;
     FResName: String;
@@ -881,6 +884,7 @@ type
     FOnPageComplete: TNotifyEvent;
     FTemplateFile: String;
     FKeywordList: TStringList;
+    procedure SetFavorite(Value: Boolean);
     // fUseUserSettings: Boolean;
     // FLastPageTime: TDateTime;
     // FLastPicTime: TDateTime;
@@ -962,6 +966,7 @@ type
     property OnPageComplete: TNotifyEvent read FOnPageComplete
       write FOnPageComplete;
     property KeywordList: TStringList read FKeywordList;
+    property Favorite: Boolean read fFavorite write SetFavorite;
     // property UseUserSettings: Boolean read fUseUserSettings write fUseUserSettings;
     // property DefinedSettings: tGeneralSettings read fDefinedSettings write fDefinedSettings;
     // property UserSettings: tGeneralSettings read fUserSettings write fUserSettings;
@@ -2739,6 +2744,12 @@ end;
 // MaxThreadCount := Value;
 // end;
 
+procedure TResource.SetFavorite(Value: Boolean);
+begin
+  fFavorite := Value;
+  fUserFav := True;
+end;
+
 procedure TResource.SetThreadCounter(Value: pThreadCounter);
 begin
   FThreadCounter := Value;
@@ -2886,7 +2897,6 @@ var
   id: integer;
 begin
   // t.JobId := ;
-  t.JobComplete := JobComplete;
 
   if not JobInitiated then
   begin
@@ -2912,6 +2922,7 @@ begin
   end;
 
   t.JobIdx := id;
+  t.JobComplete := JobComplete;
 
   // else
   // t.HTTPRec.Counter := t.JobId;
@@ -2953,7 +2964,6 @@ end;
 
 procedure TResource.CreatePicJob(t: TDownloadThread);
 begin
-
   t.Picture := FPictureList.NextJob(JOB_PICS);
   t.JobIdx := FPictureList.LastJobIdx;
   t.JobComplete := PicJobComplete;
@@ -3075,6 +3085,8 @@ procedure TResource.DeclorationEvent(ItemName: String; ItemValue: Variant;
       ThreadCounter.DefinedSettings.PicDelay := ItemValue
     else if SameText(ItemName, '$main.keepqueue') then
       FKeepQueue := ItemValue
+    else if SameText(ItemName, '$main.favorite') then
+      if not fUserFav then fFavorite := Boolean(ItemValue) else
     else if SameText(ItemName, '$picture.template.name') then
       FHTTPRec.PicTemplate.Name := ItemValue
     else if SameText(ItemName, '$picture.template.ext') then
@@ -4475,8 +4487,10 @@ begin
     FResource := nil;
     FPicsAdded := false;
     FHTTP.HandleRedirects := true;
+
     try
       Synchronize(DoFinish);
+
       case ReturnValue of
         THREAD_PROCESS:
           Continue;
@@ -4495,6 +4509,10 @@ begin
       if not Assigned(FResource) then
         raise Exception.Create('thread.execute: resource not assigned, ' +
           ' job = ' + IntToStr(FJob) + ', return = ' + IntToStr(ReturnValue));
+
+      FURLList := nil;
+      FPicList.Clear;
+      FPicture := nil;
 
       try
         if Job in [JOB_PICS, JOB_POSTPROCESS] then
@@ -4546,10 +4564,6 @@ begin
       finally
 
         Synchronize(DoJobComplete);
-
-        FURLList := nil;
-        FPicList.Clear;
-        FPicture := nil;
 
       end;
     except
@@ -4979,6 +4993,14 @@ begin
             s := gVal(Value);
             Result := FHTTP.CookieList.GetCookieValue(Clc(nVal(s)),
               GetURLDomain(HTTPRec.DefUrl));
+            // FHTTP.CookieList.ChangeCookie(GetURLDomain(HTTPRec.DefUrl),
+            // Clc(nVal(s)) + '=' + Clc(nVal(s)) + ';');
+          end
+          else if SameText(s, 'domaincookie') then
+          begin
+            s := gVal(Value);
+            Result := FHTTP.CookieList.GetCookieValue(Clc(nVal(s)),
+              Clc(nVal(s)));
             // FHTTP.CookieList.ChangeCookie(GetURLDomain(HTTPRec.DefUrl),
             // Clc(nVal(s)) + '=' + Clc(nVal(s)) + ';');
           end
@@ -5431,8 +5453,10 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
     else if SameText(Name, '@createcookie') then
     begin
       s := Value;
+      //v1 := Clc(nVal(s));
+      //v2 := Clc(nVal(s));
       FHTTP.CookieList.ChangeCookie(GetURLDomain(HTTPRec.DefUrl),
-        Clc(nVal(s)) + '=' + Clc(nVal(s)) + ';');
+        VarToStr(Clc(nVal(s))) + '=' + VarToStr(Clc(nVal(s))));
     end
     else if SameText(Name, '@addurl') then
     begin
@@ -5700,6 +5724,10 @@ begin
               finally
                 CSData.Leave;
               end;
+
+              if (ReturnValue = THREAD_FINISH) then
+                Break;
+
               sleep(FHTTPRec.PageDelay - ms);
             end;
           end;
@@ -7663,6 +7691,10 @@ var
         Value := ValidFName(Pic.PicName)
       else if SameText(s, 'ext') then
         Value := Pic.Ext
+      else if SameText(s, 'date') then
+        Value := Date
+      else if SameText(s, 'time') then
+        Value := Time
       else if SameText(s, 'rootdir') then
       begin
         Value := ExtractFileDir(paramstr(0));
@@ -8245,17 +8277,17 @@ begin
   Result := Add(p);
 end;
 
-procedure TThreadHandler.CreateThreads(acount: integer = -1);
+procedure TThreadHandler.CreateThreads;
 var
   d: TDownloadThread;
-
 begin
-  if acount = -1 then
-    acount := FThreadCount;
+  //if acount = -1 then
+  //  acount := FThreadCount;
+
   FFinishQueue := false;
   FFinishThreads := false;
   // FQueue.Clear;
-  while Count < acount do
+  while Count < FThreadCount do
   begin
     inc(FCount);
     d := TDownloadThread.Create;
@@ -8291,11 +8323,8 @@ begin
 
   if FFinishThreads then
     Result := THREAD_FINISH
-    // else if FQueue.Count > 0 then
   else if CreateJob(t) then
   begin
-    { FQueue[0].CreateJob(t);
-      FQueue.Delete(0); }
     Result := THREAD_START;
     if not Assigned(t.Resource) and Assigned(FOnError) then
       OnError(Self, 'threadhandler: thread.resource = nil');

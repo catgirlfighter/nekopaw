@@ -48,6 +48,7 @@ var
 
 procedure SetLogMode(Value: boolean);
 procedure SetConSettings(r: TResourceList);
+procedure SaveFavResource(r: tResource; INI: TINIFile = nil);
 
 implementation
 
@@ -77,6 +78,9 @@ begin
 
     for i := 1 to r.Count - 1 do
     begin
+      if INI.ValueExists(pref + r[i].Name,'Favorite') then
+        r[i].Favorite := INI.ReadBool(pref + r[i].Name,'Favorite',False);
+
       r[i].Inherit := INI.ReadBool(pref + r[i].Name, 'Inherit', true);
       if not r[i].Inherit then
       begin
@@ -126,7 +130,10 @@ begin
     if default then
       rname := 'defaultresource'
     else
+    begin
       rname := 'resource-' + r.Name;
+      //INI.WriteBool(rname, 'Favorite', r.Favorite);
+    end;
     INI.WriteBool(rname, 'Inherit', r.Inherit);
 
     if not r.Inherit then
@@ -240,7 +247,7 @@ begin
       UPDServ := INI.ReadString('settings', 'updserver',
         'http://nekopaw.googlecode.com/svn/trunk/release/graber2/');
       CHKServ := INI.ReadString('settings', 'updserver',
-        'http://nekopaw.googlecode.com/');
+        'http://code.google.com/p/nekopaw/');
       langname := INI.ReadString('settings', 'language', '');
       MenuCaptions := INI.ReadBool('settings', 'menucaptions', false);
       Tips := INI.ReadBool('settings', 'tips', true);
@@ -254,6 +261,7 @@ begin
 
       with GUI do
       begin
+        NewListFavorites := INI.ReadBool('gui','NewListFavorites',true);
         FormWidth := INI.ReadInteger('gui', 'windowwidth', 610);
         FormHeight := INI.ReadInteger('gui', 'windowheight', 420);
         FormState := INI.ReadBool('gui', 'windowmaximized', false);
@@ -446,6 +454,7 @@ begin
       end;
       if gvResSet in values then
         INI.WriteString('GUI', 'LastUsedResourceSet', LastUsedSet);
+        INI.WriteBool('GUI','NewListFavorites',NewListFavorites);
       if gvGridFields in values then
       begin
         INI.WriteString('GUI', 'LastUsedGridFields', LastUsedFields);
@@ -611,6 +620,22 @@ begin
   r.LogMode := GLOBAL_LOGMODE;
   r.UseDistribution := GlobalSettings.UseDist;
   r.WriteEXIF := GlobalSettings.WriteEXIF;
+end;
+
+procedure SaveFavResource(r: tResource; INI: TINIFile = nil);
+begin
+  if not assigned(ini) then
+    ini := tinifile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+
+  try
+
+    ini.WriteBool('resource-' + r.Name,'Favorite',r.Favorite);
+
+  finally
+    if assigned(ini) then
+      ini.Free;
+  end;
+
 end;
 
 initialization
