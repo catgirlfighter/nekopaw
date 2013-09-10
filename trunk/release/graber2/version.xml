@@ -1,4 +1,4 @@
-<item file="Graber2.exe"  archive="Graber2.zip"    version=84 />
+<item file="Graber2.exe"  archive="Graber2.zip"    version=85 />
 <item file="versionlog.txt"                        version=-1 />
 
 <item file="resources\danbooru.tmpl"               version=26 />
@@ -36,7 +36,7 @@
 <item file="resources\pixiv.net.cfg"               version=17 />
 <item file="resources\rmart.org.cfg"               version=10 />
 <item file="resources\safebooru.org.cfg"           version=3 />
-<item file="resources\chan.sankakucomplex.com.cfg" version=8 />
+<item file="resources\chan.sankakucomplex.com.cfg" version=9 />
 <item file="resources\idol.sankakucomplex.com.cfg" version=7 />
 <item file="resources\tbib.org.cfg"                version=2 />
 <item file="resources\tentaclerape.net.cfg"        version=3 />
