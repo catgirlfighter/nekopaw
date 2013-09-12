@@ -31,6 +31,7 @@ $picture.exif.theme = "%album";
 $picture.exif.comment = "%post_url";
 $picture.exif.keywords = "@picture.tags(';')";
 
+$linkrel = "last";
 $pictime = '@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy")'; 
 $fileurl = '#file_url';
 $previewurl = '#preview_url';
@@ -214,7 +215,7 @@ $ok = 0;
 [listgui]
 
 ^head{
-	^link#rel="last"{
+	^link#rel=$linkrel{
 		$thread.count = @min($maxpage,@urlvar("page",#href));
 	}
 }
