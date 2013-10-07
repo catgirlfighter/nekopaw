@@ -47,7 +47,7 @@
 <item file="resources\xbooru.com.cfg"              version=2 />
 <item file="resources\rule34.xxx.cfg"              version=1 />
 <item file="resources\yande.re.cfg"                version=5 />
-<item file="resources\zerochan.net.cfg"            version=8 />
+<item file="resources\zerochan.net.cfg"            version=9 />
 
 <item file="resources\ponibooru.413chan.net.cfg"   version=1 deleted=1 />
 <item file="resources\oreno.imouto.org.cfg"        version=0 deleted=1 />
