@@ -1,4 +1,4 @@
-<item file="Graber2.exe"  archive="Graber2.zip"    version=93 />
+<item file="Graber2.exe"  archive="Graber2.zip"    version=94 />
 <item file="versionlog.txt"                        version=-1 />
 
 <item file="resources\danbooru.tmpl"               version=28 />
@@ -21,7 +21,7 @@
 <item file="resources\exhentai.org.cfg"            version=8 />
 <item file="resources\furaffinity.net.cfg"         version=12 />
 <item file="resources\gelbooru.com.cfg"            version=3 />
-<item file="resources\hentai-foundry.com.cfg"      version=10 />
+<item file="resources\hentai-foundry.com.cfg"      version=11 />
 <item file="resources\konachan.com.cfg"            version=3 />
 <item file="resources\lolibooru.com.cfg"           version=2 />
 <item file="resources\mangahere.com.cfg"           version=5 />
