@@ -2,9 +2,9 @@ unit LangString;
 
 interface
 
-uses SysUtils,INIFiles;
+uses SysUtils, INIFiles;
 
-{var
+{ var
 
   _FILELANGUAGE_: String = 'English';
 
@@ -100,16 +100,16 @@ uses SysUtils,INIFiles;
   _INTERFACE_: String = 'Interface';
   _THREADS_: String = 'Threads';
   _AUTOUPDATE_: String = 'autoupdate after application starts';
-  _UPDATENOW_: String = 'Check updates now';                }
+  _UPDATENOW_: String = 'Check updates now'; }
 
 
-//procedure LoadLang(FileName: String);
+// procedure LoadLang(FileName: String);
 
 var
   LangINI: TINIFile = nil;
 
 procedure CreateLangINI(filename: string);
-function lang(SName: String;cat: string = 'lang'): String;
+function lang(SName: String; cat: string = 'lang'): String;
 
 implementation
 
@@ -120,18 +120,18 @@ begin
   LangINI := TINIFile.Create(filename);
 end;
 
-function lang(SName: String;cat: string = 'lang'): String;
+function lang(SName: String; cat: string = 'lang'): String;
 begin
-  Result := LangINI.ReadString(cat,SName,SName);
+  Result := LangINI.ReadString(cat, SName, SName);
 end;
 
-{procedure LoadLang(FileName: String);
-var
+{ procedure LoadLang(FileName: String);
+  var
   INI: TINIFile;
-begin
+  begin
 
   if not FileExists(FileName) then
-    Exit;
+  Exit;
 
   INI := TINIFile.Create(FileName);
   _FILELANGUAGE_ := INI.ReadString('lang','_FILELANGUAGE_',_FILELANGUAGE_);
@@ -225,7 +225,7 @@ begin
   _UPDATENOW_  := INI.ReadString('lang','_AUTOUPDATE_',_AUTOUPDATE_);
 
   INI.Free;
-end;       }
+  end; }
 initialization
 
 finalization

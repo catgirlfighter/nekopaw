@@ -1,9 +1,9 @@
 {
-    Balloon - using Balloon-shaped windows in your Delphi programs
-    Copyright (C) 2003 JWB Software
+  Balloon - using Balloon-shaped windows in your Delphi programs
+  Copyright (C) 2003 JWB Software
 
-    Web:   http://people.zeelandnet.nl/famboek/delphi/
-    Email: jwbsoftware@zeelandnet.nl
+  Web:   http://people.zeelandnet.nl/famboek/delphi/
+  Email: jwbsoftware@zeelandnet.nl
 }
 
 Unit Balloon;
@@ -11,14 +11,15 @@ Unit Balloon;
 Interface
 
 Uses
-  Types,Forms, Classes, Controls, StdCtrls, ExtCtrls, Windows, Graphics,
+  Types, Forms, Classes, Controls, StdCtrls, ExtCtrls, Windows, Graphics,
   Messages, SysUtils;
 
 Type
-  TBalloonType     = (blnNone, blnInfo, blnError, blnWarning);
-  TBalloonHoriz    = (blnLeft, blnMiddle, blnRight);
-  TBalloonVert     = (blnTop, blnCenter, blnBottom);
-  TBalloonPosition = (blnArrowTopLeft, blnArrowTopRight, blnArrowBottomLeft, blnArrowBottomRight);
+  TBalloonType = (blnNone, blnInfo, blnError, blnWarning);
+  TBalloonHoriz = (blnLeft, blnMiddle, blnRight);
+  TBalloonVert = (blnTop, blnCenter, blnBottom);
+  TBalloonPosition = (blnArrowTopLeft, blnArrowTopRight, blnArrowBottomLeft,
+    blnArrowBottomRight);
 
 Type
   TBalloon = Class(TCustomForm)
@@ -40,50 +41,56 @@ Type
   public
     property OnRelease: TNotifyEvent read FOnRelease write FOnRelease;
     Constructor CreateNew(AOwner: TComponent; Dummy: Integer = 0); override;
-    Procedure ShowBalloon(blnLeft, blnTop: Integer; blnTitle, blnText: String; blnType: TBalloonType; blnDuration: Integer; blnPosition: TBalloonPosition);
-    Procedure ShowControlBalloon(blnControl: TWinControl; blnHoriz: TBalloonHoriz; blnVert: TBalloonVert; blnTitle, blnText: String; blnType: TBalloonType; blnDuration: Integer);
+    Procedure ShowBalloon(blnLeft, blnTop: Integer; blnTitle, blnText: String;
+      blnType: TBalloonType; blnDuration: Integer;
+      blnPosition: TBalloonPosition);
+    Procedure ShowControlBalloon(blnControl: TWinControl;
+      blnHoriz: TBalloonHoriz; blnVert: TBalloonVert; blnTitle, blnText: String;
+      blnType: TBalloonType; blnDuration: Integer);
   End;
 
 Type
-      TBalloonControl = Class(TComponent)
-      private
-            FTitle: String;
+  TBalloonControl = Class(TComponent)
+  private
+    FTitle: String;
     FText: TStringList;
-            FDuration, FPixelCoordinateX, FPixelCoordinateY: Integer;
-            FHorizontal: TBalloonHoriz;
-            FVertical: TBalloonVert;
-            FPosition: TBalloonPosition;
-            FControl: TWinControl;
-            FBalloonType: TBalloonType;
+    FDuration, FPixelCoordinateX, FPixelCoordinateY: Integer;
+    FHorizontal: TBalloonHoriz;
+    FVertical: TBalloonVert;
+    FPosition: TBalloonPosition;
+    FControl: TWinControl;
+    FBalloonType: TBalloonType;
 
-    Balloon  : TBalloon;
+    Balloon: TBalloon;
 
     procedure SetText(Value: TStringList);
-      public
-            procedure ShowControlBalloon;
+  public
+    procedure ShowControlBalloon;
     procedure HideControlBalloon;
-            procedure ShowPixelBalloon;
-      published
-            property Text: TStringList read FText write SetText;
-            property Title: String read FTitle write FTitle;
-            property Duration: Integer read FDuration write FDuration;
-            property Horizontal: TBalloonHoriz read FHorizontal write FHorizontal;
-            property Vertical: TBalloonVert read FVertical write FVertical;
-            property Position: TBalloonPosition read FPosition write FPosition;
-            property Control: TWinControl read FControl write FControl;
-            property PixelCoordinateX: Integer read FPixelCoordinateX write FPixelCoordinateX;
-            property PixelCoordinateY: Integer read FPixelCoordinateY write FPixelCoordinateY;
-            property BalloonType: TBalloonType read FBalloonType write FBalloonType;
+    procedure ShowPixelBalloon;
+  published
+    property Text: TStringList read FText write SetText;
+    property Title: String read FTitle write FTitle;
+    property Duration: Integer read FDuration write FDuration;
+    property Horizontal: TBalloonHoriz read FHorizontal write FHorizontal;
+    property Vertical: TBalloonVert read FVertical write FVertical;
+    property Position: TBalloonPosition read FPosition write FPosition;
+    property Control: TWinControl read FControl write FControl;
+    property PixelCoordinateX: Integer read FPixelCoordinateX
+      write FPixelCoordinateX;
+    property PixelCoordinateY: Integer read FPixelCoordinateY
+      write FPixelCoordinateY;
+    property BalloonType: TBalloonType read FBalloonType write FBalloonType;
 
     Constructor Create(AOwner: TComponent); override;
     Destructor Destroy; override;
-      End;
+  End;
 
 Procedure Register;
 
 Implementation
 
-//{$R Balloon.res}
+// {$R Balloon.res}
 
 Procedure Register;
 Begin
@@ -92,16 +99,16 @@ End;
 
 Constructor TBalloonControl.Create(AOwner: TComponent);
 Begin
-      Inherited;
+  Inherited;
 
-      FText := TStringList.Create;
+  FText := TStringList.Create;
 End;
 
 Destructor TBalloonControl.Destroy;
 Begin
-      FText.Free;
+  FText.Free;
 
-      Inherited;
+  Inherited;
 End;
 
 procedure TBalloonControl.SetText(Value: TStringList);
@@ -111,31 +118,35 @@ end;
 
 Procedure TBalloonControl.HideControlBalloon;
 begin
-  if Assigned(Balloon) and Balloon.Visible then Balloon.Release;
+  if Assigned(Balloon) and Balloon.Visible then
+    Balloon.Release;
 end;
 
 Procedure TBalloonControl.ShowControlBalloon();
-//Var
-//      Balloon: TBalloon;
+// Var
+// Balloon: TBalloon;
 Begin
-      Balloon := TBalloon.CreateNew(Owner);
-      Balloon.ShowControlBalloon(FControl, FHorizontal, FVertical, FTitle, Trim(FText.Text), FBalloonType, FDuration);
+  Balloon := TBalloon.CreateNew(Owner);
+  Balloon.ShowControlBalloon(FControl, FHorizontal, FVertical, FTitle,
+    Trim(FText.Text), FBalloonType, FDuration);
 End;
 
 Procedure TBalloonControl.ShowPixelBalloon();
-//Var
-//      Balloon: TBalloon;
+// Var
+// Balloon: TBalloon;
 Begin
-      Balloon := TBalloon.CreateNew(nil);
-      Balloon.ShowBalloon(FPixelCoordinateX, FPixelCoordinateY, FTitle, Trim(FText.Text), FBalloonType, FDuration, FPosition);
+  Balloon := TBalloon.CreateNew(nil);
+  Balloon.ShowBalloon(FPixelCoordinateX, FPixelCoordinateY, FTitle,
+    Trim(FText.Text), FBalloonType, FDuration, FPosition);
 End;
 
 Procedure TBalloon.CreateParams(Var Params: TCreateParams);
 Begin
   Inherited CreateParams(Params);
 
-  Params.Style     := (Params.Style and not WS_CAPTION) or WS_POPUP;
-  Params.ExStyle   := Params.ExStyle or WS_EX_TOOLWINDOW or WS_EX_NOACTIVATE or WS_EX_TOPMOST;
+  Params.Style := (Params.Style and not WS_CAPTION) or WS_POPUP;
+  Params.ExStyle := Params.ExStyle or WS_EX_TOOLWINDOW or WS_EX_NOACTIVATE or
+    WS_EX_TOPMOST;
   Params.WndParent := GetDesktopWindow;
 End;
 
@@ -158,7 +169,8 @@ End;
 
 Procedure TBalloon.OnChange(Sender: TObject);
 Begin
-  SetWindowPos(Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE or SWP_NOMOVE or SWP_NOSIZE);
+  SetWindowPos(Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE or SWP_NOMOVE or
+    SWP_NOSIZE);
 End;
 
 Procedure TBalloon.WndProc(Var Message: TMessage);
@@ -173,49 +185,49 @@ Constructor TBalloon.CreateNew(AOwner: TComponent; Dummy: Integer = 0);
 Begin
   Inherited;
 
-  OnActivate   := OnChange;
+  OnActivate := OnChange;
   OnDeactivate := OnChange;
-  OnShow       := OnChange;
-  BorderStyle  := bsNone;
-  FormStyle    := fsStayOnTop;
-  OnPaint      := FormPaint;
-  Color        := clInfoBk;
-  Font.Name    := 'Tahoma';
+  OnShow := OnChange;
+  BorderStyle := bsNone;
+  FormStyle := fsStayOnTop;
+  OnPaint := FormPaint;
+  Color := clInfoBk;
+  Font.Name := 'Tahoma';
 
-  pnlAlign   := TPanel.Create(Self);
-  lblTitle   := TLabel.Create(Self);
-  lblText    := TLabel.Create(Self);
+  pnlAlign := TPanel.Create(Self);
+  lblTitle := TLabel.Create(Self);
+  lblText := TLabel.Create(Self);
   iconBitmap := TImage.Create(Self);
-  tmrExit    := TTimer.Create(Self);
+  tmrExit := TTimer.Create(Self);
 
-  OnClick          := OnMouseClick;
+  OnClick := OnMouseClick;
   iconBitmap.OnClick := OnMouseClick;
   pnlAlign.OnClick := OnMouseClick;
   lblTitle.OnClick := OnMouseClick;
-  lblText.OnClick  := OnMouseClick;
+  lblText.OnClick := OnMouseClick;
 
-  lblTitle.Parent      := Self;
+  lblTitle.Parent := Self;
   lblTitle.ParentColor := True;
-  lblTitle.ParentFont  := True;
-  lblTitle.AutoSize    := True;
-  lblTitle.Font.Style  := [fsBold];
-  lblTitle.Left        := 34;
-  lblTitle.Top         := 12;
+  lblTitle.ParentFont := True;
+  lblTitle.AutoSize := True;
+  lblTitle.Font.Style := [fsBold];
+  lblTitle.Left := 34;
+  lblTitle.Top := 12;
 
-  lblText.Parent      := Self;
+  lblText.Parent := Self;
   lblText.ParentColor := True;
-  lblText.ParentFont  := True;
-  lblText.AutoSize    := True;
-  lblText.Left        := 10;
+  lblText.ParentFont := True;
+  lblText.AutoSize := True;
+  lblText.Left := 10;
 
-  iconBitmap.Parent      := Self;
+  iconBitmap.Parent := Self;
   iconBitmap.Transparent := True;
-  iconBitmap.Left        := 10;
-  iconBitmap.Top         := 10;
+  iconBitmap.Left := 10;
+  iconBitmap.Top := 10;
 
-  tmrExit.Enabled  := False;
+  tmrExit.Enabled := False;
   tmrExit.Interval := 0;
-  tmrExit.OnTimer  := OnExitTimerEvent;
+  tmrExit.OnTimer := OnExitTimerEvent;
 End;
 
 Procedure TBalloon.FormPaint(Sender: TObject);
@@ -223,21 +235,20 @@ Var
   TempRegion: HRGN;
 Begin
   With Canvas.Brush Do
-   Begin
+  Begin
     Color := clBlack;
     Style := bsSolid;
-   End;
+  End;
 
-  TempRegion := CreateRectRgn(0,0,1,1);
+  TempRegion := CreateRectRgn(0, 0, 1, 1);
   GetWindowRgn(Handle, TempRegion);
-  FrameRgn(Canvas.Handle, TempRegion, Canvas.Brush.handle, 1, 1);
+  FrameRgn(Canvas.Handle, TempRegion, Canvas.Brush.Handle, 1, 1);
   DeleteObject(TempRegion);
 End;
 
 Procedure TBalloon.ShowControlBalloon(blnControl: TWinControl;
-  blnHoriz: TBalloonHoriz; blnVert: TBalloonVert;
-  blnTitle, blnText: String; blnType: TBalloonType;
-  blnDuration: Integer);
+  blnHoriz: TBalloonHoriz; blnVert: TBalloonVert; blnTitle, blnText: String;
+  blnType: TBalloonType; blnDuration: Integer);
 Var
   Rect: TRect;
   blnPosLeft, blnPosTop: Integer;
@@ -245,7 +256,7 @@ Var
 Begin
   GetWindowRect(blnControl.Handle, Rect);
 
-  blnPosTop  := 0;
+  blnPosTop := 0;
   blnPosLeft := 0;
 
   If blnVert = blnTop Then
@@ -268,32 +279,37 @@ Begin
 
   blnPosition := blnArrowBottomRight;
 
-  If ((blnHoriz = blnRight) and (blnVert = blnBottom)) or ((blnHoriz = blnMiddle) and (blnVert = blnBottom)) Then
+  If ((blnHoriz = blnRight) and (blnVert = blnBottom)) or
+    ((blnHoriz = blnMiddle) and (blnVert = blnBottom)) Then
     blnPosition := blnArrowBottomRight;
 
-  If (blnHoriz = blnLeft) and (blnVert = blnBottom) or ((blnHoriz = blnLeft) and (blnVert = blnCenter)) Then
+  If (blnHoriz = blnLeft) and (blnVert = blnBottom) or
+    ((blnHoriz = blnLeft) and (blnVert = blnCenter)) Then
     blnPosition := blnArrowBottomLeft;
 
-  If (blnHoriz = blnLeft) and (blnVert = blnTop) or ((blnHoriz = blnMiddle) and (blnVert = blnTop)) Then
+  If (blnHoriz = blnLeft) and (blnVert = blnTop) or
+    ((blnHoriz = blnMiddle) and (blnVert = blnTop)) Then
     blnPosition := blnArrowTopLeft;
 
-  If (blnHoriz = blnRight) and (blnVert = blnTop) or ((blnHoriz = blnRight) and (blnVert = blnCenter)) Then
+  If (blnHoriz = blnRight) and (blnVert = blnTop) or
+    ((blnHoriz = blnRight) and (blnVert = blnCenter)) Then
     blnPosition := blnArrowTopRight;
 
-  ShowBalloon(blnPosLeft, blnPosTop, blnTitle, blnText, blnType, blnDuration, blnPosition);
+  ShowBalloon(blnPosLeft, blnPosTop, blnTitle, blnText, blnType, blnDuration,
+    blnPosition);
 End;
 
 Procedure TBalloon.ShowBalloon(blnLeft, blnTop: Integer;
-  blnTitle, blnText: String; blnType: TBalloonType;
-  blnDuration: Integer; blnPosition: TBalloonPosition);
+  blnTitle, blnText: String; blnType: TBalloonType; blnDuration: Integer;
+  blnPosition: TBalloonPosition);
 Var
   ArrowHeight, ArrowWidth: Integer;
   FormRegion, ArrowRegion: HRGN;
-  Arrow: Array [0..2] Of TPoint;
+  Arrow: Array [0 .. 2] Of TPoint;
   ResName: String;
 Begin
   ArrowHeight := 20;
-  ArrowWidth  := 20;
+  ArrowWidth := 20;
 
   lblTitle.Caption := blnTitle;
 
@@ -303,7 +319,7 @@ Begin
   If blnPosition = blnArrowBottomLeft Then
     lblTitle.Top := lblTitle.Top + ArrowHeight;
 
-  lblText.Top     := lblTitle.Top + lblTitle.Height + 8;
+  lblText.Top := lblTitle.Top + lblTitle.Height + 8;
   lblText.Caption := blnText;
 
   If blnPosition = blnArrowBottomRight Then
@@ -314,15 +330,15 @@ Begin
 
   Case blnType Of
     blnNone:
-      Resname := '';
+      ResName := '';
     blnError:
       ResName := 'ERROR';
     blnInfo:
       ResName := 'INFO';
     blnWarning:
       ResName := 'WARNING';
-    Else
-      ResName := 'INFO';
+  Else
+    ResName := 'INFO';
   End;
 
   if ResName <> '' then
@@ -345,66 +361,68 @@ Begin
     Width := lblText.Left + lblText.Width + 10;
 
   If blnPosition = blnArrowTopLeft Then
-   Begin
+  Begin
     Left := blnLeft - (Width - 20);
-    Top  := blnTop - (Height);
-   End;
+    Top := blnTop - (Height);
+  End;
 
   If blnPosition = blnArrowTopRight Then
-   Begin
+  Begin
     Left := blnLeft - 20;
-    Top  := blnTop - (Height);
-   End;
+    Top := blnTop - (Height);
+  End;
 
   If blnPosition = blnArrowBottomRight Then
-   Begin
+  Begin
     Left := blnLeft - 20;
-    Top  := blnTop - 2;
-   End;
+    Top := blnTop - 2;
+  End;
 
   If blnPosition = blnArrowBottomLeft Then
-   Begin
+  Begin
     Left := blnLeft - (Width - 20);
-    Top  := blnTop - 2;
-   End;
+    Top := blnTop - 2;
+  End;
 
   FormRegion := 0;
 
   If blnPosition = blnArrowTopLeft Then
-   Begin
-    FormRegion := CreateRoundRectRgn(0, 0, Width, Height - (ArrowHeight - 2), 7, 7);
+  Begin
+    FormRegion := CreateRoundRectRgn(0, 0, Width,
+      Height - (ArrowHeight - 2), 7, 7);
 
     Arrow[0] := Point(Width - ArrowWidth - 20, Height - ArrowHeight);
     Arrow[1] := Point(Width - 20, Height);
     Arrow[2] := Point(Width - 20, Height - ArrowHeight);
-   End;
+  End;
 
   If blnPosition = blnArrowTopRight Then
-   Begin
-    FormRegion := CreateRoundRectRgn(0, 0, Width, Height - (ArrowHeight - 2), 7, 7);
+  Begin
+    FormRegion := CreateRoundRectRgn(0, 0, Width,
+      Height - (ArrowHeight - 2), 7, 7);
 
     Arrow[0] := Point(20, Height - ArrowHeight);
     Arrow[1] := Point(20, Height);
     Arrow[2] := Point(20 + ArrowWidth, Height - ArrowHeight);
-   End;
+  End;
 
   If blnPosition = blnArrowBottomRight Then
-   Begin
+  Begin
     FormRegion := CreateRoundRectRgn(0, ArrowHeight + 2, Width, Height, 7, 7);
 
     Arrow[0] := Point(20, 2);
     Arrow[1] := Point(20, ArrowHeight + 2);
     Arrow[2] := Point(20 + ArrowWidth, ArrowHeight + 2);
-   End;
+  End;
 
   If blnPosition = blnArrowBottomLeft Then
-   Begin
+  Begin
     FormRegion := CreateRoundRectRgn(0, ArrowHeight + 2, Width, Height, 7, 7);
 
     Arrow[0] := Point(Width - 20, 2);
     Arrow[1] := Point(Width - 20, ArrowHeight + 2);
     Arrow[2] := Point(Width - 20 - ArrowWidth, ArrowHeight + 2);
-   End;
+  End;
 
   ArrowRegion := CreatePolygonRgn(Arrow, 3, WINDING);
 
@@ -417,7 +435,7 @@ Begin
   Visible := True;
 
   tmrExit.Interval := blnDuration * 1000;
-  tmrExit.Enabled  := True;
+  tmrExit.Enabled := True;
 End;
 
 End.

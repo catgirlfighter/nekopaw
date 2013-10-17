@@ -21,6 +21,7 @@ object fmNewsv2: TfmNewsv2
     Top = 41
     Width = 153
     Height = 320
+    Hint = ''
     Align = alLeft
     Bands = <
       item

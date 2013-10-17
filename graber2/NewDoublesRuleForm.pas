@@ -9,11 +9,12 @@ uses
   cxControls, cxContainer, cxEdit, cxTextEdit, cxLabel, cxStyles,
   dxSkinscxPCPainter, cxCustomData, cxFilter, cxData, cxDataStorage,
   cxGridLevel, cxGridCustomTableView, cxGridTableView, cxClasses,
-  cxGridCustomView, cxGrid, dxSkinsdxBarPainter, dxBar, cxEditRepositoryItems;
+  cxGridCustomView, cxGrid, dxSkinsdxBarPainter, dxBar, cxEditRepositoryItems,
+  cxNavigator;
 
 type
 
-  TCheckNameFunction=function(rulename:string):boolean of object;
+  TCheckNameFunction = function(rulename: string): boolean of object;
 
   TfmDoublesNewRule = class(TForm)
     Panel1: TPanel;
@@ -34,7 +35,7 @@ type
     bcValues: TdxBarDockControl;
     cxEditRepository1: TcxEditRepository;
     cComboBox: TcxEditRepositoryComboBoxItem;
-    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure bbNewRuleClick(Sender: TObject);
     procedure bbDeleteRuleClick(Sender: TObject);
     procedure tvValuesEditValueChanged(Sender: TcxCustomGridTableView;
@@ -43,16 +44,16 @@ type
     FRuleName: string;
     FResultString: String;
     FCheckName: TCheckNameFunction;
-    //fpicfields: tstringlist;
+    // fpicfields: tstringlist;
     { Private declarations }
   public
     procedure SetLang;
     procedure PostValues;
-    property RuleName: String read FRuleName;
+    property rulename: String read FRuleName;
     property ValueString: String read FResultString;
-    property OnCheckName: TCheckNameFunction read FCheckname write FCheckName;
-    function Execute(rulename:string;valuestring: string;
-      picfields: tstringlist; chName: TChecknameFunction = nil): boolean;
+    property OnCheckName: TCheckNameFunction read FCheckName write FCheckName;
+    function Execute(rulename: string; ValueString: string;
+      picfields: tstringlist; chName: TCheckNameFunction = nil): boolean;
     { Public declarations }
   end;
 
@@ -76,40 +77,42 @@ begin
   gValues.SetFocus;
 end;
 
-function TfmDoublesNewRule.Execute(rulename:string;valuestring: string;
-  picfields: tstringlist; chName: TChecknameFunction): boolean;
+function TfmDoublesNewRule.Execute(rulename: string; ValueString: string;
+  picfields: tstringlist; chName: TCheckNameFunction): boolean;
 var
-  s,h,v: string;
+  s, h, v: string;
   i: integer;
 begin
   SetLang;
   FRuleName := rulename;
-  FResultString := valuestring;
+  FResultString := ValueString;
   FCheckName := chName;
   cComboBox.Properties.Items.Assign(picfields);
   cComboBox.Properties.Sorted := true;
-  //fpicfields := picfields;
+  // fpicfields := picfields;
   eName.Text := rulename;
   i := 0;
   tvValues.BeginUpdate;
   tvValues.DataController.RecordCount := 0;
-  while valuestring <> '' do
+  while ValueString <> '' do
   begin
-    s := CopyTo(valuestring,';',['""'],[],true);
-    h := CopyTo(s,'=',['""'],[],true);
+    s := CopyTo(ValueString, ';', ['""'], [], true);
+    h := CopyTo(s, '=', ['""'], [], true);
     if s <> '' then
     begin
-      tvValues.DataController.RecordCount := tvValues.DataController.RecordCount + 1;
-      v := CopyTo(s,',',['""'],[],true);
-      tvValues.DataController.Values[i,cChWhat.Index] := h;
-      tvValues.DataController.Values[i,cChWith.Index] := v;
+      tvValues.DataController.RecordCount :=
+        tvValues.DataController.RecordCount + 1;
+      v := CopyTo(s, ',', ['""'], [], true);
+      tvValues.DataController.Values[i, cChWhat.Index] := h;
+      tvValues.DataController.Values[i, cChWith.Index] := v;
       inc(i);
       while s <> '' do
       begin
-        v := CopyTo(s,',',['""'],[],true);
-        tvValues.DataController.RecordCount := tvValues.DataController.RecordCount + 1;
-        //tvValues.DataController.Values[i,cChWhat.Index] := CopyTo(s,'=',['""'],true);
-        tvValues.DataController.Values[i,cChWith.Index] := v;
+        v := CopyTo(s, ',', ['""'], [], true);
+        tvValues.DataController.RecordCount :=
+          tvValues.DataController.RecordCount + 1;
+        // tvValues.DataController.Values[i,cChWhat.Index] := CopyTo(s,'=',['""'],true);
+        tvValues.DataController.Values[i, cChWith.Index] := v;
         inc(i);
       end;
     end;
@@ -128,18 +131,19 @@ begin
 
     if tvValues.DataController.RecordCount > 0 then
     begin
-      h := tvValues.DataController.Values[0,cChWhat.Index];
-      v := tvValues.DataController.Values[0,cChWith.Index];
+      h := tvValues.DataController.Values[0, cChWhat.Index];
+      v := tvValues.DataController.Values[0, cChWith.Index];
 
-      for i := 1 to tvValues.DataController.RecordCount-1 do
-        if VarToStr(tvValues.DataController.Values[i,cChWith.Index]) <> '' then
-          if VarToStr(tvValues.DataController.Values[i,cChWhat.Index]) = '' then
-            v := v + ',' + tvValues.DataController.Values[i,cChWith.Index]
+      for i := 1 to tvValues.DataController.RecordCount - 1 do
+        if VarToStr(tvValues.DataController.Values[i, cChWith.Index]) <> '' then
+          if VarToStr(tvValues.DataController.Values[i, cChWhat.Index]) = ''
+          then
+            v := v + ',' + tvValues.DataController.Values[i, cChWith.Index]
           else
           begin
             s := s + h + '=' + v + ';';
-            h := tvValues.DataController.Values[i,cChWhat.Index];
-            v := tvValues.DataController.Values[i,cChWith.Index];
+            h := tvValues.DataController.Values[i, cChWhat.Index];
+            v := tvValues.DataController.Values[i, cChWith.Index];
           end;
       s := s + h + '=' + v + ';';
     end;
@@ -149,39 +153,40 @@ begin
 end;
 
 procedure TfmDoublesNewRule.FormCloseQuery(Sender: TObject;
-  var CanClose: Boolean);
+  var CanClose: boolean);
 var
   i: integer;
 begin
-  if (ModalResult=mrOk) then
+  if (ModalResult = mrOK) then
   begin
-    if(tvValues.DataController.RecordCount = 0) then
+    if (tvValues.DataController.RecordCount = 0) then
     begin
       CanClose := false;
-      MessageDlg(lang('_NO_VALUES_'),mtError,[mbOk],0);
+      MessageDlg(lang('_NO_VALUES_'), mtError, [mbOk], 0);
       Exit;
     end;
 
-    for i := 0 to tvValues.DataController.RecordCount-1 do
-      if trim(VarToStr(tvValues.DataController.Values[i,cChWith.index])) = '' then
+    for i := 0 to tvValues.DataController.RecordCount - 1 do
+      if trim(VarToStr(tvValues.DataController.Values[i, cChWith.Index])) = ''
+      then
       begin
         CanClose := false;
-        MessageDlg(lang('_EMPTY_VALUES_'),mtError,[mbOk],0);
+        MessageDlg(lang('_EMPTY_VALUES_'), mtError, [mbOk], 0);
         Exit;
       end;
 
-    if(trim(eName.Text) = '') then
+    if (trim(eName.Text) = '') then
     begin
       CanClose := false;
-      MessageDlg(lang('_NO_NAME_'),mtError,[mbOk],0);
+      MessageDlg(lang('_NO_NAME_'), mtError, [mbOk], 0);
       eName.SetFocus;
       Exit;
     end;
 
-    if Assigned(FCheckName)and FCheckName(trim(eName.Text)) then
+    if Assigned(FCheckName) and FCheckName(trim(eName.Text)) then
     begin
       CanClose := false;
-      MessageDlg(lang('_NAME_EXISTS_'),mtError,[mbOk],0);
+      MessageDlg(lang('_NAME_EXISTS_'), mtError, [mbOk], 0);
       eName.SetFocus;
       Exit;
     end;
@@ -206,12 +211,13 @@ begin
   cChWith.Caption := lang('_COMPARESTRING_');
 end;
 
-procedure TfmDoublesNewRule.tvValuesEditValueChanged(
-  Sender: TcxCustomGridTableView; AItem: TcxCustomGridTableItem);
+procedure TfmDoublesNewRule.tvValuesEditValueChanged
+  (Sender: TcxCustomGridTableView; AItem: TcxCustomGridTableItem);
 begin
   if AItem = cChWhat then
-    Sender.DataController.Values[Sender.DataController.FocusedRecordIndex,cChWith.Index]
-      := Sender.DataController.Values[Sender.DataController.FocusedRecordIndex,AItem.Index];
+    Sender.DataController.Values[Sender.DataController.FocusedRecordIndex,
+      cChWith.Index] := Sender.DataController.Values
+      [Sender.DataController.FocusedRecordIndex, AItem.Index];
 end;
 
 end.

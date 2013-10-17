@@ -26,8 +26,6 @@ object fmDoublesNewRule: TfmDoublesNewRule
     BevelOuter = bvNone
     ShowCaption = False
     TabOrder = 0
-    ExplicitLeft = -2
-    ExplicitTop = 0
     object bOk: TcxButton
       Left = 0
       Top = 0
@@ -69,6 +67,7 @@ object fmDoublesNewRule: TfmDoublesNewRule
     Align = alClient
     TabOrder = 1
     object tvValues: TcxGridTableView
+      Navigator.Buttons.CustomButtons = <>
       OnEditValueChanged = tvValuesEditValueChanged
       DataController.Summary.DefaultGroupSummaryItems = <>
       DataController.Summary.FooterSummaryItems = <>
@@ -121,7 +120,6 @@ object fmDoublesNewRule: TfmDoublesNewRule
       True)
     ImageOptions.Images = dm.il
     PopupMenuLinks = <>
-    Style = bmsUseLookAndFeel
     UseSystemFont = True
     Left = 32
     Top = 144

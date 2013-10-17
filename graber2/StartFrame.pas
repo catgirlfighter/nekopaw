@@ -52,31 +52,34 @@ end;
 
 procedure TfStart.bExitClick(Sender: TObject);
 begin
-  PostMessage(mf.Handle,WM_CLOSE,0,0);
+  PostMessage(mf.Handle, WM_CLOSE, 0, 0);
 end;
 
 procedure TfStart.bNewClick(Sender: TObject);
 begin
-  PostMessage(mf.Handle,CM_NEWLIST,0,0);
+  PostMessage(mf.Handle, CM_NEWLIST, 0, 0);
 end;
 
 procedure TfStart.bSettingsClick(Sender: TObject);
 begin
-  PostMessage(Application.MainForm.Handle,CM_SHOWSETTINGS,0,0);
+  PostMessage(Application.MainForm.Handle, CM_SHOWSETTINGS, 0, 0);
 end;
 
 procedure TfStart.FrameResize(Sender: TObject);
 begin
-  bNew.SetBounds((Width - ButtonWidth - sps*4 - IconWidth) div 2,
-                 (Height - ButtonHeight*3 - sps*8) div 2,
-                 ButtonWidth,ButtonHeight);
-  bLoad.SetBounds(bNew.Left,bNew.BoundsRect.Bottom + sps*4,ButtonWidth,ButtonHeight);
-  bSettings.SetBounds(bNew.Left,bLoad.BoundsRect.Bottom + sps*4,ButtonWidth,ButtonHeight);
-  //bAbout.SetBounds(bNew.Left,bSettings.BoundsRect.Bottom + sps*4,ButtonWidth,ButtonHeight);
-  iIcon.SetBounds(bNew.BoundsRect.Right + sps*4, (Height - IconHeight) div 2, IconWidth,IconHeight);
-  bExit.SetBounds(bNew.Left,iIcon.BoundsRect.Bottom - ButtonHeight, ButtonWidth,ButtonHeight);
+  bNew.SetBounds((Width - ButtonWidth - Sps * 4 - IconWidth) div 2,
+    (Height - ButtonHeight * 3 - Sps * 8) div 2, ButtonWidth, ButtonHeight);
+  bLoad.SetBounds(bNew.Left, bNew.BoundsRect.Bottom + Sps * 4, ButtonWidth,
+    ButtonHeight);
+  bSettings.SetBounds(bNew.Left, bLoad.BoundsRect.Bottom + Sps * 4, ButtonWidth,
+    ButtonHeight);
+  // bAbout.SetBounds(bNew.Left,bSettings.BoundsRect.Bottom + sps*4,ButtonWidth,ButtonHeight);
+  iIcon.SetBounds(bNew.BoundsRect.Right + Sps * 4, (Height - IconHeight) div 2,
+    IconWidth, IconHeight);
+  bExit.SetBounds(bNew.Left, iIcon.BoundsRect.Bottom - ButtonHeight,
+    ButtonWidth, ButtonHeight);
 
-//  bAdvanced.SetBounds(iIcon.BoundsRect.Right + sps*2,iIcon.BoundsRect.Bottom - ButtonHeight,ButtonWidth,ButtonHeight);
+  // bAdvanced.SetBounds(iIcon.BoundsRect.Right + sps*2,iIcon.BoundsRect.Bottom - ButtonHeight,ButtonWidth,ButtonHeight);
 end;
 
 procedure TfStart.SetLang;
@@ -84,7 +87,7 @@ begin
   bNew.Caption := lang('_NEWLIST_');
   bLoad.Caption := lang('_LOADLIST_');
   bSettings.Caption := lang('_SETTINGS_');
-  bEXIT.Caption := lang('_EXIT_');
+  bExit.Caption := lang('_EXIT_');
 end;
 
 end.

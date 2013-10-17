@@ -440,34 +440,33 @@ begin
   else
     FCurPic := a;
 
-  if FCurPic = nil then
-  begin
-    vgCurMain.ClearRows;
-    chlbTags.Clear;
-    Exit;
-  end;
+  vgCurMain.BeginUpdate; try
 
-  vgCurMain.BeginUpdate;
-  try
+    if FCurPic = nil then
+    begin
+      vgCurMain.ClearRows;
+      chlbTags.Clear;
+      Exit;
+    end;
+
     vgCurMain.ClearRows;
     dm.CreateField(vgCurMain, 'vgiRName', lang('_RESNAME_'), '', ftString, nil,
-      a.Resource.Name, true);
+      a.Resource.name, true);
 
     if a.Linked.Count > 0 then
-      dm.CreateField(vgCurMain, 'vgiName', lang('_FILENAME_'), '', ftString, nil,
-        '', true)
+      dm.CreateField(vgCurMain, 'vgiName', lang('_FILENAME_'), '', ftString,
+        nil, '', true)
     else
-      dm.CreateField(vgCurMain, 'vgiName', lang('_FILENAME_'), '', ftString, nil,
-        a.PicName + '.' + a.Ext, true);
-
+      dm.CreateField(vgCurMain, 'vgiName', lang('_FILENAME_'), '', ftString,
+        nil, a.PicName + '.' + a.Ext, true);
 
     if (a.FactFileName = '') then
       if a.Linked.Count > 0 then
         dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '',
           ftPathText, nil, ExtractFilePath(a.Linked[0].FileName), true)
-        else
-          dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '',
-            ftPathText, nil, a.FileName, true)
+      else
+        dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '',
+          ftPathText, nil, a.FileName, true)
     else
       dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '',
         ftPathText, nil, a.FactFileName, true);
@@ -485,12 +484,12 @@ begin
     vgCurMain.EndUpdate;
   end;
 
-  chlbTags.Items.BeginUpdate;
-  try
+  chlbTags.Items.BeginUpdate; try
+
     chlbTags.Clear;
 
     for i := 0 to a.Tags.Count - 1 do
-      chlbTags.AddItem(a.Tags[i].Name + ' (' +
+      chlbTags.AddItem(a.Tags[i].name + ' (' +
         IntTOStr(a.Tags[i].Linked.Count) + ')');
 
   finally
@@ -575,7 +574,7 @@ begin
             begin
               ACheckItem := TcxCheckListBoxItem
                 (ResList.PictureList.Tags[t[i].Tag].Tag);
-              ACheckItem.Text := ResList.PictureList.Tags[t[i].Tag].Name + ' ('
+              ACheckItem.Text := ResList.PictureList.Tags[t[i].Tag].name + ' ('
                 + IntTOStr(ResList.PictureList.Tags[t[i].Tag]
                 .Linked.Count) + ')';
             end
@@ -583,7 +582,7 @@ begin
             begin
               ACheckItem := chlbFullTags.Items.Insert(t[i].Tag)
                 as TcxCheckListBoxItem;
-              ACheckItem.Text := ResList.PictureList.Tags[t[i].Tag].Name + ' ('
+              ACheckItem.Text := ResList.PictureList.Tags[t[i].Tag].name + ' ('
                 + IntTOStr(ResList.PictureList.Tags[t[i].Tag]
                 .Linked.Count) + ')';
               ACheckItem.Tag := Integer(ResList.PictureList.Tags[t[i].Tag]);
@@ -637,18 +636,22 @@ begin
   f2.OnLog := OnLog;
 
   if (VarToStr(f.FullResList[0].Fields['tag']) <> '') then
-    n.Caption := f.FullResList[0].Fields['tag']
+    n.Caption := trim(f.FullResList[0].Fields['tag'])
   else if (f.ActualResList.Count < 2) and
     (VarToStr(f.ActualResList[0].Fields['tag']) <> '') then
-    n.Caption := f.ActualResList[0].Fields['tag'];
+      n.Caption := trim(
+      f.ActualResList[0].RestoreTagString(
+      f.ActualResList[0].Fields['tag'],
+      f.FullResList[0].HTTPRec.TagTemplate));
 
   f2.ResList.OnPageComplete := DoRefreshResInfo;
 
-  SaveResourceSettings(f.FullResList[0],nil,true);
+  SaveResourceSettings(f.FullResList[0], nil, true);
 
   f.Release;
 
   SaveResourceSettings(f.ActualResList);
+  SaveProfileSettings;
 
   FreeAndNil(n.SecondFrame);
 
@@ -791,8 +794,8 @@ begin
       try
         for i := 0 to ResList.Count - 1 do
         begin
-          c := dm.CreateField(vgTagsMain, 'vgT' + IntTOStr(i), ResList[i].Name
-            + '(' + VarToStr(ResList[i].Fields['tag'] + ')'),
+          c := dm.CreateField(vgTagsMain, 'vgT' + IntTOStr(i),
+            ResList[i].name + '(' + VarToStr(ResList[i].Fields['tag'] + ')'),
             '', ftString, nil, ifn(ResList.ListFinished,
             ifn(ResList.PicsFinished, '', // if pics
             IntTOStr(ResList[i].PictureList.PicCounter.FSH + ResList[i]
@@ -837,7 +840,7 @@ begin
         if ResList.ListFinished and ResList.PicsFinished then
           for i := 0 to ResList.PictureList.Tags.Count - 1 do
           begin
-            chlbFullTags.AddItem(ResList.PictureList.Tags[i].Name + ' (' +
+            chlbFullTags.AddItem(ResList.PictureList.Tags[i].name + ' (' +
               IntTOStr(ResList.PictureList.Tags[i].Linked.Count) + ')');
             // ACheckItem := chlbFullTags.Items.Add;
             // ACheckItem.Text := ResList.PictureList.Tags[i].Name + ' (' + IntToStr(ResList.PictureList.Tags[i].Linked.Count) + ')';
@@ -879,8 +882,8 @@ var
   i: Integer;
   p: DUint64;
 begin
-  if (pcTables.ActivePage <> nil) and
-    (Integer(pcTables.ActivePage) = Msg.WParam) then
+  if (pcTables.ActivePage <> nil) and (Integer(pcTables.ActivePage) = Msg.WParam)
+  then
   begin
     updateTab;
     if Msg.LParam = 0 then
@@ -934,16 +937,18 @@ procedure Tmf.UPDATECHECK(var Msg: TMessage);
 begin
   lUPD.Hide;
   case Msg.WParam of
-    //- 1: In XE3 cause error
-    //  CheckUpdates;
+    // - 1: In XE3 cause error
+    // CheckUpdates;
     0:
       OnError(Self, 'Update check is failed: ' + TUPDThread(Msg.LParam).Error);
     1:
-      if MessageDlg(lang('_NEWUPDATES_'), mtConfirmation, [mbYes, mbNo], 0)
-        = mrYes then
+      if MessageDlg(lang('_NEWUPDATES_'), mtConfirmation, [mbYes, mbNo], 0) = mrYes
+      then
         StartUpdate;
-    2:; //ALL OK;
-    3: CheckUpdates;
+    2:
+      ; // ALL OK;
+    3:
+      CheckUpdates;
   end;
 end;
 
@@ -951,8 +956,8 @@ procedure Tmf.updateTab;
 begin
   // EXIT;
 
-  if (pcTables.ActivePage <> nil) and
-    (pcTables.ActivePage is TMycxTabSheet) then
+  if (pcTables.ActivePage <> nil) and (pcTables.ActivePage is TMycxTabSheet)
+  then
   begin
     if (TMycxTabSheet(pcTables.ActivePage).SecondFrame is TfNewList) then
     begin
@@ -1073,9 +1078,11 @@ begin
       begin
         if assigned(MainFrame) then
           if MainFrame is tfGrid then
-            (MainFrame as tfGrid).Setlang else if MainFrame is TfNewList then
-              (MainFrame as TfNewList).Setlang else if MainFrame is TfSettings
-            then (MainFrame as TfSettings).Setlang;
+            (MainFrame as tfGrid).Setlang
+          else if MainFrame is TfNewList then
+            (MainFrame as TfNewList).Setlang
+          else if MainFrame is TfSettings then
+            (MainFrame as TfSettings).Setlang;
         if assigned(SecondFrame) then
           if SecondFrame is TfNewList then
             (SecondFrame as TfNewList).Setlang;
@@ -1090,7 +1097,7 @@ procedure Tmf.WHATSNEW(var Msg: TMessage);
 begin
   if FileExists(IncludeTrailingPathDelimiter(rootdir) + 'versionlog.txt') then
     ShowNews(IncludeTrailingPathDelimiter(rootdir) + 'versionlog.txt');
-  //ShowWhatsNew;
+  // ShowWhatsNew;
 end;
 
 procedure Tmf.STYLECHANGED(var Msg: TMessage);
@@ -1138,36 +1145,36 @@ begin
   begin
     for i := 0 to BarManager.ItemCount - 1 do
       if BarManager.Items[i] is TdxBarButton then
-        (BarManager.Items[i] as TdxBarButton).PaintStyle :=
-          psCaptionGlyph else if BarManager.Items[i] is TdxBarSubItem then
-          (BarManager.Items[i] as TdxBarSubItem).ShowCaption := true;
+        (BarManager.Items[i] as TdxBarButton).PaintStyle := psCaptionGlyph
+      else if BarManager.Items[i] is TdxBarSubItem then
+        (BarManager.Items[i] as TdxBarSubItem).ShowCaption := true;
 
-      for j := 0 to pcTables.PageCount - 1 do
-        if pcTables.Pages[j] is TMycxTabSheet then
-          with (pcTables.Pages[j] as TMycxTabSheet) do
-          begin
-            if assigned(MainFrame) then
-              if MainFrame is tfGrid then
-                (MainFrame as tfGrid).SetMenus;
-          end;
+    for j := 0 to pcTables.PageCount - 1 do
+      if pcTables.Pages[j] is TMycxTabSheet then
+        with (pcTables.Pages[j] as TMycxTabSheet) do
+        begin
+          if assigned(MainFrame) then
+            if MainFrame is tfGrid then
+              (MainFrame as tfGrid).SetMenus;
+        end;
 
   end
   else
   begin
     for i := 0 to BarManager.ItemCount - 1 do
       if BarManager.Items[i] is TdxBarButton then
-        (BarManager.Items[i] as TdxBarButton).PaintStyle :=
-          psStandard else if BarManager.Items[i] is TdxBarSubItem then
-          (BarManager.Items[i] as TdxBarSubItem).ShowCaption := false;
+        (BarManager.Items[i] as TdxBarButton).PaintStyle := psStandard
+      else if BarManager.Items[i] is TdxBarSubItem then
+        (BarManager.Items[i] as TdxBarSubItem).ShowCaption := false;
 
-      for j := 0 to pcTables.PageCount - 1 do
-        if pcTables.Pages[j] is TMycxTabSheet then
-          with (pcTables.Pages[j] as TMycxTabSheet) do
-          begin
-            if assigned(MainFrame) then
-              if MainFrame is tfGrid then
-                (MainFrame as tfGrid).SetMenus;
-          end;
+    for j := 0 to pcTables.PageCount - 1 do
+      if pcTables.Pages[j] is TMycxTabSheet then
+        with (pcTables.Pages[j] as TMycxTabSheet) do
+        begin
+          if assigned(MainFrame) then
+            if MainFrame is tfGrid then
+              (MainFrame as tfGrid).SetMenus;
+        end;
   end;
 end;
 
@@ -1554,12 +1561,12 @@ begin
   begin
     ds.Hide;
     dsLogs.AutoHide := true;
-    //dsTags.Hide;
-    //dsLogs.Hide;
+    // dsTags.Hide;
+    // dsLogs.Hide;
     bmbMain.Visible := false;
     pcTables.HideTabs := false;
-    //dpLog.Visible := true;
-    //dpErrors.Visible := true;
+    // dpLog.Visible := true;
+    // dpErrors.Visible := true;
     mFrame := tfStart.Create(Self);
     (mFrame as tfStart).Setlang;
     mFrame.Parent := Self;

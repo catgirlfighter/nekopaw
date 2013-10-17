@@ -9,7 +9,7 @@ var
   // FullResList: TResourceList;
   TagDump: TPictureTagList;
   GlobalSettings: TSettingsRec;
-  IgnoreList, AddFields: TDSArray;
+  IgnoreList, AddFields, BlackList: TDSArray;
   GlobalFavList, ResourceGroupsList: TStringList;
   rootdir: string;
   profname: string = 'default.ini';
@@ -48,7 +48,7 @@ var
 
 procedure SetLogMode(Value: boolean);
 procedure SetConSettings(r: TResourceList);
-procedure SaveFavResource(r: tResource; INI: TINIFile = nil);
+procedure SaveFavResource(r: TResource; INI: TINIFile = nil);
 
 implementation
 
@@ -78,8 +78,8 @@ begin
 
     for i := 1 to r.Count - 1 do
     begin
-      if INI.ValueExists(pref + r[i].Name,'Favorite') then
-        r[i].Favorite := INI.ReadBool(pref + r[i].Name,'Favorite',False);
+      if INI.ValueExists(pref + r[i].Name, 'Favorite') then
+        r[i].Favorite := INI.ReadBool(pref + r[i].Name, 'Favorite', false);
 
       r[i].Inherit := INI.ReadBool(pref + r[i].Name, 'Inherit', true);
       if not r[i].Inherit then
@@ -132,7 +132,7 @@ begin
     else
     begin
       rname := 'resource-' + r.Name;
-      //INI.WriteBool(rname, 'Favorite', r.Favorite);
+      // INI.WriteBool(rname, 'Favorite', r.Favorite);
     end;
     INI.WriteBool(rname, 'Inherit', r.Inherit);
 
@@ -252,7 +252,8 @@ begin
       MenuCaptions := INI.ReadBool('settings', 'menucaptions', false);
       Tips := INI.ReadBool('settings', 'tips', true);
       UseDist := INI.ReadBool('settings', 'dist', true);
-      WriteEXIF := INI.ReadBool('Settings','WriteEXIF',false);
+      WriteEXIF := INI.ReadBool('Settings', 'WriteEXIF', false);
+      GlobalSettings.UseBlackList := INI.ReadBool('Settings', 'UseBlackList', false);
 
       ShowSettings := langname = '';
 
@@ -261,7 +262,8 @@ begin
 
       with GUI do
       begin
-        NewListFavorites := INI.ReadBool('gui','NewListFavorites',true);
+        NewListFavorites := INI.ReadBool('gui', 'NewListFavorites', true);
+        NewListShowHint := INI.ReadBool('gui', 'NewListShowHint', true);
         FormWidth := INI.ReadInteger('gui', 'windowwidth', 610);
         FormHeight := INI.ReadInteger('gui', 'windowheight', 420);
         FormState := INI.ReadBool('gui', 'windowmaximized', false);
@@ -303,7 +305,7 @@ begin
 
       v := TStringList.Create;
       try
-        INI.ReadSection('IgnoreList', v);
+        INI.ReadSection('IgnoreList', v);      //loading ignore "doubles" list
 
         if (v.Count = 0) and ShowSettings then
         begin
@@ -319,8 +321,8 @@ begin
             IgnoreList[i][0] := v[i];
             IgnoreList[i][1] := INI.ReadString('ignorelist', v[i], '');
             { Checking old format }
-            if pos('=', CopyTo(IgnoreList[i][1], ';', ['""'], [], false)
-              ) = 0 then
+            if pos('=', CopyTo(IgnoreList[i][1], ';', ['""'], [], false)) = 0
+            then
             begin
               IgnoreList[i][1] := IgnoreList[i][0] + '=' + IgnoreList[i][1];
               IgnoreList[i][0] := 'rule' + IntToStr(i + 1);
@@ -329,8 +331,7 @@ begin
           end;
         end;
 
-        // v.Clear;
-        INI.ReadSection('fields', v);
+        INI.ReadSection('fields', v);                //additional fields
 
         if v.Count = 0 then
         begin
@@ -347,10 +348,29 @@ begin
           end;
         end;
 
+        INI.ReadSection('blacklist', v);                //black list
+
+        if v.Count = 0 then
+        begin
+
+        end
+        else
+        begin
+          SetLength(BlackList, v.Count);
+
+          for i := 0 to v.Count - 1 do
+          begin
+            BlackList[i][0] := v[i];
+            BlackList[i][1] := INI.ReadString('blacklist', v[i], '');
+          end;
+        end;
+
       finally
         v.Free;
       end;
-      // LoadResourceSettings(INI);
+
+
+
     end;
   finally
     INI.Free;
@@ -386,7 +406,8 @@ begin
       INI.WriteBool('Settings', 'MenuCaptions', MenuCaptions);
       INI.WriteBool('Settings', 'Tips', Tips);
       INI.WriteBool('Settings', 'Dist', UseDist);
-      INI.WriteBool('Settings','WriteEXIF',GlobalSettings.WriteEXIF);
+      INI.WriteBool('Settings', 'WriteEXIF', GlobalSettings.WriteEXIF);
+      INI.WriteBool('Settings', 'UseBlackList', GlobalSettings.UseBlackList);
 
       with Downl do
       begin
@@ -426,6 +447,11 @@ begin
       for i := 0 to length(IgnoreList) - 1 do
         INI.WriteString('IgnoreList', IgnoreList[i][0], IgnoreList[i][1]);
 
+      INI.EraseSection('BlackList');
+
+      for i := 0 to length(BlackList) - 1 do
+        INI.WriteString('BlackList', BlackList[i][0], BlackList[i][1]);
+
       // if Assigned(FullResList) then
       // SaveResourceSettings(INI);
 
@@ -454,7 +480,8 @@ begin
       end;
       if gvResSet in values then
         INI.WriteString('GUI', 'LastUsedResourceSet', LastUsedSet);
-        INI.WriteBool('GUI','NewListFavorites',NewListFavorites);
+      INI.WriteBool('GUI', 'NewListFavorites', NewListFavorites);
+      INI.WriteBool('GUI', 'NewListShowHint', NewListShowHint);
       if gvGridFields in values then
       begin
         INI.WriteString('GUI', 'LastUsedGridFields', LastUsedFields);
@@ -616,24 +643,29 @@ begin
   r.DWNLDHandler.ThreadCount := GlobalSettings.Downl.PicThreads;
   r.DWNLDHandler.Retries := GlobalSettings.Downl.Retries;
   r.PictureList.IgnoreList := CopyDSArray(IgnoreList);
+  r.PictureList.UseBlackList := GlobalSettings.UseBlackList;
+
+  if r.PictureList.UseBlackList then
+    r.PictureList.BlackList := CopyDSArray(BlackList);
+
 
   r.LogMode := GLOBAL_LOGMODE;
   r.UseDistribution := GlobalSettings.UseDist;
   r.WriteEXIF := GlobalSettings.WriteEXIF;
 end;
 
-procedure SaveFavResource(r: tResource; INI: TINIFile = nil);
+procedure SaveFavResource(r: TResource; INI: TINIFile = nil);
 begin
-  if not assigned(ini) then
-    ini := tinifile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+  if not Assigned(INI) then
+    INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
 
   try
 
-    ini.WriteBool('resource-' + r.Name,'Favorite',r.Favorite);
+    INI.WriteBool('resource-' + r.Name, 'Favorite', r.Favorite);
 
   finally
-    if assigned(ini) then
-      ini.Free;
+    if Assigned(INI) then
+      INI.Free;
   end;
 
 end;
