@@ -5,7 +5,7 @@ interface
 uses
   {std}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, ComCtrls, DB, ExtCtrls,
+  Dialogs, ComCtrls, DB, ExtCtrls,  DateUtils,
   {devex}
   cxGraphics, cxControls, cxLookAndFeels, cxLookAndFeelPainters,
   cxStyles, cxCustomData, cxFilter, cxData, cxDataStorage, cxEdit, cxDBData,
@@ -14,9 +14,9 @@ uses
   dxStatusBar, cxGridLevel, cxGridCustomTableView, cxGridTableView,
   cxGridCustomView, cxGridDBTableView, cxGrid, dxSkinsCore,
   dxSkinsDefaultPainters, dxSkinscxPCPainter, dxSkinsdxStatusBarPainter,
-  dxSkinsdxBarPainter,
+  dxSkinsdxBarPainter, cxNavigator,
   {graber}
-  graberU, common, dxBarExtItems, cxNavigator;
+  graberU, common, dxBarExtItems;
 
 type
 
@@ -153,12 +153,14 @@ type
     FChildPosColumn: TcxGridColumn;
     FChildResColumn: TcxGridColumn;
     FOnLog: TLogEvent;
+    fUpdCnt: integer;
+    fTimeString: string;
   public
     ResList: TResourceList;
     procedure vGridRecordExpandable(MasterDataRow: TcxGridMasterDataRow;
       var Expandable: Boolean);
     procedure Reset;
-    //procedure CreateList;
+    // procedure CreateList;
     // procedure OnPicAdd(APicture: TTPicture);
     // procedure CheckField(ch,s: string; value: variant);
     procedure OnStartJob(Sender: TObject; Action: Integer);
@@ -193,13 +195,13 @@ type
       Pic: TTPicture);
     procedure DeleteMD5Doubles;
     procedure Log(s: string);
-    procedure SetList(l: tResourceList);
-    procedure Recheck(n: integer);
+    procedure SetList(l: TResourceList);
+    procedure Recheck(n: Integer);
     property OnPicChanged: TPictureNotifyEvent read FPicChanged
       write FPicChanged;
     // property OnPageComplete: TNotifyEvent read FPageComplete write FPageComplete;
     property OnTagUpdate: TTagUpdateEvent read FTagUpdate write FTagUpdate;
-    property OnLog: TLogEvent read FOnLog write fOnLog;
+    property OnLog: TLogEvent read FOnLog write FOnLog;
     { Public declarations }
   end;
 
@@ -240,8 +242,9 @@ function TmycxGridMasterDataRow.GetExpandable: Boolean;
 begin
   Result := false;
   if Assigned((GridView as TcxGridTableView).OnGetExpandable) then
-    (GridView as TcxGridTableView).OnGetExpandable(Self, Result) else Result :=
-      inherited GetExpandable;
+    (GridView as TcxGridTableView).OnGetExpandable(Self, Result)
+  else
+    Result := inherited GetExpandable;
 end;
 
 { TfGrid }
@@ -370,43 +373,48 @@ begin
     Result := 0;
 end;
 
-//procedure TfGrid.CreateList;
-//begin
-//  { if not Assigned(FFieldList) then
-//    FFieldList := TStringList.Create; }
-//  if not Assigned(ResList) then
-//  begin
-//    ResList := TResourceList.Create;
-//    ResList.PictureList.OnPicChanged := OnListPicChanged;
-//    ResList.OnJobChanged := OnStartJob;
-//    ResList.PictureList.OnEndAddList := OnEndPicList;
-//    FPicChanged := nil;
+// procedure TfGrid.CreateList;
+// begin
+// { if not Assigned(FFieldList) then
+// FFieldList := TStringList.Create; }
+// if not Assigned(ResList) then
+// begin
+// ResList := TResourceList.Create;
+// ResList.PictureList.OnPicChanged := OnListPicChanged;
+// ResList.OnJobChanged := OnStartJob;
+// ResList.PictureList.OnEndAddList := OnEndPicList;
+// FPicChanged := nil;
 //
-//  end
-//  else
-//    ResList.Clear;
-//end;
+// end
+// else
+// ResList.Clear;
+// end;
 
 procedure TfGrid.DeleteMD5Doubles;
 var
-  i,n,c: integer;
+  i, n, c: Integer;
   md5list: tMetaList;
 begin
-  if MessageDlg(lang('_CONFIRM_DELETEMD5_'),mtConfirmation,[mbYes,mbNo],0) <> mrYes then
+  if MessageDlg(lang('_CONFIRM_DELETEMD5_'), mtConfirmation, [mbYes, mbNo], 0)
+    <> mrYes then
     Exit;
 
   c := 0;
-  md5list := tMetaList.Create; try
-    for i := 0 to ResList.PictureList.Count -1 do
+  md5list := tMetaList.Create;
+  try
+    for i := 0 to ResList.PictureList.Count - 1 do
       if Assigned(ResList.PictureList[i].MD5) then
-        if md5list.FindPosition(ResList.PictureList[i].MD5^,n) then
+        if md5list.FindPosition(ResList.PictureList[i].MD5^, n) then
         begin
           ResList.PictureList[i].DeleteFile;
           inc(c);
-        end else
-          md5list.Add(ResList.PictureList[i].MD5^,n);
-    Log(Format(lang('_DELETED_COUNT_'),[c]));
-  finally md5list.Free; end;
+        end
+        else
+          md5list.Add(ResList.PictureList[i].MD5^, n);
+    Log(Format(lang('_DELETED_COUNT_'), [c]));
+  finally
+    md5list.Free;
+  end;
 end;
 
 procedure TfGrid.doUpdates;
@@ -414,6 +422,7 @@ var
   i: Integer;
   Pic: TTPicture;
   r: TResource;
+  btw: Int64;
 begin
   vGrid.BeginUpdate;
   try
@@ -439,20 +448,36 @@ begin
     if Assigned(r) and Assigned(ResList.OnPageComplete) then
       ResList.OnPageComplete(r);
 
-    if i > 0 then
-    begin
-      sBar.Panels[1].Text := 'TTL ' + IntToStr(ResList.PictureList.Count) +
-        ' OK ' + IntToStr(ResList.PictureList.PicCounter.OK) + ' SKP ' +
-        IntToStr(ResList.PictureList.PicCounter.SKP) + ' EXS ' +
-        IntToStr(ResList.PictureList.PicCounter.EXS) + ' ERR ' +
-        IntToStr(ResList.PictureList.PicCounter.ERR);
+    with ResList.PictureList do
+      if i > 0 then
+      begin
+        if (PicCounter.FSH - PicCounter.EXS) = 0 then
+          fTimeString := '???'
+        else if fUpdCnt <> (PicCounter.FSH - PicCounter.EXS - PicCounter.ERR) then
+        begin
+          btw := SecondsBetween(ResList.PictureStartTime,Date + Time);
+          with PicCounter do
+            fTimeString := TimeString(Trunc(btw / FSH *
+              (Count - SKP - FSH + EXS + ERR)));
+          fUpdCnt := PicCounter.FSH - PicCounter.EXS - PicCounter.ERR;
+        end;
 
-      if (ResList.PictureList.Count - ResList.PictureList.PicCounter.
-        SKP) > 0 then
-        sBar.Panels[0].Text := FormatFloat('0.00%',
-          ResList.PictureList.PicCounter.FSH / (ResList.PictureList.Count -
-          ResList.PictureList.PicCounter.SKP) * 100);
-    end;
+
+
+        sBar.Panels[1].Text :=
+          'TTL ' + IntToStr(Count) +
+          ' OK ' + IntToStr(PicCounter.OK) +
+          ' SKP ' + IntToStr(PicCounter.SKP) +
+          ' EXS ' + IntToStr(PicCounter.EXS) +
+          ' ERR ' + IntToStr(PicCounter.ERR) +
+          ' ELP ' + fTimeString;
+
+        if (ResList.PictureList.Count - ResList.PictureList.PicCounter.SKP) > 0
+        then
+          sBar.Panels[0].Text := FormatFloat('0.00%',
+            ResList.PictureList.PicCounter.FSH / (ResList.PictureList.Count -
+            ResList.PictureList.PicCounter.SKP) * 100);
+      end;
 
     FChangesList.Clear;
   finally
@@ -552,7 +577,7 @@ end;
 procedure TfGrid.Log(s: string);
 begin
   if Assigned(OnLog) then
-    OnLog(self,s);
+    OnLog(Self, s);
 end;
 
 procedure TfGrid.OnEndPicList(Sender: TObject);
@@ -591,10 +616,12 @@ begin
     BestFitWidths(vGrid);
 
   t3 := GetTickCount;
-  sBar.Panels[1].Text := 'TTL ' + IntToStr(vGrid.DataController.RecordCount) +
-    ' IGN ' + IntToStr(ResList.PictureList.PicCounter.IGN) + ' TBL ' +
-    IntToStr(t3 - t1) + 'ms' + ' DBL ' +
-    IntToStr(ResList.PictureList.DoublestickCount) + 'ms';
+  sBar.Panels[1].Text :=
+    'TTL ' + IntToStr(ResList.PictureList.Count) +
+    ' IGN ' + IntToStr(ResList.PictureList.PicCounter.IGN) +
+    ' BLK ' + IntToStr(ResList.PictureList.PicCounter.BLK) +
+    ' TBL ' + IntToStr(t3 - t1) + 'ms' +
+    ' DBL ' + IntToStr(ResList.PictureList.DoublestickCount) + 'ms';
 end;
 
 procedure TfGrid.OnListPicChanged(Pic: TTPicture; Changes: TPicChanges);
@@ -729,7 +756,7 @@ procedure TfGrid.Reset;
 var
   i: Integer;
   c: TcxGridColumn;
-  p: TMetaList;
+  p: tMetaList;
   def, grp: TStringList;
   // b: boolean;
 
@@ -842,30 +869,32 @@ begin
       FFieldList.Clear;
 
     for i := 0 to ResList.PictureList.Meta.Count - 1 do
-    if ResList.PictureList.Meta.Items[i].Name <> '' then begin
-      FFieldList.Add(ResList.PictureList.Meta.Items[i].Name);
-      p := ResList.PictureList.Meta.Items[i].Value;
-      case p.ValueType of
-        DB.ftString:
+      if ResList.PictureList.Meta.Items[i].Name <> '' then
+      begin
+        FFieldList.Add(ResList.PictureList.Meta.Items[i].Name);
+        p := ResList.PictureList.Meta.Items[i].Value;
+        case p.ValueType of
+          DB.ftString:
+            c := AddField(vGrid, ResList.PictureList.Meta.Items[i].Name);
+          ftBoolean:
+            c := AddField(vGrid, ResList.PictureList.Meta.Items[i].Name + ':b');
+          ftInteger:
+            c := AddField(vGrid, ResList.PictureList.Meta.Items[i].Name + ':i');
+          ftFloat:
+            c := AddField(vGrid, ResList.PictureList.Meta.Items[i].Name + ':f');
+          ftDateTime:
+            begin
+              c := AddField(vGrid, ResList.PictureList.Meta.Items[i]
+                .Name + ':d');
+              c.DateTimeGrouping := dtgByDate;
+            end
+        else
           c := AddField(vGrid, ResList.PictureList.Meta.Items[i].Name);
-        ftBoolean:
-          c := AddField(vGrid, ResList.PictureList.Meta.Items[i].Name + ':b');
-        ftInteger:
-          c := AddField(vGrid, ResList.PictureList.Meta.Items[i].Name + ':i');
-        ftFloat:
-          c := AddField(vGrid, ResList.PictureList.Meta.Items[i].Name + ':f');
-        ftDateTime:
-          begin
-            c := AddField(vGrid, ResList.PictureList.Meta.Items[i].Name + ':d');
-            c.DateTimeGrouping := dtgByDate;
-          end
-      else
-        c := AddField(vGrid, ResList.PictureList.Meta.Items[i].Name);
+        end;
+        FFieldList.Objects[FFieldList.Count - 1] := c;
+        c.Visible := def.IndexOf(FFieldList[FFieldList.Count - 1]) > -1;
+        c.GroupIndex := grp.IndexOf(FFieldList[FFieldList.Count - 1]);
       end;
-      FFieldList.Objects[FFieldList.Count-1] := c;
-      c.Visible := def.IndexOf(FFieldList[FFieldList.Count-1]) > -1;
-      c.GroupIndex := grp.IndexOf(FFieldList[FFieldList.Count-1]);
-    end;
 
     FPosColumn.Index := vGrid.ItemCount;
     FSizeColumn.Index := vGrid.ItemCount;
@@ -1050,7 +1079,7 @@ begin
   bbAutoUnch.Caption := lang('_AUTOUNCHECKINVISIBLE_');
   bbDALF.Hint := bbAutoUnch.Caption;
   bbWriteEXIF.Caption := lang('_WRITEEXIF_');
-  bbWriteEXIF.Hint := bbWRITEEXIF.Caption;
+  bbWriteEXIF.Hint := bbWriteEXIF.Caption;
 
   FResColumn.Caption := lang('_RESNAME_');
   FLabelColumn.Caption := lang('_PICTURELABEL_');
@@ -1061,19 +1090,19 @@ begin
   vGrid.OptionsView.NoDataToDisplayInfoText := lang('_GRIDNODATA_');
 end;
 
-procedure TfGrid.SetList(l: tResourceList);
+procedure TfGrid.SetList(l: TResourceList);
 begin
-//  if not Assigned(ResList) then
-//  begin
-    ResList := l;
-    ResList.PictureList.OnPicChanged := OnListPicChanged;
-    ResList.OnJobChanged := OnStartJob;
-    ResList.PictureList.OnEndAddList := OnEndPicList;
-    FPicChanged := nil;
+  // if not Assigned(ResList) then
+  // begin
+  ResList := l;
+  ResList.PictureList.OnPicChanged := OnListPicChanged;
+  ResList.OnJobChanged := OnStartJob;
+  ResList.PictureList.OnEndAddList := OnEndPicList;
+  FPicChanged := nil;
 
-//  end
-//  else
-//    ResList.Clear;
+  // end
+  // else
+  // ResList.Clear;
 end;
 
 procedure TfGrid.SetChildColWidths(clone: TcxGridTableView);
@@ -1103,13 +1132,15 @@ begin
   if GlobalSettings.MenuCaptions then
     for i := 0 to BarManager.ItemCount - 1 do
       if BarManager.Items[i] is TdxBarButton then
-        (BarManager.Items[i] as TdxBarButton).PaintStyle :=
-          psCaptionGlyph else if BarManager.Items[i] is TdxBarSubItem then
-          (BarManager.Items[i] as TdxBarSubItem).ShowCaption :=
-          true else else for i := 0 to BarManager.ItemCount -
-          1 do if BarManager.Items[i] is TdxBarButton then
-          (BarManager.Items[i] as TdxBarButton).PaintStyle :=
-          psStandard else if BarManager.Items[i] is TdxBarSubItem then
+        (BarManager.Items[i] as TdxBarButton).PaintStyle := psCaptionGlyph
+      else if BarManager.Items[i] is TdxBarSubItem then
+        (BarManager.Items[i] as TdxBarSubItem).ShowCaption := true
+      else
+    else
+      for i := 0 to BarManager.ItemCount - 1 do
+        if BarManager.Items[i] is TdxBarButton then
+          (BarManager.Items[i] as TdxBarButton).PaintStyle := psStandard
+        else if BarManager.Items[i] is TdxBarSubItem then
           (BarManager.Items[i] as TdxBarSubItem).ShowCaption := false;
 end;
 
@@ -1139,26 +1170,30 @@ begin
   end;
 end;
 
-procedure TfGrid.Recheck(n: integer);
+procedure TfGrid.Recheck(n: Integer);
 var
-//  n: Integer;
+  // n: Integer;
   i: Integer;
 begin
-//  if AItem.Index <> FCheckColumn.Index then
-//    Exit;
-//  n := vGrid.DataController.FocusedRecordIndex;
+  // if AItem.Index <> FCheckColumn.Index then
+  // Exit;
+  // n := vGrid.DataController.FocusedRecordIndex;
+  vGrid.BeginUpdate; try
   if n > -1 then
   begin
     ResList.PictureList[n].Checked := vGrid.DataController.Values
-      [n,fCheckColumn.Index];
+      [n, FCheckColumn.Index];
     if ResList.PictureList[n].Linked.Count > 0 then
       for i := 0 to ResList.PictureList[n].Linked.Count - 1 do
       begin
         ResList.PictureList[n].Linked[i].Checked := vGrid.DataController.Values
-          [n, fCheckColumn.Index];
+          [n, FCheckColumn.Index];
         ResList.PictureList[n].Linked[i].Changes := [pcChecked];
         updatepic(ResList.PictureList[n].Linked[i]);
       end;
+  end;
+  finally
+    vGrid.EndUpdate;
   end;
 end;
 
@@ -1172,8 +1207,8 @@ begin
     begin
       vGrid.DataController.Values[i, FPosColumn.Index] := null;
       vGrid.DataController.Values[i, FSizeColumn.Index] := null;
-      if not ResList.PictureList[i].Checked and vGrid.DataController.Values
-        [i, 0] then
+      if not ResList.PictureList[i].Checked and vGrid.DataController.Values[i, 0]
+      then
       begin
         vGrid.DataController.Values[i, FProgressColumn.Index] := 'SKIP';
         vGrid.DataController.Values[i, FCheckColumn.Index] := false;
@@ -1256,7 +1291,7 @@ begin
 
     if pcSize in Changes then
     begin
-      if not (pcProgress in Changes) then
+      if not(pcProgress in Changes) then
         Values[n, pc.Index] := null;
 
       if Pic.Size = 0 then
@@ -1275,7 +1310,8 @@ begin
       case Pic.Status of
         JOB_NOJOB:
           Values[n, prgc.Index] := null;
-        JOB_DELAY: Values[n, prgc.Index] := 'DELAY';
+        JOB_DELAY:
+          Values[n, prgc.Index] := 'DELAY';
         JOB_INPROGRESS:
           if (Pic.Size = 0) and (Pic.Linked.Count = 0) then
             Values[n, prgc.Index] := 'START'
@@ -1357,53 +1393,6 @@ begin
   vGrid.BeginUpdate;
   vGrid.EndUpdate;
 end;
-
-{ procedure TfGrid.vdGetFieldValue(Sender: TCustomVirtualDataset; Field: TField;
-  Index: Integer; var Value: Variant);
-  var
-  p: TTPicture;
-  begin
-  p := ResList.PictureList[Index];
-  case Field.FieldNo of
-  1: Value := p.Checked;
-  2: Value := Integer(p);
-  3: Value := Integer(p.Parent);
-  4: Value := Copy(p.Resource.Name,1,Field.Size);
-  5: Value := Copy(p.DisplayLabel,1,Field.Size);
-  6:
-  if p.Size = 0 then
-  Value := ''
-  else
-  Value := GetBtString(p.Pos);
-  7:
-  if p.Size = 0 then
-  Value := ''
-  else
-  Value := GetBtString(p.Size);
-  8:
-  if p.Size = 0 then
-  if p.Checked then
-  Value := 0
-  else
-  Value := 100
-  else
-  Value := p.Pos / p.Size * 100;
-  else
-  case Field.DataType of
-  DB.ftString: Value := Copy(VarToStr(p.Meta[Field.DisplayName]),1,Field.Size);
-  ftBoolean: Value := p.Meta[Field.DisplayName];
-  ftInteger: Value := p.Meta[Field.DisplayName];
-  ftFloat: Value := p.Meta[Field.DisplayName];
-  ftDateTime: Value := VarToDateTime(p.Meta[Field.DisplayName]);
-  end;
-  end;
-  end;
-
-  procedure TfGrid.vdGetRecordCount(Sender: TCustomVirtualDataset;
-  var Count: Integer);
-  begin
-  Count := ResList.PictureList.Count;
-  end; }
 
 procedure TfGrid.vGrid1FocusedRecordChanged(Sender: TcxCustomGridTableView;
   APrevFocusedRecord, AFocusedRecord: TcxCustomGridRecord;
@@ -1493,7 +1482,7 @@ procedure TfGrid.vGridEditValueChanged(Sender: TcxCustomGridTableView;
   AItem: TcxCustomGridTableItem);
 var
   n: Integer;
-  //i: Integer;
+  // i: Integer;
 begin
   if AItem.Index <> FCheckColumn.Index then
     Exit;
@@ -1504,13 +1493,13 @@ begin
       [n, AItem.Index];
     if ResList.PictureList[n].Linked.Count > 0 then
       Recheck(n);
-//      for i := 0 to ResList.PictureList[n].Linked.Count - 1 do
-//      begin
-//        ResList.PictureList[n].Linked[i].Checked := vGrid.DataController.Values
-//          [n, AItem.Index];
-//        ResList.PictureList[n].Linked[i].Changes := [pcChecked];
-//        updatepic(ResList.PictureList[n].Linked[i]);
-//      end;
+    // for i := 0 to ResList.PictureList[n].Linked.Count - 1 do
+    // begin
+    // ResList.PictureList[n].Linked[i].Checked := vGrid.DataController.Values
+    // [n, AItem.Index];
+    // ResList.PictureList[n].Linked[i].Changes := [pcChecked];
+    // updatepic(ResList.PictureList[n].Linked[i]);
+    // end;
   end;
 end;
 

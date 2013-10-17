@@ -12,8 +12,8 @@ uses
   dxSkinsDefaultPainters;
 
 type
-  TLoginCallBack=procedure(Sender: TObject; N: integer; Login,Password: String;
-    const Cancel: boolean) of object;
+  TLoginCallBack = procedure(Sender: TObject; N: integer;
+    Login, Password: String; const Cancel: boolean) of object;
 
   TfLogin = class(TForm)
     eLogin: TcxTextEdit;
@@ -29,8 +29,8 @@ type
   private
     { Private declarations }
   public
-    procedure Execute(N: integer; ACaption,Login,Password: String;
-  CallBack: TLoginCallback);
+    procedure Execute(N: integer; ACaption, Login, Password: String;
+      CallBack: TLoginCallBack);
     procedure SetLang;
     { Public declarations }
   end;
@@ -45,23 +45,23 @@ uses LangString;
 {$R *.dfm}
 
 var
-  FCallBack: TLoginCallback;
+  FCallBack: TLoginCallBack;
   FN: integer;
 
 procedure TfLogin.bCancelClick(Sender: TObject);
 begin
-  FCallBack(Self,FN,eLogin.Text,ePassword.Text,true);
-//  Close;
+  FCallBack(Self, FN, eLogin.Text, ePassword.Text, true);
+  // Close;
 end;
 
 procedure TfLogin.bOkClick(Sender: TObject);
 begin
-  FCallBack(Self,FN,eLogin.Text,ePassword.Text,false);
+  FCallBack(Self, FN, eLogin.Text, ePassword.Text, false);
   bOk.Enabled := false;
 end;
 
-procedure TfLogin.Execute(N: integer; ACaption,Login,Password: String;
-  CallBack: TLoginCallback);
+procedure TfLogin.Execute(N: integer; ACaption, Login, Password: String;
+  CallBack: TLoginCallBack);
 begin
   Caption := ACaption;
   eLogin.Text := Login;

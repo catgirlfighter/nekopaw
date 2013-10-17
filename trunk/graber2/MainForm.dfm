@@ -223,6 +223,8 @@ object mf: Tmf
             ActiveGroupIndex = 0
             TabOrder = 0
             View = 1
+            ExplicitLeft = -2
+            ExplicitTop = -4
             object nbgCurMain: TdxNavBarGroup
               Caption = 'nbgCurMain'
               SelectedLinkIndex = -1
@@ -264,7 +266,7 @@ object mf: Tmf
               Left = 0
               Top = 38
               Width = 181
-              Height = 170
+              Height = 180
               Caption = 'nbgCurTagsControl'
               TabOrder = 5
               GroupIndex = 1
@@ -273,12 +275,13 @@ object mf: Tmf
                 Left = 0
                 Top = 0
                 Width = 181
-                Height = 170
+                Height = 180
                 Align = alClient
                 EditValueFormat = cvfCaptions
                 Items = <>
                 Sorted = True
                 TabOrder = 0
+                ExplicitHeight = 170
               end
             end
           end

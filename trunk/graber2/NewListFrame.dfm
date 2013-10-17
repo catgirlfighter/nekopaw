@@ -105,6 +105,8 @@ object fNewList: TfNewList
         PropertiesClassName = 'TcxLabelProperties'
         OnGetProperties = gRescNameGetProperties
         Options.ShowEditButtons = isebAlways
+        SortIndex = 1
+        SortOrder = soAscending
       end
       object gResShort: TcxGridColumn
         Visible = False
@@ -157,8 +159,6 @@ object fNewList: TfNewList
         Align = alClient
         PopupMenu = pmgFullCopy
         TabOrder = 0
-        ExplicitTop = 0
-        ExplicitHeight = 273
         object tvFull: TcxGridTableView
           OnKeyPress = tvFullKeyPress
           Navigator.Buttons.CustomButtons = <>
@@ -219,6 +219,8 @@ object fNewList: TfNewList
             OnGetProperties = tvFullcNameGetProperties
             Options.Editing = False
             Options.ShowEditButtons = isebAlways
+            SortIndex = 1
+            SortOrder = soAscending
           end
           object tvFullShort: TcxGridColumn
             PropertiesClassName = 'TcxLabelProperties'
@@ -254,15 +256,36 @@ object fNewList: TfNewList
       OnShow = tsSettingsShow
       object vgSettings: TcxVerticalGrid
         Left = 0
-        Top = 0
+        Top = 18
         Width = 261
-        Height = 273
+        Height = 255
         Align = alClient
         OptionsView.ShowEditButtons = ecsbAlways
         OptionsView.GridLineColor = clBtnShadow
         OptionsView.RowHeaderWidth = 125
         TabOrder = 0
         Version = 1
+      end
+      object lHint: TcxLabel
+        Left = 0
+        Top = 0
+        Align = alTop
+        ParentColor = False
+        ParentFont = False
+        Style.BorderColor = clInfoText
+        Style.BorderStyle = ebsUltraFlat
+        Style.Color = clInfoBk
+        Style.Edges = [bLeft, bTop, bRight, bBottom]
+        Style.Font.Charset = DEFAULT_CHARSET
+        Style.Font.Color = clInfoText
+        Style.Font.Height = -11
+        Style.Font.Name = 'Tahoma'
+        Style.Font.Style = []
+        Style.IsFontAssigned = True
+        Properties.LabelStyle = cxlsRaised
+        Properties.WordWrap = True
+        OnClick = lHintClick
+        Width = 261
       end
     end
   end

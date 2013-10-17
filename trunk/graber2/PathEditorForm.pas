@@ -79,62 +79,65 @@ type
 var
   fPathEditor: TfPathEditor;
 
-function ExecutePathEditor(Value: string; Paths,Vars,Fields: TStrings): string;
+function ExecutePathEditor(Value: string;
+  Paths, Vars, Fields: TStrings): string;
 
 implementation
 
 uses LangString;
 
 var
-  fvars,ffields: tstrings;
+  fvars, ffields: TStrings;
 
 {$R *.dfm}
 
-function ExecutePathEditor(Value: string; Paths,Vars,Fields: TStrings): string;
+function ExecutePathEditor(Value: string;
+  Paths, Vars, Fields: TStrings): string;
 var
   item: TMenuItem;
-  i: integer;
-  s,tmp: string;
+  i: Integer;
+  s, tmp: string;
 begin
-  Application.CreateForm(TfPathEditor,fPathEditor);
+  Application.CreateForm(TfPathEditor, fPathEditor);
   with fPathEditor do
   begin
     SetLang;
     cbPath.Text := Value;
     cbPath.Properties.Items.Assign(Paths);
 
-    fvars := vars;
-    if Assigned(vars) then
+    fvars := Vars;
+    if Assigned(Vars) then
     begin
       item := TMenuItem.Create(pmVariables);
       item.Caption := '-';
       pmVariables.Items.Add(item);
-      for i := 0 to vars.Count-1 do
+      for i := 0 to Vars.Count - 1 do
       begin
         item := TMenuItem.Create(pmVariables);
         item.Tag := i;
-        item.Caption := '$' + vars[i] + '$';
+        item.Caption := '$' + Vars[i] + '$';
         item.OnClick := VarClick;
         pmVariables.Items.Add(item);
       end;
     end;
 
-    ffields := fields;
-    if Assigned(fields) then
+    ffields := Fields;
+    if Assigned(Fields) then
     begin
-      for i := 0 to fields.Count-1 do
+      for i := 0 to Fields.Count - 1 do
       begin
         item := TMenuItem.Create(pmFields);
         item.Tag := i;
-        s := fields[i];
-        tmp := GetNextS(s,':');
-        fields[i] := tmp;
+        s := Fields[i];
+        tmp := GetNextS(s, ':');
+        Fields[i] := tmp;
         item.Caption := '%' + tmp + '%';
-        tmp := GetNextS(s,':'); tmp := GetNextS(s,':');
+        tmp := GetNextS(s, ':');
+        tmp := GetNextS(s, ':');
         if tmp <> '' then
           if (tmp[1] = '$') then
-            item.Caption := item.Caption + ' - '
-              + lang('_' + Copy(tmp,2,length(tmp)-1) + '_')
+            item.Caption := item.Caption + ' - ' +
+              lang('_' + Copy(tmp, 2, length(tmp) - 1) + '_')
           else
             item.Caption := item.Caption + ' - ' + tmp;
         item.OnClick := FieldClick;
@@ -143,7 +146,7 @@ begin
     end;
 
     fPathEditor.SetFocusedControl(cbPath);
-    cbPath.SelStart := Length(cbPath.Text);
+    cbPath.SelStart := length(cbPath.Text);
 
     ShowModal;
     if ModalResult = mrOk then
@@ -160,41 +163,40 @@ procedure TfPathEditor.bBrowseClick(Sender: TObject);
   var
     tmp: string;
   begin
-//    path := ExcludeTrailingPathDelimiter(path);
+    // path := ExcludeTrailingPathDelimiter(path);
     tmp := '';
-    while (path <> '') and (tmp <> path)
-    and not DirectoryExists(path) do
+    while (path <> '') and (tmp <> path) and not DirectoryExists(path) do
     begin
       tmp := path;
       path := ExcludeTrailingPathDelimiter(ExtractFileDir(path));
     end;
-    result := path;
+    Result := path;
   end;
 
 var
-  n: integer;
+  n: Integer;
   s: string;
 
 begin
-  dPath.Path := GetAcceptablePath(cbPath.Text);
+  dPath.path := GetAcceptablePath(cbPath.Text);
   if dPath.Execute then
   begin
     s := cbPath.Text;
-    s := ExcludeTrailingPathDelimiter(DeleteTo(s,'$rootdir$',false));
-    n := CharPosEx(s,['<','%','$'],[],[]);
+    s := ExcludeTrailingPathDelimiter(DeleteTo(s, '$rootdir$', false));
+    n := CharPosEx(s, ['<', '%', '$'], [], []);
     if n = 0 then
-      cbPath.Text := IncludeTrailingPathDelimiter(dPath.Path)
+      cbPath.Text := IncludeTrailingPathDelimiter(dPath.path)
     else
     begin
       s := ReverseString(s);
-      n := PosEx(PathDelim,s,length(s) - n);
+      n := PosEx(PathDelim, s, length(s) - n);
       if n > 0 then
-        s := Copy(s,1,n);
+        s := Copy(s, 1, n);
 
-      cbPath.Text := IncludeTrailingPathDelimiter(dPath.Path)
-        + ReverseString(ExcludeTrailingPathDelimiter(s));
+      cbPath.Text := IncludeTrailingPathDelimiter(dPath.path) +
+        ReverseString(ExcludeTrailingPathDelimiter(s));
     end;
-    cbPath.SelStart := Length(cbPath.Text);
+    cbPath.SelStart := length(cbPath.Text);
     cbPath.SetFocus;
   end;
 end;
@@ -206,8 +208,8 @@ end;
 
 procedure TfPathEditor.VarClick(Sender: TObject);
 begin
-  if assigned(fvars) then
-    SetValue('$' + fvars[(sender as TComponent).Tag] + '$');
+  if Assigned(fvars) then
+    SetValue('$' + fvars[(Sender as TComponent).Tag] + '$');
 end;
 
 procedure TfPathEditor.N12Click(Sender: TObject);
@@ -219,36 +221,37 @@ procedure TfPathEditor.ePathPropertiesButtonClick(Sender: TObject;
   AButtonIndex: Integer);
 begin
   case AButtonIndex of
-    //0: ePath.Properties.p\
-    3: bBrowseClick(nil);
+    // 0: ePath.Properties.p\
+    3:
+      bBrowseClick(nil);
   end;
 end;
 
 procedure TfPathEditor.FieldClick(Sender: TObject);
 begin
-  if assigned(ffields) then
-    SetValue('%' + ffields[(sender as TComponent).Tag] + '%');
+  if Assigned(ffields) then
+    SetValue('%' + ffields[(Sender as TComponent).Tag] + '%');
 end;
 
 procedure TfPathEditor.lHelpClick(Sender: TObject);
 begin
-  ShellExecute(Handle,nil,
-    'http://code.google.com/p/nekopaw/wiki/NekopawGUI#Name_formating',
-    nil,nil,SW_SHOWNORMAL);
+  ShellExecute(Handle, nil,
+    'http://code.google.com/p/nekopaw/wiki/NekopawGUI#Name_formating', nil, nil,
+    SW_SHOWNORMAL);
 end;
 
 procedure TfPathEditor.lwiki1Click(Sender: TObject);
 begin
-  ShellExecute(Handle,nil,
-    'https://code.google.com/p/nekopaw/wiki/NekopawGUI#datetime_format',
-    nil,nil,SW_SHOWNORMAL);
+  ShellExecute(Handle, nil,
+    'https://code.google.com/p/nekopaw/wiki/NekopawGUI#datetime_format', nil,
+    nil, SW_SHOWNORMAL);
 end;
 
 procedure TfPathEditor.lwiki2Click(Sender: TObject);
 begin
-  ShellExecute(Handle,nil,
+  ShellExecute(Handle, nil,
     'https://code.google.com/p/nekopaw/wiki/NekopawGUI#string-number_format',
-    nil,nil,SW_SHOWNORMAL);
+    nil, nil, SW_SHOWNORMAL);
 end;
 
 procedure TfPathEditor.N11Click(Sender: TObject);
@@ -270,9 +273,9 @@ procedure TfPathEditor.N6Click(Sender: TObject);
 var
   s: string;
 begin
-  s := DeleteTo(DeleteTo(cbPath.Text,':\'),'$rootdir$',false);
+  s := DeleteTo(DeleteTo(cbPath.Text, ':\'), '$rootdir$', false);
   while (length(s) > 0) and (s[1] = PathDelim) do
-    delete(s,1,1);
+    delete(s, 1, 1);
   cbPath.Text := IncludeTrailingPathDelimiter('$rootdir$') + s;
   cbPath.SetFocus;
 end;
@@ -320,13 +323,13 @@ begin
 end;
 
 procedure TfPathEditor.SetValue(s: string);
-///var
-//  n: integer;
+/// var
+// n: integer;
 begin
-  //n := cbPath.SelStart;
+  // n := cbPath.SelStart;
   cbPath.SelText := s;
   cbPath.SetFocus;
-  //cbPath.SelLength := 0;
+  // cbPath.SelLength := 0;
 end;
 
 procedure TfPathEditor.N13Click(Sender: TObject);

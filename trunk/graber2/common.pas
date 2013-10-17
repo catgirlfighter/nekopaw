@@ -13,10 +13,10 @@ type
   TArrayOfString = array of string;
   TSetOfChar = Set of ANSIChar;
 
-{function Replace(src, AFrom, ATo: string;    use SysUtils.StringReplace
-  rpall: boolean = false): string;     }
+  { function Replace(src, AFrom, ATo: string;    use SysUtils.StringReplace
+    rpall: boolean = false): string; }
 function emptyname(s: string): string;
-//function deleteids(s: string; slsh: boolean = false): string;
+// function deleteids(s: string; slsh: boolean = false): string;
 function addstr(s1, s2: string): string;
 function numstr(n: word; s1, s2, s3: string; engstyle: boolean = false): string;
 function CreateDirExt(Dir: string): boolean;
@@ -35,24 +35,30 @@ function GetBtStringEx(n: Extended): string;
 function diff(n1, n2: Extended): Extended;
 function batchreplace(src: string; substr1: array of string;
   substr2: string): string;
-function STRINGENCODE(s: STRING;HTML: BOOLEAN = FALSE): STRING;
-function STRINGDECODE(s: STRING;HTML: BOOLEAN = FALSE): STRING;
+function STRINGENCODE(s: STRING; HTML: boolean = false): STRING;
+function STRINGDECODE(s: STRING; HTML: boolean = false): STRING;
 function Trim(s: String; ch: Char = ' '): String;
 function TrimEx(s: String; ch: TSetOfChar): String;
-function CopyTo(s, substr: string; back: boolean = false; re: boolean = false): string; overload;
-function CopyTo(Source: String; ATo: Char; Isl,Brk: array of string): string; overload;
-function CopyTo(var Source: String; ATo: Char; Isl,Brk: array of string; cut: boolean = false): string; overload;
-function CopyFromTo(s, sub1, sub2: String; re: boolean = false): String; overload;
-function CopyFromTo(Source: String; AFrom,ATo: Char; Isl,Brk: array of string): String; overload;
+function CopyTo(s, substr: string; back: boolean = false; re: boolean = false)
+  : string; overload;
+function CopyTo(Source: String; ATo: Char; Isl, Brk: array of string)
+  : string; overload;
+function CopyTo(var Source: String; ATo: Char; Isl, Brk: array of string;
+  cut: boolean = false): string; overload;
+function CopyFromTo(s, sub1, sub2: String; re: boolean = false)
+  : String; overload;
+function CopyFromTo(Source: String; AFrom, ATo: Char; Isl, Brk: array of string)
+  : String; overload;
 function ExtractFolder(s: string): string;
 function MoveDir(const fromDir, toDir: string): boolean;
 procedure MultWordArrays(var a1: TArrayOfWord; a2: TArrayOfWord);
 procedure _Delay(dwMilliseconds: Longint);
-function ValidFName(FName: String; bckslsh: boolean = false;  nodrive: boolean = false): String;
+function ValidFName(FName: String; bckslsh: boolean = false;
+  nodrive: boolean = false): String;
 function strlisttostr(s: tStrings; del: Char = ';'; ins: Char = '"'): string;
 function strtostrlist(s: string; del: Char = ';'; ins: Char = '"'): string;
-function IndexOfStr(strlist,value: string): integer; overload;
-function IndexOfStr(list: tstrings; value: string): integer; overload;
+function IndexOfStr(strlist, value: string): Integer; overload;
+function IndexOfStr(list: tStrings; value: string): Integer; overload;
 procedure DrawImage(AImage: TImage; AStream: TStream; Ext: String);
 procedure DrawImageFromRes(AImage: TImage; ResName, Ext: String);
 procedure LoadFromRes(ABitmap: TBitmap; ResName: String); overload;
@@ -65,12 +71,12 @@ function GetWinVersion: string;
 procedure ShutDown;
 function CheckStr(s: string; a: TSetOfChar; inv: boolean = false): boolean;
 function CheckStrPos(s: string; a: TSetOfChar; inv: boolean = false): Integer;
-//function CharPos(str: string; ch: Char; Isolators: array of string;
-//  From: Integer = 1): Integer; overload;
-function CharPos(str: string; ch: Char; Isolators,Brackets: array of string;
-  From: Integer = 1): Integer; //overload;
-function CharPosEx(str: string; ch: TSetOfChar; Isolators,Brackets: array of string;
-  From: Integer = 1): Integer;
+// function CharPos(str: string; ch: Char; Isolators: array of string;
+// From: Integer = 1): Integer; overload;
+function CharPos(str: string; ch: Char; Isolators, Brackets: array of string;
+  From: Integer = 1): Integer; // overload;
+function CharPosEx(str: string; ch: TSetOfChar;
+  Isolators, Brackets: array of string; From: Integer = 1): Integer;
 function GetNextS(var s: string; del: String = ';'; ins: String = ''): string;
 function GetNextSEx(var s: string; del: TSetOfChar = [';'];
   ins: TSetOfChar = []): string;
@@ -79,19 +85,21 @@ function MathCalcStr(s: variant): variant;
 function DateTimeStrEval(const DateTimeFormat: string;
   const DateTimeStr: string; locale: string): TDateTime;
 function strnull(s: variant): variant;
-function nullstr(Value: Variant): Variant;
+function nullstr(value: variant): variant;
 function ifn(b: boolean; thn, els: variant): variant;
-function DeleteEx(S: String; Index,Count: integer): String;
-procedure SaveStrToFile(S, FileName: String; Add: boolean = false);
-function GreatestCommonFactor(a,b: Word): Word;
-procedure AddSorted(Value: String; List: TStrings);
-procedure RemSorted(Value: String; List: TStrings);
-function isolate(s: string; symbol: char): string;
+function DeleteEx(s: String; Index, Count: Integer): String;
+procedure SaveStrToFile(s, FileName: String; Add: boolean = false);
+function GreatestCommonFactor(a, b: word): word;
+procedure AddSorted(value: String; list: tStrings);
+procedure RemSorted(value: String; list: tStrings);
+function isolate(s: string; symbol: Char): string;
 function GetGUIDString: String;
-function FindExistingDir(dir: string): string;
-//function BatchReplaceStr(AText: String; AFromText,AToText: Array Of String): String;
-//function ReplaceStrMask(AText,AMaskText,AFromText,AToText: String): String;
-function PosBack(const SubStr, Str: String; Offset: Integer = 1): Integer;
+function FindExistingDir(Dir: string): string;
+// function BatchReplaceStr(AText: String; AFromText,AToText: Array Of String): String;
+// function ReplaceStrMask(AText,AMaskText,AFromText,AToText: String): String;
+function PosBack(const substr, str: String; Offset: Integer = 1): Integer;
+function TimeString(secs: int64): string;
+procedure StreamToFile(astream: tstream; fname: string);
 
 implementation
 
@@ -99,7 +107,8 @@ const
   _SYMBOL_MISSED_ = 'Can''t find symbol "%s" for #%d "%s" in "... %s ..."';
   _OPERATOR_MISSED_ = 'Must be an operator instead of "%s" in "... %s ..."';
   _OPERAND_MISSED_ = 'Must be an operand instead of "%s" in "... %s ..."';
-  _INVALID_TYPECAST_ = 'Invalid typecast for "%s" %s "%s" near #%d in "... %s ..."';
+  _INVALID_TYPECAST_ =
+    'Invalid typecast for "%s" %s "%s" near #%d in "... %s ..."';
   _INCORRECT_SYMBOL_ = 'Incorrect value "%s" near #%d in "... %s ..."';
 
 function ClearHTML(s: string): string; // yap
@@ -305,7 +314,7 @@ begin
               1:
                 ;
               2:
-                if not (i - spc in [2,3]) then
+                if not(i - spc in [2, 3]) then
                   t := -1;
             else
               t := -1;
@@ -322,10 +331,16 @@ begin
               case t of
                 1:
                   if (i - spc <= N_MLN) and ChMnem(s, spc, i) then
+                  begin
+                    l := length(s);
                     dec(i, i - spc);
+                  end;
                 2:
                   if ChNum(s, spc, i) then
+                  begin
+                    l := length(s);
                     dec(i, i - spc);
+                  end;
               end;
               t := -1;
             end;
@@ -348,16 +363,16 @@ begin
   Result := s;
 end;
 
-//use SysUtils.StringReplace
-{function Replace(src, AFrom, ATo: string;
+// use SysUtils.StringReplace
+{ function Replace(src, AFrom, ATo: string;
   rpall: boolean = false): string;
-var
+  var
   n: Integer;
-begin
+  begin
   if AFrom = ATo then
   begin
-    Result := src;
-    Exit;
+  Result := src;
+  Exit;
   end;
 
   Result := '';
@@ -365,37 +380,37 @@ begin
 
   while n > 0 do
   begin
-    Result := Result + copy(src, 1, n - 1) + Ato;
-    Delete(src, 1, n + length(AFrom) - 1);
-    if rpall then
-      n := pos(AFrom, src)
-    else
-      n := 0;
+  Result := Result + copy(src, 1, n - 1) + Ato;
+  Delete(src, 1, n + length(AFrom) - 1);
+  if rpall then
+  n := pos(AFrom, src)
+  else
+  n := 0;
   end;
   Result := Result + src;
-end;    }
+  end; }
 
-{function deleteids(s: string; slsh: boolean): string;
-var
+{ function deleteids(s: string; slsh: boolean): string;
+  var
   p: Integer;
-begin
+  begin
   if not slsh then
   begin
-    p := pos('?', s);
-    Delete(s, p, length(s) - p + 1);
-    Result := s;
+  p := pos('?', s);
+  Delete(s, p, length(s) - p + 1);
+  Result := s;
   end
   else
   begin
-    p := length(s);
-    while (p > 0) and (s[p] <> '/') do
-      dec(p);
-    if p = 0 then
-      Result := s
-    else
-      Result := copy(s, 1, p - 1) + ExtractFileExt(s);
+  p := length(s);
+  while (p > 0) and (s[p] <> '/') do
+  dec(p);
+  if p = 0 then
+  Result := s
+  else
+  Result := copy(s, 1, p - 1) + ExtractFileExt(s);
   end;
-end;      }
+  end; }
 
 function addstr(s1, s2: string): string;
 var
@@ -529,7 +544,7 @@ var
   i: Integer;
 begin
   for i := 0 to length(substr1) - 1 do
-    src := StringReplace(src, substr1[i], substr2,[]);
+    src := StringReplace(src, substr1[i], substr2, []);
   Result := src;
 end;
 
@@ -636,7 +651,7 @@ function DeleteBackTo(s: String; subs: string; casesens: boolean = true;
 begin
   s := ReverseString(s);
   subs := ReverseString(subs);
-  Result := ReverseString(DeleteTo(s,subs,casesens,re));
+  Result := ReverseString(DeleteTo(s, subs, casesens, re));
 end;
 
 function diff(n1, n2: Extended): Extended;
@@ -647,20 +662,20 @@ begin
     Result := n1 / n2;
 end;
 
-FUNCTION STRINGENCODE(S: STRING; HTML: BOOLEAN = FALSE): STRING;
+FUNCTION STRINGENCODE(s: STRING; HTML: boolean = false): STRING;
 begin
   IF HTML THEN
-    RESULT := HTMLENCODE(STRING(UTF8ENCODE(S)))
+    Result := HTMLENCODE(STRING(UTF8ENCODE(s)))
   ELSE
-    RESULT := STRING(HTTPENCODE(UTF8ENCODE(S)));
+    Result := STRING(HTTPENCODE(UTF8ENCODE(s)));
 END;
 
-FUNCTION STRINGDECODE(S: STRING; HTML: BOOLEAN = FALSE): STRING;
+FUNCTION STRINGDECODE(s: STRING; HTML: boolean = false): STRING;
 BEGIN
   IF HTML THEN
-    RESULT := UTF8TOSTRING(RAWBYTESTRING(HTMLDECODE(S)))
+    Result := UTF8TOSTRING(RAWBYTESTRING(HTMLDECODE(s)))
   ELSE
-    RESULT := UTF8TOSTRING(HTTPDECODE(ANSISTRING(S)));
+    Result := UTF8TOSTRING(HTTPDECODE(AnsiString(s)));
 END;
 
 function GetNextS(var s: string; del: String = ';'; ins: String = ''): string;
@@ -755,70 +770,71 @@ begin
   if back then
     s := ReverseString(s);
 
-    i := pos(substr, s);
+  i := pos(substr, s);
 
-    if i = 0 then
-      if re then
-        Result := ''
-      else
-        Result := copy(s, 1, length(s))
+  if i = 0 then
+    if re then
+      Result := ''
     else
-      Result := copy(s, 1, i - 1);
+      Result := copy(s, 1, length(s))
+  else
+    Result := copy(s, 1, i - 1);
 
-    if back then
-      Result := ReverseString(Result);
-  //end;
+  if back then
+    Result := ReverseString(Result);
+  // end;
 end;
 
-function CopyTo(Source: String; ATo: Char; Isl,Brk: array of string): string;
+function CopyTo(Source: String; ATo: Char; Isl, Brk: array of string): string;
 var
   i: Integer;
 begin
-  i := CharPos(Source,ATo,Isl,Brk);
+  i := CharPos(Source, ATo, Isl, Brk);
   if i = 0 then
     Result := copy(Source, 1, length(Source))
   else
     Result := copy(Source, 1, i - 1);
 end;
 
-function CopyTo(var Source: String; ATo: Char; Isl,Brk: array of string; cut: boolean = false): string;
+function CopyTo(var Source: String; ATo: Char; Isl, Brk: array of string;
+  cut: boolean = false): string;
 var
   i: Integer;
 begin
-  i := CharPos(Source,ATo,Isl,Brk);
+  i := CharPos(Source, ATo, Isl, Brk);
   if i = 0 then
     Result := copy(Source, 1, length(Source))
   else
     Result := copy(Source, 1, i - 1);
   if cut then
     if i = 0 then
-      Delete(Source,1,length(Source))
+      Delete(Source, 1, length(Source))
     else
-      Delete(Source,1,i);
+      Delete(Source, 1, i);
 end;
 
 function CopyFromTo(s, sub1, sub2: String; re: boolean = false): String;
 var
   l1, l2: Integer;
-//  tmp: string;
+  // tmp: string;
 begin
-//  tmp := lowercase(s);
+  // tmp := lowercase(s);
   Result := '';
 
-  l1 := Pos(lowercase(sub1), lowercase(s));
+  l1 := pos(lowercase(sub1), lowercase(s));
   if (l1 = 0) and re then
-//    Delete(tmp, 1, l1 + length(sub1) - 1)
+    // Delete(tmp, 1, l1 + length(sub1) - 1)
     Exit;
 
-  l2 := PosEx(lowercase(sub2),lowercase(s),l1 + length(sub1));
+  l2 := PosEx(lowercase(sub2), lowercase(s), l1 + length(sub1));
 
   if l2 = 0 then
     if re then
       Exit
     else
       l2 := length(s) + 1;
-{  else
-    l2 := l2 + length(s) - length(tmp);    }
+  { else
+    l2 := l2 + length(s) - length(tmp); }
 
   if l1 > 0 then
     Result := copy(s, l1 + length(sub1), l2 - l1 - length(sub1))
@@ -826,12 +842,13 @@ begin
     Result := copy(s, 1, l2 - 1);
 end;
 
-function CopyFromTo(Source: String; AFrom,ATo: Char; Isl,Brk: array of string): String;
+function CopyFromTo(Source: String; AFrom, ATo: Char;
+  Isl, Brk: array of string): String;
 var
-  n1,n2: integer;
+  n1, n2: Integer;
 begin
 
-  n1 := CharPos(Source,AFrom,Isl,Brk);
+  n1 := CharPos(Source, AFrom, Isl, Brk);
 
   if n1 = 0 then
   begin
@@ -839,7 +856,7 @@ begin
     Exit;
   end;
 
-  n2 := CharPos(Source,ATo,Isl,Brk,n1 + 1);
+  n2 := CharPos(Source, ATo, Isl, Brk, n1 + 1);
 
   if n2 = 0 then
   begin
@@ -847,7 +864,7 @@ begin
     Exit;
   end;
 
-  Result := Copy(Source,n1+1,n2-n1-1);
+  Result := copy(Source, n1 + 1, n2 - n1 - 1);
 
 end;
 
@@ -856,7 +873,7 @@ function DeleteFromTo(s, sub1, sub2: String; casesens: boolean = true;
 var
   l1, l2: Integer;
 begin
-//  Result := '';
+  // Result := '';
 
   sub1 := lowercase(sub1);
   sub2 := lowercase(sub2);
@@ -871,10 +888,11 @@ begin
       Delete(s, l1, l2 - l1 + length(sub2));
 
       if recursive then
-        l1 := PosEx(sub1, lowercase(s),l1)
+        l1 := PosEx(sub1, lowercase(s), l1)
       else
         l1 := 0;
-    end else
+    end
+    else
       l1 := 0;
   end;
 
@@ -934,13 +952,14 @@ end;
 
 function ValidFName(FName: String; bckslsh: boolean; nodrive: boolean): String;
 const
-  n = ['\', '/', ':', '*', '"', '<', '>', '|', '?',#13,#10];
+  n = ['\', '/', ':', '*', '"', '<', '>', '|', '?', #13, #10];
 var
   i: Integer;
 begin
   for i := 1 to length(FName) do
-    if CharInSet(FName[i], n) and (not bckslsh
-    or not((FName[i] = '\') or not nodrive and (FName[i] = ':'))) then
+    if CharInSet(FName[i], n) and
+      (not bckslsh or not((FName[i] = '\') or not nodrive and (FName[i] = ':')))
+    then
       FName[i] := '_';
   Result := FName;
 end;
@@ -988,39 +1007,39 @@ begin
   end;
 end;
 
-function IndexOfStr(strlist,value: string): integer;
+function IndexOfStr(strlist, value: string): Integer;
 var
   val: string;
 begin
-  result := 0;
+  Result := 0;
   while strlist <> '' do
   begin
-    val := TrimEx(CopyTo(strlist,',',['""'],[],true),[' ','"']);
+    val := TrimEx(CopyTo(strlist, ',', ['""'], [], true), [' ', '"']);
     if value = val then
       Exit;
-    inc(result);
+    inc(Result);
   end;
-  result := -1;
+  Result := -1;
 end;
 
-function IndexOfStr(list: tstrings; value: string): integer;
+function IndexOfStr(list: tStrings; value: string): Integer;
 var
-  i: integer;
+  i: Integer;
 begin
-  for i := 0 to list.Count-1 do
-    if SameText(list[i],value) then
+  for i := 0 to list.Count - 1 do
+    if SameText(list[i], value) then
     begin
-      result := i;
+      Result := i;
       Exit;
     end;
-  result := -1;
+  Result := -1;
 end;
 
 procedure DrawImage(AImage: TImage; AStream: TStream; Ext: String);
 var
   Graphic: TGraphic;
 begin
-  Ext := LOWERCASE(Ext);
+  Ext := lowercase(Ext);
   Delete(Ext, 1, 1);
   Graphic := nil;
   if (Ext = 'jpeg') or (Ext = 'jpg') then
@@ -1401,15 +1420,14 @@ begin
   Result := 0;
 end;
 
-function CharPos(str: string; ch: Char;
-  Isolators,Brackets: array of string;
+function CharPos(str: string; ch: Char; Isolators, Brackets: array of string;
   From: Integer = 1): Integer;
 var
   i, j: Integer;
-  //n: integer;
-  {s1,}s2: Char;
-  {b1,}b2: array of Char;
-  st,br: TSetOfChar;
+  // n: integer;
+  { s1, } s2: Char;
+  { b1, } b2: array of Char;
+  st, br: TSetOfChar;
 begin
   st := [];
   for i := 0 to length(Isolators) - 1 do
@@ -1419,11 +1437,11 @@ begin
   for i := 0 to length(Brackets) - 1 do
     br := br + [Brackets[i][1]];
 
-//  setlength(b1,0);
-  setlength(b2,0);
+  // setlength(b1,0);
+  SetLength(b2, 0);
 
-  //n := 0;
-  //s1 := #0;
+  // n := 0;
+  // s1 := #0;
   s2 := #0;
 
   for i := From to length(str) do
@@ -1431,20 +1449,19 @@ begin
       if str[i] = s2 then
         s2 := #0
       else
-    else if (length(b2) > 0)
-    and (str[i] = b2[length(b2)-1]) then
-      setlength(b2,length(b2)-1)
-//    else
-//     if CharInSet(str[i],br) then
-//      begin
-//        for j := 0 to length(Brackets) - 1 do
-//          if (str[i] = Brackets[j][1]) then
-//          begin
-//            setlength(b2,length(b2)+1);
-//            b2[length(b2)-1] := Brackets[j][2];
-//            break;
-//          end;
-//      end else
+    else if (length(b2) > 0) and (str[i] = b2[length(b2) - 1]) then
+      SetLength(b2, length(b2) - 1)
+      // else
+      // if CharInSet(str[i],br) then
+      // begin
+      // for j := 0 to length(Brackets) - 1 do
+      // if (str[i] = Brackets[j][1]) then
+      // begin
+      // setlength(b2,length(b2)+1);
+      // b2[length(b2)-1] := Brackets[j][2];
+      // break;
+      // end;
+      // end else
     else if (length(b2) = 0) and (str[i] = ch) then
     begin
       Result := i;
@@ -1455,20 +1472,21 @@ begin
       for j := 0 to length(Isolators) - 1 do
         if (str[i] = Isolators[j][1]) then
         begin
-          //s1 := Isolators[j][1];
+          // s1 := Isolators[j][1];
           s2 := Isolators[j][2];
           break;
         end;
-      //inc(n);
-    end else if CharInSet(str[i],br) then
+      // inc(n);
+    end
+    else if CharInSet(str[i], br) then
     begin
       for j := 0 to length(Brackets) - 1 do
         if (str[i] = Brackets[j][1]) then
         begin
-          //setlength(b1,length(b1)+1);
-          setlength(b2,length(b2)+1);
-          //b1[length(b1)-1] := Brackets[j][1];
-          b2[length(b2)-1] := Brackets[j][2];
+          // setlength(b1,length(b1)+1);
+          SetLength(b2, length(b2) + 1);
+          // b1[length(b1)-1] := Brackets[j][1];
+          b2[length(b2) - 1] := Brackets[j][2];
           break;
         end;
     end;
@@ -1476,14 +1494,13 @@ begin
 end;
 
 function CharPosEx(str: string; ch: TSetOfChar;
-  Isolators,Brackets: array of string;
-  From: Integer = 1): Integer;
+  Isolators, Brackets: array of string; From: Integer = 1): Integer;
 var
   i, j: Integer;
-  //n: integer;
-  {s1,}s2: Char;
-  {b1,}b2: array of Char;
-  st,br: TSetOfChar;
+  // n: integer;
+  { s1, } s2: Char;
+  { b1, } b2: array of Char;
+  st, br: TSetOfChar;
 begin
   st := [];
   for i := 0 to length(Isolators) - 1 do
@@ -1493,8 +1510,8 @@ begin
   for i := 0 to length(Brackets) - 1 do
     br := br + [Brackets[i][1]];
 
-  //n := 0;
-  //s1 := #0;
+  // n := 0;
+  // s1 := #0;
   s2 := #0;
 
   for i := From to length(str) do
@@ -1502,19 +1519,18 @@ begin
       if str[i] = s2 then
         s2 := #0
       else
-    else if (length(b2) > 0)
-    and (str[i] = b2[length(b2)-1]) then
-        setlength(b2,length(b2)-1)
-//      else if CharInSet(str[i],br) then
-//      begin
-//        for j := 0 to length(Brackets) - 1 do
-//          if (str[i] = Brackets[j][1]) then
-//          begin
-//            setlength(b2,length(b2)+1);
-//            b2[length(b2)-1] := Brackets[j][2];
-//            break;
-//          end;
-//      end else
+    else if (length(b2) > 0) and (str[i] = b2[length(b2) - 1]) then
+      SetLength(b2, length(b2) - 1)
+      // else if CharInSet(str[i],br) then
+      // begin
+      // for j := 0 to length(Brackets) - 1 do
+      // if (str[i] = Brackets[j][1]) then
+      // begin
+      // setlength(b2,length(b2)+1);
+      // b2[length(b2)-1] := Brackets[j][2];
+      // break;
+      // end;
+      // end else
     else if (length(b2) = 0) and CharInSet(str[i], ch) then
     begin
       Result := i;
@@ -1525,20 +1541,21 @@ begin
       for j := 0 to length(Isolators) - 1 do
         if (str[i] = Isolators[j][1]) then
         begin
-          //s1 := Isolators[j][1];
+          // s1 := Isolators[j][1];
           s2 := Isolators[j][2];
           break;
         end;
-      //inc(n);
-    end else if CharInSet(str[i],br) then
+      // inc(n);
+    end
+    else if CharInSet(str[i], br) then
     begin
       for j := 0 to length(Brackets) - 1 do
         if (str[i] = Brackets[j][1]) then
         begin
-          //setlength(b1,length(b1)+1);
-          setlength(b2,length(b2)+1);
-          //b1[length(b1)-1] := Brackets[j][1];
-          b2[length(b2)-1] := Brackets[j][2];
+          // setlength(b1,length(b1)+1);
+          SetLength(b2, length(b2) + 1);
+          // b1[length(b1)-1] := Brackets[j][1];
+          b2[length(b2) - 1] := Brackets[j][2];
           break;
         end;
     end;
@@ -1575,8 +1592,8 @@ const
     p = 1 + -
     p = 2 * / | \
     p = 3 < = > ! }
-  function Proc(const p: byte; var s: string; var i: Integer; const l: integer; var ls: variant;
-    const isstring: boolean = false): variant;
+  function Proc(const p: byte; var s: string; var i: Integer; const l: Integer;
+    var ls: variant; const isstring: boolean = false): variant;
   var
     n, tmp, lvl, tp: Integer;
     op: boolean;
@@ -1593,12 +1610,12 @@ const
     d := null;
     while i <= l do
       case s[i] of
-        ' ',#13,#10,#9:
+        ' ', #13, #10, #9:
           inc(i);
         '"', '''':
           begin
             if op then
-              raise Exception.Create(Format(_OPERATOR_MISSED_, [s[i],s]));
+              raise Exception.Create(Format(_OPERATOR_MISSED_, [s[i], s]));
 
             Result := '';
 
@@ -1609,14 +1626,16 @@ const
               n := CharPos(s, s[i], [], [], i + 1);
 
               if n = 0 then
-                raise Exception.Create(Format(_SYMBOL_MISSED_, [s[i], i, s[i], s]));
+                raise Exception.Create(Format(_SYMBOL_MISSED_,
+                  [s[i], i, s[i], s]));
 
               if (n < l) and (s[n + 1] = s[n]) then
               begin
                 Result := Result + copy(s, i + 1, n - i);
                 i := n + 1;
-              end else
-                Break;
+              end
+              else
+                break;
             end;
 
             Result := Result + copy(s, i + 1, n - i - 1);
@@ -1634,7 +1653,7 @@ const
               if s[i] = '-' then
                 goto cc
               else
-                raise Exception.Create(Format(_OPERAND_MISSED_, [s[i],s]));
+                raise Exception.Create(Format(_OPERAND_MISSED_, [s[i], s]));
 
             lvl := 0;
 
@@ -1661,11 +1680,13 @@ const
             begin
               d := true;
               i := l + 1;
-            end else if (s[i - 1] = '&') and (Result = false) then
+            end
+            else if (s[i - 1] = '&') and (Result = false) then
             begin
               d := false;
               i := l + 1;
-            end else
+            end
+            else
               d := Proc(lvl, s, i, l, ls, VarIsStr(Result));
 
             if d = null then
@@ -1674,7 +1695,7 @@ const
             if VarIsStr(d) and (p <> 0) then
             begin
               ls := d;
-              Break;
+              break;
             end;
 
             try
@@ -1707,7 +1728,7 @@ const
                   else
                     Result := Result = d;
                 '~':
-                  Result := pos(d,Result) > 0;
+                  Result := pos(d, Result) > 0;
                 '!':
                   if op then
                     if VarIsStr(Result) or VarIsStr(d) then
@@ -1716,7 +1737,7 @@ const
                       Result := Result <> d
                   else
                   begin
-                    Result := not Boolean(d);
+                    Result := not boolean(d);
                     op := true;
                   end;
               end;
@@ -1730,20 +1751,27 @@ const
                   ls := null;
                 end;
 
-            except on e: exception do begin
-              e.Message := Format(_INVALID_TYPECAST_,[VarToStr(Result),s[tmp],VarToStr(d),tmp,s]) +
-                #13#10 + e.Message; raise;
-            end;end;
+            except
+              on e: Exception do
+              begin
+                e.Message := Format(_INVALID_TYPECAST_,
+                  [VarToStr(Result), s[tmp], VarToStr(d), tmp, s]) + #13#10 +
+                  e.Message;
+                raise;
+              end;
+            end;
           end;
         '(':
           begin
             if op then
-              raise Exception.Create(Format(_OPERATOR_MISSED_, [s[i], copy(s,i-10,20)]));
+              raise Exception.Create(Format(_OPERATOR_MISSED_,
+                [s[i], copy(s, i - 10, 20)]));
 
-            n := CharPos(s, ')', ['''' + '''','""'], ['()'], i + 1);
+            n := CharPos(s, ')', ['''' + '''', '""'], ['()'], i + 1);
 
             if n = 0 then
-              raise Exception.Create(Format(_SYMBOL_MISSED_, [')', i, s[i], copy(s,i-10,20)]));
+              raise Exception.Create(Format(_SYMBOL_MISSED_,
+                [')', i, s[i], copy(s, i - 10, 20)]));
 
             inc(i);
             tmpls := null;
@@ -1757,9 +1785,10 @@ const
         begin
         cc:
           if op then
-            raise Exception.Create(Format(_OPERATOR_MISSED_, [s[i],copy(s,i-10,20)]));
+            raise Exception.Create(Format(_OPERATOR_MISSED_,
+              [s[i], copy(s, i - 10, 20)]));
 
-          n := CharPosEx(s, ops + [' '], ['''' + '''', '""'],['()'], i + 1);
+          n := CharPosEx(s, ops + [' '], ['''' + '''', '""'], ['()'], i + 1);
 
           if (n = 0) or (n > l) then
             n := l + 1;
@@ -1772,17 +1801,21 @@ const
             vt := VarToWideStr(Result);
             VRESULT := VarR8FromStr(@vt[1], VAR_LOCALE_USER_DEFAULT, 0, vt2);
             case VRESULT of
-              VAR_OK:  // in this case the OS function has put the value into result
+              VAR_OK: // in this case the OS function has put the value into result
                 Result := vt2;
               VAR_TYPEMISMATCH:
                 if TryStrToFloat(vt, vt2) then
                   Result := vt2
                 else
-                   raise Exception.Create(Format(_INCORRECT_SYMBOL_,[result,i,copy(s,i-10,20)]));
-              else raise Exception.Create(Format(_INCORRECT_SYMBOL_,[result,i,copy(s,i-10,20)]));
+                  raise Exception.Create(Format(_INCORRECT_SYMBOL_,
+                    [Result, i, copy(s, i - 10, 20)]));
+            else
+              raise Exception.Create(Format(_INCORRECT_SYMBOL_,
+                [Result, i, copy(s, i - 10, 20)]));
             end;
-          end else
-            Result := VarAsType(Result,varDouble);
+          end
+          else
+            Result := VarAsType(Result, varDouble);
 
           i := n;
           op := true;
@@ -1793,7 +1826,7 @@ const
 
 var
   i: Integer;
-//  s: variant;
+  // s: variant;
   st: string;
   ls: variant;
   tp: word;
@@ -1801,9 +1834,10 @@ begin
   tp := VarType(s);
   if not((tp = varOleStr) or (tp = varString) or (tp = varUString)) then
   begin
-    result := s;
+    Result := s;
     Exit;
-  end else
+  end
+  else
     st := s;
 
   i := 1;
@@ -1814,13 +1848,12 @@ end;
 function DateTimeStrEval(const DateTimeFormat: string;
   const DateTimeStr: string; locale: string): TDateTime;
 var
-  i, ii, iii: integer;
+  i, ii, iii: Integer;
   Retvar: TDateTime;
-  Tmp,
-    Fmt, Data, Mask, Spec: string;
-  Year, Month, Day, Hour, Minute, Second: integer;
+  tmp, Fmt, Data, Mask, Spec: string;
+  Year, Month, Day, Hour, Minute, Second: Integer;
   MSec: word;
-  AmPm: integer;
+  AmPm: Integer;
   fs: TFormatSettings;
 begin
   fs := TFormatSettings.Create(locale);
@@ -1831,8 +1864,8 @@ begin
   Minute := 0;
   Second := 0;
   MSec := 0;
-  Fmt := UpperCase(DateTimeFormat);
-  Data := UpperCase(DateTimeStr);
+  Fmt := UPPERCASE(DateTimeFormat);
+  Data := UPPERCASE(DateTimeStr);
   i := 1;
   Mask := '';
   AmPm := 0;
@@ -1845,7 +1878,7 @@ begin
 
   while i < length(Fmt) do
   begin
-    if CharInSet(Fmt[i],['A', 'P', 'D', 'M', 'Y', 'H', 'N', 'S', 'Z']) then
+    if CharInSet(Fmt[i], ['A', 'P', 'D', 'M', 'Y', 'H', 'N', 'S', 'Z']) then
     begin
       // Start of a date specifier
       Mask := Fmt[i];
@@ -1855,15 +1888,14 @@ begin
       while true do
       begin
         if ii > length(Fmt) then
-          Break; // End of specifier string
+          break; // End of specifier string
         Spec := Mask + Fmt[ii];
 
         if (Spec = 'D') or (Spec = 'DD') or (Spec = 'DDD') or (Spec = 'DDDD') or
           (Spec = 'M') or (Spec = 'MM') or (Spec = 'MMM') or (Spec = 'MMMM') or
-          (Spec = 'YY') or (Spec = 'YYY') or (Spec = 'YYYY') or
-          (Spec = 'H') or (Spec = 'HH') or (Spec = 'NN') or (Spec = 'SS') or
-          (Spec = 'ZZ') or (Spec = 'ZZZ') or
-          (Spec = 'AP') or (Spec = 'AM') or (Spec = 'AMP') or
+          (Spec = 'YY') or (Spec = 'YYY') or (Spec = 'YYYY') or (Spec = 'H') or
+          (Spec = 'HH') or (Spec = 'NN') or (Spec = 'SS') or (Spec = 'ZZ') or
+          (Spec = 'ZZZ') or (Spec = 'AP') or (Spec = 'AM') or (Spec = 'AMP') or
           (Spec = 'AMPM') then
         begin
           Mask := Spec;
@@ -1872,7 +1904,7 @@ begin
         else
         begin
           // End of or Invalid specifier
-          Break;
+          break;
         end;
       end;
 
@@ -1883,36 +1915,37 @@ begin
 
         if (Mask = 'D') then
         begin
-          Day := StrToIntDef(trim(copy(Data, 1, 2)), -1);
+          Day := StrToIntDef(Trim(copy(Data, 1, 2)), -1);
 
-          if day = -1 then
+          if Day = -1 then
           begin
             Day := StrToIntDef(copy(Data, 1, 1), 0);
-            delete(Data, 1, 1);
-          end else
-            delete(Data, 1, 2);
+            Delete(Data, 1, 1);
+          end
+          else
+            Delete(Data, 1, 2);
         end;
 
         if (Mask = 'DD') then
         begin
-          Day := StrToIntDef(trim(copy(Data, 1, 2)), 0);
-          delete(Data, 1, 2);
+          Day := StrToIntDef(Trim(copy(Data, 1, 2)), 0);
+          Delete(Data, 1, 2);
         end;
 
         // Day Sun..Sat (Just remove from data string)
         if Mask = 'DDD' then
-          delete(Data, 1, 3);
+          Delete(Data, 1, 3);
 
         // Day Sunday..Saturday (Just remove from data string LEN)
         if Mask = 'DDDD' then
         begin
-          Tmp := copy(Data, 1, 3);
+          tmp := copy(Data, 1, 3);
           for iii := 1 to 7 do
           begin
-            if Tmp = Uppercase(copy(fs.LongDayNames[iii], 1, 3)) then
+            if tmp = UPPERCASE(copy(fs.LongDayNames[iii], 1, 3)) then
             begin
-              delete(Data, 1, length(fs.LongDayNames[iii]));
-              Break;
+              Delete(Data, 1, length(fs.LongDayNames[iii]));
+              break;
             end;
           end;
         end;
@@ -1921,33 +1954,34 @@ begin
 
         if (Mask = 'M') then
         begin
-          Month := StrToIntDef(trim(copy(Data, 1, 2)), -1);
+          Month := StrToIntDef(Trim(copy(Data, 1, 2)), -1);
 
           if Month = -1 then
           begin
             Month := StrToIntDef(copy(Data, 1, 1), 0);
-            delete(Data, 1, 1);
-          end else
-            delete(Data, 1, 2);
+            Delete(Data, 1, 1);
+          end
+          else
+            Delete(Data, 1, 2);
         end;
 
         if (Mask = 'MM') then
         begin
-          Month := StrToIntDef(trim(copy(Data, 1, 2)), 0);
-          delete(Data, 1, 2);
+          Month := StrToIntDef(Trim(copy(Data, 1, 2)), 0);
+          Delete(Data, 1, 2);
         end;
 
         // Month Jan..Dec
         if Mask = 'MMM' then
         begin
-          Tmp := copy(Data, 1, 3);
+          tmp := copy(Data, 1, 3);
           for iii := 1 to 12 do
           begin
-            if Tmp = Uppercase(copy(fs.LongMonthNames[iii], 1, 3)) then
+            if tmp = UPPERCASE(copy(fs.LongMonthNames[iii], 1, 3)) then
             begin
               Month := iii;
-              delete(Data, 1, 3);
-              Break;
+              Delete(Data, 1, 3);
+              break;
             end;
           end;
         end;
@@ -1955,14 +1989,14 @@ begin
         // Month January..December
         if Mask = 'MMMM' then
         begin
-          Tmp := copy(Data, 1, 3);
+          tmp := copy(Data, 1, 3);
           for iii := 1 to 12 do
           begin
-            if Tmp = Uppercase(copy(fs.LongMonthNames[iii], 1, 3)) then
+            if tmp = UPPERCASE(copy(fs.LongMonthNames[iii], 1, 3)) then
             begin
               Month := iii;
-              delete(Data, 1, length(fs.LongMonthNames[iii]));
-              Break;
+              Delete(Data, 1, length(fs.LongMonthNames[iii]));
+              break;
             end;
           end;
         end;
@@ -1971,7 +2005,7 @@ begin
         if Mask = 'YY' then
         begin
           Year := StrToIntDef(copy(Data, 1, 2), 0);
-          delete(Data, 1, 2);
+          Delete(Data, 1, 2);
           if Year < fs.TwoDigitYearCenturyWindow then
             Year := (YearOf(Date) div 100) * 100 + Year
           else
@@ -1982,47 +2016,48 @@ begin
         if Mask = 'YYYY' then
         begin
           Year := StrToIntDef(copy(Data, 1, 4), 0);
-          delete(Data, 1, 4);
+          Delete(Data, 1, 4);
         end;
 
         // Hours
         if (Mask = 'H') then
         begin
-          Hour := StrToIntDef(trim(copy(Data, 1, 2)), -1);
+          Hour := StrToIntDef(Trim(copy(Data, 1, 2)), -1);
 
           if Hour = -1 then
           begin
             Hour := StrToIntDef(copy(Data, 1, 1), 0);
-            delete(Data, 1, 1);
-          end else
-            delete(Data, 1, 2);
+            Delete(Data, 1, 1);
+          end
+          else
+            Delete(Data, 1, 2);
         end;
 
         if Mask = 'HH' then
         begin
-          Hour := StrToIntDef(trim(copy(Data, 1, 2)), 0);
-          delete(Data, 1, 2);
+          Hour := StrToIntDef(Trim(copy(Data, 1, 2)), 0);
+          Delete(Data, 1, 2);
         end;
 
         // Minutes
         if Mask = 'NN' then
         begin
-          Minute := StrToIntDef(trim(copy(Data, 1, 2)), 0);
-          delete(Data, 1, 2);
+          Minute := StrToIntDef(Trim(copy(Data, 1, 2)), 0);
+          Delete(Data, 1, 2);
         end;
 
         // Seconds
         if Mask = 'SS' then
         begin
-          Second := StrToIntDef(trim(copy(Data, 1, 2)), 0);
-          delete(Data, 1, 2);
+          Second := StrToIntDef(Trim(copy(Data, 1, 2)), 0);
+          Delete(Data, 1, 2);
         end;
 
         // Milliseconds
         if (Mask = 'ZZ') or (Mask = 'ZZZ') then
         begin
-          MSec := StrToIntDef(trim(copy(Data, 1, 3)), 0);
-          delete(Data, 1, 3);
+          MSec := StrToIntDef(Trim(copy(Data, 1, 3)), 0);
+          Delete(Data, 1, 3);
         end;
 
         // AmPm A or P flag
@@ -2032,7 +2067,7 @@ begin
             AmPm := -1
           else
             AmPm := 1;
-          delete(Data, 1, 1);
+          Delete(Data, 1, 1);
         end;
 
         // AmPm AM or PM flag
@@ -2042,7 +2077,7 @@ begin
             AmPm := -1
           else
             AmPm := 1;
-          delete(Data, 1, 2);
+          Delete(Data, 1, 2);
         end;
 
         Mask := '';
@@ -2053,7 +2088,7 @@ begin
     begin
       // Remove delimiter from data string
       if length(Data) > 1 then
-        delete(Data, 1, 1);
+        Delete(Data, 1, 1);
       inc(i);
     end;
   end;
@@ -2063,7 +2098,8 @@ begin
 
   if AmPm = 1 then
     Hour := Hour + 12;
-  if not TryEncodeDateTime(Year, Month, Day, Hour, Minute, Second, MSec, Retvar) then
+  if not TryEncodeDateTime(Year, Month, Day, Hour, Minute, Second, MSec, Retvar)
+  then
     Retvar := 0.0;
   Result := Retvar;
 end;
@@ -2071,40 +2107,40 @@ end;
 function strnull(s: variant): variant;
 begin
   if s = '' then
-    result := null
+    Result := null
   else
-    result := s;
+    Result := s;
 end;
 
-function nullstr(Value: Variant): Variant;
+function nullstr(value: variant): variant;
 begin
   if value = null then
     Result := ''
   else
-    Result := Value;
+    Result := value;
 end;
 
 function ifn(b: boolean; thn, els: variant): variant;
 begin
   if b then
-    result := thn
+    Result := thn
   else
-    result:= els;
+    Result := els;
 end;
 
-function DeleteEx(S: String; Index,Count: integer): String;
+function DeleteEx(s: String; Index, Count: Integer): String;
 begin
-  Delete(S,Index,Count);
-  Result := S;
+  Delete(s, Index, Count);
+  Result := s;
 end;
 
-procedure SaveStrToFile(S, FileName: String; add: boolean);
+procedure SaveStrToFile(s, FileName: String; Add: boolean);
 var
   l: tstringlist;
 begin
   l := tstringlist.Create;
   try
-    if add and FileExists(FileName) then
+    if Add and fileexists(FileName) then
       l.LoadFromFile(FileName);
     l.Add(s);
     l.SaveToFile(FileName);
@@ -2113,14 +2149,14 @@ begin
   end;
 end;
 
-function GreatestCommonFactor(a,b: Word): Word;
+function GreatestCommonFactor(a, b: word): word;
 
 var
-  tmp: Word;
+  tmp: word;
 
 begin
-  tmp := Max(a,b);
-  b := Min(a,b);
+  tmp := Max(a, b);
+  b := Min(a, b);
   a := tmp;
 
   tmp := a mod b;
@@ -2135,27 +2171,27 @@ begin
 
 end;
 
-procedure AddSorted(Value: String; List: TStrings);
+procedure AddSorted(value: String; list: tStrings);
 var
-  Hi, Lo, index: integer;
+  Hi, Lo, Index: Integer;
 
 begin
-  if List.Count = 0 then
+  if list.Count = 0 then
   begin
-    List.Add(Value);
+    list.Add(value);
     Exit;
   end;
 
-  Hi := List.Count;
+  Hi := list.Count;
   Lo := 0;
   index := Hi div 2;
 
   try
     while (Hi - Lo) > 0 do
     begin
-      if SameText(Value,List[index]) then
-        Break
-      else if lowercase(Value) < lowercase(List[index]) then
+      if SameText(value, list[index]) then
+        break
+      else if lowercase(value) < lowercase(list[index]) then
         Hi := index - 1
       else
         Lo := index + 1;
@@ -2163,34 +2199,38 @@ begin
       index := Lo + ((Hi - Lo) div 2);
     end;
 
-    if (index < List.Count) and (lowercase(Value) > lowercase(List[index])) then
+    if (index < list.Count) and (lowercase(value) > lowercase(list[index])) then
       inc(index);
 
-    if (index >= List.Count) or not SameText(Value, List[index]) then
-      List.Insert(index,Value);
-  except on e: Exception do begin
-    e.Message := e.Message + ' (value = ' + Value + ')'; raise;
-  end; end;
+    if (index >= list.Count) or not SameText(value, list[index]) then
+      list.insert(index, value);
+  except
+    on e: Exception do
+    begin
+      e.Message := e.Message + ' (value = ' + value + ')';
+      raise;
+    end;
+  end;
 end;
 
-procedure RemSorted(Value: String; List: TStrings);
+procedure RemSorted(value: String; list: tStrings);
 var
-  Hi, Lo, index: integer;
+  Hi, Lo, Index: Integer;
 
 begin
-  if List.Count = 0 then
+  if list.Count = 0 then
     Exit;
 
-  Hi := List.Count;
+  Hi := list.Count;
   Lo := 0;
   index := Hi div 2;
 
   try
     while (Hi - Lo) > 0 do
     begin
-      if SameText(Value,List[index]) then
-        Break
-      else if lowercase(Value) < lowercase(List[index]) then
+      if SameText(value, list[index]) then
+        break
+      else if lowercase(value) < lowercase(list[index]) then
         Hi := index - 1
       else
         Lo := index + 1;
@@ -2198,26 +2238,30 @@ begin
       index := Lo + ((Hi - Lo) div 2);
     end;
 
-    if (index < List.Count) and (lowercase(Value) > lowercase(List[index])) then
+    if (index < list.Count) and (lowercase(value) > lowercase(list[index])) then
       inc(index);
 
-    if (index < List.Count) and SameText(Value, List[index]) then
-      List.Delete(index);
-  except on e: Exception do begin
-    e.Message := e.Message + ' (value = ' + Value + ')'; raise;
-  end; end;
+    if (index < list.Count) and SameText(value, list[index]) then
+      list.Delete(index);
+  except
+    on e: Exception do
+    begin
+      e.Message := e.Message + ' (value = ' + value + ')';
+      raise;
+    end;
+  end;
 end;
 
-function isolate(s: string; symbol: char): string;
+function isolate(s: string; symbol: Char): string;
 var
-  i: integer;
+  i: Integer;
 begin
-  i := PosEx(symbol,s);
+  i := PosEx(symbol, s);
 
   while i > 0 do
   begin
-    Insert(symbol,s,i);
-    i := PosEx(symbol,s,i + 2);
+    insert(symbol, s, i);
+    i := PosEx(symbol, s, i + 2);
   end;
 
   Result := s;
@@ -2231,51 +2275,89 @@ begin
   Result := GuidToString(g);
 end;
 
-function FindExistingDir(dir: string): string;
+function FindExistingDir(Dir: string): string;
 begin
-  while dir <> '' do
-    if DirectoryExists(dir) then
+  while Dir <> '' do
+    if DirectoryExists(Dir) then
     begin
-      Result := dir;
+      Result := Dir;
       Exit;
-    end else
-      dir := ExtractFileDir(ExcludeTrailingBackslash(dir));
+    end
+    else
+      Dir := ExtractFileDir(ExcludeTrailingBackslash(Dir));
 end;
 
-function PosBack(const SubStr, Str: String; Offset: Integer = 1): Integer;
+function PosBack(const substr, str: String; Offset: Integer = 1): Integer;
 var
-  I, LIterCnt, L, J, LS: Integer;
+  i, LIterCnt, l, j, ls: Integer;
   PSubStr, PS: PChar;
 begin
-  L := Length(SubStr);
-  LS := Length(Str);
-  Offset := LS  - Offset - L + 2;
+  l := length(substr);
+  ls := length(str);
+  Offset := ls - Offset - l + 2;
   { Calculate the number of possible iterations. Not valid if Offset < 1. }
   LIterCnt := Offset;
 
   { Only continue if the number of iterations is positive or zero (there is space to check) }
-  if (Offset > 0) and (LIterCnt >= 0) and (L > 0) then
+  if (Offset > 0) and (LIterCnt >= 0) and (l > 0) then
   begin
-    PSubStr := @SubStr[1];
-    PS := @Str[1];
-    //Inc(PS, Offset - 1);
+    PSubStr := @substr[1];
+    PS := @str[1];
+    // Inc(PS, Offset - 1);
 
-    for I := LIterCnt downto 0 do
+    for i := LIterCnt downto 0 do
     begin
-      J := 0;
-      while (J >= 0) and (J < L) do
+      j := 0;
+      while (j >= 0) and (j < l) do
       begin
-        if PS[I + J] = PSubStr[J] then
-          Inc(J)
+        if PS[i + j] = PSubStr[j] then
+          inc(j)
         else
-          J := -1;
+          j := -1;
       end;
-      if J >= L then
-        Exit(LS - I + 1);
+      if j >= l then
+        Exit(ls - i + 1);
     end;
   end;
 
   Result := 0;
+end;
+
+function TimeString(secs: int64): string;
+var
+  d,h,m,s: integer;
+begin
+  if (secs > 30*24*60*60) then
+    result := 'over month'
+  else
+  begin
+    s := secs mod 60;
+    m := secs div 60 mod 60;
+    h := secs div 60 div 60 mod 24;
+    d := secs div 60 div 60 div 24 mod 30;
+
+    if d > 0 then
+      result := inttostr(d) + 'd ' + inttostr(h) + 'h'
+    else if h > 0 then
+      result := inttostr(h) + 'h ' + inttostr(m) + 'm'
+    else if m > 0 then
+      result := inttostr(m) + 'm ' + inttostr(s) + 's'
+    else
+      result := inttostr(s) + 's';
+  end;
+end;
+
+procedure StreamToFile(astream: tstream; fname: string);
+var
+  f: tfilestream;
+begin
+  astream.Position := 0;
+
+  f := tfilestream.Create(fname, fmCreate or fmOpenWrite); try
+    f.CopyFrom(astream,astream.Size);
+  finally
+    f.Free;
+  end;
 end;
 
 end.

@@ -2,7 +2,7 @@ unit UPDUnit;
 
 interface
 
-uses Windows,SysUtils,Classes,Messages,MyHTTP,MyXMLParser,INIFiles,
+uses Windows, SysUtils, Classes, Messages, MyHTTP, MyXMLParser, INIFiles,
   common, IdComponent, ZIP, ActiveX;
 
 const
@@ -45,89 +45,89 @@ type
 
 implementation
 
-{function GetVersion(sFileName:string): string;
-var
+{ function GetVersion(sFileName:string): string;
+  var
   VerInfoSize: DWORD;
   VerInfo: Pointer;
   VerValueSize: DWORD;
   VerValue: PVSFixedFileInfo;
   Dummy: DWORD;
-begin
+  begin
   VerInfoSize := GetFileVersionInfoSize(PChar(sFileName), Dummy);
   GetMem(VerInfo, VerInfoSize);
   GetFileVersionInfo(PChar(sFileName), 0, VerInfoSize, VerInfo);
   VerQueryValue(VerInfo, '\', Pointer(VerValue), VerValueSize);
   with VerValue^ do
   begin
-    Result := IntToHEX(dwFileVersionMS shr 16,2);
-    Result := Result + IntToHEX(dwFileVersionMS and $FFFF,2);
-    Result := Result + IntToHEX(dwFileVersionLS shr 16,2);
-    Result := Result + IntToHEX(dwFileVersionLS and $FFFF,2);
+  Result := IntToHEX(dwFileVersionMS shr 16,2);
+  Result := Result + IntToHEX(dwFileVersionMS and $FFFF,2);
+  Result := Result + IntToHEX(dwFileVersionLS shr 16,2);
+  Result := Result + IntToHEX(dwFileVersionLS and $FFFF,2);
   end;
   FreeMem(VerInfo, VerInfoSize);
-end; }
+  end; }
 
 procedure TUpdThread.IdHTTPWorkBegin(ASender: TObject; AWorkMode: TWorkMode;
   AWorkCountMax: Int64);
 begin
-  PostMessage(FHWND,CM_UPDATEPROGRESS,UPD_FILESIZE,AWorkCountMax);
+  PostMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILESIZE, AWorkCountMax);
 end;
 
 procedure TUpdThread.IdHTTPWork(ASender: TObject; AWorkMode: TWorkMode;
   AWorkCount: Int64);
 begin
-  PostMessage(FHWND,CM_UPDATEPROGRESS,UPD_FILEPROGRESS,AWorkCount);
+  PostMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILEPROGRESS, AWorkCount);
 end;
 
 function TUpdThread.CheckUpdates(s: string; items: TTagList): boolean;
 var
   xml: TMyXMLParser;
-//  items: TTagList;
+  // items: TTagList;
   INI: TINIFile;
-  i,j,v: integer;
-  root,fname: string;
+  i, j, v: Integer;
+  root, fname: string;
   deleted: boolean;
 begin
   root := ExtractFilePath(paramstr(0));
   xml := TMyXMLParser.Create;
   xml.Parse(s);
 
-//  items := TTagList.Create;
-  xml.TagList.GetList('item',nil,items);
+  // items := TTagList.Create;
+  xml.TagList.GetList('item', nil, items);
 
   if items.Count = 0 then
-    raise Exception.Create('Result of parsing VERSION.XML is ZERO. It can not be ZERO');
-
+    raise Exception.Create
+      ('Result of parsing VERSION.XML is ZERO. It can not be ZERO');
 
   INI := TINIFile.Create(root + 'settings.ini');
 
-  //result := false;
+  // result := false;
 
   i := 0;
   j := 0;
   while i < items.Count do
   begin
     fname := items[i].Attrs.Value('file');
-    v := INI.ReadInteger('update',fname,-1);
+    v := INI.ReadInteger('update', fname, -1);
     deleted := items[i].Attrs.Value('deleted') = '1';
     if deleted then
       if (v > -1) then
-        case FJOB of
+        case FJob of
           UPD_CHECK_UPDATES:
             inc(i);
           UPD_DOWNLOAD_UPDATES:
-          begin
-            if fileexists(ExtractFilePath(paramstr(0)) + fname) then
-              DeleteFile(ExtractFilePath(paramstr(0)) + fname);
+            begin
+              if fileexists(ExtractFilePath(paramstr(0)) + fname) then
+                DeleteFile(ExtractFilePath(paramstr(0)) + fname);
 
-            INI.DeleteKey('update',fname);
-            items.Delete(i);
-          end
+              INI.DeleteKey('update', fname);
+              items.Delete(i);
+            end
         end
       else
         items.Delete(i)
     else if (StrToInt(items[i].Attrs.Value('version')) > v)
-    {or (StrToInt(items[i].Attrs.Value('version')) = -1)} then
+    { or (StrToInt(items[i].Attrs.Value('version')) = -1) } then
       inc(i)
     else if (StrToInt(items[i].Attrs.Value('version')) = -1) then
     begin
@@ -141,16 +141,16 @@ begin
   result := i + j > 0;
 
   INI.Free;
-  //items.Free;
+  // items.Free;
   xml.Free;
 end;
 
 procedure TUpdThread.DownloadUpdates(items: TTagList; HTTP: TMyIdHTTP);
 var
-  i,v1,v2: integer;
+  i, v1, v2: Integer;
   root: string;
   aroot: string;
-  fname,aname,pname,o,dir: string;
+  fname, aname, pname, o, dir: string;
   f: TFileStream;
   INI: TINIFile;
 
@@ -164,18 +164,18 @@ begin
   INI := TINIFile.Create(aroot + 'update.ini');
   CoInitialize(nil);
 
-  PostMessage(FHWND,CM_UPDATEPROGRESS,UPD_FILECOUNT,items.Count);
+  PostMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILECOUNT, items.Count);
 
   HTTP.OnWorkBegin := IdHTTPWorkBegin;
   HTTP.OnWork := IdHTTPWork;
 
-  try                 //downloading
-    for i := 0 to items.Count-1 do
+  try // downloading
+    for i := 0 to items.Count - 1 do
     begin
-      PostMessage(FHWND,CM_UPDATEPROGRESS,UPD_FILEPOS,i);
+      PostMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILEPOS, i);
       fname := items[i].Attrs.Value('file');
       v1 := StrToInt(items[i].Attrs.Value('version'));
-      v2 := INI.ReadInteger('update',fname,-1);
+      v2 := INI.ReadInteger('update', fname, -1);
 
       aname := items[i].Attrs.Value('archive');
 
@@ -184,35 +184,35 @@ begin
       else
         pname := fname;
 
-      if (v1 > -1) and (v2 >= v1) and (FileExists(aroot + aname)) then
+      if (v1 > -1) and (v2 >= v1) and (fileexists(aroot + aname)) then
         Continue;
 
-      PostMessage(FHWND,CM_UPDATEPROGRESS,UPD_FILENAME,LongInt(@fname));
-      
-      o :=  FListURL + StringReplace(pname,'\','/',[rfReplaceAll]);
+      PostMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILENAME, LongInt(@fname));
 
-      dir := ExtractFilePath(aroot+pname);
+      o := FListURL + StringReplace(pname, '\', '/', [rfReplaceAll]);
+
+      dir := ExtractFilePath(aroot + pname);
 
       if not DirectoryExists(dir) then
         CreateDirExt(dir);
 
-      f := TFileStream.Create(aroot+pname,fmCREATE);
+      f := TFileStream.Create(aroot + pname, fmCREATE);
 
       try
-        HTTP.Get(o,f);
+        HTTP.Get(o, f);
       finally
         f.Free;
       end;
 
       if v1 > -1 then
-        INI.WriteInteger('update',fname,v1); //save "DOWNLOADED"
+        INI.WriteInteger('update', fname, v1); // save "DOWNLOADED"
     end;
 
     FreeAndNil(INI);
 
     INI := TINIFile.Create(root + 'settings.ini');
 
-    for i := 0 to items.Count -1 do   //Moving files to main dir
+    for i := 0 to items.Count - 1 do // Moving files to main dir
     begin
       fname := items[i].Attrs.Value('file');
       aname := items[i].Attrs.Value('archive');
@@ -230,12 +230,13 @@ begin
 
       if aname <> '' then
       begin
-        ShellUnzip(aroot + aname,root);
+        ShellUnzip(aroot + aname, root);
         DeleteFile(aroot + aname);
-      end else
-        MoveFile(PWideChar(aroot + fname),PWideChar(root + fname));
+      end
+      else
+        MoveFile(PWideChar(aroot + fname), PWideChar(root + fname));
 
-      INI.WriteInteger('update',fname,v1);
+      INI.WriteInteger('update', fname, v1);
     end;
   finally
     CoUninitialize;
@@ -252,45 +253,52 @@ var
   items: TTagList;
 begin
   WaitForSingleObject(FEventHandle, INFINITE);
-  FHTTP := TmyIdHTTP.Create;
+  FHTTP := TMyIdHTTP.Create;
   items := TTagList.Create;
   try
     FHTTP.ConnectTimeout := 10000;
     FHTTP.ReadTimeout := 10000;
     ReturnValue := -1;
     try
-      try if FCheckURL <> '' then FHTTP.Get(FCheckURL); except end;
+      try
+        if FCheckURL <> '' then
+          FHTTP.Get(FCheckURL);
+      except
+      end;
       s := FHTTP.Get(FListURL + 'version.xml');
 
       // checking critical parts
       if s = '' then
         raise Exception.Create('VERSION.XML is EMPTY. It can not be EMPTY');
 
-      case JOB of
+      case Job of
         UPD_CHECK_UPDATES:
-          if CheckUpdates(s,items) then
+          if CheckUpdates(s, items) then
             ReturnValue := 1
           else
             ReturnValue := 2;
         UPD_DOWNLOAD_UPDATES:
-        begin
-          if CheckUpdates(s,items) then
           begin
-            DownloadUpdates(items,FHTTP);
-            ReturnValue := 1;
-          end else
-            ReturnValue := 2;
-        end;
+            if CheckUpdates(s, items) then
+            begin
+              DownloadUpdates(items, FHTTP);
+              ReturnValue := 1;
+            end
+            else
+              ReturnValue := 2;
+          end;
       end;
-    except on e: exception do
-    begin
-      ReturnValue := 0;
-      FString := e.Message;
-    end; end;
+    except
+      on e: Exception do
+      begin
+        ReturnValue := 0;
+        FString := e.Message;
+      end;
+    end;
   finally
     items.Free;
     FHTTP.Free;
-    SendMessage(FHWND,CM_UPDATE,ReturnValue,Integer(Self));
+    SendMessage(FHWND, CM_UPDATE, ReturnValue, Integer(Self));
   end;
 end;
 

@@ -13,7 +13,7 @@ type
     function GetRow: TcxMyMultiEditorRow;
   protected
     procedure CalcRowCaptionsInfo; override;
-    property Row: tcxMyMultiEditorRow read GetRow;
+    property Row: TcxMyMultiEditorRow read GetRow;
   end;
 
   TcxMyMultiEditorRow = class(TcxMultiEditorRow)
@@ -22,7 +22,8 @@ type
   public
     function CreateHeaderInfo: TcxCustomRowHeaderInfo; override;
   published
-    property FirstEditorHeader: boolean read FFirstEditorHeader write FFirstEditorHeader default False; // AR
+    property FirstEditorHeader: boolean read FFirstEditorHeader
+      write FFirstEditorHeader default False; // AR
     procedure Assign(Source: TPersistent); override; // AR
   end;
 
@@ -35,14 +36,14 @@ begin
   inherited Assign(Source);
 end;
 
-function tcxMyMultiEditorRow.CreateHeaderInfo: TcxCustomRowHeaderInfo;
+function TcxMyMultiEditorRow.CreateHeaderInfo: TcxCustomRowHeaderInfo;
 begin
-  Result := TcxMyMultiEditorRowHeaderInfo.Create(Self);
+  Result := tcxMyMultiEditorRowHeaderInfo.Create(Self);
 end;
 
 function tcxMyMultiEditorRowHeaderInfo.GetRow: TcxMyMultiEditorRow;
 begin
-  result := tcxMyMultiEditorRow(inherited Row);
+  Result := TcxMyMultiEditorRow(inherited Row);
 end;
 
 procedure tcxMyMultiEditorRowHeaderInfo.CalcRowCaptionsInfo;
@@ -54,32 +55,35 @@ var
 begin
   CalcSeparatorWidth(ViewInfo.DividerWidth);
   CalcSeparatorStyle;
-  ARects := TcxMultiEditorRowViewInfo.GetCellRects(Row, HeaderCellsRect, SeparatorInfo.Width);
+  ARects := TcxMultiEditorRowViewInfo.GetCellRects(Row, HeaderCellsRect,
+    SeparatorInfo.Width);
   if ARects <> nil then
-  try
-    // AR begin
-    if Row.FirstEditorHeader and (ARects.Count > 1) then
-    begin
-      ACaptionInfo := CalcCaptionInfo(Row.Properties.Editors[0], HeaderCellsRect);
-      CaptionsInfo.Add(ACaptionInfo);
-    end
-    else begin
-      for I := 0 to ARects.Count - 1 do
+    try
+      // AR begin
+      if Row.FirstEditorHeader and (ARects.Count > 1) then
       begin
-        R := ARects[I];
-        if R.Left < HeaderCellsRect.Right then
+        ACaptionInfo := CalcCaptionInfo(Row.Properties.Editors[0],
+          HeaderCellsRect);
+        CaptionsInfo.Add(ACaptionInfo);
+      end
+      else
+      begin
+        for I := 0 to ARects.Count - 1 do
         begin
-          ACaptionInfo := CalcCaptionInfo(Row.Properties.Editors[I], R);
-          ACaptionInfo.RowCellIndex := I;
-          CaptionsInfo.Add(ACaptionInfo);
+          R := ARects[I];
+          if R.Left < HeaderCellsRect.Right then
+          begin
+            ACaptionInfo := CalcCaptionInfo(Row.Properties.Editors[I], R);
+            ACaptionInfo.RowCellIndex := I;
+            CaptionsInfo.Add(ACaptionInfo);
+          end;
         end;
+        CalcSeparatorRects(ARects);
       end;
-      CalcSeparatorRects(ARects);
+      // AR end
+    finally
+      ARects.Free;
     end;
-    // AR end
-  finally
-    ARects.Free;
-  end;
 end;
 
 end.

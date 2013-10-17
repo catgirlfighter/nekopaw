@@ -87,18 +87,20 @@ object fSettings: TfSettings
     TabOrder = 1
     OnFocusedNodeChanged = tlListFocusedNodeChanged
     Data = {
-      000005007B0100000F00000044617461436F6E74726F6C6C6572310100000012
-      000000546378537472696E6756616C75655479706506000000445855464D5400
+      00000500B50100000F00000044617461436F6E74726F6C6C6572310100000012
+      000000546378537472696E6756616C75655479706507000000445855464D5400
       000900000049006E007400650072006600610063006500445855464D54000007
       0000005400680072006500610064007300445855464D54000005000000500072
       006F0078007900445855464D540000090000005200650073006F007500720063
       0065007300445855464D5400000700000044006F00750062006C006500730044
-      5855464D54000005000000410062006F00750074000600000000000000080200
+      5855464D5400000A00000042006C00610063006B0020004C0069007300740044
+      5855464D54000005000000410062006F00750074000700000000000000080200
       00000000000000FFFFFFFFFFFFFFFFFFFFFFFF01000000080001000000010000
       00FFFFFFFFFFFFFFFFFFFFFFFF0200000008000200000002000000FFFFFFFFFF
       FFFFFFFFFFFFFF0300000008000300000003000000FFFFFFFFFFFFFFFFFFFFFF
       FF0400000008020400000004000000FFFFFFFFFFFFFFFFFFFFFFFF0500000008
-      020500000005000000FFFFFFFFFFFFFFFFFFFFFFFF1A0006000000}
+      000600000006000000FFFFFFFFFFFFFFFFFFFFFFFF0600000008020500000005
+      000000FFFFFFFFFFFFFFFFFFFFFFFF1A0007000000}
     object tlcCaption: TcxTreeListColumn
       DataBinding.ValueType = 'String'
       Position.ColIndex = 0
@@ -527,6 +529,80 @@ object fSettings: TfSettings
         BarManager = BarManager
       end
     end
+    object cxTabSheet7: TcxTabSheet
+      Caption = 'cxTabSheet7'
+      ImageIndex = 6
+      object chbUseBlackList: TcxCheckBox
+        Left = 0
+        Top = 0
+        Align = alTop
+        Caption = 'chbUseBlackList'
+        TabOrder = 0
+        ExplicitTop = 4
+        Width = 279
+      end
+      object Panel1: TPanel
+        Left = 0
+        Top = 21
+        Width = 279
+        Height = 251
+        Align = alClient
+        BevelOuter = bvNone
+        Caption = 'Panel1'
+        TabOrder = 1
+        ExplicitLeft = 48
+        ExplicitTop = 116
+        ExplicitWidth = 185
+        ExplicitHeight = 41
+        object dxBarDockControl1: TdxBarDockControl
+          Left = 0
+          Top = 0
+          Width = 279
+          Height = 26
+          Align = dalTop
+          BarManager = BarManager
+        end
+        object gBlackList: TcxGrid
+          Left = 0
+          Top = 26
+          Width = 279
+          Height = 225
+          Align = alClient
+          TabOrder = 1
+          ExplicitLeft = 3
+          ExplicitTop = 47
+          object tvBlackList: TcxGridTableView
+            Navigator.Buttons.CustomButtons = <>
+            DataController.Summary.DefaultGroupSummaryItems = <>
+            DataController.Summary.FooterSummaryItems = <>
+            DataController.Summary.SummaryGroups = <>
+            OptionsCustomize.ColumnFiltering = False
+            OptionsCustomize.ColumnGrouping = False
+            OptionsCustomize.ColumnHidingOnGrouping = False
+            OptionsCustomize.ColumnMoving = False
+            OptionsCustomize.ColumnSorting = False
+            OptionsData.Appending = True
+            OptionsData.CancelOnExit = False
+            OptionsView.CellAutoHeight = True
+            OptionsView.ColumnAutoWidth = True
+            OptionsView.ExpandButtonsForEmptyDetails = False
+            OptionsView.GroupByBox = False
+            object cChWhat: TcxGridColumn
+              Caption = 'Field'
+              RepositoryItem = cBLComboBox
+              Width = 100
+            end
+            object cChWith: TcxGridColumn
+              Caption = 'Value'
+              Width = 292
+            end
+          end
+          object gBlackListLevel1: TcxGridLevel
+            GridView = tvBlackList
+          end
+        end
+      end
+    end
     object cxTabSheet6: TcxTabSheet
       Caption = 'cxTabSheet6'
       ImageIndex = 4
@@ -620,6 +696,11 @@ object fSettings: TfSettings
     end
     object eMemo: TcxEditRepositoryMemoItem
     end
+    object cBLComboBox: TcxEditRepositoryComboBoxItem
+      Properties.ImmediatePost = True
+      Properties.Sorted = True
+      Properties.UseNullString = True
+    end
   end
   object BarManager: TdxBarManager
     Font.Charset = DEFAULT_CHARSET
@@ -678,6 +759,38 @@ object fSettings: TfSettings
       Visible = True
       WholeRow = False
     end
+    object BarManagerBar1: TdxBar
+      AllowClose = False
+      AllowCustomizing = False
+      AllowQuickCustomizing = False
+      AllowReset = False
+      Caption = 'Blacklist'
+      CaptionButtons = <>
+      DockControl = dxBarDockControl1
+      DockedDockControl = dxBarDockControl1
+      DockedLeft = 0
+      DockedTop = 0
+      FloatLeft = 461
+      FloatTop = 0
+      FloatClientWidth = 0
+      FloatClientHeight = 0
+      ItemLinks = <
+        item
+          Visible = True
+          ItemName = 'bNewBlackword'
+        end
+        item
+          Visible = True
+          ItemName = 'bDelBlackword'
+        end>
+      NotDocking = [dsNone, dsLeft, dsTop, dsRight, dsBottom]
+      OneOnRow = True
+      Row = 0
+      UseOwnFont = False
+      UseRestSpace = True
+      Visible = True
+      WholeRow = False
+    end
     object bbNewRule: TdxBarButton
       Caption = 'New rule'
       Category = 0
@@ -701,6 +814,22 @@ object fSettings: TfSettings
       Visible = ivAlways
       ImageIndex = 18
       OnClick = bbDeleteRuleClick
+    end
+    object bNewBlackword: TdxBarButton
+      Caption = 'bNewBlackword'
+      Category = 0
+      Hint = 'bNewBlackword'
+      Visible = ivAlways
+      ImageIndex = 16
+      OnClick = bNewBlackwordClick
+    end
+    object bDelBlackword: TdxBarButton
+      Caption = 'bDelBlackword'
+      Category = 0
+      Hint = 'bDelBlackword'
+      Visible = ivAlways
+      ImageIndex = 18
+      OnClick = bDelBlackwordClick
     end
   end
   object il: TcxImageList
@@ -928,6 +1057,43 @@ object fSettings: TfSettings
           B8F50054ADFF1C4D7EBF070A0C13000000000000000000000000000000000000
           000000000000000000000000000000000000000000000000000007121A260662
           AFF1084F8FD70A10141F00000000000000000000000000000000}
+      end
+      item
+        Image.Data = {
+          36040000424D3604000000000000360000002800000010000000100000000100
+          2000000000000004000000000000000000000000000000000000000000000000
+          0000000001090200031E03000537040007540400076404000867040007640400
+          075B040006460200042901000213000000030000000000000000000000000000
+          01090500084D09000E9D070109DB0B060AFD0E090CFF0E090CFF0E080CFF0F09
+          0EFF0F070FEF08010CC808010C82020003260000000000000000000000000100
+          021008000C7A0A020EEA060404FF060405FF020101FF010101FF010101FF0101
+          02FF080506FF130C10FF100414C9040006410000000100000000000000000000
+          00040400063A0B050BE4000000FF000000FF000000FF000000FF000000FF0000
+          00FF030202FF130A13E707000A5F0100021B0000000000000000000000000000
+          0000010001110F090EE7000000FF000000FF000000FF000000FF010101FF0100
+          01FF020101FF0F090ED60000010B000000000000000000000000000000000000
+          00000201020820151CDE000000FF000000FF000000FF020102FF0D080BFF0302
+          02FF000000FF1A1016DC01010107000000000000000000000000000000000000
+          0000000000002C1C25AE000000FF000000FF010001FF0A0609FF0B070AFF0000
+          00FF000000FF1A1016EA0704060F000000000000000000000000000000000000
+          0000000000001F141B4E0D080BFF000000FF000000FF000000FF000000FF0000
+          00FF000000FF040303FF140C113C000000000000000000000000000000000000
+          0000000000000000000033202DAC030103FF000000FF000000FF000000FF0000
+          00FF000000FF000000FF02010298000000000000000000000000000000000000
+          000000000000000000000704060F372230BE0A0709FF000000FF000000FF0000
+          00FF000000FF000000FF000000D7000000030000000000000000000000000000
+          000000000000000000000000000003020206301F2A8022151DF9000000FF0000
+          00FF000000FF000000FF000000F60000001E0000000000000000000000000000
+          00000000000000000000000000000000000000000000130C112B33202DCA0504
+          05FF000000FF000000FF000000FF000000D10100001100000000000000000000
+          0000000000000000000000000000000000000000000000000000010101022C1C
+          2677060405FE020504FF010302FF000402FF120B0F8B00000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          000011070DAA0FD814FF16261EFF10D915FF1C11189000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          00000101018A171115F70E090DF2050606FF1A0F166400000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          000001000050080507190604050C0E090C250A07095500000000}
       end>
   end
 end

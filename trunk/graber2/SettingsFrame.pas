@@ -104,6 +104,19 @@ type
     chbTips: TcxCheckBox;
     chbLogMode: TcxCheckBox;
     chbUseDistr: TcxCheckBox;
+    cxTabSheet7: TcxTabSheet;
+    cBLComboBox: TcxEditRepositoryComboBoxItem;
+    BarManagerBar1: TdxBar;
+    bNewBlackword: TdxBarButton;
+    bDelBlackword: TdxBarButton;
+    chbUseBlackList: TcxCheckBox;
+    Panel1: TPanel;
+    dxBarDockControl1: TdxBarDockControl;
+    gBlackList: TcxGrid;
+    tvBlackList: TcxGridTableView;
+    cChWhat: TcxGridColumn;
+    cChWith: TcxGridColumn;
+    gBlackListLevel1: TcxGridLevel;
     procedure btnOkClick(Sender: TObject);
     procedure chbProxyPropertiesEditValueChanged(Sender: TObject);
     procedure chbProxyAuthPropertiesEditValueChanged(Sender: TObject);
@@ -119,16 +132,18 @@ type
     procedure bbNewRuleClick(Sender: TObject);
     procedure bbEditRuleClick(Sender: TObject);
     procedure lHelpClick(Sender: TObject);
+    procedure bNewBlackwordClick(Sender: TObject);
+    procedure bDelBlackwordClick(Sender: TObject);
   private
     FIgnList: TDSArray;
     FLangList: TStringList;
     FOnError: TLogEvent;
     FFullResList: TResourceList;
-    function ResetRelogin(idx: integer): boolean;
+    function ResetRelogin(idx: Integer): boolean;
     procedure CreateResFields(rs: TResource);
     procedure SaveResFields;
-    procedure LoginCallBack(Sender: TObject; N: integer; Login,Password: String;
-      const Cancel: boolean);
+    procedure LoginCallBack(Sender: TObject; N: Integer;
+      Login, Password: String; const Cancel: boolean);
     { Private declarations }
   public
     procedure ResetButtons;
@@ -139,11 +154,13 @@ type
     procedure OnClose;
     procedure CreateResources;
     procedure OnErrorEvent(Sender: TObject; Msg: String);
-    procedure JobStatus(Sander: TObject; Action: integer);
+    procedure JobStatus(Sander: TObject; Action: Integer);
     procedure LoadDoubles;
     function CheckDoublesName(rulename: string): boolean;
+    procedure LoadBlackList;
+    procedure SaveBlackList;
     property OnError: TLogEvent read FOnError write FOnError;
-    property FullResList: TResourceList read FFulLResList;
+    property FullResList: TResourceList read FFullResList;
     { Public declarations }
   end;
 
@@ -158,18 +175,20 @@ uses UpdUnit, LangString, OpBase, utils, LoginForm, NewDoublesRuleForm;
 
 var
   FLogedOn: boolean = false;
-//  FLoginCanceled: boolean = false;
+  // FLoginCanceled: boolean = false;
 
 procedure TfSettings.ApplySettings;
 begin
   if pcMain.ActivePageIndex = 3 then
     SaveResFields;
 
-  FillDSArray(FIgnList,IgnoreList);
+  FillDSArray(FIgnList, IgnoreList);
+  SaveBlackList;
 
   with GlobalSettings do
   begin
-    AutoUPD := chbAutoupdate.Checked;
+    UseBlackList := chbUseBlackList.Checked;
+    AutoUPD := chbAutoUpdate.Checked;
     ShowWhatsNew := chbShowWhatsNew.Checked;
 
     Proxy.UseProxy := chbProxy.Checked;
@@ -182,7 +201,7 @@ begin
 
     Downl.ThreadCount := eThreads.Value;
     Downl.Retries := eRetries.Value;
-    //Downl.Debug := chbDebug.Checked;
+    // Downl.Debug := chbDebug.Checked;
 
     Downl.UsePerRes := chbUseThreadPerRes.Checked;
     Downl.PerResThreads := eThreadPerRes.EditValue;
@@ -190,21 +209,21 @@ begin
 
     idThrottler.BitsPerSec := eSpeed.Value * 8 * 1024;
 
-    if (UseLookAndFeel <> chbUseLookAndFeel.Checked)
-    or (SkinName <> cbSkin.Text) then
+    if (UseLookAndFeel <> chbUseLookAndFeel.Checked) or (SkinName <> cbSkin.Text)
+    then
     begin
       UseLookAndFeel := chbUseLookAndFeel.Checked;
       if cbSkin.ItemIndex > 0 then
         SkinName := cbSkin.Text
       else
         SkinName := '';
-      PostMessage(Application.MainForm.Handle,CM_STYLECHANGED,0,0);
+      PostMessage(Application.MainForm.Handle, CM_STYLECHANGED, 0, 0);
     end;
 
     if MenuCaptions <> chbMenuCaptions.Checked then
     begin
       MenuCaptions := chbMenuCaptions.Checked;
-      PostMessage(Application.MainForm.Handle,CM_MENUSTYLECHANGED,0,0);
+      PostMessage(Application.MainForm.Handle, CM_MENUSTYLECHANGED, 0, 0);
     end;
 
     Tips := chbTips.Checked;
@@ -212,15 +231,14 @@ begin
 
   end;
 
-
-
-  if (cbLanguage.ItemIndex > -1)
-  and not SameText(FLangList[cbLanguage.ItemIndex],langname) then
+  if (cbLanguage.ItemIndex > -1) and
+    not SameText(FLangList[cbLanguage.ItemIndex], langname) then
   begin
     langname := FLangList[cbLanguage.ItemIndex];
     SetLogMode(chbLogMode.Checked);
     PostMessage(Application.MainForm.Handle, CM_LANGUAGECHANGED, 0, 0);
-  end else if GLOBAL_LOGMODE <> chbLogMode.Checked then
+  end
+  else if GLOBAL_LOGMODE <> chbLogMode.Checked then
   begin
     SetLogMode(chbLogMode.Checked);
     PostMessage(Application.MainForm.Handle, CM_LOGMODECHANGED, 0, 0);
@@ -230,40 +248,40 @@ end;
 
 procedure TfSettings.bbDeleteRuleClick(Sender: TObject);
 var
-  n: integer;
+  N: Integer;
 begin
   if tvDoubles.DataController.FocusedRecordIndex > -1 then
-    if MessageDlg(lang('_DELETE_CONFIRM_'),mtConfirmation,[mbYes,mbNo],0) = mrYes then
+    if MessageDlg(lang('_DELETE_CONFIRM_'), mtConfirmation, [mbYes, mbNo], 0) = mrYes
+    then
     begin
-      n := tvDoubles.DataController.FocusedRecordIndex;
-      DeleteDSArrayRec(FIgnList,n);
-      tvDoubles.DataController.DeleteRecord(n);
+      N := tvDoubles.DataController.FocusedRecordIndex;
+      DeleteDSArrayRec(FIgnList, N);
+      tvDoubles.DataController.DeleteRecord(N);
     end;
 end;
 
 procedure TfSettings.bbEditRuleClick(Sender: TObject);
 var
-  n: integer;
-  picfields: tstringlist;
+  N: Integer;
+  picfields: TStringList;
 begin
-  picfields := tstringlist.Create;
+  picfields := TStringList.Create;
   try
     FullResList.GetAllPictureFields(picfields);
-    n := tvDoubles.DataController.FocusedRecordIndex;
-    if (n > -1)
-    and fmDoublesNewRule.Execute(
-          FIgnList[n][0],FIgnList[n][1],picfields,CheckDoublesName) then
+    N := tvDoubles.DataController.FocusedRecordIndex;
+    if (N > -1) and fmDoublesNewRule.Execute(FIgnList[N][0], FIgnList[N][1],
+      picfields, CheckDoublesName) then
     begin
-      //SetLength(FIgnlist,n);
-      FIgnList[n][0] := fmDoublesNewRule.RuleName;
-      FIgnList[n][1] := trim(fmDoublesNewRule.ValueString,';');
+      // SetLength(FIgnlist,n);
+      FIgnList[N][0] := fmDoublesNewRule.rulename;
+      FIgnList[N][1] := trim(fmDoublesNewRule.ValueString, ';');
       tvDoubles.BeginUpdate;
       try
-        //tvDoubles.DataController.RecordCount := n;
-        tvDoubles.DataController.Values[n,cDoublesRuleName.index]
-           := FIgnList[n][0];
-        tvDoubles.DataController.Values[n,cDoublesRules.index]
-           := ReplaceStr(FIgnList[n][1],';',#13#10);
+        // tvDoubles.DataController.RecordCount := n;
+        tvDoubles.DataController.Values[N, cDoublesRuleName.index] :=
+          FIgnList[N][0];
+        tvDoubles.DataController.Values[N, cDoublesRules.index] :=
+          ReplaceStr(FIgnList[N][1], ';', #13#10);
       finally
         tvDoubles.EndUpdate;
       end;
@@ -275,34 +293,48 @@ end;
 
 procedure TfSettings.bbNewRuleClick(Sender: TObject);
 var
-  picfields: tstringlist;
-  n: integer;
+  picfields: TStringList;
+  N: Integer;
 begin
-  n := tvDoubles.DataController.RecordCount+1;
-  picfields := tstringlist.Create;
+  N := tvDoubles.DataController.RecordCount + 1;
+  picfields := TStringList.Create;
   try
     FullResList.GetAllPictureFields(picfields);
-    if fmDoublesNewRule.Execute(
-      'rule'+IntToStr(n),'',picfields,CheckDoublesName) then
+    if fmDoublesNewRule.Execute('rule' + IntToStr(N), '', picfields,
+      CheckDoublesName) then
     begin
-      SetLength(FIgnlist,n);
-      FIgnList[n-1][0] := fmDoublesNewRule.RuleName;
-      FIgnList[n-1][1] := trim(fmDoublesNewRule.ValueString,';');
+      SetLength(FIgnList, N);
+      FIgnList[N - 1][0] := fmDoublesNewRule.rulename;
+      FIgnList[N - 1][1] := trim(fmDoublesNewRule.ValueString, ';');
       tvDoubles.BeginUpdate;
       try
-        tvDoubles.DataController.RecordCount := n;
-        tvDoubles.DataController.Values[n-1,cDoublesRuleName.index]
-           := FIgnList[n-1][0];
-        tvDoubles.DataController.Values[n-1,cDoublesRules.index]
-           := ReplaceStr(FIgnList[n-1][1],';',#13#10);
+        tvDoubles.DataController.RecordCount := N;
+        tvDoubles.DataController.Values[N - 1, cDoublesRuleName.index] :=
+          FIgnList[N - 1][0];
+        tvDoubles.DataController.Values[N - 1, cDoublesRules.index] :=
+          ReplaceStr(FIgnList[N - 1][1], ';', #13#10);
       finally
         tvDoubles.EndUpdate;
       end;
-      tvDoubles.DataController.FocusedRecordIndex := n-1;
+      tvDoubles.DataController.FocusedRecordIndex := N - 1;
     end;
   finally
-    picfields.free;
+    picfields.Free;
   end;
+end;
+
+procedure TfSettings.bDelBlackwordClick(Sender: TObject);
+begin
+  tvBlackList.DataController.DeleteFocused;
+end;
+
+procedure TfSettings.bNewBlackwordClick(Sender: TObject);
+begin
+  tvBlackList.DataController.Append;
+
+  tvBlackList.DataController.Values[tvBlackList.DataController.FocusedRecordIndex,0]
+  := 'tags';
+  gBlackList.SetFocus;
 end;
 
 procedure TfSettings.btnApplyClick(Sender: TObject);
@@ -310,7 +342,7 @@ begin
   ApplySettings;
   SaveProfileSettings;
   SaveResourceSettings(FullResList);
-  //SaveResourceSettings(
+  // SaveResourceSettings(
 end;
 
 procedure TfSettings.btnCancelClick(Sender: TObject);
@@ -345,8 +377,8 @@ end;
 
 procedure TfSettings.CreateResources;
 var
-  i,idx: integer;
-  item: tcxTreeListNode;
+  i, idx: Integer;
+  item: TcxTreeListNode;
   bmp: tbitmap;
 begin
   if not Assigned(FullResList) then
@@ -357,14 +389,14 @@ begin
     FFullResList.OnJobChanged := JobStatus;
   end;
 
-  bmp := TBitmap.Create;
-  for i := 1 to FulLResList.Count -1 do
+  bmp := tbitmap.Create;
+  for i := 1 to FullResList.Count - 1 do
   begin
     item := tlList.Items[3].AddChild;
     item.Values[0] := FullResList[i].Name;
     if FullResList[i].IconFile <> '' then
       bmp.LoadFromFile(rootdir + '\resources\icons\' + FullResList[i].IconFile);
-    idx := il.Add(bmp,nil);
+    idx := il.Add(bmp, nil);
     item.ImageIndex := idx;
   end;
 end;
@@ -372,21 +404,19 @@ end;
 procedure TfSettings.cxeAuthButtonPropertiesButtonClick(Sender: TObject;
   AButtonIndex: Integer);
 var
-  n: integer;
+  N: Integer;
 begin
-  n := tlList.FocusedNode.Index + 1;
+  N := tlList.FocusedNode.index + 1;
   Application.CreateForm(TfLogin, fLogin);
-  fLogin.Execute(n,
-    Format(lang('_LOGINON_'),[FullResList[n].Name]),
-    nullstr(FullResList[n].Fields['login']),
-    nullstr(FullResList[n].Fields['password']),
-    LoginCallback);
+  fLogin.Execute(N, Format(lang('_LOGINON_'), [FullResList[N].Name]),
+    nullstr(FullResList[N].Fields['login']),
+    nullstr(FullResList[N].Fields['password']), LoginCallBack);
 end;
 
 procedure TfSettings.cxLabel5Click(Sender: TObject);
 begin
-  ShellExecute(Handle,nil,'http://code.google.com/p/nekopaw/',
-    nil,nil,SW_SHOWNORMAL);
+  ShellExecute(Handle, nil, 'http://code.google.com/p/nekopaw/', nil, nil,
+    SW_SHOWNORMAL);
 end;
 
 procedure TfSettings.GetLanguages;
@@ -396,44 +426,63 @@ var
   path: string;
 begin
   FLangList := TStringList.Create;
-  path := IncludeTrailingPathDelimiter(ExtractFilePath(paramstr(0))+'languages');
-  if FindFirst(path + '*.ini',faAnyFile,fs) = 0 then
+  path := IncludeTrailingPathDelimiter(ExtractFilePath(paramstr(0)) +
+    'languages');
+  if FindFirst(path + '*.ini', faAnyFile, fs) = 0 then
     repeat
-      FLangList.Add(ChangeFileExt(fs.Name,''));
-      INI := TINIFile.Create(path + fs.Name);
-      cblanguage.Properties.Items.Add(INI.ReadString('lang','_FILELANGUAGE_',
-        ChangeFileExt(fs.Name,'')));
-      INI.Free;
-      if SameText(ChangeFileExt(fs.Name,''),langname) then
+      FLangList.Add(ChangeFileExt(fs.Name, ''));
+      ini := TINIFile.Create(path + fs.Name);
+      cbLanguage.Properties.Items.Add(ini.ReadString('lang', '_FILELANGUAGE_',
+        ChangeFileExt(fs.Name, '')));
+      ini.Free;
+      if SameText(ChangeFileExt(fs.Name, ''), langname) then
         cbLanguage.ItemIndex := cbLanguage.Properties.Items.Count - 1;
     until FindNext(fs) <> 0;
 end;
 
 procedure TfSettings.lCheckNowClick(Sender: TObject);
 begin
-  PostMessage(Application.MainForm.Handle, CM_UPDATE,
-  3, 0);
+  PostMessage(Application.MainForm.Handle, CM_UPDATE, 3, 0);
 end;
 
 procedure TfSettings.lHelpClick(Sender: TObject);
 begin
-  ShellExecute(Handle,nil,'http://code.google.com/p/nekopaw/wiki/NekopawGUI',
-    nil,nil,SW_SHOWNORMAL);
+  ShellExecute(Handle, nil, 'http://code.google.com/p/nekopaw/wiki/NekopawGUI',
+    nil, nil, SW_SHOWNORMAL);
+end;
+
+procedure TfSettings.LoadBlackList;
+var
+  i: integer;
+begin
+  FullResList.GetAllPictureFields(cBLComboBox.Properties.Items);
+  cBLComboBox.Properties.Items.Add('tags');
+
+  gBlackList.BeginUpdate; try
+  tvBlackList.DataController.RecordCount := Length(BlackList);
+
+  for i := 0 to Length(BlackList) -1 do
+  begin
+    tvBlackList.DataController.Values[i,0] := BlackList[i][0];
+    tvBlackList.DataController.Values[i,1] := BlackList[i][1];
+  end;
+
+  finally gBlackList.EndUpdate; end;
 end;
 
 procedure TfSettings.LoadDoubles;
 var
-  i: integer;
+  i: Integer;
 begin
   tvDoubles.BeginUpdate;
   try
     tvDoubles.DataController.RecordCount := length(FIgnList);
-    for i := 0 to length(FIgnList)-1 do
+    for i := 0 to length(FIgnList) - 1 do
     begin
-      tvDoubles.DataController.Values[i,cDoublesRuleName.Index] :=
+      tvDoubles.DataController.Values[i, cDoublesRuleName.index] :=
         FIgnList[i][0];
-      tvDoubles.DataController.Values[i,cDoublesRules.Index] :=
-        ReplaceStr(FIgnList[i][1],';',#13#10);
+      tvDoubles.DataController.Values[i, cDoublesRules.index] :=
+        ReplaceStr(FIgnList[i][1], ';', #13#10);
     end;
   finally
     tvDoubles.EndUpdate;
@@ -444,15 +493,17 @@ begin
 end;
 
 procedure TfSettings.LoadSettings;
-{var
-  resnames,skinnames: tstringlist;}
+{ var
+  resnames,skinnames: tstringlist; }
 begin
   GetLanguages;
-  FillDSArray(IgnoreList,FIgnList);
+  FillDSArray(IgnoreList, FIgnList);
   LoadDoubles;
+  LoadBlackList;
   with GlobalSettings do
   begin
-    chbAutoupdate.Checked := AutoUPD;
+    chbUseBlackList.Checked := UseBlackList;
+    chbAutoUpdate.Checked := AutoUPD;
     chbShowWhatsNew.Checked := ShowWhatsNew;
     chbUseLookAndFeel.Checked := UseLookAndFeel;
     if SkinName = '' then
@@ -462,16 +513,7 @@ begin
     chbMenuCaptions.Checked := MenuCaptions;
     chbTips.Checked := Tips;
     chbLogMode.Checked := GLOBAL_LOGMODE;
-    chbuseDistr.Checked := UseDist;
-{    resnames := tstringlist.Create;
-    skinnames := tstringlist.Create;
-    try
-      dxSkinsPopulateSkinResources(hInstance,resnames,skinnames);
-      cbSkin.Properties.Items.Assign(skinnames);
-    finally
-      resnames.Free;
-      skinnames.Free;
-    end;  }
+    chbUseDistr.Checked := UseDist;
     chbProxy.Checked := Proxy.UseProxy;
     eHost.Text := Proxy.Host;
     ePort.Value := Proxy.Port;
@@ -482,7 +524,6 @@ begin
 
     eThreads.Value := Downl.ThreadCount;
     eRetries.Value := Downl.Retries;
-    //chbDebug.Checked := Downl.Debug;
 
     chbUseThreadPerRes.Checked := Downl.UsePerRes;
     eThreadPerRes.EditValue := Downl.PerResThreads;
@@ -496,8 +537,8 @@ procedure TfSettings.OnClose;
 begin
   if Assigned(FLangList) then
     FLangList.Free;
-  //FullResList.OnError := nil;
-  //FullResList.OnJobChanged := nil;
+  // FullResList.OnError := nil;
+  // FullResList.OnJobChanged := nil;
   FullResList.Free;
 end;
 
@@ -510,12 +551,12 @@ begin
   eProxyPassword.Enabled := eProxyLogin.Enabled;
   chbProxySavePWD.Enabled := eProxyLogin.Enabled;
 
-  //chbHideToTray.Enabled := chbTrayIcon.Checked and chbTrayIcon.Enabled;
+  // chbHideToTray.Enabled := chbTrayIcon.Checked and chbTrayIcon.Enabled;
 end;
 
 procedure TfSettings.SetLang;
 begin
-//  gpWork.Caption := _WORK_;
+  // gpWork.Caption := _WORK_;
   cxLabel1.Caption := 'About ' + Application.MainForm.Caption;
   btnOk.Caption := lang('_OK_');
   btnCancel.Caption := lang('_CANCEL_');
@@ -536,56 +577,57 @@ begin
   tlList.Items[2].Texts[0] := lang('_PROXY_');
   tlList.Items[3].Texts[0] := lang('_RESOURCES_');
   tlList.Items[4].Texts[0] := lang('_DOUBLES_');
-  tlList.Items[5].Texts[0] := lang('_ABOUT_');
-  //chbDebug.Caption := _DEBUGMODE_;
-//  gpProxy.Caption := _PROXY_;
+  tlList.Items[5].Texts[0] := lang('_BLACKLIST_');
+  tlList.Items[6].Texts[0] := lang('_ABOUT_');
+  // chbDebug.Caption := _DEBUGMODE_;
+  // gpProxy.Caption := _PROXY_;
   chbProxy.Caption := lang('_USE_PROXY_');
   chbProxyAuth.Caption := lang('_AUTHORISATION_');
-  chbProxySavePwd.Caption := lang('_SAVE_PASSWORD_');
-  chbAutoupdate.Caption := lang('_AUTOUPDATE_');
+  chbProxySavePWD.Caption := lang('_SAVE_PASSWORD_');
+  chbAutoUpdate.Caption := lang('_AUTOUPDATE_');
   lCheckNow.Caption := lang('_UPDATENOW_');
   chbShowWhatsNew.Caption := lang('_SHOW_WHATSNEW_');
   chbUseLookAndFeel.Caption := lang('_USELOOKANDFEEL_');
   lSkin.Caption := lang('_SKIN_');
-  bbNewRule.Caption :=  lang('_CREATERULE_');
-  bbEditRule.Caption :=  lang('_EDITRULE_');
-  bbDeleteRule.Caption :=  lang('_DELETERULE_');
+  bbNewRule.Caption := lang('_CREATERULE_');
+  bbEditRule.Caption := lang('_EDITRULE_');
+  bbDeleteRule.Caption := lang('_DELETERULE_');
   cDoublesRuleName.Caption := lang('_RULENAME_');
   cDoublesRules.Caption := lang('_RULESTRING_');
-  chbmenucaptions.Caption := lang('_MENUCAPTIONS_');
+  chbMenuCaptions.Caption := lang('_MENUCAPTIONS_');
   chbTips.Caption := lang('_SHOWTIPS_');
-  lHELP.Caption := lang('_HELP_');
+  lHelp.Caption := lang('_HELP_');
   chbLogMode.Caption := lang('_LOGMODE_');
-  chbuseDistr.Caption := lang('_USERESDISTR_');
+  chbUseDistr.Caption := lang('_USERESDISTR_');
+  chbUseBlackList.Caption := lang('_USEBLACKLIST_');
 end;
 
 procedure TfSettings.tlListFocusedNodeChanged(Sender: TcxCustomTreeList;
   APrevFocusedNode, AFocusedNode: TcxTreeListNode);
 begin
   if AFocusedNode.Parent = tlList.Root then
-    pcMain.ActivePageIndex := AFocusedNode.Index
+    pcMain.ActivePageIndex := AFocusedNode.index
   else if AFocusedNode.Parent = tlList.Items[3] then
     pcMain.ActivePageIndex := 3;
 
-  if Assigned(APrevFocusedNode)
-  and((APrevFocusedNode = tlList.Items[3])
-  or (APrevFocusedNode.Parent = tlList.Items[3])) then
+  if Assigned(APrevFocusedNode) and ((APrevFocusedNode = tlList.Items[3]) or
+    (APrevFocusedNode.Parent = tlList.Items[3])) then
     SaveResFields;
 
   if (AFocusedNode = tlList.Items[3]) then
     CreateResFields(FullResList[0])
   else if (AFocusedNode.Parent = tlList.Items[3]) then
-    CreateResFields(FullResList[AFocusedNode.Index + 1]);
+    CreateResFields(FullResList[AFocusedNode.index + 1]);
 
 end;
 
 function TfSettings.CheckDoublesName(rulename: string): boolean;
 var
-  i: integer;
+  i: Integer;
 begin
-  for i := 0 to length(FIgnList)-1 do
-    if (i<>tvDoubles.DataController.FocusedRecordIndex)
-    and SameText(rulename,FIgnList[i][0]) then
+  for i := 0 to length(FIgnList) - 1 do
+    if (i <> tvDoubles.DataController.FocusedRecordIndex) and
+      SameText(rulename, FIgnList[i][0]) then
     begin
       Result := true;
       Exit;
@@ -601,82 +643,115 @@ var
   s: string;
 
 begin
-{
-  if vgSettings.Rows.Count > 0 then
+  {
+    if vgSettings.Rows.Count > 0 then
     SaveResFields;
-}
-  vgSettings.BeginUpdate; try
-  vgSettings.ClearRows;
-  vgSettings.Tag := Integer(rs);
-  if rs = FullResList[0] then
-  begin
-    c := dm.CreateCategory(vgSettings,'vgimain',lang('_MAINCONFIG_'));
-    //dm.CreateField(vgSettings,'vgitag',_TAGSTRING_,'',ftString,c,FullResList[n].Fields['tag']);
-    dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftPathText,c,rs.NameFormat);
-    dm.CreateField(vgSettings,'vgisdalf',lang('_SDALF_'),'',ftCheck,c,GlobalSettings.Downl.SDALF);
-    dm.CreateField(vgSettings,'vgiautounch',lang('_AUTOUNCHECKINVISIBLE_'),'',ftCheck,c,GlobalSettings.Downl.AutoUncheckInvisible);
-    dm.CreateField(vgSettings,'vgiexif',lang('_WRITEEXIF_'),'',ftCheck,c,GlobalSettings.WriteEXIF);
-  end
-  else
-  with rs do begin
-    c := dm.CreateCategory(vgSettings,'vgimain',lang('_MAINCONFIG_') + ' ' +
-      rs.Name);
-    dm.CreateField(vgSettings,'vgiinherit',lang('_INHERIT_'),'',ftCheck,c,Inherit);
-
-    {s := VarToStr(Fields['tag']);
-    if (s = '') and Inherit then
-      s := VarToStr(FullResList[0].Fields['tag']);
-    dm.CreateField(vgSettings,'vgitag',_TAGSTRING_,'',ftString,c,s);  }
-
-    s := NameFormat;
-    if (s = '') or Inherit then
-      s := FullResList[0].NameFormat;
-    dm.CreateField(vgSettings,'vgidwpath',lang('_SAVEPATH_'),'',ftPathText,c,s);
-
-{    c := dm.CreateCategory(vgSettings,'vgiauth',lang('_AUTHORISATION_'),true);
-    dm.CreateField(vgSettings,'vgilogin',lang('_LOGIN_'),'',ftString,c,
-      FullResLIst[n].Fields['login']);
-    dm.CreateField(vgSettings,'vgipassword',lang('_PASSWORD_'),'',ftPassword,c,
-      FullResLIst[n].Fields['password']);   }
-
-    (dm.CreateField(vgSettings,'vgiauth',lang('_AUTHORISATION_'),'',ftString,c,'')
-    as tcxEditorRow).Properties.RepositoryItem := eAuthButton;
-
-    d := FullResList[0].Fields.Count;
-
-    c := nil;
-    r := nil;
-
-    if rs.Fields.Count > d then
+  }
+  vgSettings.BeginUpdate;
+  try
+    vgSettings.ClearRows;
+    vgSettings.Tag := Integer(rs);
+    if rs = FullResList[0] then
     begin
-      if not Assigned(c) then
-        c := dm.CreateCategory(vgSettings,'vgieditional',lang('_EDITIONALCONFIG_'));
+      c := dm.CreateCategory(vgSettings, 'vgimain', lang('_MAINCONFIG_'));
+      // dm.CreateField(vgSettings,'vgitag',_TAGSTRING_,'',ftString,c,FullResList[n].Fields['tag']);
+      dm.CreateField(vgSettings, 'vgidwpath', lang('_SAVEPATH_'), '',
+        ftPathText, c, rs.NameFormat);
+      dm.CreateField(vgSettings, 'vgisdalf', lang('_SDALF_'), '', ftCheck, c,
+        GlobalSettings.Downl.SDALF);
+      dm.CreateField(vgSettings, 'vgiautounch', lang('_AUTOUNCHECKINVISIBLE_'),
+        '', ftCheck, c, GlobalSettings.Downl.AutoUncheckInvisible);
+      dm.CreateField(vgSettings, 'vgiexif', lang('_WRITEEXIF_'), '', ftCheck, c,
+        GlobalSettings.WriteEXIF);
+    end
+    else
+      with rs do
+      begin
+        c := dm.CreateCategory(vgSettings, 'vgimain', lang('_MAINCONFIG_') + ' '
+          + rs.Name);
+        dm.CreateField(vgSettings, 'vgiinherit', lang('_INHERIT_'), '', ftCheck,
+          c, Inherit);
 
-      with rs.Fields do
-        for i := d to Count - 1 do
-          if Items[i].restype <> ftNone then
-            with rs.Fields.Items[i]^ do
-              if InMulti then
-                dm.CreateField(vgSettings,'evgi' + resname,restitle,resitems,restype,r,resvalue)
-              else
-                r := dm.CreateField(vgSettings,'evgi' + resname,restitle,resitems,restype,c,resvalue);
+        { s := VarToStr(Fields['tag']);
+          if (s = '') and Inherit then
+          s := VarToStr(FullResList[0].Fields['tag']);
+          dm.CreateField(vgSettings,'vgitag',_TAGSTRING_,'',ftString,c,s); }
 
-      c := dm.CreateCategory(vgSettings,'vgispecial',lang('_SPECIALSETTINGS_'));
-      if not ThreadCounter.UseUserSettings then
-        c.Expanded := false;
+        s := NameFormat;
+        if (s = '') or Inherit then
+          s := FullResList[0].NameFormat;
+        dm.CreateField(vgSettings, 'vgidwpath', lang('_SAVEPATH_'), '',
+          ftPathText, c, s);
 
-      dm.CreateField(vgSettings,'vgiinheritstt',lang('_OWNSETTINGS_'),'',ftCheck,c,
-        ThreadCounter.UseUserSettings);
-      dm.CreateField(vgSettings,'vgithreadcount',lang('_THREAD_COUNT_'),'',ftNumber,c,
-        ThreadCounter.UserSettings.MaxThreadCount);
-      dm.CreateField(vgSettings,'vgithreaddelay',lang('_QUERY_DELAY_'),'',ftNumber,c,
-        ThreadCounter.UserSettings.PageDelay);
-      dm.CreateField(vgSettings,'vgipicdelay',lang('_PIC_DELAY_'),'',ftNumber,c,
-        ThreadCounter.UserSettings.PicDelay);
+        { c := dm.CreateCategory(vgSettings,'vgiauth',lang('_AUTHORISATION_'),true);
+          dm.CreateField(vgSettings,'vgilogin',lang('_LOGIN_'),'',ftString,c,
+          FullResLIst[n].Fields['login']);
+          dm.CreateField(vgSettings,'vgipassword',lang('_PASSWORD_'),'',ftPassword,c,
+          FullResLIst[n].Fields['password']); }
 
-    end;
+        (dm.CreateField(vgSettings, 'vgiauth', lang('_AUTHORISATION_'), '',
+          ftString, c, '') as tcxEditorRow).Properties.RepositoryItem :=
+          eAuthButton;
+
+        d := FullResList[0].Fields.Count;
+
+        c := nil;
+        r := nil;
+
+        if rs.Fields.Count > d then
+        begin
+          if not Assigned(c) then
+            c := dm.CreateCategory(vgSettings, 'vgieditional',
+              lang('_EDITIONALCONFIG_'));
+
+          with rs.Fields do
+            for i := d to Count - 1 do
+              if Items[i].restype <> ftNone then
+                with rs.Fields.Items[i]^ do
+                  if InMulti then
+                    dm.CreateField(vgSettings, 'evgi' + resname, restitle,
+                      resitems, restype, r, resvalue)
+                  else
+                    r := dm.CreateField(vgSettings, 'evgi' + resname, restitle,
+                      resitems, restype, c, resvalue);
+
+          c := dm.CreateCategory(vgSettings, 'vgispecial',
+            lang('_SPECIALSETTINGS_'));
+          if not ThreadCounter.UseUserSettings then
+            c.Expanded := false;
+
+          dm.CreateField(vgSettings, 'vgiinheritstt', lang('_OWNSETTINGS_'), '',
+            ftCheck, c, ThreadCounter.UseUserSettings);
+          dm.CreateField(vgSettings, 'vgithreadcount', lang('_THREAD_COUNT_'),
+            '', ftNumber, c, ThreadCounter.UserSettings.MaxThreadCount);
+          dm.CreateField(vgSettings, 'vgithreaddelay', lang('_QUERY_DELAY_'),
+            '', ftNumber, c, ThreadCounter.UserSettings.PageDelay);
+          dm.CreateField(vgSettings, 'vgipicdelay', lang('_PIC_DELAY_'), '',
+            ftNumber, c, ThreadCounter.UserSettings.PicDelay);
+
+        end;
+      end;
+  finally
+    vgSettings.EndUpdate;
   end;
-  finally vgSettings.EndUpdate; end;
+end;
+
+procedure TfSettings.SaveBlackList;
+var
+  i: integer;
+  l: integer;
+begin
+  SetLength(BlackList,0);
+  l := 0;
+  with tvBlackList.DataController do
+    for i := 0 to RecordCount-1 do
+      if (Values[i,0] <> '') and (Values[i,1] <> '') then
+      begin
+        SetLength(BlackList,l + 1);
+        BlackList[l,0] := Values[i,0];
+        BlackList[l,1] := lowercase(Values[i,1]);
+        inc(l);
+      end;
 end;
 
 procedure TfSettings.SaveResFields;
@@ -688,32 +763,33 @@ begin
   rs := TResource(vgSettings.Tag);
   with rs do
   begin
-{    Fields['tag'] := (vgSettings.RowByName('vgitag') as TcxEditorRow)
-      .Properties.Value;    }
+    { Fields['tag'] := (vgSettings.RowByName('vgitag') as TcxEditorRow)
+      .Properties.Value; }
 
-    NameFormat := (vgSettings.RowByName('vgidwpath') as TcxEditorRow)
+    NameFormat := (vgSettings.RowByName('vgidwpath') as tcxEditorRow)
       .Properties.Value;
 
     if rs = FullResList[0] then
     begin
-      GlobalSettings.Downl.SDALF := (vgSettings.RowByName('vgisdalf') as TcxEditorRow)
-        .Properties.Value;
+      GlobalSettings.Downl.SDALF :=
+        (vgSettings.RowByName('vgisdalf') as tcxEditorRow).Properties.Value;
       GlobalSettings.Downl.AutoUncheckInvisible :=
-        (vgSettings.RowByName('vgiautounch') as TcxEditorRow).Properties.Value;
+        (vgSettings.RowByName('vgiautounch') as tcxEditorRow).Properties.Value;
 
       GlobalSettings.WriteEXIF :=
-        (vgSettings.RowByName('vgiexif') as TcxEditorRow).Properties.Value;
+        (vgSettings.RowByName('vgiexif') as tcxEditorRow).Properties.Value;
 
-    end else
+    end
+    else
     begin
-      Inherit := (vgSettings.RowByName('vgiinherit') as TcxEditorRow)
+      Inherit := (vgSettings.RowByName('vgiinherit') as tcxEditorRow)
         .Properties.Value;
 
-{      Fields['login'] := (vgSettings.RowByName('vgilogin') as TcxEditorRow)
+      { Fields['login'] := (vgSettings.RowByName('vgilogin') as TcxEditorRow)
         .Properties.Value;
 
-      Fields['password'] := (vgSettings.RowByName('vgipassword') as TcxEditorRow)
-        .Properties.Value;   }
+        Fields['password'] := (vgSettings.RowByName('vgipassword') as TcxEditorRow)
+        .Properties.Value; }
 
       d := FullResList[0].Fields.Count;
       r := nil;
@@ -721,46 +797,54 @@ begin
       if Fields.Count > d then
         with Fields do
           for i := d to Count - 1 do
-          if Items[i].restype <> ftNone then
-          begin
-            case Items[i].restype of
-              ftMultiEdit:
-                r := vgSettings.RowByName('evgi' + Items[i].resname) as tcxMyMultiEditorRow;
-              ftIndexCombo:
-                if Items[i].InMulti then
-                  Items[i].resvalue := IndexOfStr(Items[i].resitems,r.Properties
-                  .Editors[StrToInt(CopyFromTo(items[i].resname,'[',']',[],[]))-1].Value)
-                else
-                  Items[i].resvalue := IndexOfStr(Items[i].resitems,(vgSettings.RowByName('evgi' + Items[i].resname)
-                    as TcxEditorRow).Properties.Value)
+            if Items[i].restype <> ftNone then
+            begin
+              case Items[i].restype of
+                ftMultiEdit:
+                  r := vgSettings.RowByName('evgi' + Items[i].resname)
+                    as tcxMyMultiEditorRow;
+                ftIndexCombo:
+                  if Items[i].InMulti then
+                    Items[i].resvalue := IndexOfStr(Items[i].resitems,
+                      r.Properties.Editors[StrToInt(CopyFromTo(Items[i].resname,
+                      '[', ']', [], [])) - 1].Value)
+                  else
+                    Items[i].resvalue := IndexOfStr(Items[i].resitems,
+                      (vgSettings.RowByName('evgi' + Items[i].resname)
+                      as tcxEditorRow).Properties.Value)
               else
                 if Items[i].InMulti then
-                  Items[i].resvalue := r.Properties
-                  .Editors[StrToInt(CopyFromTo(items[i].resname,'[',']',[],[]))-1].Value
+                  Items[i].resvalue := r.Properties.Editors
+                    [StrToInt(CopyFromTo(Items[i].resname, '[', ']', [], []))
+                    - 1].Value
                 else
-                  Items[i].resvalue := (vgSettings.RowByName('evgi' + Items[i].resname)
-                    as TcxEditorRow).Properties.Value;
+                  Items[i].resvalue :=
+                    (vgSettings.RowByName('evgi' + Items[i].resname)
+                    as tcxEditorRow).Properties.Value;
+              end;
             end;
-          end;
 
       ThreadCounter.UseUserSettings :=
-        (vgSettings.RowByName('vgiinheritstt') as TcxEditorRow).Properties.Value;
+        (vgSettings.RowByName('vgiinheritstt') as tcxEditorRow)
+        .Properties.Value;
 
       ThreadCounter.UserSettings.MaxThreadCount :=
-        (vgSettings.RowByName('vgithreadcount') as TcxEditorRow).Properties.Value;
+        (vgSettings.RowByName('vgithreadcount') as tcxEditorRow)
+        .Properties.Value;
 
       ThreadCounter.UserSettings.PageDelay :=
-        (vgSettings.RowByName('vgithreaddelay') as TcxEditorRow).Properties.Value;
+        (vgSettings.RowByName('vgithreaddelay') as tcxEditorRow)
+        .Properties.Value;
 
       ThreadCounter.UserSettings.PicDelay :=
-        (vgSettings.RowByName('vgipicdelay') as TcxEditorRow).Properties.Value;
+        (vgSettings.RowByName('vgipicdelay') as tcxEditorRow).Properties.Value;
 
     end;
   end;
 end;
 
-procedure TfSettings.LoginCallBack(Sender: TObject; N: integer; Login,Password: String;
-    const Cancel: boolean);
+procedure TfSettings.LoginCallBack(Sender: TObject; N: Integer;
+  Login, Password: String; const Cancel: boolean);
 begin
   if Cancel then
   begin
@@ -769,35 +853,38 @@ begin
     begin
       SetConSettings(FullResList);
       FullResList.StartJob(JOB_STOPLIST);
-    end else
+    end
+    else
       fLogin.Close;
-  end else
+  end
+  else
   begin
-    FullResList[n].Fields['login'] := Login;
-    FullResList[n].Fields['password'] := Password;
+    FullResList[N].Fields['login'] := Login;
+    FullResList[N].Fields['password'] := Password;
     if ResetRelogin(N) then
     begin
       FLogedOn := true;
-      FullResLIst.StartJob(JOB_LOGIN);
-    end else
+      FullResList.StartJob(JOB_LOGIN);
+    end
+    else
       fLogin.Close;
   end;
 end;
 
-function TfSettings.ResetRelogin(idx: integer): boolean;
+function TfSettings.ResetRelogin(idx: Integer): boolean;
 var
-  i: integer;
-  n: TResource;
+  i: Integer;
+  N: TResource;
 begin
   Result := false;
-  for i := 0 to FullResList.Count -1 do
+  for i := 0 to FullResList.Count - 1 do
     FullResList[i].Relogin := false;
 
-  n := FullResList[idx{tvRes.DataController.Values[idx, 0]}];
-  if(n.ScriptStrings.Login<>'')or(n.HTTPRec.CookieStr<>'')
-  and(n.LoginPrompt or (nullstr(n.Fields['login'])<>''))then
+  N := FullResList[idx { tvRes.DataController.Values[idx, 0] } ];
+  if (N.ScriptStrings.Login <> '') or (N.HTTPRec.CookieStr <> '') and
+    (N.LoginPrompt or (nullstr(N.Fields['login']) <> '')) then
   begin
-    n.Relogin := true;
+    N.Relogin := true;
     Result := true;
   end;
 end;
@@ -807,10 +894,10 @@ begin
   if FLogedOn then
     FLogedOn := false;
   if Assigned(FOnError) then
-    FOnError(Sender,Msg);
+    FOnError(Sender, Msg);
 end;
 
-procedure TfSettings.JobStatus(Sander: TObject; Action: integer);
+procedure TfSettings.JobStatus(Sander: TObject; Action: Integer);
 begin
   if Action = JOB_STOPLIST then
     if Assigned(fLogin) then

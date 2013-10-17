@@ -1,13 +1,13 @@
 { **** UBPFD *********** by delphibase.endimus.com ****
->> Вычисление хеш-суммы MD5
+  >> Вычисление хеш-суммы MD5
 
-Зависимости: Windows, SysUtils, Classes
-Автор:       Dimka Maslov, mainbox@endimus.ru, ICQ:148442121, Санкт-Петербург
-Copyright:   http://www.faqs.org/rfcs/rfc1321.html
-Дата:        19 июня 2002 г.
-***************************************************** }
+  Зависимости: Windows, SysUtils, Classes
+  Автор:       Dimka Maslov, mainbox@endimus.ru, ICQ:148442121, Санкт-Петербург
+  Copyright:   http://www.faqs.org/rfcs/rfc1321.html
+  Дата:        19 июня 2002 г.
+  ***************************************************** }
 
-{******************************************************************}
+{ ****************************************************************** }
 { MD5 Hashsum Evaluation Unit For Borland Delphi }
 { }
 { Copyright © 2002 by Dimka Maslov }
@@ -17,7 +17,7 @@ Copyright:   http://www.faqs.org/rfcs/rfc1321.html
 { Derived from the RSA Data Security, Inc. }
 { MD5 Message-Digest Algorithm described in RFC 1321 }
 { http://www.faqs.org/rfcs/rfc1321.html }
-{******************************************************************}
+{ ****************************************************************** }
 
 unit md5;
 
@@ -32,16 +32,19 @@ type
     как набор из 4 целых чисел, или как
     массив из 16 байт }
   PMD5Digest = ^TMD5Digest;
+
   TMD5Digest = record
     case Integer of
-      0: (A, B, C, D: LongInt);
-      1: (v: array[0..15] of Byte);
+      0:
+        (A, B, C, D: LongInt);
+      1:
+        (v: array [0 .. 15] of Byte);
   end;
 
   // вычисление хеш-суммы для строки
 function MD5String(const S: string): TMD5Digest;
 
-  // вычисление хеш-суммы для ANSI-строки
+// вычисление хеш-суммы для ANSI-строки
 function MD5ANSIString(const S: ANSIString): TMD5Digest;
 
 // вычисление хеш-суммы для файла
@@ -62,51 +65,52 @@ function MD5DigestCompare(const Digest1, Digest2: TMD5Digest): Boolean;
 implementation
 
 {
-Copyright (C) 1991-2, RSA Data Security, Inc. Created 1991. All
-rights reserved.
+  Copyright (C) 1991-2, RSA Data Security, Inc. Created 1991. All
+  rights reserved.
 
-License to copy and use this software is granted provided that it
-is identified as the "RSA Data Security, Inc. MD5 Message-Digest
-Algorithm" in all material mentioning or referencing this software
-or this function.
+  License to copy and use this software is granted provided that it
+  is identified as the "RSA Data Security, Inc. MD5 Message-Digest
+  Algorithm" in all material mentioning or referencing this software
+  or this function.
 
-License is also granted to make and use derivative works provided
-that such works are identified as "derived from the RSA Data
-Security, Inc. MD5 Message-Digest Algorithm" in all material
-mentioning or referencing the derived work.
+  License is also granted to make and use derivative works provided
+  that such works are identified as "derived from the RSA Data
+  Security, Inc. MD5 Message-Digest Algorithm" in all material
+  mentioning or referencing the derived work.
 
-RSA Data Security, Inc. makes no representations concerning either
-the merchantability of this software or the suitability of this
-software for any particular purpose. It is provided "as is"
-without express or implied warranty of any kind.
+  RSA Data Security, Inc. makes no representations concerning either
+  the merchantability of this software or the suitability of this
+  software for any particular purpose. It is provided "as is"
+  without express or implied warranty of any kind.
 
-These notices must be retained in any copies of any part of this
-documentation and/or software.
+  These notices must be retained in any copies of any part of this
+  documentation and/or software.
 }
 
 type
   UINT4 = LongWord;
 
   PArray4UINT4 = ^TArray4UINT4;
-  TArray4UINT4 = array[0..3] of UINT4;
+  TArray4UINT4 = array [0 .. 3] of UINT4;
   PArray2UINT4 = ^TArray2UINT4;
-  TArray2UINT4 = array[0..1] of UINT4;
+  TArray2UINT4 = array [0 .. 1] of UINT4;
   PArray16Byte = ^TArray16Byte;
-  TArray16Byte = array[0..15] of Byte;
+  TArray16Byte = array [0 .. 15] of Byte;
   PArray64Byte = ^TArray64Byte;
-  TArray64Byte = array[0..63] of Byte;
+  TArray64Byte = array [0 .. 63] of Byte;
 
   PByteArray = ^TByteArray;
-  TByteArray = array[0..0] of Byte;
+  TByteArray = array [0 .. 0] of Byte;
 
   PUINT4Array = ^TUINT4Array;
-  TUINT4Array = array[0..0] of UINT4;
+  TUINT4Array = array [0 .. 0] of UINT4;
 
   PMD5Context = ^TMD5Context;
+
   TMD5Context = record
     state: TArray4UINT4;
     count: TArray2UINT4;
-    buffer: TArray64Byte;
+    Buffer: TArray64Byte;
   end;
 
 const
@@ -128,10 +132,9 @@ const
   S44 = 21;
 
 var
-  Padding: TArray64Byte =
-  ($80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+  Padding: TArray64Byte = ($80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
 function _F(x, y, z: UINT4): UINT4;
 begin
@@ -158,32 +161,32 @@ begin
   Result := (((x) shl (n)) or ((x) shr (32 - (n))));
 end;
 
-procedure FF(var a: UINT4; b, c, d, x, s, ac: UINT4);
+procedure FF(var A: UINT4; B, C, D, x, S, ac: UINT4);
 begin
-  a := a + _F(b, c, d) + x + ac;
-  a := ROTATE_LEFT(a, s);
-  a := a + b;
+  A := A + _F(B, C, D) + x + ac;
+  A := ROTATE_LEFT(A, S);
+  A := A + B;
 end;
 
-procedure GG(var a: UINT4; b, c, d, x, s, ac: UINT4);
+procedure GG(var A: UINT4; B, C, D, x, S, ac: UINT4);
 begin
-  a := a + _G(b, c, d) + x + ac;
-  a := ROTATE_LEFT(a, s);
-  a := a + b;
+  A := A + _G(B, C, D) + x + ac;
+  A := ROTATE_LEFT(A, S);
+  A := A + B;
 end;
 
-procedure HH(var a: UINT4; b, c, d, x, s, ac: UINT4);
+procedure HH(var A: UINT4; B, C, D, x, S, ac: UINT4);
 begin
-  a := a + _H(b, c, d) + x + ac;
-  a := ROTATE_LEFT(a, s);
-  a := a + b;
+  A := A + _H(B, C, D) + x + ac;
+  A := ROTATE_LEFT(A, S);
+  A := A + B;
 end;
 
-procedure II(var a: UINT4; b, c, d, x, s, ac: UINT4);
+procedure II(var A: UINT4; B, C, D, x, S, ac: UINT4);
 begin
-  a := a + _I(b, c, d) + x + ac;
-  a := ROTATE_LEFT(a, s);
-  a := a + b;
+  A := A + _I(B, C, D) + x + ac;
+  A := ROTATE_LEFT(A, S);
+  A := A + B;
 end;
 
 procedure MD5Encode(Output: PByteArray; Input: PUINT4Array; Len: LongWord);
@@ -194,10 +197,10 @@ begin
   i := 0;
   while j < Len do
   begin
-    output[j] := Byte(input[i] and $FF);
-    output[j + 1] := Byte((input[i] shr 8) and $FF);
-    output[j + 2] := Byte((input[i] shr 16) and $FF);
-    output[j + 3] := Byte((input[i] shr 24) and $FF);
+    Output[j] := Byte(Input[i] and $FF);
+    Output[j + 1] := Byte((Input[i] shr 8) and $FF);
+    Output[j + 2] := Byte((Input[i] shr 16) and $FF);
+    Output[j + 3] := Byte((Input[i] shr 24) and $FF);
     Inc(j, 4);
     Inc(i);
   end;
@@ -211,8 +214,8 @@ begin
   i := 0;
   while j < Len do
   begin
-    Output[i] := UINT4(input[j]) or (UINT4(input[j + 1]) shl 8) or
-      (UINT4(input[j + 2]) shl 16) or (UINT4(input[j + 3]) shl 24);
+    Output[i] := UINT4(Input[j]) or (UINT4(Input[j + 1]) shl 8) or
+      (UINT4(Input[j + 2]) shl 16) or (UINT4(Input[j + 3]) shl 24);
     Inc(j, 4);
     Inc(i);
   end;
@@ -228,90 +231,90 @@ begin
   FillChar(Output^, Len, Byte(Value));
 end;
 
-procedure MD5Transform(State: PArray4UINT4; Buffer: PArray64Byte);
+procedure MD5Transform(state: PArray4UINT4; Buffer: PArray64Byte);
 var
-  a, b, c, d: UINT4;
-  x: array[0..15] of UINT4;
+  A, B, C, D: UINT4;
+  x: array [0 .. 15] of UINT4;
 begin
-  a := State[0];
-  b := State[1];
-  c := State[2];
-  d := State[3];
+  A := state[0];
+  B := state[1];
+  C := state[2];
+  D := state[3];
   MD5Decode(PUINT4Array(@x), PByteArray(Buffer), 64);
 
-  FF(a, b, c, d, x[0], S11, $D76AA478);
-  FF(d, a, b, c, x[1], S12, $E8C7B756);
-  FF(c, d, a, b, x[2], S13, $242070DB);
-  FF(b, c, d, a, x[3], S14, $C1BDCEEE);
-  FF(a, b, c, d, x[4], S11, $F57C0FAF);
-  FF(d, a, b, c, x[5], S12, $4787C62A);
-  FF(c, d, a, b, x[6], S13, $A8304613);
-  FF(b, c, d, a, x[7], S14, $FD469501);
-  FF(a, b, c, d, x[8], S11, $698098D8);
-  FF(d, a, b, c, x[9], S12, $8B44F7AF);
-  FF(c, d, a, b, x[10], S13, $FFFF5BB1);
-  FF(b, c, d, a, x[11], S14, $895CD7BE);
-  FF(a, b, c, d, x[12], S11, $6B901122);
-  FF(d, a, b, c, x[13], S12, $FD987193);
-  FF(c, d, a, b, x[14], S13, $A679438E);
-  FF(b, c, d, a, x[15], S14, $49B40821);
+  FF(A, B, C, D, x[0], S11, $D76AA478);
+  FF(D, A, B, C, x[1], S12, $E8C7B756);
+  FF(C, D, A, B, x[2], S13, $242070DB);
+  FF(B, C, D, A, x[3], S14, $C1BDCEEE);
+  FF(A, B, C, D, x[4], S11, $F57C0FAF);
+  FF(D, A, B, C, x[5], S12, $4787C62A);
+  FF(C, D, A, B, x[6], S13, $A8304613);
+  FF(B, C, D, A, x[7], S14, $FD469501);
+  FF(A, B, C, D, x[8], S11, $698098D8);
+  FF(D, A, B, C, x[9], S12, $8B44F7AF);
+  FF(C, D, A, B, x[10], S13, $FFFF5BB1);
+  FF(B, C, D, A, x[11], S14, $895CD7BE);
+  FF(A, B, C, D, x[12], S11, $6B901122);
+  FF(D, A, B, C, x[13], S12, $FD987193);
+  FF(C, D, A, B, x[14], S13, $A679438E);
+  FF(B, C, D, A, x[15], S14, $49B40821);
 
-  GG(a, b, c, d, x[1], S21, $F61E2562);
-  GG(d, a, b, c, x[6], S22, $C040B340);
-  GG(c, d, a, b, x[11], S23, $265E5A51);
-  GG(b, c, d, a, x[0], S24, $E9B6C7AA);
-  GG(a, b, c, d, x[5], S21, $D62F105D);
-  GG(d, a, b, c, x[10], S22, $2441453);
-  GG(c, d, a, b, x[15], S23, $D8A1E681);
-  GG(b, c, d, a, x[4], S24, $E7D3FBC8);
-  GG(a, b, c, d, x[9], S21, $21E1CDE6);
-  GG(d, a, b, c, x[14], S22, $C33707D6);
-  GG(c, d, a, b, x[3], S23, $F4D50D87);
+  GG(A, B, C, D, x[1], S21, $F61E2562);
+  GG(D, A, B, C, x[6], S22, $C040B340);
+  GG(C, D, A, B, x[11], S23, $265E5A51);
+  GG(B, C, D, A, x[0], S24, $E9B6C7AA);
+  GG(A, B, C, D, x[5], S21, $D62F105D);
+  GG(D, A, B, C, x[10], S22, $2441453);
+  GG(C, D, A, B, x[15], S23, $D8A1E681);
+  GG(B, C, D, A, x[4], S24, $E7D3FBC8);
+  GG(A, B, C, D, x[9], S21, $21E1CDE6);
+  GG(D, A, B, C, x[14], S22, $C33707D6);
+  GG(C, D, A, B, x[3], S23, $F4D50D87);
 
-  GG(b, c, d, a, x[8], S24, $455A14ED);
-  GG(a, b, c, d, x[13], S21, $A9E3E905);
-  GG(d, a, b, c, x[2], S22, $FCEFA3F8);
-  GG(c, d, a, b, x[7], S23, $676F02D9);
-  GG(b, c, d, a, x[12], S24, $8D2A4C8A);
+  GG(B, C, D, A, x[8], S24, $455A14ED);
+  GG(A, B, C, D, x[13], S21, $A9E3E905);
+  GG(D, A, B, C, x[2], S22, $FCEFA3F8);
+  GG(C, D, A, B, x[7], S23, $676F02D9);
+  GG(B, C, D, A, x[12], S24, $8D2A4C8A);
 
-  HH(a, b, c, d, x[5], S31, $FFFA3942);
-  HH(d, a, b, c, x[8], S32, $8771F681);
-  HH(c, d, a, b, x[11], S33, $6D9D6122);
-  HH(b, c, d, a, x[14], S34, $FDE5380C);
-  HH(a, b, c, d, x[1], S31, $A4BEEA44);
-  HH(d, a, b, c, x[4], S32, $4BDECFA9);
-  HH(c, d, a, b, x[7], S33, $F6BB4B60);
-  HH(b, c, d, a, x[10], S34, $BEBFBC70);
-  HH(a, b, c, d, x[13], S31, $289B7EC6);
-  HH(d, a, b, c, x[0], S32, $EAA127FA);
-  HH(c, d, a, b, x[3], S33, $D4EF3085);
-  HH(b, c, d, a, x[6], S34, $4881D05);
-  HH(a, b, c, d, x[9], S31, $D9D4D039);
-  HH(d, a, b, c, x[12], S32, $E6DB99E5);
-  HH(c, d, a, b, x[15], S33, $1FA27CF8);
-  HH(b, c, d, a, x[2], S34, $C4AC5665);
+  HH(A, B, C, D, x[5], S31, $FFFA3942);
+  HH(D, A, B, C, x[8], S32, $8771F681);
+  HH(C, D, A, B, x[11], S33, $6D9D6122);
+  HH(B, C, D, A, x[14], S34, $FDE5380C);
+  HH(A, B, C, D, x[1], S31, $A4BEEA44);
+  HH(D, A, B, C, x[4], S32, $4BDECFA9);
+  HH(C, D, A, B, x[7], S33, $F6BB4B60);
+  HH(B, C, D, A, x[10], S34, $BEBFBC70);
+  HH(A, B, C, D, x[13], S31, $289B7EC6);
+  HH(D, A, B, C, x[0], S32, $EAA127FA);
+  HH(C, D, A, B, x[3], S33, $D4EF3085);
+  HH(B, C, D, A, x[6], S34, $4881D05);
+  HH(A, B, C, D, x[9], S31, $D9D4D039);
+  HH(D, A, B, C, x[12], S32, $E6DB99E5);
+  HH(C, D, A, B, x[15], S33, $1FA27CF8);
+  HH(B, C, D, A, x[2], S34, $C4AC5665);
 
-  II(a, b, c, d, x[0], S41, $F4292244);
-  II(d, a, b, c, x[7], S42, $432AFF97);
-  II(c, d, a, b, x[14], S43, $AB9423A7);
-  II(b, c, d, a, x[5], S44, $FC93A039);
-  II(a, b, c, d, x[12], S41, $655B59C3);
-  II(d, a, b, c, x[3], S42, $8F0CCC92);
-  II(c, d, a, b, x[10], S43, $FFEFF47D);
-  II(b, c, d, a, x[1], S44, $85845DD1);
-  II(a, b, c, d, x[8], S41, $6FA87E4F);
-  II(d, a, b, c, x[15], S42, $FE2CE6E0);
-  II(c, d, a, b, x[6], S43, $A3014314);
-  II(b, c, d, a, x[13], S44, $4E0811A1);
-  II(a, b, c, d, x[4], S41, $F7537E82);
-  II(d, a, b, c, x[11], S42, $BD3AF235);
-  II(c, d, a, b, x[2], S43, $2AD7D2BB);
-  II(b, c, d, a, x[9], S44, $EB86D391);
+  II(A, B, C, D, x[0], S41, $F4292244);
+  II(D, A, B, C, x[7], S42, $432AFF97);
+  II(C, D, A, B, x[14], S43, $AB9423A7);
+  II(B, C, D, A, x[5], S44, $FC93A039);
+  II(A, B, C, D, x[12], S41, $655B59C3);
+  II(D, A, B, C, x[3], S42, $8F0CCC92);
+  II(C, D, A, B, x[10], S43, $FFEFF47D);
+  II(B, C, D, A, x[1], S44, $85845DD1);
+  II(A, B, C, D, x[8], S41, $6FA87E4F);
+  II(D, A, B, C, x[15], S42, $FE2CE6E0);
+  II(C, D, A, B, x[6], S43, $A3014314);
+  II(B, C, D, A, x[13], S44, $4E0811A1);
+  II(A, B, C, D, x[4], S41, $F7537E82);
+  II(D, A, B, C, x[11], S42, $BD3AF235);
+  II(C, D, A, B, x[2], S43, $2AD7D2BB);
+  II(B, C, D, A, x[9], S44, $EB86D391);
 
-  Inc(State[0], a);
-  Inc(State[1], b);
-  Inc(State[2], c);
-  Inc(State[3], d);
+  Inc(state[0], A);
+  Inc(state[1], B);
+  Inc(state[2], C);
+  Inc(state[3], D);
 
   MD5_memset(PByteArray(@x), 0, SizeOf(x));
 end;
@@ -325,24 +328,24 @@ begin
   Context.state[3] := $10325476;
 end;
 
-procedure MD5Update(var Context: TMD5Context; Input: PByteArray; InputLen:
-  LongWord);
+procedure MD5Update(var Context: TMD5Context; Input: PByteArray;
+  InputLen: LongWord);
 var
   i, index, partLen: LongWord;
 
 begin
-  index := LongWord((context.count[0] shr 3) and $3F);
+  index := LongWord((Context.count[0] shr 3) and $3F);
   Inc(Context.count[0], UINT4(InputLen) shl 3);
   if Context.count[0] < UINT4(InputLen) shl 3 then
     Inc(Context.count[1]);
   Inc(Context.count[1], UINT4(InputLen) shr 29);
   partLen := 64 - index;
-  if inputLen >= partLen then
+  if InputLen >= partLen then
   begin
-    MD5_memcpy(PByteArray(@Context.buffer[index]), Input, PartLen);
-    MD5Transform(@Context.state, @Context.buffer);
+    MD5_memcpy(PByteArray(@Context.Buffer[index]), Input, partLen);
+    MD5Transform(@Context.state, @Context.Buffer);
     i := partLen;
-    while i + 63 < inputLen do
+    while i + 63 < InputLen do
     begin
       MD5Transform(@Context.state, PArray64Byte(@Input[i]));
       Inc(i, 64);
@@ -351,13 +354,13 @@ begin
   end
   else
     i := 0;
-  MD5_memcpy(PByteArray(@Context.buffer[index]), PByteArray(@Input[i]), inputLen
-    - i);
+  MD5_memcpy(PByteArray(@Context.Buffer[index]), PByteArray(@Input[i]),
+    InputLen - i);
 end;
 
 procedure MD5Final(var Digest: TMD5Digest; var Context: TMD5Context);
 var
-  bits: array[0..7] of Byte;
+  bits: array [0 .. 7] of Byte;
   index, padLen: LongWord;
 begin
   MD5Encode(PByteArray(@bits), PUINT4Array(@Context.count), 8);
@@ -366,8 +369,8 @@ begin
     padLen := 56 - index
   else
     padLen := 120 - index;
-  MD5Update(Context, PByteArray(@PADDING), padLen);
-  MD5Update(Context, PByteArray(@Bits), 8);
+  MD5Update(Context, PByteArray(@Padding), padLen);
+  MD5Update(Context, PByteArray(@bits), 8);
   MD5Encode(PByteArray(@Digest), PUINT4Array(@Context.state), 16);
   MD5_memset(PByteArray(@Context), 0, SizeOf(Context));
 end;
@@ -406,7 +409,7 @@ end;
 function MD5Stream(const Stream: TStream): TMD5Digest;
 var
   Context: TMD5Context;
-  Buffer: array[0..4095] of Byte;
+  Buffer: array [0 .. 4095] of Byte;
   Size: Integer;
   ReadBytes: Integer;
   TotalBytes: Integer;
@@ -453,4 +456,3 @@ begin
 end;
 
 end.
- 

@@ -222,7 +222,12 @@ begin
     if full then
       aend := length(s) + 1
     else
-      aend := sstart + 1;
+    begin
+      if s[sstart] <> properties.Isolator then
+        aend := sstart + 1
+      else
+        aend := sstart;
+    end;
 {  if aend > SelStart then
     aend := SelStart + SelLength;        }
 
