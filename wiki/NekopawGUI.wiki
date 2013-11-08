@@ -7,7 +7,7 @@ First and main rule of this application is
 
 ==== "It's not to search content, but to download" =====
 
-This is means you're using an app to download content from know resources. And in this way this is means if you getting errors or nothing from resources you're DO NOT know - it's your own problem, not app's.
+This means you're using an app to download content only from known resources. And in this way this means if you getting errors or nothing from resources you're DO NOT know - it's your own problem, not app's.
 
 Resources are too different from each other, and there is no way to make only ONE way to download from all of them a the same time. They're have different search rules, keywords, storing methods and other. So, you must to know, how to work with resource you're using.
 
@@ -27,7 +27,7 @@ Resources are too different from each other, and there is no way to make only ON
 
 = First screen =
 
-After application launch by default it automatically checks for updates. If updates will be found, pop up a window with suggestion to update an application. You can disable updates check in settings.
+By default, after launch the application automatically checks for updates. If updates will be found, a window pops up and suggest to update the application. You can disable autochek in settings.
 
 
 === Buttons ===
@@ -40,7 +40,7 @@ After application launch by default it automatically checks for updates. If upda
 
 Appears after clicking "New List".
 
-On the right side located list of resources that you can add. On the left side - list of added items.
+On the right side located a list of resources that you can add. On the left side - list of added items.
 To add item you need to click a button with arrow, also you can remove items from the current list.
 
 To the next step of list making you need to click a "Continue" button. For return click a "Change list" button.
