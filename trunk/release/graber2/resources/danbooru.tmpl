@@ -50,6 +50,7 @@ $pool_post_per_page = 24;
 $picture.template.ext = '%ext%';
 $tryext = 0;
 $GUImode = 0;
+$tags_copyto = 'score:';
 
 $gui_thumbs_dir = 'preview/';
 $gui_images_dir = '';
@@ -237,11 +238,11 @@ $ok = 0;
 						%url=@replace($gui_images_part,$gui_thumbs_part,@replace($gui_images_dir,$gui_thumbs_dir,@removevars(#src))),
 						%preview=#src,
 						%post_url=$main.url+@trim($post_url,"/"),
-						%rating=@trim(@copyfromtoex(" ","rating:",#title + " ")),
-						%score=@trim(@copyfromtoex(" ","score:",#title + " ")),
+						%rating=@trim(@copyfromtoex(" ","rating:",@lowcase(#title) + " ")),
+						%score=@trim(@copyfromtoex(" ","score:",@lowcase(#title) + " ")),
 						%id=$id,
-						%author = @trim(@copyfromtoex(" ","user:",#title + " ")),
-						%tags=csv(@trim(@copyto("score:",#title))," ")
+						%author = @trim(@copyfromtoex(" ","user:",@lowcase(#title) + " ")),
+						%tags=csv(@trim(@copyto($tags_copyto,@lowcase(#title)))," ")
 					);
 					?$tryext=1{$picture.filename = @changeext("%ext%",@emptyname($picture%url));}
 					?$tryext=0{$picture.filename = @emptyname(@emptyname($picture%url));}
