@@ -1,5 +1,7 @@
-<item file="Graber2.exe"  archive="Graber2.zip"    version=100 />
-<item file="versionlog.txt"                        version=-1 />
+<item file="Graber2.exe"   archive="Graber2.zip"     version=100 />
+<item file="libeay32.sys"  archive="libeay32.zip"    version=0 />
+<item file="ssleay32.sys"  archive="ssleay32.zip"    version=0 />
+<item file="versionlog.txt"                          version=-1 />
 
 <item file="resources\danbooru.tmpl"               version=28 />
 <item file="resources\danbooru2.tmpl"              version=4  />
