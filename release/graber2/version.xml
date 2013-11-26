@@ -1,4 +1,4 @@
-<item file="Graber2.exe"   archive="Graber2.zip"     version=103 />
+<item file="Graber2.exe"   archive="Graber2.zip"     version=104 />
 <item file="libeay32.sys"  archive="libeay32.zip"    version=0 />
 <item file="ssleay32.sys"  archive="ssleay32.zip"    version=0 />
 <item file="versionlog.txt"                          version=-1 />
@@ -18,7 +18,7 @@
 <item file="resources\derpiboo.ru.cfg"             version=15 />
 <item file="resources\deviantart.com.cfg"          version=16 />
 <item file="resources\donmai.us.cfg"               version=6 />
-<item file="resources\g.e-hentai.org.cfg"          version=9 />
+<item file="resources\g.e-hentai.org.cfg"          version=10 />
 <item file="resources\e-shuushuu.net.cfg"          version=4 />
 <item file="resources\e621.net.cfg"                version=4 />
 <item file="resources\exhentai.org.cfg"            version=8 />
@@ -101,5 +101,5 @@
 
 <item file="resources\icons\ponibooru.413chan.net.bmp"   version=0 deleted=1 />
 
-<item file="languages\English.ini" version=37 />
-<item file="languages\Russian.ini" version=35 />
+<item file="languages\English.ini" version=38 />
+<item file="languages\Russian.ini" version=36 />
