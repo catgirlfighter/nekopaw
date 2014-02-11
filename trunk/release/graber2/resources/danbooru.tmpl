@@ -25,14 +25,13 @@ $picture.fields(
 	album:s,
 	album_url:s);
 
-
-$picture.exif.author = "%author";
 $picture.exif.theme = "%album"; 
 $picture.exif.comment = "%post_url";
 $picture.exif.keywords = "@picture.tags(';')";
 
 $linkrel = "last";
-$pictime = '@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy")'; 
+$pictime = '@vartime("en-US",#created_at,"ddd mmm dd hh:nn:ss xxxxx yyyy")';
+$guipicurl = '@replace($gui_images_part,$gui_thumbs_part,@replace($gui_images_dir,$gui_thumbs_dir,@removevars(#src)))'; 
 $fileurl = '#file_url';
 $previewurl = '#preview_url';
 $sampleurl = '#sample_url';
@@ -235,7 +234,7 @@ $ok = 0;
 
 				^img{?@pos(#src,"download-preview.png")=0{
 					addpicture(
-						%url=@replace($gui_images_part,$gui_thumbs_part,@replace($gui_images_dir,$gui_thumbs_dir,@removevars(#src))),
+						%url=@calc($guipicurl),
 						%preview=#src,
 						%post_url=$main.url+@trim($post_url,"/"),
 						%rating=@trim(@copyfromtoex(" ","rating:",@lowcase(#title) + " ")),
