@@ -3,8 +3,8 @@
 <item file="ssleay32.sys"  archive="ssleay32.zip"    version=0 />
 <item file="versionlog.txt"                          version=-1 />
 
-<item file="resources\danbooru.tmpl"               version=29 />
-<item file="resources\danbooru2.tmpl"              version=4  />
+<item file="resources\danbooru.tmpl"               version=30 />
+<item file="resources\danbooru2.tmpl"              version=5  />
 <item file="resources\gelbooru.tmpl"               version=16 />
 
 <item file="resources\analbooru.com.cfg"           version=3 />
@@ -39,7 +39,7 @@
 <item file="resources\pixiv.net.cfg"               version=19 />
 <item file="resources\rmart.org.cfg"               version=12 />
 <item file="resources\safebooru.org.cfg"           version=3 />
-<item file="resources\chan.sankakucomplex.com.cfg" version=13 />
+<item file="resources\chan.sankakucomplex.com.cfg" version=14 />
 <item file="resources\idol.sankakucomplex.com.cfg" version=11 />
 <item file="resources\tbib.org.cfg"                version=2 />
 <item file="resources\tentaclerape.net.cfg"        version=4 />

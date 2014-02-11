@@ -19,6 +19,7 @@ $picture.fields(
 	rating:s:$$RATING,
 	id:i:$$ID,
 	author:s:$$AUTHOR,
+	artist:s,
 	score:i:$$SCORE,
 	posted:d:$$POSTED,
 	md5:s:$$MD5,
@@ -28,7 +29,7 @@ $picture.fields(
 	album:s,
 	album_url:s);
 
-$picture.exif.author = "%author";
+$picture.exif.author = "%artist";
 $picture.exif.theme = "%album"; 
 $picture.exif.comment = "%post_url";
 $picture.exif.keywords = "@picture.tags(';')";
@@ -103,6 +104,7 @@ $ok = 0;
 	^tag-string   { %tags = "csv(@text,' ')"; }
 	^uploader-name{ %author = @text; }
 	^source       { %source = @trim(@text); }
+	^tag-string-artist{ %artist = @trim(@text); }
 
 	%url = $main.url + "data/" + $picture%md5 + "." + $ext;
 	%post_url = $main.url + "posts/" + $picture%id;
