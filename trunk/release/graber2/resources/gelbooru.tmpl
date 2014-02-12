@@ -3,6 +3,7 @@
 ;template for gelbooru engine
 
 [main]
+$addpath = '';
 $main.cheatsheet = "http://gelbooru.com/index.php?page=help&topic=cheatsheet";
 $main.keywordhint = "tag: tag_1 tag_2";
 
@@ -17,7 +18,7 @@ $picture.exif.keywords = "@picture.tags(';')";
 $main.checkcookie = 'user_id';
 $userstring = 'user';
 $pwdstring = 'pass';
-$main.login = '$main.url+"index.php?page=account&s=login&code=00"';
+$main.login = '$main.url+$addpath+"index.php?page=account&s=login&code=00"';
 $main.loginpost = '$userstring+"="+$login+"&"+$pwdstring+"="+$password+"&submit=Log in"';
 
 $source = 'api';
@@ -32,25 +33,25 @@ $gui_images_part = '';
 
 ?$src = 0{
 	?$source = 'api'{
-		$thread.url = "$main.url+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)";
+		$thread.url = "$main.url+$addpath+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)";
 		$thread.xml = 'firstpagexml';
 		$thread.execute();
 		$thread.xml = 'listxml';
-		$thread.url = "$main.url+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)+'&pid='+$thread.counter";
+		$thread.url = "$main.url+$addpath+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)+'&pid='+$thread.counter";
 	}
 	?$source = 'gui'{
 		$thread.xmlcontent = 'html';
-		$thread.url = "$main.url+'index.php?page=post&s=list&tags='+@httpencode($tag)";
+		$thread.url = "$main.url+$addpath+'index.php?page=post&s=list&tags='+@httpencode($tag)";
 		$thread.xml = 'fpgui';
 		$thread.execute();
 		$thread.xml = 'listgui';
-		$thread.url = "$main.url+'index.php?page=post&s=list&tags='+@httpencode($tag)+'&pid='+$thread.counter*$picsperpage";	
+		$thread.url = "$main.url+$addpath+'index.php?page=post&s=list&tags='+@httpencode($tag)+'&pid='+$thread.counter*$picsperpage";	
 	}
 }
 
 ?$src = 1{
 	;http://gelbooru.com/index.php?page=pool&s=show&id=10902
-	$thread.url = "$main.url+'index.php?page=pool&s=show&id='+@httpencode($tag)";
+	$thread.url = "$main.url+$addpath+'index.php?page=pool&s=show&id='+@httpencode($tag)";
 	$thread.xml = 'listgui';
 	$thread.execute();
 }
@@ -68,7 +69,7 @@ $thread.referer = $picture%post_url;
 			%url=#file_url,
 			%preview=#preview_url,
 			%sample_url=#sample_url,
-			%post_url=$main.url+'index.php?page=post&s=view&id='+#id,
+			%post_url=$main.url+$addpath+'index.php?page=post&s=view&id='+#id,
 			%width=#width,
 			%height=#height,
 			%rating=#rating,
@@ -90,7 +91,7 @@ $thread.referer = $picture%post_url;
 			%url=#file_url,
 			%preview=#preview_url,
 			%sample_url=#sample_url,
-			%post_url=$main.url+'index.php?page=post&s=view&id='+#id,
+			%post_url=$main.url+$addpath+'index.php?page=post&s=view&id='+#id,
 			%width=#width,
 			%height=#height,
 			%rating=#rating,
@@ -114,7 +115,7 @@ $thread.referer = $picture%post_url;
 		addpicture(
 			%url=@replace($gui_images_part,$gui_thumbs_part,@replace($gui_images_dir,$gui_thumbs_dir,@removevars(#src))),
 			%preview=#src,
-			%post_url=$main.url+@trim($post_url,"/"),
+			%post_url=$main.url+$addpath+@trim($post_url,"/"),
 			%rating=@trim(@copyfromtoex(" ","rating:",#title + " ")),
 			%score=@ifempty(@trim(@copyfromtoex(" ","score:",#title + " ")),0),
 			%id=@ifempty(@urlvar("id",$post_url),0),
@@ -148,7 +149,7 @@ $thread.referer = $picture%post_url;
 		addpicture(
 			%url=$url,
 			%preview=#src,
-			%post_url=$main.url+@trim($post_url,"/"),
+			%post_url=$main.url+$addpath+@trim($post_url,"/"),
 			%rating=@trim(@copyfromtoex(" ","rating:",#title + " ")),
 			%score=@trim(@copyfromtoex(" ","score:",#title + " ")),
 			%id=@urlvar("id",$post_url),
