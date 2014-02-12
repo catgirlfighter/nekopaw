@@ -5,10 +5,10 @@
 
 <item file="resources\danbooru.tmpl"               version=30 />
 <item file="resources\danbooru2.tmpl"              version=5  />
-<item file="resources\gelbooru.tmpl"               version=16 />
+<item file="resources\gelbooru.tmpl"               version=17 />
 
 <item file="resources\analbooru.com.cfg"           version=3 />
-<item file="resources\allthefallen.org.cfg"        version=0 />
+<item file="resources\allthefallen.org.cfg"        version=1 />
 <item file="resources\anime-pictures.net.cfg"      version=6 />
 <item file="resources\behoimi.org.cfg"             version=2 />
 <item file="resources\elderscrollsbooru.booru.org.cfg" version=0 />
