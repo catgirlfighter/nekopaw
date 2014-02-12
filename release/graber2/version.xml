@@ -8,6 +8,7 @@
 <item file="resources\gelbooru.tmpl"               version=16 />
 
 <item file="resources\analbooru.com.cfg"           version=3 />
+<item file="resources\allthefallen.org.cfg"        version=0 />
 <item file="resources\anime-pictures.net.cfg"      version=6 />
 <item file="resources\behoimi.org.cfg"             version=2 />
 <item file="resources\elderscrollsbooru.booru.org.cfg" version=0 />
@@ -26,7 +27,6 @@
 <item file="resources\gelbooru.com.cfg"            version=3 />
 <item file="resources\hentai-foundry.com.cfg"      version=13 />
 <item file="resources\konachan.com.cfg"            version=3 />
-<item file="resources\lolibooru.com.cfg"           version=2 />
 <item file="resources\mangahere.com.cfg"           version=5 />
 <item file="resources\mgbooru.net.cfg"             version=2 />
 <item file="resources\minitokyo.net.cfg"           version=12 />
@@ -55,11 +55,12 @@
 <item file="resources\ponibooru.413chan.net.cfg"   version=1 deleted=1 />
 <item file="resources\oreno.imouto.org.cfg"        version=0 deleted=1 />
 <item file="resources\nekobooru.net.cfg"           version=0 deleted=1 />
+<item file="resources\lolibooru.com.cfg"           version=2 deleted=1 />
 
+<item file="resources\icons\allthefallen.org.cfg"        version=0 />
 <item file="resources\icons\analbooru.com.bmp"           version=0 />
 <item file="resources\icons\wildcritters.ws.bmp"         version=0 />
 <item file="resources\icons\tbib.org.bmp"                version=0 />
-<item file="resources\icons\safebooru.org.bmp"           version=0 deleted=1 />
 <item file="resources\icons\rule34.xxx.bmp"              version=0 />
 <item file="resources\icons\nekobooru.net.bmp"           version=0 />
 <item file="resources\icons\konachan.com.bmp"            version=0 />
@@ -71,7 +72,6 @@
 <item file="resources\icons\xbooru.com.bmp"              version=0 />
 <item file="resources\icons\wildcritters.net.bmp"        version=0 />
 <item file="resources\icons\donmai.us.bmp"               version=0 />
-<item file="resources\icons\lolibooru.com.bmp"           version=0 deleted=1 />
 <item file="resources\icons\ii.booru.org.bmp"            version=0 />
 <item file="resources\icons\zerochan.net.bmp"            version=0 />
 <item file="resources\icons\rmart.org.bmp"               version=0 />
@@ -100,6 +100,8 @@
 <item file="resources\icons\blogspot.com.bmp"            version=0 />
 
 <item file="resources\icons\ponibooru.413chan.net.bmp"   version=0 deleted=1 />
+<item file="resources\icons\safebooru.org.bmp"           version=0 deleted=1 />
+<item file="resources\icons\lolibooru.com.bmp"           version=0 deleted=1 />
 
 <item file="languages\English.ini" version=38 />
 <item file="languages\Russian.ini" version=36 />
