@@ -1,4 +1,4 @@
-<item file="Graber2.exe"   archive="Graber2.zip"     version=108 />
+<item file="Graber2.exe"   archive="Graber2.zip"     version=109 />
 <item file="libeay32.sys"  archive="libeay32.zip"    version=0 />
 <item file="ssleay32.sys"  archive="ssleay32.zip"    version=0 />
 <item file="versionlog.txt"                          version=-1 />
@@ -34,7 +34,7 @@
 <item file="resources\seiga.nicovideo.jp.cfg"      version=3 />
 <item file="resources\nihonomaru.com.cfg"          version=1 />
 <item file="resources\rule34.paheal.net.cfg"       version=9 />
-<item file="resources\pixiv.net.cfg"               version=19 />
+<item file="resources\pixiv.net.cfg"               version=20 />
 <item file="resources\rmart.org.cfg"               version=12 />
 <item file="resources\safebooru.org.cfg"           version=3 />
 <item file="resources\chan.sankakucomplex.com.cfg" version=14 />
