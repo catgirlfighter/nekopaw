@@ -4,7 +4,7 @@
 <item file="versionlog.txt"                          version=-1 />
 
 <item file="resources\danbooru.tmpl"               version=30 />
-<item file="resources\danbooru2.tmpl"              version=5  />
+<item file="resources\danbooru2.tmpl"              version=6  />
 <item file="resources\gelbooru.tmpl"               version=17 />
 
 <item file="resources\analbooru.com.cfg"           version=3 />

@@ -92,28 +92,32 @@ $ok = 0;
 ^post{
 	$ok = 1;
 	$ext = "";
-	@addpicture(%url="");
-	^created-at   { %posted=@calc($pictime); }
-	^file-ext     { $ext = @text; }
-	^id           { %id = @text; }
-	^image-height { %height = @text; }
-	^image-width  { %width = @text; }
-	^md5          { %md5 = @text; }
-	^rating       { %rating = @text; }
-	^score        { %score = @text; }
-	^tag-string   { %tags = "csv(@text,' ')"; }
-	^uploader-name{ %author = @text; }
-	^source       { %source = @trim(@text); }
-	^tag-string-artist{ %artist = @trim(@text); }
+	$md5 = "";
+	^md5          { $md5 = @text; }
+	?@isempty($md5)=0{
+		@addpicture(%url="");
+		%md5 = $md5;
+		^created-at   { %posted=@calc($pictime); }
+		^file-ext     { $ext = @text; }
+		^id           { %id = @text; }
+		^image-height { %height = @text; }
+		^image-width  { %width = @text; }
+		^rating       { %rating = @text; }
+		^score        { %score = @text; }
+		^tag-string   { %tags = "csv(@text,' ')"; }
+		^uploader-name{ %author = @text; }
+		^source       { %source = @trim(@text); }
+		^tag-string-artist{ %artist = @trim(@text); }
 
-	%url = $main.url + "data/" + $picture%md5 + "." + $ext;
-	%post_url = $main.url + "posts/" + $picture%id;
-	%sample_url = $main.url + "data/sample/sample-" + $picture%md5 + ".jpg";
-	%preview = $main.url + "data/preview/" + $picture%md5 + ".jpg";
-	%aspect_ratio = @ifempty($picture%width,0)/@ifempty($picture%height,1);
+		%url = $main.url + "data/" + $picture%md5 + "." + $ext;
+		%post_url = $main.url + "posts/" + $picture%id;
+		%sample_url = $main.url + "data/sample/sample-" + $picture%md5 + ".jpg";
+		%preview = $main.url + "data/preview/" + $picture%md5 + ".jpg";
+		%aspect_ratio = @ifempty($picture%width,0)/@ifempty($picture%height,1);
 
-	$picture.displaylabel = $picture%url;
-	$picture.filename = $picture%md5 + "." + $ext;
+		$picture.displaylabel = $picture%url;
+		$picture.filename = $picture%md5 + "." + $ext;
+	}
 }
 
 ^total-count{
