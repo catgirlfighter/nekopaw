@@ -162,7 +162,7 @@ How do you know what you need to use to achieve the desired result:
 === string-number format ===
 *`[`-`]``[`Width`]``[`.Precision`]`Type*
  * *Width* - minimal length of string (filled with spaces).
- * *Precision* - leading zeros (filled with zeros, ex. 000123). Fractional numbers filled with zeros from the back (ex. 1.2300). For strings is "maximum length".
+ * *Precision* - leading zeros for decimal (ex. 000123), back zeros for fractional numbers (ex. 1.2300), maximum length for strings.
  * *Type* - value type.
 || *type* || *description* || *example* || *type* || *description* || *example* ||
 || *d* || Decimal || -123 || *e* || Exponent || 1.23456780000000E+004 ||
