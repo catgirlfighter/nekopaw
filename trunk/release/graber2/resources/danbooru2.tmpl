@@ -53,10 +53,10 @@ $thread.xmlcontent = 'xml';
 
 ;POSTS
 ?$src = 0 {
-	$thread.url = "$main.url+'posts.xml?limit=100&tags='+@httpencode($tag)";
+	;$thread.url = "$main.url+'posts.xml?limit=100&tags='+@httpencode($tag)";
+	$thread.url = "$main.url+'posts.xml?limit=100&tags='+@httpencode($tag)+'&page='+$thread.counter+1";
 	$thread.xml = 'listxml';
 	$thread.execute();
-	$thread.url = "$main.url+'posts.xml?limit=100&tags='+@httpencode($tag)+'&page='+$thread.counter+1";
 }
 
 ;POOLS

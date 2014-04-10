@@ -66,7 +66,7 @@ $gui_images_part = '';
 
 ;XML API mode
 ?($GUImode=0){
-	$thread.url = "$main.url+'post/index.'+$fpxml+'?limit=100&tags='+@httpencode($tag)";
+	;$thread.url = "$main.url+'post/index.'+$fpxml+'?limit=100&tags='+@httpencode($tag)";
 	$thread.jsonitem = 'post';
 
 	;non-Pools
@@ -82,31 +82,32 @@ $gui_images_part = '';
 			$thread.xml = 'listxml';	
 		}
 
+		$thread.url = "$main.url+'post/index.'+$fpxml+'?limit=100&tags='+@httpencode($tag)+'&page='+$thread.counter+1";
 		$thread.xmlcontent = $fpxml;
 		$thread.execute();
 		$thread.xml = 'listxml';
 		$thread.xmlcontent = $lxml;
-		$thread.url = "$main.url+'post/index.'+$fpxml+'?limit=100&tags='+@httpencode($tag)+'&page='+$thread.counter+1";
+		
 	}
 
 	;Pools
 	?$src=1{
 		$thread.xmlcontent = 'xml';
 		$thread.xml = 'poolxml';
-		$thread.url = "'"+$main.url+"pool/show.xml?id="+@httpencode($tag)+"'";
+		$thread.url = "'"+$main.url+"pool/show.xml?id="+@httpencode($tag)+"&page='+$thread.counter+1";
+		;$thread.url = "'"+$main.url+"pool/show.xml?id="+@httpencode($tag)+"'";
 		@thread.execute;
-		$thread.url = "'"+$main.url+"pool/show.xml?id="+@httpencode($tag)+"&page='+$thread.counter+1";		
+				
 	}
 }
 
 ;GUI HTML mode
 ?($src=0)&($GUImode!0){
 	$thread.xmlcontent = 'html';
-	$thread.url = "$main.url+'post?tags='+@httpencode($tag)";
+	$thread.url = "$main.url+'post?tags='+@httpencode($tag)+'&page='+$thread.counter+1";
+	;$thread.url = "$main.url+'post?tags='+@httpencode($tag)";
 	$thread.xml = "listgui";
 	@thread.execute;
-	$thread.url = "$main.url+'post?tags='+@httpencode($tag)+'&page='+$thread.counter+1";
-
 }
 
 [dwscript]
