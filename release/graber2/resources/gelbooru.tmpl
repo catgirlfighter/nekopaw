@@ -33,19 +33,20 @@ $gui_images_part = '';
 
 ?$src = 0{
 	?$source = 'api'{
-		$thread.url = "$main.url+$addpath+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)";
+		;$thread.url = "$main.url+$addpath+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)";
+		$thread.url = "$main.url+$addpath+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)+'&pid='+$thread.counter";
 		$thread.xml = 'firstpagexml';
 		$thread.execute();
 		$thread.xml = 'listxml';
-		$thread.url = "$main.url+$addpath+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)+'&pid='+$thread.counter";
 	}
 	?$source = 'gui'{
 		$thread.xmlcontent = 'html';
-		$thread.url = "$main.url+$addpath+'index.php?page=post&s=list&tags='+@httpencode($tag)";
+		;$thread.url = "$main.url+$addpath+'index.php?page=post&s=list&tags='+@httpencode($tag)";
+		$thread.url = "$main.url+$addpath+'index.php?page=post&s=list&tags='+@httpencode($tag)+'&pid='+$thread.counter*$picsperpage";
 		$thread.xml = 'fpgui';
 		$thread.execute();
 		$thread.xml = 'listgui';
-		$thread.url = "$main.url+$addpath+'index.php?page=post&s=list&tags='+@httpencode($tag)+'&pid='+$thread.counter*$picsperpage";	
+			
 	}
 }
 
