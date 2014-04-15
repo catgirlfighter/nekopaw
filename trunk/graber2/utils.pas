@@ -482,7 +482,7 @@ begin
           SW_SHOWNORMAL) < 33 then
           if ShellExecute(0, nil, PCHAR(ExtractFilePath(ExtractFileDir(s))),
             nil, nil, SW_SHOWNORMAL) < 33 then
-            MessageDlg(format(lang('_NO_DIRECTORY_'), [s]), mtInformation,
+            MessageDlg(format(lang('_NO_DIRECTORY_'), [ExtractFileDir(s)]), mtInformation,
               [mbOk], 0);
       end;
   end;

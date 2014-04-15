@@ -10,12 +10,15 @@ const
   CM_UPDATEPROGRESS = WM_USER + 14;
   UPD_CHECK_UPDATES = 0;
   UPD_DOWNLOAD_UPDATES = 1;
+
   UPD_FILECOUNT = 0;
   UPD_FILEPOS = 1;
   UPD_FILESIZE = 2;
   UPD_FILEPROGRESS = 3;
   UPD_FILENAME = 4;
-
+  UPD_FILEDELETED = 5;
+  UPD_FILEUNZIP = 6;
+  UPD_DWDONE = 7;
 type
 
   TUpdThread = class(TThread)
@@ -70,13 +73,13 @@ implementation
 procedure TUpdThread.IdHTTPWorkBegin(ASender: TObject; AWorkMode: TWorkMode;
   AWorkCountMax: Int64);
 begin
-  PostMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILESIZE, AWorkCountMax);
+  SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILESIZE, AWorkCountMax);
 end;
 
 procedure TUpdThread.IdHTTPWork(ASender: TObject; AWorkMode: TWorkMode;
   AWorkCount: Int64);
 begin
-  PostMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILEPROGRESS, AWorkCount);
+  SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILEPROGRESS, AWorkCount);
 end;
 
 function TUpdThread.CheckUpdates(s: string; items: TTagList): boolean;
@@ -119,9 +122,9 @@ begin
             begin
               if fileexists(ExtractFilePath(paramstr(0)) + fname) then
                 DeleteFile(ExtractFilePath(paramstr(0)) + fname);
-
               INI.DeleteKey('update', fname);
               items.Delete(i);
+              SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILEDELETED, LongInt(@fname));
             end
         end
       else
@@ -153,7 +156,7 @@ var
   fname, aname, pname, o, dir: string;
   f: TFileStream;
   INI: TINIFile;
-
+  z: tzipfile;
 begin
   root := ExtractFilePath(paramstr(0));
   aroot := IncludeTrailingPathDelimiter(root + 'update');
@@ -164,7 +167,7 @@ begin
   INI := TINIFile.Create(aroot + 'update.ini');
   CoInitialize(nil);
 
-  PostMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILECOUNT, items.Count);
+  SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILECOUNT, items.Count);
 
   HTTP.OnWorkBegin := IdHTTPWorkBegin;
   HTTP.OnWork := IdHTTPWork;
@@ -172,7 +175,7 @@ begin
   try // downloading
     for i := 0 to items.Count - 1 do
     begin
-      PostMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILEPOS, i);
+      SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILEPOS, i);
       fname := items[i].Attrs.Value('file');
       v1 := StrToInt(items[i].Attrs.Value('version'));
       v2 := INI.ReadInteger('update', fname, -1);
@@ -187,7 +190,7 @@ begin
       if (v1 > -1) and (v2 >= v1) and (fileexists(aroot + aname)) then
         Continue;
 
-      PostMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILENAME, LongInt(@fname));
+      SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILENAME, LongInt(@fname));
 
       o := FListURL + StringReplace(pname, '\', '/', [rfReplaceAll]);
 
@@ -197,11 +200,15 @@ begin
         CreateDirExt(dir);
 
       f := TFileStream.Create(aroot + pname, fmCREATE);
-
-      try
-        HTTP.Get(o, f);
-      finally
-        f.Free;
+      try  try
+          HTTP.Get(o, f);
+        finally
+          f.Free;
+        end;
+      except
+        if fileexists(aroot + pname) then
+          DeleteFile(aroot + pname);
+        raise;
       end;
 
       if v1 > -1 then
@@ -230,7 +237,12 @@ begin
 
       if aname <> '' then
       begin
-        ShellUnzip(aroot + aname, root);
+        SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILEUNZIP, LongInt(@aname));
+        z := tzipfile.Create; try
+        z.ExtractZipFile(aroot + aname,root);
+        finally
+          z.Free;
+        end;
         DeleteFile(aroot + aname);
       end
       else

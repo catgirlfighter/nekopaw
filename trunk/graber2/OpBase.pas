@@ -47,7 +47,8 @@ var
   GLOBAL_LOGMODE: boolean;
 
 procedure SetLogMode(Value: boolean);
-procedure SetConSettings(r: TResourceList);
+procedure SetConSettings(r: TResourceList; list: boolean = true;
+  pics: boolean = true);
 procedure SaveFavResource(r: TResource; INI: TINIFile = nil);
 
 implementation
@@ -67,6 +68,7 @@ var
   i, j, n: integer;
   pref, s: string;
   INI: TINIFile;
+  rec: thttprec;
 begin
   INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
   try
@@ -92,6 +94,13 @@ begin
       if s <> '' then
         r[i].Fields['password'] := trim(DecryptString(s, KeyString), #0);
 
+      rec:= r[i].HTTPRec;
+
+      rec.StartCount := INI.ReadInteger(pref + r[i].Name, 'StartCount', 0);
+      rec.MaxCount := INI.ReadInteger(pref + r[i].Name, 'MaxCount', 0);
+
+      r[i].HTTPRec := rec;
+
       r[i].ThreadCounter.UseUserSettings := INI.ReadBool(pref + r[i].Name,
         'UseUserSettings', false);
       r[i].ThreadCounter.UserSettings.MaxThreadCount :=
@@ -100,6 +109,10 @@ begin
         INI.ReadInteger(pref + r[i].Name, 'UserPageDelay', 0);
       r[i].ThreadCounter.UserSettings.PicDelay :=
         INI.ReadInteger(pref + r[i].Name, 'UserPicDelay', 0);
+
+      //h := r[i].HTTPRec;
+      r[i].ThreadCounter.UseProxy :=
+        INI.ReadInteger(pref + r[i].Name, 'UseProxy', -1);
 
       for j := n to r[i].Fields.Count - 1 do
         if r[i].Fields.Items[j].restype <> ftNone then
@@ -159,6 +172,10 @@ begin
     else
       INI.DeleteKey(rname, 'Password');
 
+    if default then //all default finished there
+      Exit;
+
+
     if Assigned(r.ThreadCounter) then
     begin
       INI.WriteBool(rname, 'UseUserSettings', r.ThreadCounter.UseUserSettings);
@@ -168,7 +185,11 @@ begin
         r.ThreadCounter.UserSettings.PageDelay);
       INI.WriteInteger(rname, 'UserPicDelay',
         r.ThreadCounter.UserSettings.PicDelay);
+      INI.WriteInteger(rname,'UseProxy',r.ThreadCounter.UseProxy);
     end;
+
+    INI.WriteInteger(rName, 'StartCount', r.HTTPRec.StartCount);
+    INI.WriteInteger(rName, 'MaxCount', r.HTTPRec.MaxCount);
 
     for j := 1 to r.Fields.Count - 1 do
       if not(r.Fields.Items[j].restype in [ftNone, ftMultiEdit]) then
@@ -253,7 +274,10 @@ begin
       Tips := INI.ReadBool('settings', 'tips', true);
       UseDist := INI.ReadBool('settings', 'dist', true);
       WriteEXIF := INI.ReadBool('Settings', 'WriteEXIF', false);
-      GlobalSettings.UseBlackList := INI.ReadBool('Settings', 'UseBlackList', false);
+      UseBlackList := INI.ReadBool('Settings', 'UseBlackList', false);
+      SemiJob := tSemiListJob(INI.ReadInteger('Settings','SemiJob',0));
+      GlobalSettings.UncheckBlacklisted := INI.ReadBool('Settings','UncheckBlacklisted',true);
+      GlobalSettings.StopSignalTimer := INI.ReadInteger('Settings', 'StopSignalTimer',0);
 
       ShowSettings := langname = '';
 
@@ -283,7 +307,7 @@ begin
         PerResThreads := INI.ReadInteger('download',
           'perresourcethreadcount', 2);
         PicThreads := INI.ReadInteger('download', 'picturethreadcount', 1);
-        SDALF := INI.ReadBool('download', 'SDALF', false);
+        //SDALF := INI.ReadBool('download', 'SDALF', false);
         AutoUncheckInvisible := INI.ReadBool('download',
           'AutoUncheckInvisible', false);
         Debug := false;
@@ -293,7 +317,8 @@ begin
 
       with Proxy do
       begin
-        UseProxy := INI.ReadBool('proxy', 'useproxy', false);
+        UseProxy := INI.ReadInteger('proxy', 'useproxy', 0);
+        ptype := tProxyType(INI.ReadInteger('proxy','type',0));
         Host := INI.ReadString('proxy', 'host', '');
         Port := INI.ReadInteger('proxy', 'port', 0);
         Auth := INI.ReadBool('proxy', 'authetication', false);
@@ -360,7 +385,7 @@ begin
 
           for i := 0 to v.Count - 1 do
           begin
-            BlackList[i][0] := v[i];
+            BlackList[i][0] := DeleteTo(v[i],'_');
             BlackList[i][1] := INI.ReadString('blacklist', v[i], '');
           end;
         end;
@@ -368,8 +393,6 @@ begin
       finally
         v.Free;
       end;
-
-
 
     end;
   finally
@@ -408,6 +431,9 @@ begin
       INI.WriteBool('Settings', 'Dist', UseDist);
       INI.WriteBool('Settings', 'WriteEXIF', GlobalSettings.WriteEXIF);
       INI.WriteBool('Settings', 'UseBlackList', GlobalSettings.UseBlackList);
+      INI.WriteInteger('Settings', 'SemiJob',Integer(GlobalSettings.SemiJob));
+      INI.WriteBool('Settings','UncheckBlacklisted',GlobalSettings.UncheckBlacklisted);
+      INI.WriteInteger('Settings', 'StopSignalTimer',GlobalSettings.StopSignalTimer);
 
       with Downl do
       begin
@@ -416,15 +442,15 @@ begin
         INI.WriteBool('Download', 'UsePerResource', UsePerRes);
         INI.WriteInteger('Download', 'PerResourceThreadCount', PerResThreads);
         INI.WriteInteger('Download', 'PictureThreadCount', PicThreads);
-        INI.WriteBool('Download', 'SDALF', SDALF);
         INI.WriteBool('Download', 'AutoUncheckInvisible', AutoUncheckInvisible);
       end;
 
-      INI.WriteInteger('download', 'Speed', idThrottler.BitsPerSec);
+      INI.WriteInteger('Download', 'Speed', idThrottler.BitsPerSec);
 
       with Proxy do
       begin
-        INI.WriteBool('Proxy', 'UseProxy', UseProxy);
+        INI.WriteInteger('Proxy', 'UseProxy', UseProxy);
+        INI.WriteInteger('Proxy','Type',Integer(ptype));
         INI.WriteString('Proxy', 'Host', Host);
         INI.WriteInteger('Proxy', 'Port', Port);
         INI.WriteBool('Proxy', 'Authetication', Auth);
@@ -435,13 +461,7 @@ begin
         else
           INI.WriteString('Proxy', 'Password', Password);
       end;
-      {
-        with Formats do
-        begin
-        INI.WriteString('Formats','List',ListFormat);
-        INI.WriteString('Formats','Picture',PicFormat);
-        end;
-      }
+
       INI.EraseSection('ignorelist');
 
       for i := 0 to length(IgnoreList) - 1 do
@@ -450,10 +470,7 @@ begin
       INI.EraseSection('BlackList');
 
       for i := 0 to length(BlackList) - 1 do
-        INI.WriteString('BlackList', BlackList[i][0], BlackList[i][1]);
-
-      // if Assigned(FullResList) then
-      // SaveResourceSettings(INI);
+        INI.WriteString('BlackList', IntToStr(i)+'_'+BlackList[i][0], BlackList[i][1]);
 
     end;
   finally
@@ -628,30 +645,57 @@ begin
   end;
 end;
 
-procedure SetConSettings(r: TResourceList);
+procedure SetConSettings(r: TResourceList; list: boolean = true;
+  pics: boolean = true);
+var
+  ps: tproxyrec;
 begin
-  if GlobalSettings.Downl.UsePerRes then
-    r.MaxThreadCount := GlobalSettings.Downl.PerResThreads
-  else
-    r.MaxThreadCount := 0;
+  ps := GlobalSettings.Proxy;
+  if list then
+  begin
+    if GlobalSettings.Downl.UsePerRes then
+      r.MaxThreadCount := GlobalSettings.Downl.PerResThreads
+    else
+      r.MaxThreadCount := 0;
 
-  r.ThreadHandler.Proxy := GlobalSettings.Proxy;
-  r.ThreadHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
-  r.ThreadHandler.Retries := GlobalSettings.Downl.Retries;
+    if GlobalSettings.Proxy.UseProxy in [0,1,2] then
+      ps.UseProxy := GlobalSettings.Proxy.UseProxy
+    else
+      ps.UseProxy := 0;
 
-  r.DWNLDHandler.Proxy := GlobalSettings.Proxy;
-  r.DWNLDHandler.ThreadCount := GlobalSettings.Downl.PicThreads;
-  r.DWNLDHandler.Retries := GlobalSettings.Downl.Retries;
-  r.PictureList.IgnoreList := CopyDSArray(IgnoreList);
-  r.PictureList.UseBlackList := GlobalSettings.UseBlackList;
+    r.ThreadHandler.Proxy := ps;
 
-  if r.PictureList.UseBlackList then
-    r.PictureList.BlackList := CopyDSArray(BlackList);
+    r.ThreadHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
+    r.ThreadHandler.Retries := GlobalSettings.Downl.Retries;
 
+    r.PictureList.IgnoreList := CopyDSArray(IgnoreList);
+    r.PictureList.UseBlackList := GlobalSettings.UseBlackList;
 
-  r.LogMode := GLOBAL_LOGMODE;
-  r.UseDistribution := GlobalSettings.UseDist;
-  r.WriteEXIF := GlobalSettings.WriteEXIF;
+    if r.PictureList.UseBlackList then
+      r.PictureList.BlackList := CopyDSArray(BlackList);
+  end;
+
+  if pics then
+  begin
+    r.DWNLDHandler.Proxy := GlobalSettings.Proxy;
+
+    if GlobalSettings.Proxy.UseProxy in [0,1,3] then
+      ps.UseProxy := GlobalSettings.Proxy.UseProxy
+    else
+      ps.UseProxy := 0;
+
+    r.DWNLDHandler.Proxy := ps;
+
+    r.DWNLDHandler.ThreadCount := GlobalSettings.Downl.PicThreads;
+    r.DWNLDHandler.Retries := GlobalSettings.Downl.Retries;
+
+    r.UseDistribution := GlobalSettings.UseDist;
+    r.WriteEXIF := GlobalSettings.WriteEXIF;
+    r.UncheckBlacklisted := GlobalSettings.UncheckBlacklisted;
+  end;
+
+  if pics and list then
+    r.LogMode := GLOBAL_LOGMODE;
 end;
 
 procedure SaveFavResource(r: TResource; INI: TINIFile = nil);
@@ -688,9 +732,6 @@ end;
 CreateLangINI(IncludeTrailingPathDelimiter(rootdir) +
   IncludeTrailingPathDelimiter('languages') + langname + '.ini');
 
-// FullResList := TResourceList.Create;
-// FullResList.OnError := erclass.OnError;
-// FullResList.LoadList(IncludeTrailingPathDelimiter(rootdir) + 'resources');
 resources_dir := IncludeTrailingPathDelimiter(rootdir) + 'resources';
 
 TagDump := TPictureTagList.Create;
@@ -703,8 +744,6 @@ if FileExists(IncludeTrailingPathDelimiter(rootdir) + 'tagdump.txt') then
 GlobalFavList := TStringList.Create;
 
 LoadFavList(GlobalFavList);
-
-// LoadLang(IncludeTrailingPathDelimiter(rootdir)+IncludeTrailingPathDelimiter('languages')+langname+'.ini');
 
 finalization
 

@@ -5,7 +5,7 @@ interface
 uses
   {std}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, ComCtrls, DB, ExtCtrls,  DateUtils,
+  Dialogs, ComCtrls, DB, ExtCtrls,  DateUtils, math,
   {devex}
   cxGraphics, cxControls, cxLookAndFeels, cxLookAndFeelPainters,
   cxStyles, cxCustomData, cxFilter, cxData, cxDataStorage, cxEdit, cxDBData,
@@ -52,6 +52,23 @@ type
     function GetExpandable: Boolean; override;
   end;
 
+  tTickMeter = record
+    Tick: Word;
+    Size: Word;
+    LowDate: TDateTime;
+  end;
+
+  tTickCounter = record
+    TA: array[0..99] of tTickMeter;
+    TAPos: Byte;
+    TAMax: Byte;
+    //AVGSpeed: Word;
+    TickSum: Extended;
+    SizeSum: Extended;
+    FDate: TDateTime;
+    LowDate,HighDate: TDateTime;
+  end;
+
   TfGrid = class(TFrame)
     GridLevel1: TcxGridLevel;
     Grid: TcxGrid;
@@ -88,6 +105,9 @@ type
     GridPopup: TcxGridPopupMenu;
     vChildGrid: TcxGridTableView;
     bbWriteEXIF: TdxBarButton;
+    bbUncheckBlacklisted: TdxBarButton;
+    bbCheckBlacklisted: TdxBarButton;
+    SignalTimer: TTimer;
     procedure bbColumnsClick(Sender: TObject);
     procedure bbFilterClick(Sender: TObject);
     procedure vGrid1FocusedRecordChanged(Sender: TcxCustomGridTableView;
@@ -126,6 +146,9 @@ type
       APrevFocusedItem, AFocusedItem: TcxCustomGridTableItem);
     procedure GridFocusedViewChanged(Sender: TcxCustomGrid;
       APrevFocusedView, AFocusedView: TcxCustomGridView);
+    procedure bbCheckBlacklistedClick(Sender: TObject);
+    procedure bbUncheckBlacklistedClick(Sender: TObject);
+    procedure SignalTimerTimer(Sender: TObject);
   private
     // FList: TList;
     // FFieldList: TStringList;
@@ -153,8 +176,12 @@ type
     FChildPosColumn: TcxGridColumn;
     FChildResColumn: TcxGridColumn;
     FOnLog: TLogEvent;
+    FOnError: TLogEvent;
     fUpdCnt: integer;
     fTimeString: string;
+    fTickCounter: tTickCounter;
+    fSignalTimer: integer;
+    procedure DoOnError(Sender: TObject; Msg: String; Data: Pointer);
   public
     ResList: TResourceList;
     procedure vGridRecordExpandable(MasterDataRow: TcxGridMasterDataRow;
@@ -176,7 +203,7 @@ type
     procedure updatefocusedrecord(rec: TcxCustomGridRecord);
     procedure ForceStop(Sender: TObject);
     procedure ForcePicsStop(Sender: TObject);
-    procedure SetSettings;
+    procedure SetSettings(list,pics: boolean);
     procedure SelectAll(b: Boolean);
     procedure SelectSelected(b: Boolean);
     procedure SelectFiltered(b: Boolean);
@@ -197,11 +224,17 @@ type
     procedure Log(s: string);
     procedure SetList(l: TResourceList);
     procedure Recheck(n: Integer);
+    procedure CalcStats;
+    procedure ResetTickCounter;
+    procedure AddTick(ASize: Word; DTStart,DTEnd: TDateTime);
+    procedure SelectBlacklisted(b: boolean);
+    procedure OnSendStop(Sender: TObject; Msg: String; Data: Pointer);
     property OnPicChanged: TPictureNotifyEvent read FPicChanged
       write FPicChanged;
     // property OnPageComplete: TNotifyEvent read FPageComplete write FPageComplete;
     property OnTagUpdate: TTagUpdateEvent read FTagUpdate write FTagUpdate;
     property OnLog: TLogEvent read FOnLog write FOnLog;
+    property OnError: TLogEvent read FOnError write FOnError;
     { Public declarations }
   end;
 
@@ -213,6 +246,16 @@ implementation
 uses LangString, utils, OpBase;
 
 {$R *.dfm}
+
+function DateTimeToMilliseconds(const ADateTime: TDateTime): Int64;
+var
+  LTimeStamp: TTimeStamp;
+begin
+  LTimeStamp := DateTimeToTimeStamp(ADateTime);
+  Result := LTimeStamp.Date;
+  Result := (Result * MSecsPerDay) + LTimeStamp.Time;
+end;
+
 { TmycxGridTableView }
 
 constructor TcxGridTableView.Create(AOwner: TComponent);
@@ -248,6 +291,12 @@ begin
 end;
 
 { TfGrid }
+
+procedure TfGrid.DoOnError(Sender: TObject; Msg: String; Data: Pointer);
+begin
+  if assigned(OnError) then
+    OnError(Self,Msg,Data);
+end;
 
 procedure TfGrid.vGridRecordExpandable(MasterDataRow: TcxGridMasterDataRow;
   var Expandable: Boolean);
@@ -304,6 +353,38 @@ begin
   // result.DataBinding.ValueType := 'String';
 end;
 
+procedure TfGrid.AddTick(ASize: Word; DTStart,DTEnd: TDateTime);
+var
+  ntick: word;
+begin
+  with fTickCounter do
+  begin
+    if LowDate = 0 then
+      LowDate := DTStart;
+
+    if HighDate = 0 then
+      HighDate := DtEnd;
+
+    ntick := Max(0, DateTimeToMilliseconds(LowDate) - DateTimeToMilliseconds(DTStart))
+      + Max(0,DateTimeToMilliseconds(DTEnd) - DateTimeToMilliseconds(HighDate));
+
+    if (DTEnd > HighDate) then
+      HighDate := DTEnd;
+
+    TickSum := TickSum - TA[TAPos].Tick + ntick;
+    SizeSum := SizeSum - TA[TAPos].Size + ASize;
+
+    if TA[TAPos].LowDate > LowDate then
+      LowDate := TA[TAPos].LowDate;
+
+    TA[TAPos].Tick := nTick;
+    TA[TAPos].Size := ASize;
+    TAPos := (TAPos + 1) mod 100;
+    if TAMax < 100 then
+      inc(TAMax);
+  end;
+end;
+
 procedure TfGrid.bbAutoUnchClick(Sender: TObject);
 begin
   GlobalSettings.Downl.AutoUncheckInvisible := bbAutoUnch.Down;
@@ -312,6 +393,11 @@ end;
 procedure TfGrid.bbCheckAllClick(Sender: TObject);
 begin
   SelectAll(true);
+end;
+
+procedure TfGrid.bbCheckBlacklistedClick(Sender: TObject);
+begin
+  SelectBlackListed(true);
 end;
 
 procedure TfGrid.bbCheckFilteredClick(Sender: TObject);
@@ -332,7 +418,7 @@ end;
 
 procedure TfGrid.bbDALFClick(Sender: TObject);
 begin
-  GlobalSettings.Downl.SDALF := bbDALF.Down;
+  //GlobalSettings.Downl.SDALF := bbDALF.Down;
 end;
 
 procedure TfGrid.bbFilterClick(Sender: TObject);
@@ -353,6 +439,11 @@ begin
   SelectAll(false);
 end;
 
+procedure TfGrid.bbUncheckBlacklistedClick(Sender: TObject);
+begin
+  SelectBlackListed(false);
+end;
+
 procedure TfGrid.bbUncheckFilteredClick(Sender: TObject);
 begin
   SelectFiltered(false);
@@ -371,6 +462,26 @@ begin
     Result := 2
   else
     Result := 0;
+end;
+
+procedure TfGrid.CalcStats;
+var
+  n: word;
+begin
+  with fTickCounter do
+  begin
+    if TickSum > 0 then
+      sBar.Panels[1].Text := GetBtString(SizeSum / TickSum {/ TAMax} * 1000)
+    else
+      sBar.Panels[1].Text := '';
+
+    n := SecondsBetween(Date+Time,FDate);
+    if (FDate > 0) and (n > 10) then
+      sBar.Panels[2].Text := TimeString(n)
+    else
+      sBar.Panels[2].Text := '';
+  end;
+
 end;
 
 // procedure TfGrid.CreateList;
@@ -401,6 +512,7 @@ begin
 
   c := 0;
   md5list := tMetaList.Create;
+  md5list.ValueType := db.ftString;
   try
     for i := 0 to ResList.PictureList.Count - 1 do
       if Assigned(ResList.PictureList[i].MD5) then
@@ -449,37 +561,45 @@ begin
       ResList.OnPageComplete(r);
 
     with ResList.PictureList do
+    begin
+
+      sBar.Panels[1].Text := fTimeString;
+
       if i > 0 then
       begin
+
+
         if (PicCounter.FSH - PicCounter.EXS) = 0 then
-          fTimeString := '???'
+          //fTimeString := '???'
         else if fUpdCnt <> (PicCounter.FSH - PicCounter.EXS - PicCounter.ERR) then
         begin
           btw := SecondsBetween(ResList.PictureStartTime,Date + Time);
           with PicCounter do
-            fTimeString := TimeString(Trunc(btw / FSH *
+            fTickCounter.FDate := IncSecond(Date+Time,Trunc(btw / FSH *
               (Count - SKP - FSH + EXS + ERR)));
           fUpdCnt := PicCounter.FSH - PicCounter.EXS - PicCounter.ERR;
         end;
 
 
-
-        sBar.Panels[1].Text :=
+        sBar.Panels[3].Text :=
           'TTL ' + IntToStr(Count) +
           ' OK ' + IntToStr(PicCounter.OK) +
           ' SKP ' + IntToStr(PicCounter.SKP) +
           ' EXS ' + IntToStr(PicCounter.EXS) +
-          ' ERR ' + IntToStr(PicCounter.ERR) +
-          ' ELP ' + fTimeString;
+          ' ERR ' + IntToStr(PicCounter.ERR);
 
-        if (ResList.PictureList.Count - ResList.PictureList.PicCounter.SKP) > 0
+        if ResList.ListFinished
+        and ((ResList.PictureList.Count - ResList.PictureList.PicCounter.SKP) > 0)
         then
           sBar.Panels[0].Text := FormatFloat('0.00%',
             ResList.PictureList.PicCounter.FSH / (ResList.PictureList.Count -
             ResList.PictureList.PicCounter.SKP) * 100);
       end;
 
-    FChangesList.Clear;
+      CalcStats;
+
+      FChangesList.Clear;
+    end;
   finally
     vGrid.EndUpdate;
     sendprogress;
@@ -493,7 +613,7 @@ var
   n: TListValue;
   clm: TcxGridColumn;
 begin
-  if Assigned(Pic.Parent) then
+  if Assigned(Pic.Parent){ or (dc.RecordCount <= RecNo) }then
     Exit;
 
   for j := 0 to Pic.Meta.Count - 1 do
@@ -520,7 +640,7 @@ begin
     begin
       IF Assigned(ResList.OnError) then
         ResList.OnError(Self, Pic.Resource.Name + ': field ' + n.Name +
-          ' does not declared in field list');
+          ' does not declared in field list', nil);
     end;
   end;
 end;
@@ -577,7 +697,7 @@ end;
 procedure TfGrid.Log(s: string);
 begin
   if Assigned(OnLog) then
-    OnLog(Self, s);
+    OnLog(Self, s, nil);
 end;
 
 procedure TfGrid.OnEndPicList(Sender: TObject);
@@ -588,45 +708,53 @@ var
   // clm: TcxGridColumn;
 begin
   t1 := GetTickCount;
-  vGrid.BeginUpdate;
+  vGrid.BeginUpdate; try
 
-  c := vGrid.DataController.RecordCount;
+    c := vGrid.DataController.RecordCount;
 
-  try
 
-    vGrid.DataController.RecordCount := ResList.PictureList.ParensCount;
+
+    vGrid.DataController.RecordCount := ResList.PictureList.ParentCount;
 
     with vGrid.DataController, ResList do
       for i := c to RecordCount - 1 do
       begin
         Values[i, FCheckColumn.Index] := PictureList[i].Checked;
         Values[i, FIdColumn.Index] := Integer(PictureList[i]);
-        // Values[i,FParentColumn.Index] := Integer(PictureList[i].Parent);
         Values[i, FResColumn.Index] := PictureList[i].Resource.Name;
         Values[i, FLabelColumn.Index] := PictureList[i].DisplayLabel;
-        { if PictureList[i].Meta.Count <> FFieldLIst.Count then
-          raise Exception.Create('Picture Meta does not equal to grid fields'); }
         FillRecord(vGrid.DataController, i, PictureList[i]);
       end;
-  finally
-    vGrid.EndUpdate;
-  end;
+
+  finally vGrid.EndUpdate; end;
 
   if c = 0 then
     BestFitWidths(vGrid);
 
   t3 := GetTickCount;
-  sBar.Panels[1].Text :=
+
+  if ResList.PicsFinished then
+    sBar.Panels[3].Text :=
     'TTL ' + IntToStr(ResList.PictureList.Count) +
     ' IGN ' + IntToStr(ResList.PictureList.PicCounter.IGN) +
     ' BLK ' + IntToStr(ResList.PictureList.PicCounter.BLK) +
     ' TBL ' + IntToStr(t3 - t1) + 'ms' +
     ' DBL ' + IntToStr(ResList.PictureList.DoublestickCount) + 'ms';
+
+  if ResList.PicsFinished and not ResList.PostProcDelayed
+  and (GlobalSettings.SemiJob <> sljNone) and (ResList.Count > 0) then
+  case GlobalSettings.SemiJob of
+    sljPostProc: ResList.StartJob(JOB_POSTPROCESS);
+    sljPics: ResLIst.StartJob(JOB_PICS);
+  end;
 end;
 
 procedure TfGrid.OnListPicChanged(Pic: TTPicture; Changes: TPicChanges);
 begin
   Pic.Changes := Pic.Changes + Changes;
+  if Pic.LastPos > 0 then
+    AddTick(Pic.Pos - Pic.LastPos,Pic.DTStart,Pic.DTEnd);
+
   if updTimer.Enabled then
   begin
     if FChangesList.IndexOf(Pic) = -1 then
@@ -634,6 +762,19 @@ begin
   end
   else
     updatepic(Pic);
+end;
+
+procedure TfGrid.OnSendStop(Sender: TObject; Msg: String; Data: Pointer);
+begin
+  if Boolean(Data) and (GlobalSettings.StopSignalTimer > 0) then
+  begin
+    OnError(Self,'Stop signal sent with a reason: ' + Msg +'. Restart after '
+    + IntToStr(GlobalSettings.StopSignalTimer) + ' sec',nil);
+    fSignalTimer := GlobalSettings.StopSignalTimer;
+    SignalTimer.Enabled := True;
+  end else OnError(Self,'Stop signal sent with a reason: ' + Msg,nil);
+
+  ResList.StartJob(JOB_STOPPICS);
 end;
 
 procedure TfGrid.OnStartJob(Sender: TObject; Action: Integer);
@@ -648,9 +789,12 @@ begin
     or (Action = JOB_STOPPICS) and (ResList.ListFinished) then
     PostMessage(Application.MainForm.Handle,CM_ENDJOB,Integer(Self.Parent),0);
   }
+  if Action in [JOB_PICS,JOB_POSTPROCESS] then SignalTimer.Enabled := false;
   case Action of
     JOB_POSTPROCESS:
       begin
+        vGrid.OptionsData.Editing := false;
+        vChildGrid.OptionsData.Editing := false;
         SetColWidths;
         FSizeColumn.Visible := true;
         FPosColumn.Visible := true;
@@ -672,6 +816,9 @@ begin
     JOB_PICS:
       begin
         // vGrid.BeginUpdate;
+        //fTotalSize := 0;
+        //fCurrentSize := 0;
+
         updTimer.Enabled := true;
         vGrid.OptionsData.Editing := false;
         vChildGrid.OptionsData.Editing := false;
@@ -689,24 +836,26 @@ begin
       end;
     JOB_STOPLIST:
       begin
-        if ResList.PicsFinished then
-        begin
-          if not ResList.Canceled and GlobalSettings.Downl.SDALF then
-            ResList.StartJob(JOB_PICS);
-          sBar.Panels[0].Text := '';
-        end;
-        PostMessage(Application.MainForm.Handle, CM_ENDJOB,
-          Integer(Self.Parent), 0);
         c := TagDump.Count;
         TagDump.CopyTagList(ResList.PictureList.Tags);
 
         if c <> TagDump.Count then
           SaveTagDump;
 
-        FSizeColumn.Visible := false;
-        FPosColumn.Visible := false;
-        FChildSizeColumn.Visible := false;
-        FChildPosColumn.Visible := false;
+        if ResList.PicsFinished then
+        begin
+          //if not ResList.Canceled and GlobalSettings.Downl.SDALF then
+          //  ResList.StartJob(JOB_PICS);
+          sBar.Panels[0].Text := '';
+
+          //FSizeColumn.Visible := false;
+          //FPosColumn.Visible := false;
+          //FChildSizeColumn.Visible := false;
+          //FChildPosColumn.Visible := false;
+        end;
+
+        PostMessage(Application.MainForm.Handle, CM_ENDJOB,
+        Integer(Self.Parent), 0);
       end;
     JOB_STOPPICS:
       begin
@@ -720,7 +869,11 @@ begin
         vGrid.OptionsData.Editing := true;
         vChildGrid.OptionsData.Editing := true;
         if ResList.ListFinished then
+        begin
           sBar.Panels[0].Text := '';
+          sBar.Panels[1].Text := '';
+          sBar.Panels[2].Text := '';
+        end;
         PostMessage(Application.MainForm.Handle, CM_ENDJOB,
           Integer(Self.Parent), 1);
       end;
@@ -912,6 +1065,28 @@ begin
   end;
 end;
 
+procedure TfGrid.ResetTickCounter;
+var
+  i: integer;
+begin
+  with fTickCounter do
+  begin
+    TAPos := 0;
+    TAMax := 0;
+    TickSum := 0;
+    SizeSum := 0;
+    FDate := 0;
+    LowDate := 0;
+    HighDate := 0;
+
+    for I := 0 to 99 do
+    begin
+      TA[i].Tick := 0;
+      TA[i].Size := 0;
+    end;
+  end;
+end;
+
 procedure TfGrid.SaveFields;
 var
   i: Integer;
@@ -988,6 +1163,26 @@ begin
   end;
 end;
 
+procedure TfGrid.SelectBlacklisted(b: boolean);
+var
+  i: integer;
+begin
+  vGrid.BeginUpdate;
+  try
+    for i := 0 to vGrid.DataController.RecordCount - 1 do
+    if ResList.PictureList.CheckBlackList(ResList.PictureList[i]) then
+    begin
+      vGrid.DataController.Values[i, FCheckColumn.Index] := b;
+      ResList.PictureList[i].Checked := b;
+      if ResList.PictureList[i].Linked.Count > 0 then
+        Recheck(i);
+    end;
+    vGrid.DataController.Post(true);
+  finally
+    vGrid.EndUpdate;
+  end;
+end;
+
 procedure TfGrid.SelectFiltered(b: Boolean);
 var
   i: Integer;
@@ -1011,18 +1206,30 @@ end;
 procedure TfGrid.SelectSelected(b: Boolean);
 var
   i: Integer;
+  Pic: TTPicture;
 begin
   vGrid.BeginUpdate;
   try
-    for i := 0 to vGrid.ViewData.RowCount - 1 do
-      if vGrid.ViewData.Rows[i].Selected then
+    if Grid.FocusedView = vGrid then
+      for i := 0 to vGrid.Controller.SelectedRecordCount - 1 do
       begin
-        vGrid.DataController.Values[vGrid.ViewData.Rows[i].RecordIndex,
-          FCheckColumn.Index] := b;
+        vGrid.Controller.SelectedRecords[i].Values[FCheckColumn.Index] := b;
         ResList.PictureList[vGrid.ViewData.Rows[i].RecordIndex].Checked := b;
-        if ResList.PictureList[i].Linked.Count > 0 then
-          Recheck(i);
+          if ResList.PictureList[i].Linked.Count > 0 then
+            Recheck(i);
+      end
+    else with (Grid.FocusedView as tcxGridTableView) do
+      for i := 0 to Controller.SelectedRecordCount -1 do
+      begin
+        pic := TTPicture(Integer(Controller.SelectedRecords[i].Values
+          [FChildIdColumn.Index]));
+        Controller.selectedRecords[i].Values[FChildCheckColumn.Index] := b;
+        pic.Checked := b;
+        pic.Parent.Checked := true;
+        Pic.Parent.Changes := [pcChecked];
+        updatepic(Pic.Parent);
       end;
+
     vGrid.DataController.Post(true);
   finally
     vGrid.EndUpdate;
@@ -1070,6 +1277,8 @@ begin
   bbCheckFiltered.Hint := bbCheckFiltered.Caption;
   bbUncheckFiltered.Caption := bbCheckFiltered.Caption;
   bbUncheckFiltered.Hint := bbCheckFiltered.Caption;
+  bbUncheckBlacklisted.Caption := lang('_CH_BLACKLISTED_');
+  bbUncheckBlackListed.Hint := bbUncheckBlacklisted.Caption;
   bbInverseChecked.Caption := lang('_INVERSE_');
   bbInverseChecked.Hint := bbInverseChecked.Caption;
   bbAdditional.Caption := lang('_ADDITIONAL_');
@@ -1098,6 +1307,8 @@ begin
   ResList.PictureList.OnPicChanged := OnListPicChanged;
   ResList.OnJobChanged := OnStartJob;
   ResList.PictureList.OnEndAddList := OnEndPicList;
+  ResList.OnError := DoOnError;
+  ResList.OnSendStop := OnSendStop;
   FPicChanged := nil;
 
   // end
@@ -1144,11 +1355,21 @@ begin
           (BarManager.Items[i] as TdxBarSubItem).ShowCaption := false;
 end;
 
-procedure TfGrid.SetSettings;
+procedure TfGrid.SetSettings(list,pics: boolean);
 begin
-  SetConSettings(ResList);
-  bbDALF.Down := GlobalSettings.Downl.SDALF;
+  SetConSettings(ResList,list,pics);
+  //bbDALF.Down := GlobalSettings.Downl.SDALF;
   bbAutoUnch.Down := GlobalSettings.Downl.AutoUncheckInvisible;
+end;
+
+procedure TfGrid.SignalTimerTimer(Sender: TObject);
+begin
+  if fSignalTimer > 0 then
+    dec(fSignalTimer)
+  else begin
+    SignalTimer.Enabled := false;
+    ResList.StartJob(JOB_PICS);
+  end;
 end;
 
 procedure TfGrid.UncheckInvisible;
@@ -1246,7 +1467,9 @@ var
   dc: tcxGridDataController;
   sc, pc, prgc, lc, cc: TcxGridColumn;
 begin
+  //Exit;
   // Pic.Changes
+
   Changes := Pic.Changes;
 
   dc := vGrid.DataController;
@@ -1257,7 +1480,7 @@ begin
 
     dc := tcxGridDataController(dc.GetDetailDataController(n, 0));
 
-    if not Assigned(dc) or (dc.RecordCount = 0) then
+    if not Assigned(dc) or (dc.RecordCount < pic.Bookmark) then
       Exit;
 
     sc := FChildSizeColumn;
@@ -1321,8 +1544,9 @@ begin
             Values[n, prgc.Index] := Pic.Linked.PicCounter.FSH /
               Pic.Linked.Count * 100;
         // FormatFloat('00.00%',);
-        JOB_FINISHED:
-          if (Pic.Size = 0) and (Pic.Linked.Count = 0) then
+        JOB_FINISHED,JOB_POSTFINISHED:
+          if (Pic.Size = 0) and (Pic.Linked.Count = 0)
+          then
             Values[n, prgc.Index] := 'SKIP'
           else if (Pic.Linked.Count = 0) then
             Values[n, prgc.Index] := 'OK'
@@ -1336,7 +1560,7 @@ begin
           Values[n, prgc.Index] := 'ERROR';
         JOB_CANCELED:
           Values[n, prgc.Index] := 'ABORT';
-        JOB_REFRESH:
+        JOB_REFRESH,JOB_POSTPROCINPROGRESS:
           Values[n, prgc.Index] := 'REFRESH';
       end;
     end;

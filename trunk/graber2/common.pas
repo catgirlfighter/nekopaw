@@ -1287,11 +1287,13 @@ end;
 function ImageFormat(Start: Pointer): string;
 type
   ByteArray = array [0 .. 10] of byte;
+  Str3 = array [0..2] of ANSICHAR;
 
 var
   PB: ^ByteArray absolute Start;
   PW: ^word absolute Start;
   PL: ^DWORD absolute Start;
+  FL: ^Str3 absolute Start;
 
 begin
   if PL^ = $38464947 then
@@ -1305,6 +1307,8 @@ begin
     Result := 'png'
   else if PW^ = $D8FF then
     Result := 'jpeg'
+  else if (FL^ = 'CWS') or (FL^ = 'FWS') or (FL^ = 'ZWS') then
+    result := 'swf'
   else
     Result := '';
 end;
@@ -2284,7 +2288,7 @@ begin
       Exit;
     end
     else
-      Dir := ExtractFileDir(ExcludeTrailingBackslash(Dir));
+      Dir := ExtractFileDir(ExcludeTrailingPathDelimiter(Dir));
 end;
 
 function PosBack(const substr, str: String; Offset: Integer = 1): Integer;

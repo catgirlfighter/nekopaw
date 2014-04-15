@@ -74,7 +74,7 @@ object Form1: TForm1
   end
   object Edit1: TEdit
     Left = 8
-    Top = 82
+    Top = 46
     Width = 345
     Height = 21
     TabOrder = 6
@@ -82,7 +82,7 @@ object Form1: TForm1
   end
   object Button5: TButton
     Left = 359
-    Top = 80
+    Top = 44
     Width = 75
     Height = 25
     Caption = 'Button5'

@@ -32,6 +32,7 @@ type
     procedure bExitClick(Sender: TObject);
     procedure bSettingsClick(Sender: TObject);
     procedure bAboutClick(Sender: TObject);
+    procedure FrameClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -63,6 +64,12 @@ end;
 procedure TfStart.bSettingsClick(Sender: TObject);
 begin
   PostMessage(Application.MainForm.Handle, CM_SHOWSETTINGS, 0, 0);
+end;
+
+procedure TfStart.FrameClick(Sender: TObject);
+begin
+  Self.ScalingFlags := [sfLeft, sfTop, sfWidth, sfHeight, sfFont,
+    sfDesignSize];
 end;
 
 procedure TfStart.FrameResize(Sender: TObject);

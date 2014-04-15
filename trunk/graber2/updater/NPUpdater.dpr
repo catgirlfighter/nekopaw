@@ -5,9 +5,9 @@ uses
   MainForm in 'MainForm.pas' {mf},
   UPDUnit in '..\UPDUnit.pas',
   MyHTTP in '..\MyHTTP.pas',
-  Common in 'common.pas',
+  Common in '..\common.pas',
   LangString in '..\LangString.pas',
-  IdHTTP in 'IdHTTP.pas',
+  IdHTTP in '..\IdHTTP.pas',
   MyXMLParser in '..\MyXMLParser.pas',
   ZIP in '..\ZIP.pas';
 {  GraberU in '..\GraberU.pas',
