@@ -1,4 +1,4 @@
-<item file="Graber2.exe"   archive="Graber2.zip"     version=111 />
+<item file="Graber2.exe"   archive="Graber2.zip"     version=112 />
 <item file="libeay32.sys"  archive="libeay32.zip"    version=0 />
 <item file="ssleay32.sys"  archive="ssleay32.zip"    version=0 />
 <item file="versionlog.txt"                          version=-1 />
@@ -15,7 +15,7 @@
 <item file="resources\ii.booru.org.cfg"            version=1 />
 <item file="resources\neko.booru.org.cfg"          version=1 />
 <item file="resources\blogspot.com.cfg"            version=3 />
-<item file="resources\comicartcommunity.com.cfg"   version=5 />
+<item file="resources\comicartcommunity.com.cfg"   version=6 />
 <item file="resources\derpiboo.ru.cfg"             version=16 />
 <item file="resources\deviantart.com.cfg"          version=17 />
 <item file="resources\donmai.us.cfg"               version=6 />
