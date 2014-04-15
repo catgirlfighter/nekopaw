@@ -204,8 +204,6 @@ object fNewList: TfNewList
           object tvFullID: TcxGridColumn
             DataBinding.ValueType = 'Integer'
             Visible = False
-            SortIndex = 0
-            SortOrder = soAscending
           end
           object tvFullcIcon: TcxGridColumn
             PropertiesClassName = 'TcxImageProperties'
@@ -219,7 +217,7 @@ object fNewList: TfNewList
             OnGetProperties = tvFullcNameGetProperties
             Options.Editing = False
             Options.ShowEditButtons = isebAlways
-            SortIndex = 1
+            SortIndex = 0
             SortOrder = soAscending
           end
           object tvFullShort: TcxGridColumn

@@ -16,7 +16,7 @@ uses
   cxGridCustomTableView, cxGridTableView, cxClasses, cxGridLevel, cxGrid,
   dxSkinsdxBarPainter, dxBar,
   {Graber}
-  cxmymultirow, MyHTTP, Common, GraberU, cxNavigator;
+  cxmymultirow, MyHTTP, Common, GraberU, cxNavigator, cxBarEditItem;
 {
   dxSkinsdxBarPainter, dxBar, dxSkinBlack, dxSkinBlue,
   dxSkinBlueprint, dxSkinCaramel, dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide,
@@ -51,7 +51,6 @@ type
     lcPicThreads: TcxLabel;
     lcRetries: TcxLabel;
     cxTabSheet3: TcxTabSheet;
-    chbProxy: TcxCheckBox;
     chbProxyAuth: TcxCheckBox;
     eHost: TcxTextEdit;
     eProxyLogin: TcxTextEdit;
@@ -117,6 +116,13 @@ type
     cChWhat: TcxGridColumn;
     cChWith: TcxGridColumn;
     gBlackListLevel1: TcxGridLevel;
+    lblProxy: TcxLabel;
+    cbProxy: TcxComboBox;
+    cbProxyType: TcxComboBox;
+    lblProxyType: TcxLabel;
+    chbUncheckBlacklisted: TcxBarEditItem;
+    eStopSignalTimer: TcxSpinEdit;
+    lcStopSignalTimer: TcxLabel;
     procedure btnOkClick(Sender: TObject);
     procedure chbProxyPropertiesEditValueChanged(Sender: TObject);
     procedure chbProxyAuthPropertiesEditValueChanged(Sender: TObject);
@@ -134,6 +140,7 @@ type
     procedure lHelpClick(Sender: TObject);
     procedure bNewBlackwordClick(Sender: TObject);
     procedure bDelBlackwordClick(Sender: TObject);
+    procedure cbProxyPropertiesChange(Sender: TObject);
   private
     FIgnList: TDSArray;
     FLangList: TStringList;
@@ -153,12 +160,13 @@ type
     procedure ApplySettings;
     procedure OnClose;
     procedure CreateResources;
-    procedure OnErrorEvent(Sender: TObject; Msg: String);
+    procedure OnErrorEvent(Sender: TObject; Msg: String; Data: Pointer);
     procedure JobStatus(Sander: TObject; Action: Integer);
     procedure LoadDoubles;
     function CheckDoublesName(rulename: string): boolean;
     procedure LoadBlackList;
     procedure SaveBlackList;
+    procedure ResetPosition;
     property OnError: TLogEvent read FOnError write FOnError;
     property FullResList: TResourceList read FFullResList;
     { Public declarations }
@@ -190,8 +198,11 @@ begin
     UseBlackList := chbUseBlackList.Checked;
     AutoUPD := chbAutoUpdate.Checked;
     ShowWhatsNew := chbShowWhatsNew.Checked;
+    UncheckBlacklisted := chbUncheckBlacklisted.EditValue;
+    StopSignalTimer := eStopSignalTimer.EditValue;
 
-    Proxy.UseProxy := chbProxy.Checked;
+    Proxy.UseProxy := cbProxy.ItemIndex;
+    Proxy.ptype := tProxyType(cbProxyType.ItemIndex);
     Proxy.Host := eHost.Text;
     Proxy.Port := ePort.Value;
     Proxy.Auth := chbProxyAuth.Checked;
@@ -358,6 +369,11 @@ begin
     Integer(Self.Parent), 0);
 end;
 
+procedure TfSettings.cbProxyPropertiesChange(Sender: TObject);
+begin
+  ResetButtons;
+end;
+
 procedure TfSettings.chbProxyAuthPropertiesEditValueChanged(Sender: TObject);
 begin
   eProxyLogin.Enabled := chbProxyAuth.Enabled and chbProxyAuth.Checked;
@@ -367,9 +383,9 @@ end;
 
 procedure TfSettings.chbProxyPropertiesEditValueChanged(Sender: TObject);
 begin
-  eHost.Enabled := chbProxy.Checked;
-  ePort.Enabled := chbProxy.Checked;
-  chbProxyAuth.Enabled := chbProxy.Checked;
+  eHost.Enabled := cbProxy.ItemIndex > 0;
+  ePort.Enabled := eHost.Enabled;
+  chbProxyAuth.Enabled := eHost.Enabled;
   eProxyLogin.Enabled := chbProxyAuth.Enabled and chbProxyAuth.Checked;
   eProxyPassword.Enabled := eProxyLogin.Enabled;
   chbProxySavePWD.Enabled := eProxyLogin.Enabled;
@@ -506,6 +522,7 @@ begin
     chbAutoUpdate.Checked := AutoUPD;
     chbShowWhatsNew.Checked := ShowWhatsNew;
     chbUseLookAndFeel.Checked := UseLookAndFeel;
+    eStopSignalTimer.EditValue := StopSignalTimer;
     if SkinName = '' then
       cbSkin.ItemIndex := 0
     else
@@ -514,7 +531,8 @@ begin
     chbTips.Checked := Tips;
     chbLogMode.Checked := GLOBAL_LOGMODE;
     chbUseDistr.Checked := UseDist;
-    chbProxy.Checked := Proxy.UseProxy;
+    cbProxy.ItemIndex := Proxy.UseProxy;
+    cbProxyType.ItemIndex := integer(Proxy.ptype);
     eHost.Text := Proxy.Host;
     ePort.Value := Proxy.Port;
     chbProxyAuth.Checked := Proxy.Auth;
@@ -529,6 +547,7 @@ begin
     eThreadPerRes.EditValue := Downl.PerResThreads;
     ePicThreads.EditValue := Downl.PicThreads;
     eSpeed.Value := idThrottler.BitsPerSec / 1024 / 8;
+    chbUncheckBlacklisted.EditValue := UncheckBlacklisted;
   end;
 
 end;
@@ -544,19 +563,133 @@ end;
 
 procedure TfSettings.ResetButtons;
 begin
-  eHost.Enabled := chbProxy.Checked;
-  ePort.Enabled := chbProxy.Checked;
-  chbProxyAuth.Enabled := chbProxy.Checked;
-  eProxyLogin.Enabled := chbProxyAuth.Enabled and chbProxyAuth.Checked;
+  //cbProxyType.Enabled := cbProxy.ItemIndex > 0;
+  //eHost.Enabled := cbProxyType.Enabled;
+  //ePort.Enabled := eHost.Enabled;
+  //chbProxyAuth.Enabled := eHost.Enabled;
+  eProxyLogin.Enabled := {chbProxyAuth.Enabled and }chbProxyAuth.Checked;
   eProxyPassword.Enabled := eProxyLogin.Enabled;
   chbProxySavePWD.Enabled := eProxyLogin.Enabled;
 
   // chbHideToTray.Enabled := chbTrayIcon.Checked and chbTrayIcon.Enabled;
 end;
 
+procedure TfSettings.ResetPosition;
+const
+//  _cbwidth = 139;
+  _space = 15;
+
+var
+  lcap: integer;
+
+procedure chkw(v: tcxcustomedit);
+begin
+  if v is tcxcheckbox then
+    with v as tcxcheckbox do
+    begin
+      v.Width := canvas.TextWidth(caption) + 24;
+    end;
+end;
+
+procedure getw(l: tcxcustomedit; cb: tcxcustomedit = nil);
+var
+  lw: integer;
+begin
+  if l is tcxLabel then with l as tcxlabel do
+    lw := Canvas.TextWidth(Caption)
+  else if l is tcxCheckBox then with l as tcxCheckBox do
+    lw := Canvas.TextWidth(Caption);
+
+  if assigned(cb) then
+    if lW + _space + cb.Width > lcap then
+      lcap := lW + _space + cb.Width
+    else
+  else
+  if lW > lcap then
+    lcap := lW;
+end;
+
+procedure setw(l: tcxcustomedit; cb: tcxcustomedit = nil; l2: tcxcustomedit = nil);
+begin
+  if assigned(cb) then
+  begin
+    cb.Left := lcap - cb.Width;
+    if assigned(l2) then
+      l2.Left := lcap + 4;
+  end else
+  begin
+
+  end;
+end;
+
+begin
+  //pcMain.Properties.BeginUpdate; try
+
+  {page1}
+
+  lcap := 0;
+  getw(lcLanguage,cbLanguage);
+  chkw(chbAutoupdate);// getw(chbAutoupdate);
+  getw(lCheckNow);
+  chkw(chbShowWhatsNew);// getw(chbShowWhatsNew);
+  getw(lSkin,cbSkin);
+  chkw(chbUseLookAndFeel);// getw(chbUseLookAndFeel);
+  chkw(chbMenuCaptions);// getw(chbMenuCaptions);
+  chkw(chbTips);// getw(chbTips);
+  chkw(chbLogMode);// getw(chbLogMode);
+
+  setw(lcLanguage,cbLanguage);
+  setw(lSkin,cbSkin);
+
+  {page2}
+
+  lcap := 0;
+  getw(lcThreads,eThreads);
+  chkw(chbuseThreadPerRes);// getw(chbuseThreadPerRes);
+  getw(lcThreadPerRes,eThreadPerRes);
+  getw(lcPicThreads,ePicThreads);
+  getw(lcRetries,eRetries);
+  getw(lcSpeed,eSpeed);
+  getw(lcStopSignalTimer,eStopSignalTimer);
+  chkw(chbUseDistr);// getw(chbUseDistr);
+
+  setw(lcThreads,eThreads);
+  setw(lcThreadPerRes,eThreadPerRes);
+  setw(lcPicThreads,ePicThreads);
+  setw(lcRetries,eRetries);
+  setw(lcSpeed,eSpeed,cxLabel6);
+  setw(lcStopSignalTimer,eStopSignalTimer);
+  {page3}
+
+  lcap := 0;
+  getw(lblProxy,cbProxy);
+  getw(lblProxyType,cbProxyType);
+  getw(lcProxyHost,eHost);
+  getw(lcProxyPort,ePort);
+  chkw(chbProxyAuth);
+  getw(lcProxyLogin,eProxyLogin);
+  getw(lcProxyPassword,eProxyPassword);
+
+  setw(lblProxy,cbProxy);
+  setw(lblProxyType,cbProxyType);
+  setw(lcProxyHost,eHost);
+  setw(lcProxyPort,ePort);
+  setw(lcProxyLogin,eProxyLogin);
+  setw(lcProxyPassword,eProxyPassword);
+  chbProxySavePWD.Left := eProxyPassword.Left;
+
+  //finally
+  //  pcMain.Properties.EndUpdate;
+  //end;
+end;
+
 procedure TfSettings.SetLang;
+var
+  n: integer;
 begin
   // gpWork.Caption := _WORK_;
+  pcMain.Properties.BeginUpdate; try
+
   cxLabel1.Caption := 'About ' + Application.MainForm.Caption;
   btnOk.Caption := lang('_OK_');
   btnCancel.Caption := lang('_CANCEL_');
@@ -572,6 +705,7 @@ begin
   lcProxyPassword.Caption := lang('_PASSWORD_');
   lcSpeed.Caption := lang('_SPEED_');
   lcLanguage.Caption := lang('_LANGUAGE_');
+  lcStopSignalTimer.Caption := lang('_STOPSIGNALTIMER_');
   tlList.Items[0].Texts[0] := lang('_INTERFACE_');
   tlList.Items[1].Texts[0] := lang('_THREADS_');
   tlList.Items[2].Texts[0] := lang('_PROXY_');
@@ -581,7 +715,26 @@ begin
   tlList.Items[6].Texts[0] := lang('_ABOUT_');
   // chbDebug.Caption := _DEBUGMODE_;
   // gpProxy.Caption := _PROXY_;
-  chbProxy.Caption := lang('_USE_PROXY_');
+  lblProxy.Caption := lang('_USE_PROXY_');
+  n := cbProxy.ItemIndex;
+  cbProxy.Properties.BeginUpdate; try
+  cbProxy.Properties.Items[0] := lang('_PROXY_DISABLED_');
+  cbProxy.Properties.Items[1] := lang('_PROXY_ALWAYS_');
+  cbProxy.Properties.Items[2] := lang('_PROXY_LIST_');
+  cbProxy.Properties.Items[3] := lang('_PROXY_PICS_');
+
+  finally
+    cbProxy.ItemIndex := n;
+    cbProxy.Properties.EndUpdate;
+  end;
+  lblProxyType.Caption := lang('_PROXY_TYPE_');
+  cbProxyType.Properties.BeginUpdate; try
+  cbProxyType.Properties.Items[0] := lang('_PROXY_HTTP_');
+  cbProxyType.Properties.Items[1] := lang('_PROXY_SOCKS4_');
+  cbProxyType.Properties.Items[2] := lang('_PROXY_SOCKS5_');
+  finally
+    cbProxyType.Properties.EndUpdate;
+  end;
   chbProxyAuth.Caption := lang('_AUTHORISATION_');
   chbProxySavePWD.Caption := lang('_SAVE_PASSWORD_');
   chbAutoUpdate.Caption := lang('_AUTOUPDATE_');
@@ -600,6 +753,13 @@ begin
   chbLogMode.Caption := lang('_LOGMODE_');
   chbUseDistr.Caption := lang('_USERESDISTR_');
   chbUseBlackList.Caption := lang('_USEBLACKLIST_');
+  chbUncheckBlacklisted.Caption := lang('_UNCHECKBLACKLISTED_');
+  chbUncheckBlacklisted.Hint := chbUncheckBlacklisted.Caption;
+
+  ResetPosition;
+  finally
+    pcmain.Properties.EndUpdate;
+  end;
 end;
 
 procedure TfSettings.tlListFocusedNodeChanged(Sender: TcxCustomTreeList;
@@ -610,15 +770,17 @@ begin
   else if AFocusedNode.Parent = tlList.Items[3] then
     pcMain.ActivePageIndex := 3;
 
-  if Assigned(APrevFocusedNode) and ((APrevFocusedNode = tlList.Items[3]) or
-    (APrevFocusedNode.Parent = tlList.Items[3])) then
-    SaveResFields;
+  try
+    if Assigned(APrevFocusedNode) and ((APrevFocusedNode = tlList.Items[3]) or
+      (APrevFocusedNode.Parent = tlList.Items[3])) then
+        SaveResFields;
 
-  if (AFocusedNode = tlList.Items[3]) then
-    CreateResFields(FullResList[0])
-  else if (AFocusedNode.Parent = tlList.Items[3]) then
-    CreateResFields(FullResList[AFocusedNode.index + 1]);
-
+  finally
+    if (AFocusedNode = tlList.Items[3]) then
+      CreateResFields(FullResList[0])
+    else if (AFocusedNode.Parent = tlList.Items[3]) then
+      CreateResFields(FullResList[AFocusedNode.index + 1]);
+  end;
 end;
 
 function TfSettings.CheckDoublesName(rulename: string): boolean;
@@ -657,8 +819,8 @@ begin
       // dm.CreateField(vgSettings,'vgitag',_TAGSTRING_,'',ftString,c,FullResList[n].Fields['tag']);
       dm.CreateField(vgSettings, 'vgidwpath', lang('_SAVEPATH_'), '',
         ftPathText, c, rs.NameFormat);
-      dm.CreateField(vgSettings, 'vgisdalf', lang('_SDALF_'), '', ftCheck, c,
-        GlobalSettings.Downl.SDALF);
+      //dm.CreateField(vgSettings, 'vgisdalf', lang('_SDALF_'), '', ftCheck, c,
+      //  GlobalSettings.Downl.SDALF);
       dm.CreateField(vgSettings, 'vgiautounch', lang('_AUTOUNCHECKINVISIBLE_'),
         '', ftCheck, c, GlobalSettings.Downl.AutoUncheckInvisible);
       dm.CreateField(vgSettings, 'vgiexif', lang('_WRITEEXIF_'), '', ftCheck, c,
@@ -699,12 +861,19 @@ begin
         r := nil;
 
         if rs.Fields.Count > d then
-        begin
-          if not Assigned(c) then
-            c := dm.CreateCategory(vgSettings, 'vgieditional',
-              lang('_EDITIONALCONFIG_'));
-
           with rs.Fields do
+          begin
+            for i := d to Count - 1 do
+              if Items[i].restype <> ftNone then
+              begin
+                c := dm.CreateCategory(vgSettings, 'vgieditional',
+                lang('_EDITIONALCONFIG_'));
+                //d := i;
+                Break;
+              end else
+                inc(d);
+
+
             for i := d to Count - 1 do
               if Items[i].restype <> ftNone then
                 with rs.Fields.Items[i]^ do
@@ -715,21 +884,27 @@ begin
                     r := dm.CreateField(vgSettings, 'evgi' + resname, restitle,
                       resitems, restype, c, resvalue);
 
-          c := dm.CreateCategory(vgSettings, 'vgispecial',
-            lang('_SPECIALSETTINGS_'));
-          if not ThreadCounter.UseUserSettings then
-            c.Expanded := false;
-
-          dm.CreateField(vgSettings, 'vgiinheritstt', lang('_OWNSETTINGS_'), '',
-            ftCheck, c, ThreadCounter.UseUserSettings);
-          dm.CreateField(vgSettings, 'vgithreadcount', lang('_THREAD_COUNT_'),
-            '', ftNumber, c, ThreadCounter.UserSettings.MaxThreadCount);
-          dm.CreateField(vgSettings, 'vgithreaddelay', lang('_QUERY_DELAY_'),
-            '', ftNumber, c, ThreadCounter.UserSettings.PageDelay);
-          dm.CreateField(vgSettings, 'vgipicdelay', lang('_PIC_DELAY_'), '',
-            ftNumber, c, ThreadCounter.UserSettings.PicDelay);
-
         end;
+
+        c := dm.CreateCategory(vgSettings, 'vgispecial',
+          lang('_SPECIALSETTINGS_'));
+        if not ThreadCounter.UseUserSettings and (ThreadCounter.UseProxy = -1) then
+          c.Expanded := false;
+
+      dm.CreateField(vgSettings, 'vgiproxy', lang('_USE_PROXY_'),
+        lang('_PROXY_DEFAULT_')+','+lang('_PROXY_DISABLED_')+','+
+        lang('_PROXY_ALWAYS_')+','+lang('_PROXY_LIST_')+','+lang('_PROXY_PICS_'),
+        ftIndexCombo, c, ThreadCounter.UseProxy + 1);
+
+        dm.CreateField(vgSettings, 'vgiinheritstt', lang('_OWNSETTINGS_'), '',
+          ftCheck, c, ThreadCounter.UseUserSettings);
+        dm.CreateField(vgSettings, 'vgithreadcount', lang('_THREAD_COUNT_'),
+          '', ftNumber, c, ThreadCounter.UserSettings.MaxThreadCount);
+        dm.CreateField(vgSettings, 'vgithreaddelay', lang('_QUERY_DELAY_'),
+          '', ftNumber, c, ThreadCounter.UserSettings.PageDelay);
+        dm.CreateField(vgSettings, 'vgipicdelay', lang('_PIC_DELAY_'), '',
+          ftNumber, c, ThreadCounter.UserSettings.PicDelay);
+
       end;
   finally
     vgSettings.EndUpdate;
@@ -771,8 +946,8 @@ begin
 
     if rs = FullResList[0] then
     begin
-      GlobalSettings.Downl.SDALF :=
-        (vgSettings.RowByName('vgisdalf') as tcxEditorRow).Properties.Value;
+      //GlobalSettings.Downl.SDALF :=
+      //  (vgSettings.RowByName('vgisdalf') as tcxEditorRow).Properties.Value;
       GlobalSettings.Downl.AutoUncheckInvisible :=
         (vgSettings.RowByName('vgiautounch') as tcxEditorRow).Properties.Value;
 
@@ -823,6 +998,11 @@ begin
                     as tcxEditorRow).Properties.Value;
               end;
             end;
+
+      ThreadCOunter.UseProxy := IndexOfStr(
+        lang('_PROXY_DEFAULT_')+','+lang('_PROXY_DISABLED_')+','+
+        lang('_PROXY_ALWAYS_')+','+lang('_PROXY_LIST_')+','+lang('_PROXY_PICS_'),
+        (vgSettings.RowByName('vgiproxy') as TcxEditorRow).Properties.Value) -1;
 
       ThreadCounter.UseUserSettings :=
         (vgSettings.RowByName('vgiinheritstt') as tcxEditorRow)
@@ -889,12 +1069,12 @@ begin
   end;
 end;
 
-procedure TfSettings.OnErrorEvent(Sender: TObject; Msg: String);
+procedure TfSettings.OnErrorEvent(Sender: TObject; Msg: String; Data: Pointer);
 begin
   if FLogedOn then
     FLogedOn := false;
   if Assigned(FOnError) then
-    FOnError(Sender, Msg);
+    FOnError(Sender, Msg, Data);
 end;
 
 procedure TfSettings.JobStatus(Sander: TObject; Action: Integer);

@@ -11,6 +11,7 @@ object fStart: TfStart
   Font.Style = []
   ParentFont = False
   TabOrder = 0
+  OnClick = FrameClick
   OnResize = FrameResize
   object iIcon: TImage
     Left = 32

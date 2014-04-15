@@ -65,30 +65,46 @@ var
   s: ^string;
 begin
   case Msg.WParam of
-    0:
+    UPD_FILECOUNT:
     begin
       pttl.Max := Msg.LParam;
       pttl.Position := 0;
       lLog.Items.Add(IntToStr(pttl.Max) + ' new items');
     end;
-    1: pttl.Position := Msg.LParam;
-    2:
+    UPD_FILEPOS: pttl.Position := Msg.LParam;
+    UPD_FILESIZE:
     begin
       pcurr.Max := Msg.LParam;
       pcurr.Position := 0;
     end;
-    3:
+    UPD_FILEPROGRESS:
     begin
       pcurr.Position := Msg.LParam;
       lLog.Items[lLog.Items.Count-1] := fname
         + ' (' + GetBTString(pcurr.Position) + '/'
         + GetBTString(pcurr.Max) + ')';
     end;
-    4:
+    UPD_FILENAME:
     begin
-     s := Pointer(Msg.LParam);
-     fname := s^;
-     lLog.Items.Add(s^);
+      s := Pointer(Msg.LParam);
+      fname := s^;
+      lLog.ItemIndex := lLog.Items.Add(s^);
+    end;
+    UPD_FILEDELETED:
+    begin
+      s := Pointer(Msg.LParam);
+      fname := s^;
+      lLog.ItemIndex := lLog.Items.Add(s^ + ' deleted');
+    end;
+    UPD_FILEUNZIP:
+    begin
+      s := Pointer(Msg.LParam);
+      fname := s^;
+      lLog.ItemIndex := lLog.Items.Add(s^ + ' extracting');
+    end;
+    UPD_DWDONE:
+    begin
+      lLog.Items.Add('------------');
     end;
   end;
 end;

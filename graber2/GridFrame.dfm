@@ -49,6 +49,11 @@ object fGrid: TfGrid
       DataController.Summary.DefaultGroupSummaryItems = <>
       DataController.Summary.FooterSummaryItems = <>
       DataController.Summary.SummaryGroups = <>
+      OptionsData.CancelOnExit = False
+      OptionsData.Deleting = False
+      OptionsData.DeletingConfirmation = False
+      OptionsData.Inserting = False
+      OptionsSelection.MultiSelect = True
       OptionsView.ColumnAutoWidth = True
       OptionsView.ExpandButtonsForEmptyDetails = False
       OptionsView.GroupByBox = False
@@ -78,6 +83,13 @@ object fGrid: TfGrid
     Width = 451
     Height = 20
     Panels = <
+      item
+        PanelStyleClassName = 'TdxStatusBarTextPanelStyle'
+      end
+      item
+        PanelStyleClassName = 'TdxStatusBarTextPanelStyle'
+        Width = 50
+      end
       item
         PanelStyleClassName = 'TdxStatusBarTextPanelStyle'
       end
@@ -268,6 +280,10 @@ object fGrid: TfGrid
         item
           Visible = True
           ItemName = 'bbInverseChecked'
+        end
+        item
+          Visible = True
+          ItemName = 'bbCheckBlacklisted'
         end>
     end
     object siUncheck: TdxBarSubItem
@@ -288,6 +304,10 @@ object fGrid: TfGrid
         item
           Visible = True
           ItemName = 'bbUncheckFiltered'
+        end
+        item
+          Visible = True
+          ItemName = 'bbUncheckBlacklisted'
         end>
     end
     object bbCheckAll: TdxBarButton
@@ -365,6 +385,7 @@ object fGrid: TfGrid
       Hint = 'bbDALF'
       Visible = ivAlways
       ButtonStyle = bsChecked
+      UnclickAfterDoing = False
       OnClick = bbDALFClick
     end
     object bbAutoUnch: TdxBarButton
@@ -376,10 +397,24 @@ object fGrid: TfGrid
       OnClick = bbAutoUnchClick
     end
     object bbWriteEXIF: TdxBarButton
-      Caption = 'New Button'
+      Caption = 'bbWriteEXIF'
       Category = 0
-      Hint = 'New Button'
+      Hint = 'bbWriteEXIF'
       Visible = ivAlways
+    end
+    object bbUncheckBlacklisted: TdxBarButton
+      Caption = 'bbUncheckBlacklisted'
+      Category = 0
+      Hint = 'bbUncheckBlacklisted'
+      Visible = ivAlways
+      OnClick = bbUncheckBlacklistedClick
+    end
+    object bbCheckBlacklisted: TdxBarButton
+      Caption = 'bbCheckBlacklisted'
+      Category = 0
+      Hint = 'bbCheckBlacklisted'
+      Visible = ivAlways
+      OnClick = bbCheckBlacklistedClick
     end
   end
   object updTimer: TTimer
@@ -393,5 +428,11 @@ object fGrid: TfGrid
     PopupMenus = <>
     Left = 104
     Top = 176
+  end
+  object SignalTimer: TTimer
+    Enabled = False
+    OnTimer = SignalTimerTimer
+    Left = 148
+    Top = 88
   end
 end

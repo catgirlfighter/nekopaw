@@ -3,7 +3,7 @@ unit MyHTTP;
 interface
 
 uses IdHTTP, IdInterceptThrottler, Classes, SysUtils, SyncObjs, Strutils,
-  Variants, Common, IdURI, MyIdURI;
+  Variants, Common, IdURI, MyIdURI, HTTPApp;
 
 type
   TMyCookieList = class(TStringList)
@@ -331,6 +331,7 @@ var
   i: integer;
 
 begin
+//  CookieDomain := CopyTo(CookieDomain,'/');
   result := '';
   FCS.Enter;
   try

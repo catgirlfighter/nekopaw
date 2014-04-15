@@ -51,7 +51,7 @@ object fSettings: TfSettings
       OnClick = btnApplyClick
     end
     object lHelp: TcxLabel
-      Left = 814
+      Left = 1271
       Top = 3
       Cursor = crHandPoint
       Anchors = [akTop, akRight]
@@ -65,7 +65,7 @@ object fSettings: TfSettings
       OnClick = lHelpClick
       Height = 17
       Width = 113
-      AnchorX = 927
+      AnchorX = 1384
     end
   end
   object tlList: TcxTreeList
@@ -134,17 +134,11 @@ object fSettings: TfSettings
     object cxTabSheet1: TcxTabSheet
       Caption = 'cxTabSheet1'
       ImageIndex = 0
-      DesignSize = (
-        279
-        272)
       object lcLanguage: TcxLabel
         Left = 6
-        Top = 4
-        AutoSize = False
+        Top = 5
         Caption = 'lcLanguage'
         Transparent = True
-        Height = 17
-        Width = 194
       end
       object cbLanguage: TcxComboBox
         Left = 206
@@ -156,7 +150,6 @@ object fSettings: TfSettings
       object chbAutoUpdate: TcxCheckBox
         Left = 6
         Top = 27
-        Anchors = [akLeft, akTop, akRight]
         Caption = 'chbAutoupdate'
         TabOrder = 2
         Transparent = True
@@ -166,20 +159,16 @@ object fSettings: TfSettings
         Left = 6
         Top = 54
         Cursor = crHandPoint
-        AutoSize = False
         Caption = 'lCheckNow'
         ParentColor = False
         Style.TextColor = clHotLight
         Style.TextStyle = [fsUnderline]
         Transparent = True
         OnClick = lCheckNowClick
-        Height = 17
-        Width = 194
       end
       object chbShowWhatsNew: TcxCheckBox
         Left = 6
         Top = 77
-        Anchors = [akLeft, akTop, akRight]
         Caption = 'chbShowWhatsNew'
         TabOrder = 4
         Transparent = True
@@ -188,11 +177,8 @@ object fSettings: TfSettings
       object lSkin: TcxLabel
         Left = 6
         Top = 104
-        AutoSize = False
         Caption = 'lSkin'
         Transparent = True
-        Height = 17
-        Width = 194
       end
       object cbSkin: TcxComboBox
         Left = 206
@@ -207,38 +193,34 @@ object fSettings: TfSettings
       object chbUseLookAndFeel: TcxCheckBox
         Left = 6
         Top = 129
-        Anchors = [akLeft, akTop, akRight]
         Caption = 'chbUseLookAndFeel'
         TabOrder = 7
         Transparent = True
-        Width = 329
+        Width = 339
       end
       object chbMenuCaptions: TcxCheckBox
         Left = 6
         Top = 156
-        Anchors = [akLeft, akTop, akRight]
         Caption = 'chbMenuCaptions'
         TabOrder = 8
         Transparent = True
-        Width = 329
+        Width = 339
       end
       object chbTips: TcxCheckBox
         Left = 6
         Top = 183
-        Anchors = [akLeft, akTop, akRight]
         Caption = 'chbTips'
         TabOrder = 9
         Transparent = True
-        Width = 329
+        Width = 339
       end
       object chbLogMode: TcxCheckBox
         Left = 6
         Top = 210
-        Anchors = [akLeft, akTop, akRight]
         Caption = 'chbLogMode'
         TabOrder = 10
         Transparent = True
-        Width = 329
+        Width = 339
       end
     end
     object cxTabSheet2: TcxTabSheet
@@ -293,48 +275,33 @@ object fSettings: TfSettings
       end
       object lcThreads: TcxLabel
         Left = 6
-        Top = 4
-        AutoSize = False
+        Top = 3
         Caption = 'lcThreads'
         Transparent = True
-        Height = 17
-        Width = 194
       end
       object lcThreadPerRes: TcxLabel
         Left = 6
         Top = 58
-        AutoSize = False
         Caption = 'lcThreadPerRes'
         Transparent = True
-        Height = 17
-        Width = 194
       end
       object lcPicThreads: TcxLabel
         Left = 6
         Top = 85
-        AutoSize = False
         Caption = 'lcPicThreads'
         Transparent = True
-        Height = 17
-        Width = 194
       end
       object lcRetries: TcxLabel
         Left = 6
         Top = 112
-        AutoSize = False
         Caption = 'lcRetries'
         Transparent = True
-        Height = 17
-        Width = 194
       end
       object lcSpeed: TcxLabel
         Left = 6
         Top = 139
-        AutoSize = False
         Caption = 'lcSpeed'
         Transparent = True
-        Height = 17
-        Width = 194
       end
       object eSpeed: TcxSpinEdit
         Left = 206
@@ -347,20 +314,31 @@ object fSettings: TfSettings
       object cxLabel6: TcxLabel
         Left = 287
         Top = 139
-        AutoSize = False
         Caption = 'kB/s'
         Transparent = True
-        Height = 17
-        Width = 43
       end
       object chbUseDistr: TcxCheckBox
         Left = 6
-        Top = 165
+        Top = 192
         Anchors = [akLeft, akTop, akRight]
         Caption = 'chbUseDistr'
         TabOrder = 12
         Transparent = True
         Width = 265
+      end
+      object eStopSignalTimer: TcxSpinEdit
+        Left = 206
+        Top = 165
+        Properties.AssignedValues.MaxValue = True
+        Properties.AssignedValues.MinValue = True
+        TabOrder = 13
+        Width = 75
+      end
+      object lcStopSignalTimer: TcxLabel
+        Left = 6
+        Top = 166
+        Caption = 'lcStopSignalTimer'
+        Transparent = True
       end
     end
     object cxTabSheet3: TcxTabSheet
@@ -369,95 +347,107 @@ object fSettings: TfSettings
       DesignSize = (
         279
         272)
-      object chbProxy: TcxCheckBox
-        Left = 6
-        Top = 3
-        Anchors = [akLeft, akTop, akRight]
-        Caption = 'chbProxy'
-        Properties.OnEditValueChanged = chbProxyPropertiesEditValueChanged
-        TabOrder = 0
-        Transparent = True
-        Width = 313
-      end
       object chbProxyAuth: TcxCheckBox
         Left = 6
-        Top = 81
+        Top = 108
         Anchors = [akLeft, akTop, akRight]
         Caption = 'chbProxyAuth'
         Properties.OnEditValueChanged = chbProxyAuthPropertiesEditValueChanged
-        TabOrder = 1
+        TabOrder = 0
         Transparent = True
         Width = 313
       end
       object eHost: TcxTextEdit
         Left = 206
-        Top = 30
-        TabOrder = 2
+        Top = 57
+        TabOrder = 1
         Width = 123
       end
       object eProxyLogin: TcxTextEdit
         Left = 206
-        Top = 102
-        TabOrder = 3
+        Top = 129
+        TabOrder = 2
         Width = 123
       end
       object ePort: TcxSpinEdit
         Left = 206
-        Top = 57
-        TabOrder = 4
+        Top = 84
+        TabOrder = 3
         Width = 123
       end
       object eProxyPassword: TcxTextEdit
         Left = 206
-        Top = 129
+        Top = 156
         Properties.EchoMode = eemPassword
         Properties.PasswordChar = #9679
-        TabOrder = 5
+        TabOrder = 4
         Width = 123
       end
       object chbProxySavePWD: TcxCheckBox
         Left = 206
-        Top = 156
+        Top = 183
         Caption = 'chbProxySavePWD'
-        TabOrder = 6
+        TabOrder = 5
         Transparent = True
         Width = 123
       end
       object lcProxyHost: TcxLabel
         Left = 6
-        Top = 31
-        AutoSize = False
+        Top = 58
         Caption = 'lcProxyHost'
         Transparent = True
-        Height = 17
-        Width = 194
       end
       object lcProxyPort: TcxLabel
         Left = 6
-        Top = 58
-        AutoSize = False
+        Top = 85
         Caption = 'lcProxyPort'
         Transparent = True
-        Height = 17
-        Width = 194
       end
       object lcProxyLogin: TcxLabel
         Left = 6
-        Top = 103
-        AutoSize = False
+        Top = 130
         Caption = 'lcProxyLogin'
         Transparent = True
-        Height = 17
-        Width = 194
       end
       object lcProxyPassword: TcxLabel
         Left = 6
-        Top = 130
-        AutoSize = False
+        Top = 157
         Caption = 'lcProxyPassword'
         Transparent = True
-        Height = 17
-        Width = 194
+      end
+      object lblProxy: TcxLabel
+        Left = 6
+        Top = 5
+        Caption = 'lblProxy'
+      end
+      object cbProxy: TcxComboBox
+        Left = 206
+        Top = 3
+        Properties.DropDownListStyle = lsFixedList
+        Properties.Items.Strings = (
+          '_PROXY_DISABLED_'
+          '_PROXY_ALWAYS_'
+          '_PROXY_LIST_'
+          '_PROXY_PICS_')
+        Properties.OnChange = cbProxyPropertiesChange
+        TabOrder = 11
+        Width = 123
+      end
+      object cbProxyType: TcxComboBox
+        Left = 206
+        Top = 30
+        Properties.DropDownListStyle = lsFixedList
+        Properties.Items.Strings = (
+          '_PROXY_HTTP_'
+          '_PROXY_SOCKS4_'
+          '_PROXY_SOCKS5_')
+        TabOrder = 12
+        Width = 123
+      end
+      object lblProxyType: TcxLabel
+        Left = 6
+        Top = 32
+        Caption = 'lblProxyType'
       end
     end
     object cxTabSheet4: TcxTabSheet
@@ -538,7 +528,6 @@ object fSettings: TfSettings
         Align = alTop
         Caption = 'chbUseBlackList'
         TabOrder = 0
-        ExplicitTop = 4
         Width = 279
       end
       object Panel1: TPanel
@@ -550,10 +539,8 @@ object fSettings: TfSettings
         BevelOuter = bvNone
         Caption = 'Panel1'
         TabOrder = 1
-        ExplicitLeft = 48
-        ExplicitTop = 116
-        ExplicitWidth = 185
-        ExplicitHeight = 41
+        ExplicitTop = 0
+        ExplicitHeight = 272
         object dxBarDockControl1: TdxBarDockControl
           Left = 0
           Top = 0
@@ -569,8 +556,6 @@ object fSettings: TfSettings
           Height = 225
           Align = alClient
           TabOrder = 1
-          ExplicitLeft = 3
-          ExplicitTop = 47
           object tvBlackList: TcxGridTableView
             Navigator.Buttons.CustomButtons = <>
             DataController.Summary.DefaultGroupSummaryItems = <>
@@ -718,7 +703,7 @@ object fSettings: TfSettings
     PopupMenuLinks = <>
     UseSystemFont = True
     Left = 392
-    Top = 232
+    Top = 284
     DockControlHeights = (
       0
       0
@@ -782,6 +767,11 @@ object fSettings: TfSettings
         item
           Visible = True
           ItemName = 'bDelBlackword'
+        end
+        item
+          ViewLayout = ivlGlyphControlCaption
+          Visible = True
+          ItemName = 'chbUncheckBlacklisted'
         end>
       NotDocking = [dsNone, dsLeft, dsTop, dsRight, dsBottom]
       OneOnRow = True
@@ -830,6 +820,18 @@ object fSettings: TfSettings
       Visible = ivAlways
       ImageIndex = 18
       OnClick = bDelBlackwordClick
+    end
+    object chbUncheckBlacklisted: TcxBarEditItem
+      Caption = 'chbUncheckBlacklisted'
+      Category = 0
+      Hint = 'chbUncheckBlacklisted'
+      Visible = ivAlways
+      ShowCaption = True
+      Width = 0
+      PropertiesClassName = 'TcxCheckBoxProperties'
+      Properties.ImmediatePost = True
+      Properties.NullStyle = nssUnchecked
+      Properties.ValueGrayed = 'False'
     end
   end
   object il: TcxImageList

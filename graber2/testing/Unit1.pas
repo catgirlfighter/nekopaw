@@ -24,8 +24,8 @@ type
     procedure ApplicationEvents1Message(var Msg: tagMSG; var Handled: Boolean);
     procedure Button3Click(Sender: TObject);
     procedure Button1Click(Sender: TObject);
-    procedure Button5Click(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
+    procedure Button5Click(Sender: TObject);
   private
     Msg_TaskbarButtonCreated: Cardinal;
     { Private declarations }
@@ -117,53 +117,20 @@ begin
 end;
 
 procedure TForm1.Button5Click(Sender: TObject);
-//var
-  //h: tmyidhttp;
-//  xml: tMyXMLParser;
-//  s: tstringlist;
 var
-  //l1,l2: TResourceList;
-  r: tResource;
-  n: integer;
+  fname: string;
+  f: tfilestream;
+  buff: array[0..21] of byte;
 begin
-  if Assigned(l2) then
-    if l2.ListFinished then
-    begin
-      FreeAndNil(l2);
-    end else begin
-      memo1.Lines.Add('Job still in progress');
-      Exit;
-    end;
+  fname := ExtractFilePath(paramstr(0)) + 'file.bin';
 
-
-    l2 := tResourceList.Create; //try
-    r := l1.ItemByName('safebooru.org');
-    n := l2.CopyResource(r);
-    l2[n].Parent := r;
-    l2.ApplyInherit;
-    l2.HandleKeywordList;
-    l2.HandleParentLinks;
-
-    l2[n].Fields.Values['tag'] := 'blazblue';
-
-    l2.ThreadHandler.ThreadCount := 5;
-    l2.StartJob(JOB_LIST);
-
-
-    //finally
-    //  l2.Free;
-    //end;
-//  xml := tMyXMLParser.Create; try
-//    s := tstringlist.Create; try
-//      s.LoadFromFile(ExtractFilePath(paramstr(0))+'test.html');
-//      xml.Parse(s.Text,true);
-//      s.Text := xml.TagList.Text;
-//      s.SaveToFile(ExtractFilePath(paramstr(0))+'result.html');
-//      xml.Parse(memo1.Text,true);
-//      memo1.Text := xml.TagList.Text;
-//    finally s.Free end;
-//  finally xml.Free; end;
-
+  f := tfilestream.Create(fname,fmOpenRead);
+  try
+    f.Read(buff,22);
+    memo1.Lines.Insert(0,ImageFormat(@buff[0]));
+  finally
+    f.Free;
+  end;
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);

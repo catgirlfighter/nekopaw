@@ -900,13 +900,13 @@ function TAttrList.Value(AName: String): String;
 var
   i: Integer;
 begin
-  Result := '';
   for i := 0 to length(FAttrs) - 1 do
     if SameText(FAttrs[i].Name, AName) then
     begin
       Result := FAttrs[i].Value;
-      break;
+      Exit;
     end;
+  Result := '';
 end;
 
 function TAttrList.IndexOf(AName: String): Integer;

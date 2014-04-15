@@ -140,7 +140,7 @@ type
     procedure LoadItems;
     procedure ResetItems;
     procedure SetLang;
-    procedure OnErrorEvent(Sender: TObject; Msg: String);
+    procedure OnErrorEvent(Sender: TObject; Msg: String; Data: Pointer);
     procedure JobStatus(Sander: TObject; Action: Integer);
     procedure SendMsg(Cancel: Boolean = false);
     procedure SaveSet;
@@ -161,6 +161,10 @@ implementation
 uses OpBase, LangString, utils, LoginForm, TextEditorForm;
 
 {$R *.dfm}
+
+//const
+//  SJobNum: array[tSemiListJob] of byte = (0,1,2);
+//  NumSJob: array[0..2] of tSemiListJob = (sljNone,sljPostproc,sljPics);
 
 var
   // LList: array of TcxLabelProperties;
@@ -343,7 +347,7 @@ var
 begin
   if (vgSettings.Rows.Count > 0) and Assigned(fCurrItem) then
     SaveSettings;
-  vgSettings.BeginUpdate;
+  vgSettings.BeginUpdate; try
   vgSettings.ClearRows;
 
   if Assigned(rs) then
@@ -385,8 +389,9 @@ begin
 
     dm.CreateField(vgSettings, 'vgidwpath', lang('_SAVEPATH_'), '', ftPathText,
       c, fCurrItem.NameFormat);
-    dm.CreateField(vgSettings, 'vgisdalf', lang('_SDALF_'), '', ftCheck, c,
-      GlobalSettings.Downl.SDALF);
+    dm.CreateField(vgSettings, 'vgisdalf', lang('_LISTPW_'),
+    '"'+lang('_NOTHING_')+'","'+lang('_SPPS_')+'","'+lang('_SPDS_')+'"', ftIndexCombo, c,
+      Integer(GlobalSettings.SemiJob));
     dm.CreateField(vgSettings, 'vgiexif', lang('_WRITEEXIF_'), '', ftCheck, c,
       GlobalSettings.WriteEXIF);
   end
@@ -478,9 +483,19 @@ begin
 
       c := dm.CreateCategory(vgSettings, 'vgispecial',
         lang('_SPECIALSETTINGS_'));
-      if not Parent.ThreadCounter.UseUserSettings then
+      if not Parent.ThreadCounter.UseUserSettings and (Parent.ThreadCounter.UseProxy = -1)
+      and (HTTPRec.StartCount = 0) and (HTTPRec.MaxCount = 0) then
         c.Expanded := false;
 
+
+      r :=  dm.CreateField(vgSettings,'vgicountlimit','','',ftMultiEdit,c,null);
+      dm.CreateField(vgSettings,'vgimincount',lang('_COUNTLIMIT_'),'',ftNumber,r,HTTPRec.StartCount);
+      dm.CreateField(vgSettings,'vgimaxcount','','',ftNumber,r,HTTPRec.MaxCount);
+
+      dm.CreateField(vgSettings, 'vgiproxy', lang('_USE_PROXY_'),
+        lang('_PROXY_DEFAULT_')+','+lang('_PROXY_DISABLED_')+','+
+        lang('_PROXY_ALWAYS_')+','+lang('_PROXY_LIST_')+','+lang('_PROXY_PICS_'),
+        ftIndexCombo, c, Parent.ThreadCounter.UseProxy + 1);
       dm.CreateField(vgSettings, 'vgiinheritstt', lang('_OWNSETTINGS_'), '',
         ftCheck, c, Parent.ThreadCounter.UseUserSettings);
       dm.CreateField(vgSettings, 'vgithreadcount', lang('_THREAD_COUNT_'), '',
@@ -496,7 +511,7 @@ begin
   dm.ertagedit.Properties.Separator := fCurrItem.HTTPRec.TagTemplate.Separator;
   dm.ertagedit.Properties.Isolator := fCurrItem.HTTPRec.TagTemplate.Isolator;
 
-  vgSettings.EndUpdate;
+  finally vgSettings.EndUpdate; end;
 end;
 
 procedure TfNewList.erAuthButtonPropertiesButtonClick(Sender: TObject;
@@ -561,12 +576,12 @@ begin
   // ARecord.Values[2] := ARecord.Values[0];
 end;
 
-procedure TfNewList.OnErrorEvent(Sender: TObject; Msg: String);
+procedure TfNewList.OnErrorEvent(Sender: TObject; Msg: String; Data: Pointer);
 begin
   if FLoggedOn then
     FLoggedOn := false;
   if Assigned(FOnError) then
-    FOnError(Sender, Msg);
+    FOnError(Sender, Msg, nil);
 end;
 
 procedure TfNewList.JobStatus(Sander: TObject; Action: Integer);
@@ -782,15 +797,14 @@ procedure TfNewList.refillRecs;
 var
   i: Integer;
 begin
-  tvFull.BeginUpdate;
-  try
+  FAutoAdd := false;
+  tvFull.DataController.Filter.Clear;
+  tvFull.BeginUpdate; try
     tvFull.DataController.RecordCount := 0;
     for i := 1 to FullResList.Count - 1 do
       if not bbFavorite.Down or bbFavorite.Down and FullResList[i].Favorite then
           fillRec(FullResList, tvFull.DataController, i, 1);
-  finally
-    tvFull.EndUpdate;
-  end;
+  finally tvFull.EndUpdate; end;
 end;
 
 procedure TfNewList.Release;
@@ -959,6 +973,7 @@ procedure TfNewList.SaveSettings;
 var
   i, { n, } d: Integer;
   r: tcxMyMultiEditorRow;
+  rec: thttprec;
 begin
   // n := fCurrItem;
   with fCurrItem do
@@ -971,8 +986,9 @@ begin
 
     if fCurrItem = FullResList[0] then
     begin
-      GlobalSettings.Downl.SDALF :=
-        (vgSettings.RowByName('vgisdalf') as TcxEditorRow).Properties.Value;
+      GlobalSettings.SemiJob :=
+        tSemiListJob(IndexOfStr('"'+lang('_NOTHING_')+'","'+lang('_SPPS_')+'","'+lang('_SPDS_')+'"',
+        (vgSettings.RowByName('vgisdalf') as TcxEditorRow).Properties.Value));
       GlobalSettings.WriteEXIF :=
         (vgSettings.RowByName('vgiexif') as TcxEditorRow).Properties.Value;
     end
@@ -1018,6 +1034,17 @@ begin
               end;
 
             end;
+
+      rec := HTTPRec;
+      r := vgSettings.RowByName('vgicountlimit') as tcxMyMultiEditorRow;
+      rec.StartCount := r.Properties.Editors[0].Value;
+      rec.MaxCount := r.Properties.Editors[1].Value;
+      HTTPRec := rec;
+
+      Parent.ThreadCounter.UseProxy := IndexOfStr(
+        lang('_PROXY_DEFAULT_')+','+lang('_PROXY_DISABLED_')+','+
+        lang('_PROXY_ALWAYS_')+','+lang('_PROXY_LIST_')+','+lang('_PROXY_PICS_'),
+        (vgSettings.RowByName('vgiproxy') as TcxEditorRow).Properties.Value) -1;
 
       Parent.ThreadCounter.UseUserSettings :=
         (vgSettings.RowByName('vgiinheritstt') as TcxEditorRow)

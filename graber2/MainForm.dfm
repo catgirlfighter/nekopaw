@@ -2,7 +2,7 @@ object mf: Tmf
   Left = 0
   Top = 0
   Caption = 'nekopaw grabber'
-  ClientHeight = 423
+  ClientHeight = 425
   ClientWidth = 608
   Color = clBtnFace
   Constraints.MinHeight = 450
@@ -23,23 +23,23 @@ object mf: Tmf
   OnResize = FormResize
   DesignSize = (
     608
-    423)
+    425)
   PixelsPerInch = 96
   TextHeight = 13
   object ds: TdxDockSite
     Left = 0
     Top = 26
     Width = 608
-    Height = 397
+    Height = 399
     Align = alClient
     DockingType = 5
     OriginalWidth = 608
-    OriginalHeight = 397
+    OriginalHeight = 399
     object dxLayoutDockSite4: TdxLayoutDockSite
       Left = 0
       Top = 0
       Width = 608
-      Height = 247
+      Height = 249
       DockingType = 0
       OriginalWidth = 300
       OriginalHeight = 200
@@ -47,7 +47,7 @@ object mf: Tmf
         Left = 185
         Top = 0
         Width = 423
-        Height = 247
+        Height = 249
         DockingType = 0
         OriginalWidth = 300
         OriginalHeight = 200
@@ -55,7 +55,7 @@ object mf: Tmf
           Left = 0
           Top = 0
           Width = 423
-          Height = 247
+          Height = 249
           DockingType = 0
           OriginalWidth = 300
           OriginalHeight = 200
@@ -64,7 +64,7 @@ object mf: Tmf
           Left = 0
           Top = 0
           Width = 423
-          Height = 247
+          Height = 249
           AllowFloating = False
           AutoHide = False
           Caption = 'dpTable'
@@ -77,7 +77,7 @@ object mf: Tmf
             Left = 0
             Top = 0
             Width = 419
-            Height = 243
+            Height = 245
             Align = alClient
             TabOrder = 0
             Properties.CloseButtonMode = cbmEveryTab
@@ -86,7 +86,7 @@ object mf: Tmf
             Properties.Options = [pcoGoDialog]
             OnCanCloseEx = pcTablesCanCloseEx
             OnChange = pcTablesChange
-            ClientRectBottom = 243
+            ClientRectBottom = 245
             ClientRectRight = 419
             ClientRectTop = 0
           end
@@ -96,7 +96,7 @@ object mf: Tmf
         Left = 0
         Top = 0
         Width = 185
-        Height = 247
+        Height = 249
         ActiveChildIndex = 0
         AllowFloating = False
         AutoHide = False
@@ -110,7 +110,7 @@ object mf: Tmf
           Left = 0
           Top = 0
           Width = 181
-          Height = 218
+          Height = 220
           AllowFloating = False
           AutoHide = False
           Caption = 'dpTags'
@@ -122,7 +122,7 @@ object mf: Tmf
             Left = 0
             Top = 0
             Width = 181
-            Height = 218
+            Height = 220
             Align = alClient
             ActiveGroupIndex = 0
             TabOrder = 0
@@ -148,7 +148,7 @@ object mf: Tmf
               Left = 0
               Top = 19
               Width = 181
-              Height = 180
+              Height = 182
               Caption = 'nbgCurMainControl'
               TabOrder = 1
               GroupIndex = 0
@@ -157,7 +157,7 @@ object mf: Tmf
                 Left = 0
                 Top = 0
                 Width = 181
-                Height = 180
+                Height = 182
                 Align = alClient
                 OptionsView.RowHeaderWidth = 84
                 TabOrder = 0
@@ -206,7 +206,7 @@ object mf: Tmf
           Left = 0
           Top = 0
           Width = 181
-          Height = 218
+          Height = 220
           AllowFloating = False
           AutoHide = False
           Caption = 'dpCurTags'
@@ -218,13 +218,11 @@ object mf: Tmf
             Left = 0
             Top = 0
             Width = 181
-            Height = 218
+            Height = 220
             Align = alClient
             ActiveGroupIndex = 0
             TabOrder = 0
             View = 1
-            ExplicitLeft = -2
-            ExplicitTop = -4
             object nbgCurMain: TdxNavBarGroup
               Caption = 'nbgCurMain'
               SelectedLinkIndex = -1
@@ -245,7 +243,7 @@ object mf: Tmf
               Left = 0
               Top = 19
               Width = 181
-              Height = 180
+              Height = 182
               Caption = 'nbgCurMainControl'
               TabOrder = 1
               GroupIndex = 0
@@ -254,7 +252,7 @@ object mf: Tmf
                 Left = 0
                 Top = 0
                 Width = 181
-                Height = 180
+                Height = 182
                 Align = alClient
                 OptionsView.ShowEditButtons = ecsbAlways
                 OptionsView.RowHeaderWidth = 86
@@ -281,7 +279,6 @@ object mf: Tmf
                 Items = <>
                 Sorted = True
                 TabOrder = 0
-                ExplicitHeight = 170
               end
             end
           end
@@ -290,7 +287,7 @@ object mf: Tmf
     end
     object dsLogs: TdxTabContainerDockSite
       Left = 0
-      Top = 247
+      Top = 249
       Width = 608
       Height = 150
       ActiveChildIndex = 0
@@ -341,6 +338,7 @@ object mf: Tmf
           Left = 0
           Top = 0
           Align = alClient
+          PopupMenu = fLogPopup
           Properties.ReadOnly = True
           Properties.ScrollBars = ssVertical
           Style.Color = 14803455
@@ -439,6 +437,10 @@ object mf: Tmf
         end
         item
           Visible = True
+          ItemName = 'bbSignalTimer'
+        end
+        item
+          Visible = True
           ItemName = 'bbAdvanced'
         end
         item
@@ -504,6 +506,14 @@ object mf: Tmf
       Visible = ivAlways
       OnClick = bbDeleteMD5DoublesClick
     end
+    object bbSignalTimer: TdxBarButton
+      Caption = 'bbSignalTimer'
+      Category = 0
+      Hint = 'bbSignalTimer'
+      Visible = ivNever
+      ImageIndex = 24
+      OnClick = bbSignalTimerClick
+    end
   end
   object ApplicationEvents1: TApplicationEvents
     OnDeactivate = ApplicationEvents1Deactivate
@@ -521,5 +531,25 @@ object mf: Tmf
     UseSkins = False
     Left = 368
     Top = 96
+  end
+  object fLogPopup: TPopupMenu
+    OnPopup = fLogPopupPopup
+    Left = 224
+    Top = 80
+    object COPY1: TMenuItem
+      Caption = '_COPY_'
+      OnClick = COPY1Click
+    end
+    object GOTO1: TMenuItem
+      Caption = '_GOTO_'
+      OnClick = GOTO1Click
+    end
+    object SELECTALL1: TMenuItem
+      Caption = '_SELECTALL_'
+    end
+    object CLEAR1: TMenuItem
+      Caption = '_CLEAR_'
+      OnClick = CLEAR1Click
+    end
   end
 end
