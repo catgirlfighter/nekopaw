@@ -12,6 +12,7 @@
 <item file="resources\anime-pictures.net.cfg"      version=6 />
 <item file="resources\behoimi.org.cfg"             version=2 />
 <item file="resources\elderscrollsbooru.booru.org.cfg" version=0 />
+<item file="resources\furry.booru.org.cfg"         version=0 />
 <item file="resources\ii.booru.org.cfg"            version=1 />
 <item file="resources\neko.booru.org.cfg"          version=1 />
 <item file="resources\blogspot.com.cfg"            version=3 />
@@ -96,6 +97,7 @@
 <item file="resources\icons\g.e-hentai.org.bmp"          version=0 />
 <item file="resources\icons\booru.org.bmp"               version=0 />
 <item file="resources\icons\blogspot.com.bmp"            version=0 />
+<item file="resources\icons\furry.booru.org.bmp"         version=0 />
 
 <item file="resources\icons\ponibooru.413chan.net.bmp"   version=0 deleted=1 />
 <item file="resources\icons\safebooru.org.bmp"           version=0 deleted=1 />
