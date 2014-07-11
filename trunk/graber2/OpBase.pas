@@ -334,9 +334,11 @@ begin
 
         if (v.Count = 0) and ShowSettings then
         begin
-          SetLength(IgnoreList, 1);
-          IgnoreList[0][0] := 'md5Check';
+          SetLength(IgnoreList, 2);
+          IgnoreList[0][0] := 'MD5 dublicates';
           IgnoreList[0][1] := 'md5=md5';
+          IgnoreList[1][0] := 'URL dublicates';
+          IgnoreList[1][1] := 'url=url';
         end
         else
         begin

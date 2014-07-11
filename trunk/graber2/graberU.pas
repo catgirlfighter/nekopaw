@@ -5,7 +5,8 @@ interface
 uses Classes, Types, Messages, Windows, SysUtils, SyncObjs, Variants, VarUtils,
   IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP,
   MyXMLParser, DateUtils, IdException, MyHTTP, IdHTTPHeaderInfo, StrUtils, DB,
-  IdStack, idSocks, IdSSLOpenSSL, Math, Dialogs, CCR.EXIF, CCR.EXIF.XMPUtils;
+  IdStack, idSocks, IdSSLOpenSSL, Math, Dialogs, CCR.EXIF, CCR.EXIF.XMPUtils,
+  ThreadUtils;
 
 const
   UNIQUE_ID = 'GRABER2LOCK';
@@ -63,17 +64,18 @@ const
 
 type
   doublestring = record
-    val1, val2: string end;
-    TArrayOfString = array of doublestring;
-    TBoolProcedureOfObject =
-    procedure(Value: Boolean = false) of object;
-    TLogEvent =
-    procedure(Sender: TObject; Msg: String; Data: Pointer) of object;
-    tSemiListJob = (sljNone, sljPostProc, sljPics);
-    tPostProcJob = (ppjNone, ppjJob, ppjDelayed);
-    tProxyType = (ptHTTP, ptSOCKS4, ptSOCKS5);
+    val1, val2: string;
+  end;
 
-    tEXIFRec = record UseEXIF: Boolean;
+  TArrayOfString = array of doublestring;
+  TBoolProcedureOfObject = procedure(Value: Boolean = false) of object;
+  TLogEvent = procedure(Sender: TObject; Msg: String; Data: Pointer) of object;
+  tSemiListJob = (sljNone, sljPostProc, sljPics);
+  tPostProcJob = (ppjNone, ppjJob, ppjDelayed);
+  tProxyType = (ptHTTP, ptSOCKS4, ptSOCKS5);
+
+  tEXIFRec = record
+    UseEXIF: Boolean;
     Author: String;
     Title: String;
     Theme: String;
@@ -201,10 +203,10 @@ type
 
   TPicChanges = Set of TPicChange;
 
-  TXMPPacketHelper = class(TXMPPacket)
-  public
-    property UpdatePolicy;
-  end;
+  // TXMPPacketHelper = class(TXMPPacket)
+  // public
+  // property UpdatePolicy;
+  // end;
 
   TTagedListValue = class(TObject)
   private
@@ -683,6 +685,7 @@ type
     FDisplayLabel: String;
     FPicName: String;
     FFileName: String;
+    FOrigFileName: String;
     FNameCounter: pNameCounter;
     FNameUpdated: Boolean;
     FPrevPic: TTPicture;
@@ -732,7 +735,10 @@ type
     property DisplayLabel: String read FDisplayLabel write FDisplayLabel;
     { name of picture, displayed in table's field "label" }
     property FileName: String read FFileName write FFileName;
-    { picture's save name with full path (logical, made BEFORE picture downloaded) }
+    { picture's save name with full path (logical, made BEFORE picture downloaded,
+      but AFTER name dublicate search) }
+    property OriginalFileName: String read FOrigFileName write FOrigFileName;
+    { picture's save name with full path (BEFORE name dublicate search) }
     property FactFileName: String read FFactFileName write FFactFileName;
     { picture's real save name with full path (made AFTER picture downloaded) }
     property Ext: String read FExt; { picture's file's extension }
@@ -936,17 +942,20 @@ type
   tGeneralSettings = record
     MaxThreadCount: integer;
     PicDelay: integer;
-    PageDelay: integer end;
+    PageDelay: integer;
+  end;
 
-    pThreadCounter = ^tThreadCounter;
+  pThreadCounter = ^tThreadCounter;
 
-    tThreadCounter = record DefinedSettings: tGeneralSettings;
+  tThreadCounter = record
+    DefinedSettings: tGeneralSettings;
     UseProxy: shortint;
     UserSettings: tGeneralSettings;
     UseUserSettings: Boolean;
     MaxThreadCount: integer;
     CurrThreadCount: integer;
     PictureThreadCount: integer;
+    Queue: tThreadQueue;
     // PageDelay: integer;
     // PicDelay: integer;
     CurrentResource: TResource;
@@ -1221,7 +1230,7 @@ var
   VRESULT: HRESULT;
   tmp: integer;
   rsv: Variant;
-  b: Boolean;
+  b, NKey: Boolean;
 
 begin
   rsv := s;
@@ -1276,6 +1285,8 @@ begin
       else
         cstr := Copy(s, n1, n2 - n1);
 
+      NKey := (n1 > 1) and SameText(VarToStr(s)[n1 - 1], 'N');
+
       rstr := null;
       // end;
       VE(cstr, rstr, Lnk);
@@ -1297,7 +1308,7 @@ begin
         begin
           vt := VarToWideStr(rstr);
 
-          if Pos(' ', SysUtils.trim(rstr)) = 0 then
+          if not NKey and (Pos(' ', SysUtils.trim(rstr)) = 0) then
             VRESULT := VarR8FromStr(@vt[1], VAR_LOCALE_USER_DEFAULT, 0, vt2)
           else
             VRESULT := 1;
@@ -1314,7 +1325,10 @@ begin
       end;
 
       // cstr := VarToStr(s)[n1] + cstr;
-      s := StringReplace(s, cstr, rstr, [rfReplaceAll]);
+      if NKey then
+        s := StringReplace(s, 'n' + cstr, rstr, [rfReplaceAll, rfIgnoreCase])
+      else
+        s := StringReplace(s, cstr, rstr, [rfReplaceAll, rfIgnoreCase]);
 
       // n2 := n1 + length(rstr) - 1;
       n2 := 0;
@@ -2884,7 +2898,10 @@ end;
 procedure TResource.FreeThreadCounter;
 begin
   if Assigned(FThreadCounter) then
+  begin
+    FThreadCounter.Queue.Free;
     Dispose(FThreadCounter);
+  end;
 
   FThreadCounter := nil;
 end;
@@ -3706,6 +3723,7 @@ begin
     FThreadCounter.UserSettings.MaxThreadCount := 0;
     FThreadCounter.UserSettings.PicDelay := 0;
     FThreadCounter.UserSettings.PageDelay := 0;
+    FThreadCounter.Queue := tThreadQueue.Create;
   end;
 
   mainscript := TScriptSection.Create;
@@ -4535,9 +4553,10 @@ begin
         begin
           FStopTick := 0;
           FThreadHandler.FinishThreads(true);
-
           if not PicsFinished and not PicDW then
             FDwnldHandler.FinishThreads(true);
+          for i := 0 to Count - 1 do
+            Items[i].ThreadCounter.Queue.Dismiss;
           // if FMode = rmPostProcess then
           // FDwnldHandler.FinishThreads(true);
         end;
@@ -4554,6 +4573,8 @@ begin
         begin
           FStopPicsTick := 0;
           FDwnldHandler.FinishThreads(true);
+          for i := 0 to Count - 1 do
+            Items[i].ThreadCounter.Queue.Dismiss;
         end;
         FCanceled := true;
         fPicDW := false;
@@ -4850,7 +4871,7 @@ begin
     FHTTP.HandleRedirects := true;
     FSkipMe := false;
     FStopSignal := false;
-    FResultURL := '';
+    fResultURL := '';
 
     try
 
@@ -5235,10 +5256,14 @@ begin
           Result := Assigned(FPicture.Parent)
         else if SameText(Value, 'picture.postprocessed') then
           Result := FPicture.PostProcessed
+        else if SameText(Value, 'picture.filename') then
+          Result := FPicture.PicName
         else if SameText(Value, 'main.url') then
           Result := HTTPRec.DefUrl
         else if SameText(Value, 'main.login') then
           Result := HTTPRec.LoginStr
+        else if SameText(Value, 'main.loginpost') then
+          Result := HTTPRec.LoginPost
         else if SameText(Value, 'thread.skip') then
           Result := FSkipMe
         else if SameText(Value, 'thread.loginresult') then
@@ -5246,7 +5271,7 @@ begin
         else if SameText(Value, 'thread.url') then
           Result := HTTPRec.Url
         else if SameText(Value, 'thread.resulturl') then
-          Result := FResultUrl
+          Result := fResultURL
         else if SameText(Value, 'thread.count') then
           if HTTPRec.StartCount = 0 then
             Result := HTTPRec.Count
@@ -5338,6 +5363,11 @@ begin
           begin
             s := gVal(Value);
             Result := Min(Clc(nVal(s)), Clc(nVal(s)));
+          end
+          else if SameText(s, 'checkproto') then
+          begin
+            s := gVal(Value);
+            Result := CheckProto(Clc(nVal(s)), Clc(nVal(s)));
           end
           else if SameText(s, 'max') then
           begin
@@ -5853,13 +5883,15 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
       if FHTTPRec.MaxCount = 0 then
         FHTTPRec.Count := Trunc(Value)
       else
-        FHTTpRec.Count := Min(Trunc(Value),FHTTPRec.MaxCount + FHTTPRec.AddToMax);
+        FHTTPRec.Count := Min(Trunc(Value), FHTTPRec.MaxCount +
+          FHTTPRec.AddToMax);
 
       if FHTTPRec.StartCount > 0 then
-        //FHTTPRec.Count := Trunc(Value)
-      //else
+        // FHTTPRec.Count := Trunc(Value)
+        // else
         FHTTPRec.Count := FHTTPRec.Count - FHTTPRec.StartCount + 1
-    end else if SameText(Name, '$thread.counter') then
+    end
+    else if SameText(Name, '$thread.counter') then
       raise Exception.Create('Can not assign value for ' + Name)
     else if SameText(Name, '$main.pagebypage') then
       FHTTPRec.PageByPage := CalcValue(Value, VE, LinkedObj)
@@ -5899,6 +5931,8 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
       FPicture.PicName := Value
     else if SameText(Name, '$child.filename') then
       FChild.PicName := Value
+    else if SameText(Name, '$thread.extfromheader') then
+      FHTTPRec.PicTemplate.ExtFromHeader := Value
     else if SameText(Name, '$thread.result') then
       FHTTPRec.Theor := Value
     else if SameText(Name, '$thread.referer') then
@@ -6161,6 +6195,7 @@ end;
 
 procedure TDownloadThread.ProcHTTP; // process PAGE request with text content
 var // used if need to parse content
+  h: THandle;
   Result: TStringStream;
   tmp, Url: string;
   Post: TStringList;
@@ -6185,45 +6220,43 @@ begin
             FHTTP.Disconnect;
           except
           end;
-          //Url := '';
+          // Url := '';
 
           Url := CheckProto(CalcValue(FHTTPRec.Url, VE, nil), FHTTPRec.Referer);
 
-          {
-            if SameText(Copy(Url, 1, 6), 'https:') then
-            begin
-            FHTTP.IOHandler := FSSLHandler;
-            // FHTTP.ConnectTimeout := 0;
-            // FHTTP.ReadTimeout := 0;
-            end
-            else
-            FHTTP.IOHandler := nil;
-          }
           FHTTP.Request.Referer := FHTTPRec.Referer;
 
           Result.Clear;
 
           if FHTTPRec.PageDelay > 0 then
           begin
-            while true do
-            begin
-              CSData.Enter;
-              try
-                ms := MillisecondsBetween(FResource.ThreadCounter.LastPageTime,
-                  Date + Time);
-                if ms >= FHTTPRec.PageDelay then
-                begin
-                  FResource.ThreadCounter.LastPageTime := Date + Time;
+            h := FResource.ThreadCounter.Queue.Enter;
+            try
+              //while true do
+              //begin
+                if (ReturnValue = THREAD_FINISH) then
                   Break;
+
+                CSData.Enter;
+                try
+                  ms := MillisecondsBetween
+                    (FResource.ThreadCounter.LastPageTime, Date + Time);
+                  if ms < FHTTPRec.PageDelay then
+                    FResource.ThreadCounter.LastPageTime := IncMillisecond(Date + Time,FHTTPRec.PageDelay - ms)
+                  else
+                    FResource.ThreadCounter.LastPageTime := Date + Time;
+                finally
+                  CSData.Leave;
                 end;
-              finally
-                CSData.Leave;
-              end;
 
-              if (ReturnValue = THREAD_FINISH) then
-                Break;
+                if ms < FHTTPRec.PageDelay then
+                  WaitForSingleObject(h, FHTTPRec.PageDelay - ms);
 
-              sleep(FHTTPRec.PageDelay - ms);
+                if (ReturnValue = THREAD_FINISH) then
+                  Break;
+              //end;
+            finally
+              FResource.ThreadCounter.Queue.Leave;
             end;
           end;
 
@@ -6275,7 +6308,7 @@ begin
           if (ReturnValue = THREAD_FINISH) then
             Break;
 
-          FResultUrl := URL;
+          fResultURL := Url;
 
         except
           on e: Exception do
@@ -6292,7 +6325,9 @@ begin
               Continue;
 
             if FHTTPRec.AcceptError then
-              if (FHTTP.ResponseCode = 404) or (FHTTP.ResponseCode = 503)
+              if (FHTTP.ResponseCode = 404)
+              or (FHTTP.ResponseCode = 503)
+              or (FHTTP.ResponseCode = 410)
               { or (FHTTP.ResponseCode = -1) } then
               begin
                 SetHTTPError(Url + ': ' + e.Message);
@@ -6342,7 +6377,8 @@ begin
             tkComment));
           FXML.TagList.Insert(0, ttag.Create(#13#10, tkText));
           FXML.TagList.Insert(0,
-            ttag.Create(CheckProto(CalcValue(FHTTPRec.Url, VE, nil), FHTTPRec.Referer), tkComment));
+            ttag.Create(CheckProto(CalcValue(FHTTPRec.Url, VE, nil),
+            FHTTPRec.Referer), tkComment));
           i := 0;
           repeat
             inc(i);
@@ -6411,6 +6447,7 @@ var
   Url: string;
   ms: Int64;
   not_resume: Boolean;
+  h: THandle;
   // frec: tSearchRec;
 
   function makeName: String;
@@ -6577,53 +6614,64 @@ begin
             FExt), HTTPRec.Referer);
 
         // Delay feature for retarted resources
-        // not really queue, threads just get his work by "who faster" rule
+        // 2.0.2.115 NOW is a queue
 
         if FHTTPRec.PicDelay > 0 then
         begin
-          CSData.Enter;
+
+          // CSData.Enter;
+          // try
+          // ms := MillisecondsBetween(FResource.ThreadCounter.LastPicTime,
+          // Date + Time);
+          // if ms >= FHTTPRec.PicDelay then
+          // FResource.ThreadCounter.LastPicTime := Date + Time;
+          // finally
+          // CSData.Leave;
+          // end;
+
+          // if ms < FHTTPRec.PicDelay then
+          // begin
+          FPicture.Status := JOB_DELAY;
+          FPicture.Pos := 0;
+          FPicture.Size := 0;
+          FPicture.Changes := FPicture.Changes + [pcSize, pcProgress];
+          Synchronize(PicChanged);
+
+          h := FResource.ThreadCounter.Queue.Enter;
           try
-            ms := MillisecondsBetween(FResource.ThreadCounter.LastPicTime,
-              Date + Time);
-            if ms >= FHTTPRec.PicDelay then
-              FResource.ThreadCounter.LastPicTime := Date + Time;
-          finally
-            CSData.Leave;
-          end;
 
-          if ms < FHTTPRec.PicDelay then
-          begin
-            FPicture.Status := JOB_DELAY;
-            FPicture.Pos := 0;
-            FPicture.Size := 0;
-            FPicture.Changes := FPicture.Changes + [pcSize, pcProgress];
-            Synchronize(PicChanged);
-
-            while true do
+            if ReturnValue = THREAD_FINISH then
             begin
-              sleep(FHTTPRec.PicDelay - ms);
-
-              if ReturnValue = THREAD_FINISH then
-              begin
-                FJob := JOB_CANCELED;
-                Break;
-              end;
-
-              CSData.Enter;
-              try // critical sections prevent from collisions and "at the same time checking"
-                ms := MillisecondsBetween(FResource.ThreadCounter.LastPicTime,
-                  Date + Time);
-                if ms < FHTTPRec.PicDelay then
-                  Continue
-                else
-                begin
-                  FResource.ThreadCounter.LastPicTime := Date + Time;
-                  Break;
-                end;
-              finally
-                CSData.Leave;
-              end;
+              FJob := JOB_CANCELED;
+              Break;
             end;
+
+            // while true do
+            // begin
+            CSData.Enter;
+            try // critical sections prevent from collisions and "at the same time checking"
+              ms := MillisecondsBetween(FResource.ThreadCounter.LastPicTime,
+                Date + Time);
+              if ms < FHTTPRec.PicDelay then
+                FResource.ThreadCounter.LastPicTime :=
+                  IncMillisecond(Date + Time, FHTTPRec.PicDelay - ms)
+              else
+                FResource.ThreadCounter.LastPicTime := Date + Time;
+            finally
+              CSData.Leave;
+            end;
+
+            if ms < FHTTPRec.PicDelay then
+              WaitForSingleObject(h, FHTTPRec.PicDelay - ms);
+
+            if ReturnValue = THREAD_FINISH then
+            begin
+              FJob := JOB_CANCELED;
+              Break;
+            end;
+
+          finally
+            FResource.ThreadCounter.Queue.Leave;
           end;
 
         end;
@@ -6633,7 +6681,7 @@ begin
         Synchronize(PicChanged);
 
         // error generating
-        randomize;
+        //randomize;
         // if random(5) = 1 then
         // url := 'hurrdurr/509s.gif';
 
@@ -6776,8 +6824,11 @@ begin
               Continue;
           end;
 
-          if not not_resume and (HTTP.ResponseCode <> 404) and
-            (FRetries < FMaxRetries) then
+          if not not_resume
+          and (HTTP.ResponseCode <> 404)
+          and (HTTP.ResponseCode <> 503)
+          and (HTTP.ResponseCode <> 410)
+          and (FRetries < FMaxRetries) then
             inc(FRetries) // 404 not need to retry
           else if FHTTPRec.TryExt <> '' then
             FRetries := 0
@@ -7712,15 +7763,16 @@ begin
     begin
       LPic.NameNo := APic.NameNo;
 
-      //change prevpic's link to next
+      // change prevpic's link to next
 
-      //LPic.prevPic.nextPic := nil;
+      // LPic.prevPic.nextPic := nil;
 
       if LPic.prevPic = APic then
       begin
-        //if Assigned(APic.prevPic) then
-        //  APic.prevPic.nextPic := LPic;
-      end else
+        // if Assigned(APic.prevPic) then
+        // APic.prevPic.nextPic := LPic;
+      end
+      else
       begin
         LPic.NameCounter.Last := LPic.prevPic;
         LPic.prevPic.nextPic := nil;
@@ -7733,16 +7785,16 @@ begin
       if Assigned(LPic.prevPic) then
         LPic.prevPic.nextPic := LPic;
 
-{      if APic.nextPic <> LPic then
-      begin
+      { if APic.nextPic <> LPic then
+        begin
         LPic.nextPic := APic.nextPic;
 
         if Assigned(LPic.nextPic) then
-          LPic.nextPic.prevPic := LPic;
-      end;
+        LPic.nextPic.prevPic := LPic;
+        end;
 
-      if APic = APic.NameCounter.First then
-        APic.NameCounter.First := LPic;    }
+        if APic = APic.NameCounter.First then
+        APic.NameCounter.First := LPic; }
 
       if APic.NameNo > 0 then
         fNamePatchDec(APic, APic.FileName);
@@ -7875,7 +7927,8 @@ begin
         v.Last.nextPic := APic;
         APic.prevPic := v.Last;
         v.Last := APic;
-      end else if Assigned(v.First) then
+      end
+      else if Assigned(v.First) then
         raise Exception.Create('v.last not assigned (counter=' +
           IntToStr(v.Counter) + ',fname=' + FName + ')')
       else
@@ -8430,7 +8483,7 @@ var
       while n <> 0 do
       begin
         Result := Result + ParseValues(Pic, Result, Copy(s, i, n - i),
-          Copy(s, n + 1, l - n {- 1}), level, false);
+          Copy(s, n + 1, l - n { - 1 } ), level, false);
         i := n;
 
         n := PosEx('>', s, i + 1);
@@ -8438,7 +8491,7 @@ var
         if n <> 0 then
         begin
           Result := Result + ParseValues(Pic, Result, Copy(s, i + 1, n - i - 1),
-            Copy(s, n + 1, l - n{ - 1}), level);
+            Copy(s, n + 1, l - n { - 1 } ), level);
           i := n + 1;
         end;
 
@@ -8518,7 +8571,8 @@ var
     begin
       fnoext := false;
       Pic.FileName := Pic.FileName + ParseSections(Pic, '$fname$<($fn$)>.$ext$')
-    end else if fnoext then
+    end
+    else if fnoext then
       Pic.FileName := Pic.FileName + '.' + Pic.Ext;
 
     Checklength(Pic);

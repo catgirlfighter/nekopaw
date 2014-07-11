@@ -32,7 +32,8 @@ uses
   TextEditorForm in 'TextEditorForm.pas' {fTextEdit},
   Newsv2Form in 'Newsv2Form.pas' {fmNewsv2},
   NekoProvider in 'NekoProvider.pas',
-  fontScale in 'fontScale.pas';
+  fontScale in 'fontScale.pas',
+  ThreadUtils in 'ThreadUtils.pas';
 
 {$R *.res}
 
