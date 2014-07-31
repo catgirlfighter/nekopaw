@@ -1,4 +1,4 @@
-<item file="Graber2.exe"   archive="Graber2.zip"     version=120 />
+<item file="Graber2.exe"   archive="Graber2.zip"     version=121 />
 <item file="libeay32.sys"  archive="libeay32.zip"    version=0 />
 <item file="ssleay32.sys"  archive="ssleay32.zip"    version=0 />
 <item file="versionlog.txt"                          version=-1 />
@@ -32,6 +32,7 @@
 <item file="resources\mgbooru.net.cfg"             version=3 />
 <item file="resources\minitokyo.net.cfg"           version=13 />
 <item file="resources\nabyn.com.cfg"               version=6 />
+<item file="resources\nhentai.net.cfg"             version=0 />
 <item file="resources\seiga.nicovideo.jp.cfg"      version=3 />
 <item file="resources\nihonomaru.com.cfg"          version=1 />
 <item file="resources\rule34.paheal.net.cfg"       version=11 />
@@ -100,6 +101,7 @@
 <item file="resources\icons\booru.org.bmp"               version=0 />
 <item file="resources\icons\blogspot.com.bmp"            version=0 />
 <item file="resources\icons\furry.booru.org.bmp"         version=0 />
+<item file="resources\icons\nhentai.net.bmp"             version=0 />
 
 <item file="resources\icons\ponibooru.413chan.net.bmp"   version=0 deleted=1 />
 <item file="resources\icons\safebooru.org.bmp"           version=0 deleted=1 />
