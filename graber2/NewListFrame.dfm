@@ -254,36 +254,30 @@ object fNewList: TfNewList
       OnShow = tsSettingsShow
       object vgSettings: TcxVerticalGrid
         Left = 0
-        Top = 18
+        Top = 17
         Width = 261
-        Height = 255
+        Height = 256
         Align = alClient
         OptionsView.ShowEditButtons = ecsbAlways
         OptionsView.GridLineColor = clBtnShadow
         OptionsView.RowHeaderWidth = 125
         TabOrder = 0
+        ExplicitLeft = 3
+        ExplicitTop = 18
+        ExplicitHeight = 255
         Version = 1
       end
       object lHint: TcxLabel
         Left = 0
         Top = 0
         Align = alTop
-        ParentColor = False
-        ParentFont = False
-        Style.BorderColor = clInfoText
+        Caption = 'lHint'
         Style.BorderStyle = ebsUltraFlat
-        Style.Color = clInfoBk
-        Style.Edges = [bLeft, bTop, bRight, bBottom]
-        Style.Font.Charset = DEFAULT_CHARSET
-        Style.Font.Color = clInfoText
-        Style.Font.Height = -11
-        Style.Font.Name = 'Tahoma'
-        Style.Font.Style = []
-        Style.IsFontAssigned = True
-        Properties.LabelStyle = cxlsRaised
-        Properties.WordWrap = True
+        Transparent = True
         OnClick = lHintClick
-        Width = 261
+        ExplicitLeft = 80
+        ExplicitTop = 16
+        ExplicitWidth = 46
       end
     end
   end

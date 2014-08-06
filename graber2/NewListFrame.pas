@@ -5,7 +5,7 @@ interface
 uses
   {base}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, Menus, StdCtrls, INIFiles, ShellAPI, Clipbrd,
+  Dialogs, Menus, StdCtrls, INIFiles, ShellAPI, Clipbrd, Types,
   {devexp}
   cxGraphics, cxControls, cxLookAndFeels, cxTextEdit,
   cxLookAndFeelPainters, cxStyles, cxCustomData, cxFilter, cxData,
@@ -325,6 +325,19 @@ begin
     SendMsg(true);
 end;
 
+procedure TfNewList.lHintClick(Sender: TObject);
+begin
+  GlobalSettings.GUI.NewListShowHint := not GlobalSettings.GUI.NewListShowHint;
+
+  if GlobalSettings.GUI.NewListShowHint then
+    lHint.AutoSize := true
+  else
+  begin
+    lHint.AutoSize := false;
+    lHint.Height := lHint.Canvas.TextHeight('Example') + 6;
+  end;
+end;
+
 procedure TfNewList.COPY1Click(Sender: TObject);
 begin
   if Assigned(tvFull.Controller.FocusedItem) and
@@ -606,23 +619,10 @@ begin
   end;
 end;
 
-procedure TfNewList.lHintClick(Sender: TObject);
-begin
-  GlobalSettings.GUI.NewListShowHint := not GlobalSettings.GUI.NewListShowHint;
-
-  if GlobalSettings.GUI.NewListShowHint then
-    lHint.AutoSize := true
-  else
-  begin
-    lHint.AutoSize := false;
-    lHint.Height := lHint.Canvas.TextHeight('Example') + 6;
-  end;
-end;
-
 procedure TfNewList.fillRec(r: TResourceList;
   DataController: TcxGridDataController; RecordIndex, ItemOffset: Integer);
 var
-  s: ANSIString;
+  s: String;
   N: Integer;
 begin
   with DataController do
@@ -633,8 +633,8 @@ begin
     try
       if r[RecordIndex].IconFile <> '' then
       begin
-        FileToString(rootdir + '\resources\icons\' + r[RecordIndex]
-          .IconFile, s);
+        s := FileToStr(rootdir + '\resources\icons\' + r[RecordIndex]
+          .IconFile);
         Values[N, ItemOffset + 1] := s;
       end;
 
@@ -651,7 +651,7 @@ end;
 procedure TfNewList.refillRec(DataController: TcxGridDataController;
   RecordIndex, ItemOffset: Integer);
 var
-  s: ANSIString;
+  s: String;
   r: tResource;
   //N: Integer;
 begin
@@ -665,8 +665,8 @@ begin
     try
       if r.IconFile <> '' then
       begin
-        FileToString(rootdir + '\resources\icons\' + r
-          .IconFile, s);
+        S := FileToStr(rootdir + '\resources\icons\' + r
+          .IconFile);
         Values[RecordIndex, ItemOffset + 1] := s;
       end;
 

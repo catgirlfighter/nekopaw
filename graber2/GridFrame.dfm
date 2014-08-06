@@ -161,6 +161,11 @@ object fGrid: TfGrid
           Description = 'DELAY'
           ImageIndex = 22
           Value = 'DELAY'
+        end
+        item
+          Description = 'BLACKLISTED'
+          ImageIndex = 25
+          Value = 'BLACKLISTED'
         end>
       Properties.ReadOnly = True
       Properties.ShowDescriptions = False

@@ -3,7 +3,7 @@ unit OpBase;
 interface
 
 uses Windows, SysUtils, Messages, GraberU, INIFiles, Classes, Common,
-  MyHTTP, MyINIFile, Dialogs, Forms, Variants;
+  MyHTTP, MyINIFile, Dialogs, Forms, Variants, UITypes;
 
 var
   // FullResList: TResourceList;
@@ -94,7 +94,7 @@ begin
       if s <> '' then
         r[i].Fields['password'] := trim(DecryptString(s, KeyString), #0);
 
-      rec:= r[i].HTTPRec;
+      rec := r[i].HTTPRec;
 
       rec.StartCount := INI.ReadInteger(pref + r[i].Name, 'StartCount', 0);
       rec.MaxCount := INI.ReadInteger(pref + r[i].Name, 'MaxCount', 0);
@@ -110,9 +110,9 @@ begin
       r[i].ThreadCounter.UserSettings.PicDelay :=
         INI.ReadInteger(pref + r[i].Name, 'UserPicDelay', 0);
 
-      //h := r[i].HTTPRec;
-      r[i].ThreadCounter.UseProxy :=
-        INI.ReadInteger(pref + r[i].Name, 'UseProxy', -1);
+      // h := r[i].HTTPRec;
+      r[i].ThreadCounter.UseProxy := INI.ReadInteger(pref + r[i].Name,
+        'UseProxy', -1);
 
       for j := n to r[i].Fields.Count - 1 do
         if r[i].Fields.Items[j].restype <> ftNone then
@@ -172,9 +172,8 @@ begin
     else
       INI.DeleteKey(rname, 'Password');
 
-    if default then //all default finished there
+    if default then // all default finished there
       Exit;
-
 
     if Assigned(r.ThreadCounter) then
     begin
@@ -185,11 +184,11 @@ begin
         r.ThreadCounter.UserSettings.PageDelay);
       INI.WriteInteger(rname, 'UserPicDelay',
         r.ThreadCounter.UserSettings.PicDelay);
-      INI.WriteInteger(rname,'UseProxy',r.ThreadCounter.UseProxy);
+      INI.WriteInteger(rname, 'UseProxy', r.ThreadCounter.UseProxy);
     end;
 
-    INI.WriteInteger(rName, 'StartCount', r.HTTPRec.StartCount);
-    INI.WriteInteger(rName, 'MaxCount', r.HTTPRec.MaxCount);
+    INI.WriteInteger(rname, 'StartCount', r.HTTPRec.StartCount);
+    INI.WriteInteger(rname, 'MaxCount', r.HTTPRec.MaxCount);
 
     for j := 1 to r.Fields.Count - 1 do
       if not(r.Fields.Items[j].restype in [ftNone, ftMultiEdit]) then
@@ -275,9 +274,11 @@ begin
       UseDist := INI.ReadBool('settings', 'dist', true);
       WriteEXIF := INI.ReadBool('Settings', 'WriteEXIF', false);
       UseBlackList := INI.ReadBool('Settings', 'UseBlackList', false);
-      SemiJob := tSemiListJob(INI.ReadInteger('Settings','SemiJob',0));
-      GlobalSettings.UncheckBlacklisted := INI.ReadBool('Settings','UncheckBlacklisted',true);
-      GlobalSettings.StopSignalTimer := INI.ReadInteger('Settings', 'StopSignalTimer',0);
+      SemiJob := tSemiListJob(INI.ReadInteger('Settings', 'SemiJob', 0));
+      GlobalSettings.UncheckBlacklisted :=
+        INI.ReadBool('Settings', 'UncheckBlacklisted', true);
+      GlobalSettings.StopSignalTimer := INI.ReadInteger('Settings',
+        'StopSignalTimer', 0);
 
       ShowSettings := langname = '';
 
@@ -307,7 +308,7 @@ begin
         PerResThreads := INI.ReadInteger('download',
           'perresourcethreadcount', 2);
         PicThreads := INI.ReadInteger('download', 'picturethreadcount', 1);
-        //SDALF := INI.ReadBool('download', 'SDALF', false);
+        // SDALF := INI.ReadBool('download', 'SDALF', false);
         AutoUncheckInvisible := INI.ReadBool('download',
           'AutoUncheckInvisible', false);
         Debug := false;
@@ -318,7 +319,7 @@ begin
       with Proxy do
       begin
         UseProxy := INI.ReadInteger('proxy', 'useproxy', 0);
-        ptype := tProxyType(INI.ReadInteger('proxy','type',0));
+        ptype := tProxyType(INI.ReadInteger('proxy', 'type', 0));
         Host := INI.ReadString('proxy', 'host', '');
         Port := INI.ReadInteger('proxy', 'port', 0);
         Auth := INI.ReadBool('proxy', 'authetication', false);
@@ -330,7 +331,7 @@ begin
 
       v := TStringList.Create;
       try
-        INI.ReadSection('IgnoreList', v);      //loading ignore "doubles" list
+        INI.ReadSection('IgnoreList', v); // loading ignore "doubles" list
 
         if (v.Count = 0) and ShowSettings then
         begin
@@ -358,7 +359,7 @@ begin
           end;
         end;
 
-        INI.ReadSection('fields', v);                //additional fields
+        INI.ReadSection('fields', v); // additional fields
 
         if v.Count = 0 then
         begin
@@ -375,7 +376,7 @@ begin
           end;
         end;
 
-        INI.ReadSection('blacklist', v);                //black list
+        INI.ReadSection('blacklist', v); // black list
 
         if v.Count = 0 then
         begin
@@ -387,7 +388,7 @@ begin
 
           for i := 0 to v.Count - 1 do
           begin
-            BlackList[i][0] := DeleteTo(v[i],'_');
+            BlackList[i][0] := DeleteTo(v[i], '_');
             BlackList[i][1] := INI.ReadString('blacklist', v[i], '');
           end;
         end;
@@ -433,9 +434,11 @@ begin
       INI.WriteBool('Settings', 'Dist', UseDist);
       INI.WriteBool('Settings', 'WriteEXIF', GlobalSettings.WriteEXIF);
       INI.WriteBool('Settings', 'UseBlackList', GlobalSettings.UseBlackList);
-      INI.WriteInteger('Settings', 'SemiJob',Integer(GlobalSettings.SemiJob));
-      INI.WriteBool('Settings','UncheckBlacklisted',GlobalSettings.UncheckBlacklisted);
-      INI.WriteInteger('Settings', 'StopSignalTimer',GlobalSettings.StopSignalTimer);
+      INI.WriteInteger('Settings', 'SemiJob', integer(GlobalSettings.SemiJob));
+      INI.WriteBool('Settings', 'UncheckBlacklisted',
+        GlobalSettings.UncheckBlacklisted);
+      INI.WriteInteger('Settings', 'StopSignalTimer',
+        GlobalSettings.StopSignalTimer);
 
       with Downl do
       begin
@@ -452,7 +455,7 @@ begin
       with Proxy do
       begin
         INI.WriteInteger('Proxy', 'UseProxy', UseProxy);
-        INI.WriteInteger('Proxy','Type',Integer(ptype));
+        INI.WriteInteger('Proxy', 'Type', integer(ptype));
         INI.WriteString('Proxy', 'Host', Host);
         INI.WriteInteger('Proxy', 'Port', Port);
         INI.WriteBool('Proxy', 'Authetication', Auth);
@@ -472,7 +475,8 @@ begin
       INI.EraseSection('BlackList');
 
       for i := 0 to length(BlackList) - 1 do
-        INI.WriteString('BlackList', IntToStr(i)+'_'+BlackList[i][0], BlackList[i][1]);
+        INI.WriteString('BlackList', IntToStr(i) + '_' + BlackList[i][0],
+          BlackList[i][1]);
 
     end;
   finally
@@ -660,7 +664,7 @@ begin
     else
       r.MaxThreadCount := 0;
 
-    if GlobalSettings.Proxy.UseProxy in [0,1,2] then
+    if GlobalSettings.Proxy.UseProxy in [0, 1, 2] then
       ps.UseProxy := GlobalSettings.Proxy.UseProxy
     else
       ps.UseProxy := 0;
@@ -681,7 +685,7 @@ begin
   begin
     r.DWNLDHandler.Proxy := GlobalSettings.Proxy;
 
-    if GlobalSettings.Proxy.UseProxy in [0,1,3] then
+    if GlobalSettings.Proxy.UseProxy in [0, 1, 3] then
       ps.UseProxy := GlobalSettings.Proxy.UseProxy
     else
       ps.UseProxy := 0;

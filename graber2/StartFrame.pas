@@ -33,6 +33,11 @@ type
     procedure bSettingsClick(Sender: TObject);
     procedure bAboutClick(Sender: TObject);
     procedure FrameClick(Sender: TObject);
+    procedure FrameMouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure FrameMouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+
   private
     { Private declarations }
   public
@@ -68,8 +73,22 @@ end;
 
 procedure TfStart.FrameClick(Sender: TObject);
 begin
-  Self.ScalingFlags := [sfLeft, sfTop, sfWidth, sfHeight, sfFont,
-    sfDesignSize];
+  Self.ScalingFlags := [sfLeft, sfTop, sfWidth, sfHeight, sfFont, sfDesignSize];
+end;
+
+procedure TfStart.FrameMouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  if (Button = mbLeft) and (X > iIcon.Left + 185) and (X < iIcon.Left + 290) and (Y > iIcon.Top + 30) and
+    (Y < iIcon.Top + 120) then
+    iIcon.Visible := True;
+
+end;
+
+procedure TfStart.FrameMouseUp(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  iIcon.Visible := false;
 end;
 
 procedure TfStart.FrameResize(Sender: TObject);
@@ -83,8 +102,8 @@ begin
   // bAbout.SetBounds(bNew.Left,bSettings.BoundsRect.Bottom + sps*4,ButtonWidth,ButtonHeight);
   iIcon.SetBounds(bNew.BoundsRect.Right + Sps * 4, (Height - IconHeight) div 2,
     IconWidth, IconHeight);
-  bExit.SetBounds(bNew.Left, iIcon.BoundsRect.Bottom - ButtonHeight,
-    ButtonWidth, ButtonHeight);
+  bExit.SetBounds(bNew.Left, bSettings.BoundsRect.Bottom + Sps * 4, ButtonWidth,
+    ButtonHeight);
 
   // bAdvanced.SetBounds(iIcon.BoundsRect.Right + sps*2,iIcon.BoundsRect.Bottom - ButtonHeight,ButtonWidth,ButtonHeight);
 end;

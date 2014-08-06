@@ -1,7 +1,7 @@
 object fSettings: TfSettings
   Left = 0
   Top = 0
-  Width = 451
+  Width = 611
   Height = 304
   Align = alClient
   Font.Charset = DEFAULT_CHARSET
@@ -11,17 +11,19 @@ object fSettings: TfSettings
   Font.Style = []
   ParentFont = False
   TabOrder = 0
+  ExplicitWidth = 451
   object pButtons: TPanel
     AlignWithMargins = True
     Left = 3
     Top = 3
-    Width = 445
+    Width = 605
     Height = 26
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
+    ExplicitWidth = 445
     DesignSize = (
-      445
+      605
       26)
     object btnOk: TcxButton
       Left = 0
@@ -51,7 +53,7 @@ object fSettings: TfSettings
       OnClick = btnApplyClick
     end
     object lHelp: TcxLabel
-      Left = 1271
+      Left = 1431
       Top = 3
       Cursor = crHandPoint
       Anchors = [akTop, akRight]
@@ -63,9 +65,10 @@ object fSettings: TfSettings
       Properties.Alignment.Horz = taRightJustify
       Transparent = True
       OnClick = lHelpClick
+      ExplicitLeft = 1271
       Height = 17
       Width = 113
-      AnchorX = 1384
+      AnchorX = 1544
     end
   end
   object tlList: TcxTreeList
@@ -121,19 +124,21 @@ object fSettings: TfSettings
   object pcMain: TcxPageControl
     Left = 172
     Top = 32
-    Width = 279
+    Width = 439
     Height = 272
     Align = alClient
     TabOrder = 3
     Properties.ActivePage = cxTabSheet1
     Properties.CustomButtons.Buttons = <>
     Properties.HideTabs = True
+    ExplicitWidth = 279
     ClientRectBottom = 272
-    ClientRectRight = 279
+    ClientRectRight = 439
     ClientRectTop = 0
     object cxTabSheet1: TcxTabSheet
       Caption = 'cxTabSheet1'
       ImageIndex = 0
+      ExplicitWidth = 279
       object lcLanguage: TcxLabel
         Left = 6
         Top = 5
@@ -185,8 +190,7 @@ object fSettings: TfSettings
         Top = 102
         Properties.DropDownListStyle = lsFixedList
         Properties.Items.Strings = (
-          '<None>'
-          'UserSkin')
+          '<None>')
         TabOrder = 6
         Width = 139
       end
@@ -226,8 +230,9 @@ object fSettings: TfSettings
     object cxTabSheet2: TcxTabSheet
       Caption = 'cxTabSheet2'
       ImageIndex = 1
+      ExplicitWidth = 279
       DesignSize = (
-        279
+        439
         272)
       object eThreads: TcxSpinEdit
         Left = 206
@@ -245,7 +250,8 @@ object fSettings: TfSettings
         Caption = 'chbUseThreadPerRes'
         TabOrder = 1
         Transparent = True
-        Width = 265
+        ExplicitWidth = 265
+        Width = 425
       end
       object eThreadPerRes: TcxSpinEdit
         Left = 206
@@ -324,7 +330,8 @@ object fSettings: TfSettings
         Caption = 'chbUseDistr'
         TabOrder = 12
         Transparent = True
-        Width = 265
+        ExplicitWidth = 265
+        Width = 425
       end
       object eStopSignalTimer: TcxSpinEdit
         Left = 206
@@ -344,8 +351,9 @@ object fSettings: TfSettings
     object cxTabSheet3: TcxTabSheet
       Caption = 'cxTabSheet3'
       ImageIndex = 2
+      ExplicitWidth = 279
       DesignSize = (
-        279
+        439
         272)
       object chbProxyAuth: TcxCheckBox
         Left = 6
@@ -355,7 +363,8 @@ object fSettings: TfSettings
         Properties.OnEditValueChanged = chbProxyAuthPropertiesEditValueChanged
         TabOrder = 0
         Transparent = True
-        Width = 313
+        ExplicitWidth = 313
+        Width = 473
       end
       object eHost: TcxTextEdit
         Left = 206
@@ -419,6 +428,7 @@ object fSettings: TfSettings
         Left = 6
         Top = 5
         Caption = 'lblProxy'
+        Transparent = True
       end
       object cbProxy: TcxComboBox
         Left = 206
@@ -448,34 +458,39 @@ object fSettings: TfSettings
         Left = 6
         Top = 32
         Caption = 'lblProxyType'
+        Transparent = True
       end
     end
     object cxTabSheet4: TcxTabSheet
       Caption = 'cxTabSheet4'
       ImageIndex = 3
+      ExplicitWidth = 279
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0
-        Width = 279
+        Width = 439
         Height = 272
         Align = alClient
         OptionsView.ShowEditButtons = ecsbAlways
         OptionsView.GridLineColor = clBtnShadow
         OptionsView.RowHeaderWidth = 148
         TabOrder = 0
+        ExplicitWidth = 279
         Version = 1
       end
     end
     object cxTabSheet5: TcxTabSheet
       Caption = 'cxTabSheet5'
       ImageIndex = 5
+      ExplicitWidth = 279
       object gDoubles: TcxGrid
         Left = 0
         Top = 26
-        Width = 279
+        Width = 439
         Height = 246
         Align = alClient
         TabOrder = 0
+        ExplicitWidth = 279
         object tvDoubles: TcxGridTableView
           Navigator.Buttons.CustomButtons = <>
           DataController.Summary.DefaultGroupSummaryItems = <>
@@ -513,49 +528,56 @@ object fSettings: TfSettings
       object bcDoubles: TdxBarDockControl
         Left = 0
         Top = 0
-        Width = 279
+        Width = 439
         Height = 26
         Align = dalTop
         BarManager = BarManager
+        ExplicitWidth = 279
       end
     end
     object cxTabSheet7: TcxTabSheet
       Caption = 'cxTabSheet7'
       ImageIndex = 6
+      ExplicitWidth = 279
       object chbUseBlackList: TcxCheckBox
         Left = 0
         Top = 0
         Align = alTop
         Caption = 'chbUseBlackList'
         TabOrder = 0
-        Width = 279
+        Transparent = True
+        ExplicitWidth = 279
+        Width = 439
       end
       object Panel1: TPanel
         Left = 0
         Top = 21
-        Width = 279
+        Width = 439
         Height = 251
         Align = alClient
         BevelOuter = bvNone
         Caption = 'Panel1'
         TabOrder = 1
         ExplicitTop = 0
+        ExplicitWidth = 279
         ExplicitHeight = 272
         object dxBarDockControl1: TdxBarDockControl
           Left = 0
           Top = 0
-          Width = 279
+          Width = 439
           Height = 26
           Align = dalTop
           BarManager = BarManager
+          ExplicitWidth = 279
         end
         object gBlackList: TcxGrid
           Left = 0
           Top = 26
-          Width = 279
+          Width = 439
           Height = 225
           Align = alClient
           TabOrder = 1
+          ExplicitWidth = 279
           object tvBlackList: TcxGridTableView
             Navigator.Buttons.CustomButtons = <>
             DataController.Summary.DefaultGroupSummaryItems = <>
@@ -591,6 +613,7 @@ object fSettings: TfSettings
     object cxTabSheet6: TcxTabSheet
       Caption = 'cxTabSheet6'
       ImageIndex = 4
+      ExplicitWidth = 279
       object cxLabel1: TcxLabel
         Left = 6
         Top = 3
@@ -624,13 +647,10 @@ object fSettings: TfSettings
         Transparent = True
       end
       object cxLabel5: TcxLabel
-        Left = 24
+        Left = 7
         Top = 113
         Cursor = crHandPoint
         Caption = 'http://code.google.com/p/nekopaw/'
-        Style.BorderColor = clBtnShadow
-        Style.Shadow = False
-        Style.TextColor = clBlue
         Style.TextStyle = [fsUnderline]
         Properties.LineOptions.Alignment = cxllaBottom
         Transparent = True
@@ -700,10 +720,11 @@ object fSettings: TfSettings
     Categories.Visibles = (
       True)
     ImageOptions.Images = dm.il
+    MenusShowRecentItemsFirst = False
     PopupMenuLinks = <>
     UseSystemFont = True
-    Left = 392
-    Top = 284
+    Left = 208
+    Top = 152
     DockControlHeights = (
       0
       0
@@ -742,13 +763,12 @@ object fSettings: TfSettings
       UseOwnFont = False
       UseRestSpace = True
       Visible = True
-      WholeRow = False
+      WholeRow = True
     end
     object BarManagerBar1: TdxBar
       AllowClose = False
       AllowCustomizing = False
       AllowQuickCustomizing = False
-      AllowReset = False
       Caption = 'Blacklist'
       CaptionButtons = <>
       DockControl = dxBarDockControl1
@@ -762,11 +782,11 @@ object fSettings: TfSettings
       ItemLinks = <
         item
           Visible = True
-          ItemName = 'bNewBlackword'
+          ItemName = 'bbNewBlackword'
         end
         item
           Visible = True
-          ItemName = 'bDelBlackword'
+          ItemName = 'bbDelBlackword'
         end
         item
           ViewLayout = ivlGlyphControlCaption
@@ -805,21 +825,21 @@ object fSettings: TfSettings
       ImageIndex = 18
       OnClick = bbDeleteRuleClick
     end
-    object bNewBlackword: TdxBarButton
-      Caption = 'bNewBlackword'
+    object bbNewBlackword: TdxBarButton
+      Caption = 'bbNewBlackword'
       Category = 0
-      Hint = 'bNewBlackword'
+      Hint = 'bbNewBlackword'
       Visible = ivAlways
       ImageIndex = 16
-      OnClick = bNewBlackwordClick
+      OnClick = bbNewBlackwordClick
     end
-    object bDelBlackword: TdxBarButton
-      Caption = 'bDelBlackword'
+    object bbDelBlackword: TdxBarButton
+      Caption = 'bbDelBlackword'
       Category = 0
-      Hint = 'bDelBlackword'
+      Hint = 'bbDelBlackword'
       Visible = ivAlways
       ImageIndex = 18
-      OnClick = bDelBlackwordClick
+      OnClick = bbDelBlackwordClick
     end
     object chbUncheckBlacklisted: TcxBarEditItem
       Caption = 'chbUncheckBlacklisted'
