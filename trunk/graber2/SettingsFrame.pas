@@ -5,7 +5,7 @@ interface
 uses
   {std}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, Menus, INIFiles, ShellAPI, ImgList, ExtCtrls, StrUtils,
+  Dialogs, Menus, INIFiles, ShellAPI, ImgList, ExtCtrls, StrUtils, UITypes,
   {devex}
   cxPCdxBarPopupMenu, cxGraphics, cxLookAndFeels,
   cxLookAndFeelPainters, cxControls, cxCustomData, cxStyles, cxTL, cxTextEdit,
@@ -16,7 +16,8 @@ uses
   cxGridCustomTableView, cxGridTableView, cxClasses, cxGridLevel, cxGrid,
   dxSkinsdxBarPainter, dxBar,
   {Graber}
-  cxmymultirow, MyHTTP, Common, GraberU, cxNavigator, cxBarEditItem;
+  cxmymultirow, MyHTTP, Common, GraberU, cxNavigator, cxBarEditItem,
+  cxHyperLinkEdit;
 {
   dxSkinsdxBarPainter, dxBar, dxSkinBlack, dxSkinBlue,
   dxSkinBlueprint, dxSkinCaramel, dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide,
@@ -106,8 +107,8 @@ type
     cxTabSheet7: TcxTabSheet;
     cBLComboBox: TcxEditRepositoryComboBoxItem;
     BarManagerBar1: TdxBar;
-    bNewBlackword: TdxBarButton;
-    bDelBlackword: TdxBarButton;
+    bbNewBlackword: TdxBarButton;
+    bbDelBlackword: TdxBarButton;
     chbUseBlackList: TcxCheckBox;
     Panel1: TPanel;
     dxBarDockControl1: TdxBarDockControl;
@@ -138,8 +139,8 @@ type
     procedure bbNewRuleClick(Sender: TObject);
     procedure bbEditRuleClick(Sender: TObject);
     procedure lHelpClick(Sender: TObject);
-    procedure bNewBlackwordClick(Sender: TObject);
-    procedure bDelBlackwordClick(Sender: TObject);
+    procedure bbNewBlackwordClick(Sender: TObject);
+    procedure bbDelBlackwordClick(Sender: TObject);
     procedure cbProxyPropertiesChange(Sender: TObject);
   private
     FIgnList: TDSArray;
@@ -167,6 +168,7 @@ type
     procedure LoadBlackList;
     procedure SaveBlackList;
     procedure ResetPosition;
+    procedure LoadSkinList;
     property OnError: TLogEvent read FOnError write FOnError;
     property FullResList: TResourceList read FFullResList;
     { Public declarations }
@@ -334,12 +336,12 @@ begin
   end;
 end;
 
-procedure TfSettings.bDelBlackwordClick(Sender: TObject);
+procedure TfSettings.bbDelBlackwordClick(Sender: TObject);
 begin
   tvBlackList.DataController.DeleteFocused;
 end;
 
-procedure TfSettings.bNewBlackwordClick(Sender: TObject);
+procedure TfSettings.bbNewBlackwordClick(Sender: TObject);
 begin
   tvBlackList.DataController.Append;
 
@@ -513,6 +515,7 @@ procedure TfSettings.LoadSettings;
   resnames,skinnames: tstringlist; }
 begin
   GetLanguages;
+  LoadSkinList;
   FillDSArray(IgnoreList, FIgnList);
   LoadDoubles;
   LoadBlackList;
@@ -550,6 +553,19 @@ begin
     chbUncheckBlacklisted.EditValue := UncheckBlacklisted;
   end;
 
+end;
+
+procedure TfSettings.LoadSkinList;
+var
+  r: tSearchRec;
+begin
+  if not DirectoryExists(extractfilepath(paramstr(0))+'skins\') then
+    Exit;
+
+  if FindFirst(extractfilepath(paramstr(0))+'skins\*.skinres',faAnyFile,r) = 0 then
+    repeat
+      cbSkin.Properties.Items.Add(ChangeFileExt(r.Name,''));
+    until FindNext(r) <> 0;
 end;
 
 procedure TfSettings.OnClose;
@@ -598,7 +614,8 @@ begin
   if l is tcxLabel then with l as tcxlabel do
     lw := Canvas.TextWidth(Caption)
   else if l is tcxCheckBox then with l as tcxCheckBox do
-    lw := Canvas.TextWidth(Caption);
+    lw := Canvas.TextWidth(Caption)
+  else lw := 0;
 
   if assigned(cb) then
     if lW + _space + cb.Width > lcap then
@@ -745,6 +762,8 @@ begin
   bbNewRule.Caption := lang('_CREATERULE_');
   bbEditRule.Caption := lang('_EDITRULE_');
   bbDeleteRule.Caption := lang('_DELETERULE_');
+  bbNewBlackword.Caption := lang('_NEWBW_');
+  bbDelBlackword.Caption := lang('_DELETEBW_');
   cDoublesRuleName.Caption := lang('_RULENAME_');
   cDoublesRules.Caption := lang('_RULESTRING_');
   chbMenuCaptions.Caption := lang('_MENUCAPTIONS_');

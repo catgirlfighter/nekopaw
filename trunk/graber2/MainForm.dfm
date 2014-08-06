@@ -441,6 +441,10 @@ object mf: Tmf
         end
         item
           Visible = True
+          ItemName = 'btnSave'
+        end
+        item
+          Visible = True
           ItemName = 'bbAdvanced'
         end
         item
@@ -514,6 +518,13 @@ object mf: Tmf
       ImageIndex = 24
       OnClick = bbSignalTimerClick
     end
+    object btnSave: TdxBarButton
+      Caption = 'btnSave'
+      Category = 0
+      Hint = 'btnSave'
+      Visible = ivAlways
+      OnClick = btnSaveClick
+    end
   end
   object ApplicationEvents1: TApplicationEvents
     OnDeactivate = ApplicationEvents1Deactivate
@@ -551,5 +562,13 @@ object mf: Tmf
       Caption = '_CLEAR_'
       OnClick = CLEAR1Click
     end
+  end
+  object dlgSave: TSaveDialog
+    DefaultExt = '.csv'
+    Filter = 
+      'CSV (name+md5+tags, only downloaded)|*.csv|NKP (full progress li' +
+      'st)|*.nkp'
+    Left = 328
+    Top = 188
   end
 end

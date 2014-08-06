@@ -80,7 +80,8 @@ function CharPosEx(str: string; ch: TSetOfChar;
 function GetNextS(var s: string; del: String = ';'; ins: String = ''): string;
 function GetNextSEx(var s: string; del: TSetOfChar = [';'];
   ins: TSetOfChar = []): string;
-procedure FileToString(FileName: String; var AValue: AnsiString);
+procedure StrToFile(const Value: RawByteString; FileName: String);
+function FileToStr(FileName: String): RawByteString;
 function MathCalcStr(s: variant): variant;
 function DateTimeStrEval(const DateTimeFormat: string;
   const DateTimeStr: string; locale: string): TDateTime;
@@ -1566,23 +1567,67 @@ begin
   Result := 0;
 end;
 
-procedure FileToString(FileName: String; var AValue: AnsiString);
+procedure StrToFile(const Value: RawByteString; FileName: String);
 var
-  AStream: TFileStream;
+  F: tFileStream;
 begin
-  if not fileexists(FileName) then
-  begin
-    AValue := '';
-    Exit;
-  end;
-
-  AStream := TFileStream.Create(FileName, fmOpenRead);
+  F := tFileStream.Create(FileName, fmCreate or fmOpenWrite or fmShareDenyNone);
   try
-    AStream.Position := 0;
-    SetLength(AValue, AStream.Size);
-    AStream.ReadBuffer(AValue[1], AStream.Size);
+    //F.WriteData($FEFF);
+    case StringCodepage(Value) of
+      1200: F.Write(#$FF#$FE,2);
+      1201: F.Write(#$FE#$FF,2);
+      65001: F.Write(#$BBEF#$00BF,3);
+    end;
+    if length(Value) > 0 then
+      F.Write(@Value[1], SizeOf(Value[1]) * length(Value));
   finally
-    AStream.Free;
+    F.Free;
+  end;
+end;
+
+function FileToStr(FileName: String): RawByteString;
+var
+  F: tFileStream;
+  MN: array[0..2] of byte;
+  wds: widestring;
+  ans: ansistring;
+begin
+  F := tFileStream.Create(FileName, fmOpenRead or fmShareDenyNone);
+  try
+    if F.Size > 1 then
+    begin
+      F.Read(MN[0],2);
+      if (MN[0] = $FF)and(MN[1] = $FE) then
+        SetCodepage(Result,1200,false)
+      else if (MN[0] = $FE)and(MN[1] = $FF) then
+        SetCodepage(Result,1201,false)
+      else if F.Size > 2 then
+      begin
+        F.Read(MN[2],1);
+        if (MN[0] = $EF) and (MN[1] = $BB) and (MN[2] = $BF) then
+          SetCodepage(Result,65001,false)
+        else begin
+          F.Position := 0;
+          SetCodepage(Result,DefaultSystemCodepage,false);
+        end;
+      end else begin
+        F.Position := 0;
+        SetCodepage(Result,DefaultSystemCodepage,false);
+      end;
+    end else
+      SetCodepage(Result,DefaultSystemCodepage,false);
+
+    if F.Size > 0 then
+    begin
+      SetLength(Result, F.Size - F.Position);
+      F.Read(Result[1], F.Size - F.Position);
+    end
+    else
+      Result := '';
+
+  finally
+    F.Free;
   end;
 end;
 

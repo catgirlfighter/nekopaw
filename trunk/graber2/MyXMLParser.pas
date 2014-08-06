@@ -627,7 +627,7 @@ begin
   for i := 0 to Count - 1 do
     if (Items[i].Kind = tkTag) then
     begin
-      b := false;
+      //b := false;
 
       if lx = length(Tags) then
         lx := 0;

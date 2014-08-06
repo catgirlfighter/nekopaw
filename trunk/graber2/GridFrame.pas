@@ -535,6 +535,7 @@ var
   Pic: TTPicture;
   r: TResource;
   btw: Int64;
+  ndt: tDateTime;
 begin
   vGrid.BeginUpdate;
   try
@@ -575,8 +576,10 @@ begin
         begin
           btw := SecondsBetween(ResList.PictureStartTime,Date + Time);
           with PicCounter do
-            fTickCounter.FDate := IncSecond(Date+Time,Trunc(btw / FSH *
+            ndt := IncSecond(Date+Time,Trunc(btw / FSH *
               (Count - SKP - FSH + EXS + ERR)));
+          if SecondsBetween(fTickCounter.FDate,ndt) > 5 then
+            fTickCounter.FDate := ndt;
           fUpdCnt := PicCounter.FSH - PicCounter.EXS - PicCounter.ERR;
         end;
 
@@ -1214,7 +1217,7 @@ begin
       for i := 0 to vGrid.Controller.SelectedRecordCount - 1 do
       begin
         vGrid.Controller.SelectedRecords[i].Values[FCheckColumn.Index] := b;
-        ResList.PictureList[vGrid.ViewData.Rows[i].RecordIndex].Checked := b;
+        ResList.PictureList[vGrid.Controller.SelectedRecords[i].RecordIndex].Checked := b;
           if ResList.PictureList[i].Linked.Count > 0 then
             Recheck(i);
       end
@@ -1277,6 +1280,8 @@ begin
   bbCheckFiltered.Hint := bbCheckFiltered.Caption;
   bbUncheckFiltered.Caption := bbCheckFiltered.Caption;
   bbUncheckFiltered.Hint := bbCheckFiltered.Caption;
+  bbCheckBlacklisted.Caption := lang('_CH_BLACKLISTED_');
+  bbCheckBlackListed.Hint := bbUncheckBlacklisted.Caption;
   bbUncheckBlacklisted.Caption := lang('_CH_BLACKLISTED_');
   bbUncheckBlackListed.Hint := bbUncheckBlacklisted.Caption;
   bbInverseChecked.Caption := lang('_INVERSE_');
@@ -1562,6 +1567,8 @@ begin
           Values[n, prgc.Index] := 'ABORT';
         JOB_REFRESH,JOB_POSTPROCINPROGRESS:
           Values[n, prgc.Index] := 'REFRESH';
+        JOB_BLACKLISTED:
+          Values[n, prgc.Index] := 'BLACKLISTED';
       end;
     end;
 

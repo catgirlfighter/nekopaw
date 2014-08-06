@@ -5,7 +5,7 @@ interface
 uses
   {std}
   SysUtils, Classes, Math, Variants, Dialogs, Windows, ShellAPI,
-  ImgList, Controls, Forms, Menus,
+  ImgList, Controls, Forms, Menus, UITypes,
   {devex}
   cxGridCustomTableView, cxGraphics, cxEdit,
   cxDataUtils, cxGridCommon, cxGridTableView, cxEditRepositoryItems,

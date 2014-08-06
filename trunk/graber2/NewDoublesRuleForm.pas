@@ -10,7 +10,7 @@ uses
   dxSkinscxPCPainter, cxCustomData, cxFilter, cxData, cxDataStorage,
   cxGridLevel, cxGridCustomTableView, cxGridTableView, cxClasses,
   cxGridCustomView, cxGrid, dxSkinsdxBarPainter, dxBar, cxEditRepositoryItems,
-  cxNavigator;
+  cxNavigator, UITypes;
 
 type
 
