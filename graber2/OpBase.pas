@@ -26,12 +26,16 @@ type
   tGUIValue = (gvSizes, gvResSet, gvGridFields);
   tGUIValues = set of tGUIValue;
 
-procedure LoadProfileSettings;
+procedure LoadProfileSettings(pname: string = ''); overload;
+procedure LoadProfileSettings(ini: tINIFile); overload;
+
 procedure SaveProfileSettings;
-procedure LoadResourceSettings(r: TResourceList);
-procedure SaveResourceSettings(r: TResource; AINI: TINIFile = nil;
+procedure LoadResourceSettings(const r: TResourceList); overload;
+procedure LoadResourceSettings(const r: TResourceList;
+  const ini: tINIFile); overload;
+procedure SaveResourceSettings(r: TResource; AINI: tINIFile = nil;
   default: boolean = false); overload;
-procedure SaveResourceSettings(r: TResourceList; AINI: TINIFile = nil);
+procedure SaveResourceSettings(r: TResourceList; AINI: tINIFile = nil);
   overload;
 procedure SaveGUISettings(values: tGUIValues);
 procedure FillDSArray(const a1: TDSArray; var a2: TDSArray);
@@ -49,7 +53,8 @@ var
 procedure SetLogMode(Value: boolean);
 procedure SetConSettings(r: TResourceList; list: boolean = true;
   pics: boolean = true);
-procedure SaveFavResource(r: TResource; INI: TINIFile = nil);
+procedure SaveFavResource(r: TResource; ini: tINIFile = nil);
+procedure SaveCurrentProfile;
 
 implementation
 
@@ -63,82 +68,88 @@ begin
   MessageDLG('Error in initiation: ' + Msg, mtError, [mbOk], 0);
 end;
 
-procedure LoadResourceSettings(r: TResourceList);
+procedure LoadResourceSettings(const r: TResourceList; const ini: tINIFile);
 var
   i, j, n: integer;
   pref, s: string;
-  INI: TINIFile;
   rec: thttprec;
 begin
-  INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
-  try
-    pref := 'resource-';
-    n := r[0].Fields.Count;
+  pref := 'resource-';
+  n := r[0].Fields.Count;
 
-    r[0].NameFormat := INI.ReadString('defaultresource', 'NameFormat',
-      '$rootdir$\pics\$tag$\');
+  r[0].NameFormat := ini.ReadString('defaultresource', 'NameFormat',
+    '$rootdir$\pics\$tag$\');
 
-    for i := 1 to r.Count - 1 do
+  for i := 1 to r.Count - 1 do
+  begin
+    if ini.ValueExists(pref + r[i].Name, 'Favorite') then
+      r[i].Favorite := ini.ReadBool(pref + r[i].Name, 'Favorite', false);
+
+    r[i].Inherit := ini.ReadBool(pref + r[i].Name, 'Inherit', true);
+    if not r[i].Inherit then
     begin
-      if INI.ValueExists(pref + r[i].Name, 'Favorite') then
-        r[i].Favorite := INI.ReadBool(pref + r[i].Name, 'Favorite', false);
+      r[i].NameFormat := ini.ReadString(pref + r[i].Name, 'NameFormat', '');
+    end;
 
-      r[i].Inherit := INI.ReadBool(pref + r[i].Name, 'Inherit', true);
-      if not r[i].Inherit then
+    r[i].Fields['login'] := ini.ReadString(pref + r[i].Name, 'login', '');
+    s := ini.ReadString(pref + r[i].Name, 'password', '');
+    if s <> '' then
+      r[i].Fields['password'] := trim(DecryptString(s, KeyString), #0);
+
+    rec := r[i].HTTPRec;
+
+    rec.StartCount := ini.ReadInteger(pref + r[i].Name, 'StartCount', 0);
+    rec.MaxCount := ini.ReadInteger(pref + r[i].Name, 'MaxCount', 0);
+
+    r[i].HTTPRec := rec;
+
+    r[i].ThreadCounter.UseUserSettings := ini.ReadBool(pref + r[i].Name,
+      'UseUserSettings', false);
+    r[i].ThreadCounter.UserSettings.MaxThreadCount :=
+      ini.ReadInteger(pref + r[i].Name, 'UserMaxThreadCount', 0);
+    r[i].ThreadCounter.UserSettings.PageDelay :=
+      ini.ReadInteger(pref + r[i].Name, 'UserPageDelay', 0);
+    r[i].ThreadCounter.UserSettings.PicDelay :=
+      ini.ReadInteger(pref + r[i].Name, 'UserPicDelay', 0);
+
+    // h := r[i].HTTPRec;
+    r[i].ThreadCounter.UseProxy := ini.ReadInteger(pref + r[i].Name,
+      'UseProxy', -1);
+
+    for j := n to r[i].Fields.Count - 1 do
+      if r[i].Fields.Items[j].restype <> ftNone then
       begin
-        r[i].NameFormat := INI.ReadString(pref + r[i].Name, 'NameFormat', '');
+        r[i].Fields.Items[j].resvalue :=
+          strnull(ini.ReadString(pref + r[i].Name, r[i].Fields.Items[j].resname,
+          r[i].Fields.Items[j].resvalue));
       end;
 
-      r[i].Fields['login'] := INI.ReadString(pref + r[i].Name, 'login', '');
-      s := INI.ReadString(pref + r[i].Name, 'password', '');
-      if s <> '' then
-        r[i].Fields['password'] := trim(DecryptString(s, KeyString), #0);
-
-      rec := r[i].HTTPRec;
-
-      rec.StartCount := INI.ReadInteger(pref + r[i].Name, 'StartCount', 0);
-      rec.MaxCount := INI.ReadInteger(pref + r[i].Name, 'MaxCount', 0);
-
-      r[i].HTTPRec := rec;
-
-      r[i].ThreadCounter.UseUserSettings := INI.ReadBool(pref + r[i].Name,
-        'UseUserSettings', false);
-      r[i].ThreadCounter.UserSettings.MaxThreadCount :=
-        INI.ReadInteger(pref + r[i].Name, 'UserMaxThreadCount', 0);
-      r[i].ThreadCounter.UserSettings.PageDelay :=
-        INI.ReadInteger(pref + r[i].Name, 'UserPageDelay', 0);
-      r[i].ThreadCounter.UserSettings.PicDelay :=
-        INI.ReadInteger(pref + r[i].Name, 'UserPicDelay', 0);
-
-      // h := r[i].HTTPRec;
-      r[i].ThreadCounter.UseProxy := INI.ReadInteger(pref + r[i].Name,
-        'UseProxy', -1);
-
-      for j := n to r[i].Fields.Count - 1 do
-        if r[i].Fields.Items[j].restype <> ftNone then
-        begin
-          r[i].Fields.Items[j].resvalue :=
-            strnull(INI.ReadString(pref + r[i].Name,
-            r[i].Fields.Items[j].resname, r[i].Fields.Items[j].resvalue));
-        end;
-
-    end;
-  finally
-    INI.Free;
   end;
 end;
 
-procedure SaveResourceSettings(r: TResource; AINI: TINIFile = nil;
+procedure LoadResourceSettings(const r: TResourceList);
+var
+  ini: tINIFile;
+begin
+  ini := tINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+  try
+    LoadResourceSettings(r, ini);
+  finally
+    ini.Free;
+  end;
+end;
+
+procedure SaveResourceSettings(r: TResource; AINI: tINIFile = nil;
   default: boolean = false);
 var
   j { ,n } : integer;
   rname, s: string;
-  INI: TINIFile;
+  ini: tINIFile;
 begin
   if Assigned(AINI) then
-    INI := AINI
+    ini := AINI
   else
-    INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+    ini := tINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
   try
     if default then
       rname := 'defaultresource'
@@ -147,95 +158,97 @@ begin
       rname := 'resource-' + r.Name;
       // INI.WriteBool(rname, 'Favorite', r.Favorite);
     end;
-    INI.WriteBool(rname, 'Inherit', r.Inherit);
+    ini.WriteBool(rname, 'Inherit', r.Inherit);
 
     if not r.Inherit then
     begin
-      INI.WriteBool(rname, 'Inherit', r.Inherit);
-      INI.WriteString(rname, 'NameFormat', r.NameFormat);
+      ini.WriteBool(rname, 'Inherit', r.Inherit);
+      ini.WriteString(rname, 'NameFormat', r.NameFormat);
     end
     else
     begin
-      INI.DeleteKey(rname, 'Inherit');
-      INI.DeleteKey(rname, 'NameFormat');
+      ini.DeleteKey(rname, 'Inherit');
+      ini.DeleteKey(rname, 'NameFormat');
     end;
 
     s := nullstr(r.Fields['login']);
     if s <> '' then
-      INI.WriteString(rname, 'Login', '"' + s + '"')
+      ini.WriteString(rname, 'Login', '"' + s + '"')
     else
-      INI.DeleteKey(rname, 'Login');
+      ini.DeleteKey(rname, 'Login');
 
     s := nullstr(r.Fields['password']);
     if s <> '' then
-      INI.WriteString(rname, 'Password', EncryptString(s, KeyString))
+      ini.WriteString(rname, 'Password', EncryptString(s, KeyString))
     else
-      INI.DeleteKey(rname, 'Password');
+      ini.DeleteKey(rname, 'Password');
 
     if default then // all default finished there
       Exit;
 
     if Assigned(r.ThreadCounter) then
     begin
-      INI.WriteBool(rname, 'UseUserSettings', r.ThreadCounter.UseUserSettings);
-      INI.WriteInteger(rname, 'UserMaxThreadCount',
+      ini.WriteBool(rname, 'UseUserSettings', r.ThreadCounter.UseUserSettings);
+      ini.WriteInteger(rname, 'UserMaxThreadCount',
         r.ThreadCounter.UserSettings.MaxThreadCount);
-      INI.WriteInteger(rname, 'UserPageDelay',
+      ini.WriteInteger(rname, 'UserPageDelay',
         r.ThreadCounter.UserSettings.PageDelay);
-      INI.WriteInteger(rname, 'UserPicDelay',
+      ini.WriteInteger(rname, 'UserPicDelay',
         r.ThreadCounter.UserSettings.PicDelay);
-      INI.WriteInteger(rname, 'UseProxy', r.ThreadCounter.UseProxy);
+      ini.WriteInteger(rname, 'UseProxy', r.ThreadCounter.UseProxy);
     end;
 
-    INI.WriteInteger(rname, 'StartCount', r.HTTPRec.StartCount);
-    INI.WriteInteger(rname, 'MaxCount', r.HTTPRec.MaxCount);
+    ini.WriteInteger(rname, 'StartCount', r.HTTPRec.StartCount);
+    ini.WriteInteger(rname, 'MaxCount', r.HTTPRec.MaxCount);
 
     for j := 1 to r.Fields.Count - 1 do
       if not(r.Fields.Items[j].restype in [ftNone, ftMultiEdit]) then
       begin
-        INI.WriteString(rname, r.Fields.Items[j].resname,
+        ini.WriteString(rname, r.Fields.Items[j].resname,
           '"' + vartostr(nullstr(r.Fields.Items[j].resvalue)) + '"');
       end;
   finally
     if not Assigned(AINI) then
-      INI.Free;
+      ini.Free;
   end;
 end;
 
-procedure SaveResourceSettings(r: TResourceList; AINI: TINIFile = nil);
+procedure SaveResourceSettings(r: TResourceList; AINI: tINIFile = nil);
 var
   i: integer;
-  INI: TINIFile;
+  ini: tINIFile;
 begin
   if Assigned(AINI) then
-    INI := AINI
+    ini := AINI
   else
-    INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+    ini := tINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
   try
     for i := 0 to r.Count - 1 do
-      SaveResourceSettings(r[i], AINI);
+      if r[i].IsNew then
+        SaveResourceSettings(r[i], AINI);
   finally
     if not Assigned(AINI) then
-      INI.Free;
+      ini.Free;
   end;
 end;
 
-procedure LoadProfileSettings;
+procedure LoadProfileSettings(pname: string = '');
 var
-  INI: TINIFile;
-  i { ,j } : integer;
-  v: TStringList;
-  // s: string;
+  ini: tINIFile;
   dlu: integer;
 begin
-  INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) +
+  ini := tINIFile.Create(IncludeTrailingPathDelimiter(rootdir) +
     'settings.ini');
   try
-    profname := INI.ReadString('settings', 'profile', profname);
-    GlobalSettings.IsNew := INI.ReadBool('settings', 'isnew', false);
+    if pname = '' then
+      profname := ini.ReadString('settings', 'profile', profname)
+    else
+      profname := pname;
+    GlobalSettings.IncSkins := ini.ReadBool('settings', 'incskins', false);
+    GlobalSettings.IsNew := ini.ReadBool('settings', 'isnew', false);
     if GlobalSettings.IsNew then
-      INI.DeleteKey('settings', 'isnew');
-    dlu := INI.ReadInteger('settings', 'delupd', 0);
+      ini.DeleteKey('settings', 'isnew');
+    dlu := ini.ReadInteger('settings', 'delupd', 0);
     if dlu = 1 then
     begin
       while FileExists(IncludeTrailingPathDelimiter(rootdir) +
@@ -244,178 +257,196 @@ begin
         DeleteFile(IncludeTrailingPathDelimiter(rootdir) + 'NPUpdater.exe');
         Application.ProcessMessages;
       end;
-      INI.DeleteKey('settings', 'delupd');
+      ini.DeleteKey('settings', 'delupd');
     end;
   finally
-    INI.Free;
+    ini.Free;
   end;
 
-  INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+  ini := tINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
   try
-    with GlobalSettings do
-    begin
-      // OneInstance := INI.ReadBool('global','oneinstance',true);
-
-      // Trayicon := INI.ReadBool('GUI','trayicon',true);
-      // HideToTray := INI.ReadBool('GUI','hidetotray',true);
-      // SaveConfirm := INI.ReadBool('GUI','saveconfirm',true);
-
-      AutoUPD := INI.ReadBool('settings', 'autoupd', true);
-      ShowWhatsNew := INI.ReadBool('settings', 'showwhatsnew', true);
-      UseLookAndFeel := INI.ReadBool('settings', 'uselookandfeel', false);
-      SkinName := INI.ReadString('settings', 'skinname', '');
-      UPDServ := INI.ReadString('settings', 'updserver',
-        'http://nekopaw.googlecode.com/svn/trunk/release/graber2/');
-      CHKServ := INI.ReadString('settings', 'updserver',
-        'http://code.google.com/p/nekopaw/');
-      langname := INI.ReadString('settings', 'language', '');
-      MenuCaptions := INI.ReadBool('settings', 'menucaptions', false);
-      Tips := INI.ReadBool('settings', 'tips', true);
-      UseDist := INI.ReadBool('settings', 'dist', true);
-      WriteEXIF := INI.ReadBool('Settings', 'WriteEXIF', false);
-      UseBlackList := INI.ReadBool('Settings', 'UseBlackList', false);
-      SemiJob := tSemiListJob(INI.ReadInteger('Settings', 'SemiJob', 0));
-      GlobalSettings.UncheckBlacklisted :=
-        INI.ReadBool('Settings', 'UncheckBlacklisted', true);
-      GlobalSettings.StopSignalTimer := INI.ReadInteger('Settings',
-        'StopSignalTimer', 0);
-
-      ShowSettings := langname = '';
-
-      if ShowSettings then
-        langname := 'English';
-
-      with GUI do
-      begin
-        NewListFavorites := INI.ReadBool('gui', 'NewListFavorites', true);
-        NewListShowHint := INI.ReadBool('gui', 'NewListShowHint', true);
-        FormWidth := INI.ReadInteger('gui', 'windowwidth', 610);
-        FormHeight := INI.ReadInteger('gui', 'windowheight', 420);
-        FormState := INI.ReadBool('gui', 'windowmaximized', false);
-        PanelPage := INI.ReadInteger('gui', 'panelpage', 0);
-        PanelWidth := INI.ReadInteger('gui', 'panelwidth', 185);
-        LastUsedSet := INI.ReadString('gui', 'lastusedresourceset', '');
-        LastUsedFields := INI.ReadString('gui', 'lastusedgridfields',
-          '@resource,@label');
-        LastUsedGrouping := INI.ReadString('gui', 'lastusedgridgrouping', '');
-      end;
-
-      with Downl do
-      begin
-        ThreadCount := INI.ReadInteger('download', 'threadcount', 1);
-        Retries := INI.ReadInteger('download', 'retries', 5);
-        UsePerRes := INI.ReadBool('download', 'useperresource', true);
-        PerResThreads := INI.ReadInteger('download',
-          'perresourcethreadcount', 2);
-        PicThreads := INI.ReadInteger('download', 'picturethreadcount', 1);
-        // SDALF := INI.ReadBool('download', 'SDALF', false);
-        AutoUncheckInvisible := INI.ReadBool('download',
-          'AutoUncheckInvisible', false);
-        Debug := false;
-      end;
-
-      idThrottler.BitsPerSec := INI.ReadInteger('download', 'Speed', 0);
-
-      with Proxy do
-      begin
-        UseProxy := INI.ReadInteger('proxy', 'useproxy', 0);
-        ptype := tProxyType(INI.ReadInteger('proxy', 'type', 0));
-        Host := INI.ReadString('proxy', 'host', '');
-        Port := INI.ReadInteger('proxy', 'port', 0);
-        Auth := INI.ReadBool('proxy', 'authetication', false);
-        Login := INI.ReadString('proxy', 'login', '');
-        Password := INI.ReadString('proxy', 'password', '');
-        if Password <> '' then
-          Password := DecryptString(Password, KeyString);
-      end;
-
-      v := TStringList.Create;
-      try
-        INI.ReadSection('IgnoreList', v); // loading ignore "doubles" list
-
-        if (v.Count = 0) and ShowSettings then
-        begin
-          SetLength(IgnoreList, 2);
-          IgnoreList[0][0] := 'MD5 dublicates';
-          IgnoreList[0][1] := 'md5=md5';
-          IgnoreList[1][0] := 'URL dublicates';
-          IgnoreList[1][1] := 'url=url';
-        end
-        else
-        begin
-          SetLength(IgnoreList, v.Count);
-          for i := 0 to v.Count - 1 do
-          begin
-            IgnoreList[i][0] := v[i];
-            IgnoreList[i][1] := INI.ReadString('ignorelist', v[i], '');
-            { Checking old format }
-            if pos('=', CopyTo(IgnoreList[i][1], ';', ['""'], [], false)) = 0
-            then
-            begin
-              IgnoreList[i][1] := IgnoreList[i][0] + '=' + IgnoreList[i][1];
-              IgnoreList[i][0] := 'rule' + IntToStr(i + 1);
-            end;
-
-          end;
-        end;
-
-        INI.ReadSection('fields', v); // additional fields
-
-        if v.Count = 0 then
-        begin
-
-        end
-        else
-        begin
-          SetLength(AddFields, v.Count);
-
-          for i := 0 to v.Count - 1 do
-          begin
-            AddFields[i][0] := v[i];
-            AddFields[i][1] := INI.ReadString('fields', v[i], '');
-          end;
-        end;
-
-        INI.ReadSection('blacklist', v); // black list
-
-        if v.Count = 0 then
-        begin
-
-        end
-        else
-        begin
-          SetLength(BlackList, v.Count);
-
-          for i := 0 to v.Count - 1 do
-          begin
-            BlackList[i][0] := DeleteTo(v[i], '_');
-            BlackList[i][1] := INI.ReadString('blacklist', v[i], '');
-          end;
-        end;
-
-      finally
-        v.Free;
-      end;
-
-    end;
+    LoadProfileSettings(ini);
   finally
-    INI.Free;
+    ini.Free;
+  end;
+end;
+
+procedure LoadProfileSettings(ini: tINIFile);
+var
+  v: TStringList;
+  i: integer;
+begin
+  with GlobalSettings do
+  begin
+    // OneInstance := INI.ReadBool('global','oneinstance',true);
+
+    // Trayicon := INI.ReadBool('GUI','trayicon',true);
+    // HideToTray := INI.ReadBool('GUI','hidetotray',true);
+    // SaveConfirm := INI.ReadBool('GUI','saveconfirm',true);
+
+    AutoUPD := ini.ReadBool('settings', 'autoupd', true);
+    ShowWhatsNew := ini.ReadBool('settings', 'showwhatsnew', true);
+    UseLookAndFeel := ini.ReadBool('settings', 'uselookandfeel', false);
+    SkinName := ini.ReadString('settings', 'skinname', '');
+    UPDServ := ini.ReadString('settings', 'updserver',
+      'http://nekopaw.googlecode.com/svn/trunk/release/graber2/');
+    CHKServ := ini.ReadString('settings', 'updserver',
+      'http://code.google.com/p/nekopaw/');
+    langname := ini.ReadString('settings', 'language', '');
+    MenuCaptions := ini.ReadBool('settings', 'menucaptions', false);
+    Tips := ini.ReadBool('settings', 'tips', true);
+    UseDist := ini.ReadBool('settings', 'dist', true);
+    WriteEXIF := ini.ReadBool('Settings', 'WriteEXIF', false);
+    UseBlackList := ini.ReadBool('Settings', 'UseBlackList', false);
+    SemiJob := tSemiListJob(ini.ReadInteger('Settings', 'SemiJob', 0));
+    GlobalSettings.UncheckBlacklisted := ini.ReadBool('Settings',
+      'UncheckBlacklisted', true);
+    GlobalSettings.StopSignalTimer := ini.ReadInteger('Settings',
+      'StopSignalTimer', 0);
+
+    ShowSettings := langname = '';
+
+    if ShowSettings then
+      langname := 'English';
+
+    with GUI do
+    begin
+      NewListFavorites := ini.ReadBool('gui', 'NewListFavorites', true);
+      NewListShowHint := ini.ReadBool('gui', 'NewListShowHint', true);
+      FormWidth := ini.ReadInteger('gui', 'windowwidth', 610);
+      FormHeight := ini.ReadInteger('gui', 'windowheight', 420);
+      FormState := ini.ReadBool('gui', 'windowmaximized', false);
+      PanelPage := ini.ReadInteger('gui', 'panelpage', 0);
+      PanelWidth := ini.ReadInteger('gui', 'panelwidth', 185);
+      LastUsedSet := ini.ReadString('gui', 'lastusedresourceset', '');
+      LastUsedFields := ini.ReadString('gui', 'lastusedgridfields',
+        '@resource,@label');
+      LastUsedGrouping := ini.ReadString('gui', 'lastusedgridgrouping', '');
+    end;
+
+    with Downl do
+    begin
+      ThreadCount := ini.ReadInteger('download', 'threadcount', 1);
+      Retries := ini.ReadInteger('download', 'retries', 5);
+      UsePerRes := ini.ReadBool('download', 'useperresource', true);
+      PerResThreads := ini.ReadInteger('download', 'perresourcethreadcount', 2);
+      PicThreads := ini.ReadInteger('download', 'picturethreadcount', 1);
+      // SDALF := INI.ReadBool('download', 'SDALF', false);
+      AutoUncheckInvisible := ini.ReadBool('download',
+        'AutoUncheckInvisible', false);
+      Debug := false;
+    end;
+
+    idThrottler.BitsPerSec := ini.ReadInteger('download', 'Speed', 0);
+
+    with Proxy do
+    begin
+      UseProxy := ini.ReadInteger('proxy', 'useproxy', 0);
+      ptype := tProxyType(ini.ReadInteger('proxy', 'type', 0));
+      Host := ini.ReadString('proxy', 'host', '');
+      Port := ini.ReadInteger('proxy', 'port', 0);
+      Auth := ini.ReadBool('proxy', 'authetication', false);
+      Login := ini.ReadString('proxy', 'login', '');
+      Password := ini.ReadString('proxy', 'password', '');
+      if Password <> '' then
+        Password := DecryptString(Password, KeyString);
+      UsePac := ini.ReadBool('proxy', 'UsePAC', false);
+      // PACFile := INI.ReadString('proxy','PACFile','');
+      PACHost := ini.ReadString('proxy', 'PACHost', '');
+    end;
+
+    v := TStringList.Create;
+    try
+      ini.ReadSection('IgnoreList', v); // loading ignore "doubles" list
+
+      if (v.Count = 0) and ShowSettings then
+      begin
+        SetLength(IgnoreList, 2);
+        IgnoreList[0][0] := 'MD5 dublicates';
+        IgnoreList[0][1] := 'md5=md5';
+        IgnoreList[1][0] := 'URL dublicates';
+        IgnoreList[1][1] := 'url=url';
+      end
+      else
+      begin
+        SetLength(IgnoreList, v.Count);
+        for i := 0 to v.Count - 1 do
+        begin
+          IgnoreList[i][0] := v[i];
+          IgnoreList[i][1] := ini.ReadString('ignorelist', v[i], '');
+          { Checking old format }
+          if pos('=', CopyTo(IgnoreList[i][1], ';', ['""'], [], false)) = 0 then
+          begin
+            IgnoreList[i][1] := IgnoreList[i][0] + '=' + IgnoreList[i][1];
+            IgnoreList[i][0] := 'rule' + IntToStr(i + 1);
+          end;
+
+        end;
+      end;
+
+      ini.ReadSection('fields', v); // additional fields
+
+      if v.Count = 0 then
+      begin
+
+      end
+      else
+      begin
+        SetLength(AddFields, v.Count);
+
+        for i := 0 to v.Count - 1 do
+        begin
+          AddFields[i][0] := v[i];
+          AddFields[i][1] := ini.ReadString('fields', v[i], '');
+        end;
+      end;
+
+      ini.ReadSection('blacklist', v); // black list
+
+      if v.Count = 0 then
+      begin
+
+      end
+      else
+      begin
+        SetLength(BlackList, v.Count);
+
+        for i := 0 to v.Count - 1 do
+        begin
+          BlackList[i][0] := DeleteTo(v[i], '_');
+          BlackList[i][1] := ini.ReadString('blacklist', v[i], '');
+        end;
+      end;
+
+    finally
+      v.Free;
+    end;
+
   end;
 end;
 
 procedure SaveProfileSettings;
 var
-  INI: TINIFile;
+  ini: tINIFile;
   i: integer;
 
 begin
-  INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+  ini := tINIFile.Create(IncludeTrailingPathDelimiter(rootdir) +
+    'settings.ini');
+  try
+    ini.WriteString('settings', 'profile', profname);
+    ini.WriteBool('settings', 'incskins', GlobalSettings.IncSkins);
+  finally
+    ini.Free;
+  end;
 
-  if not FileExists(INI.FileName) then
+  ini := tINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+
+  if not FileExists(ini.FileName) then
   begin
     with TStringStream.Create('[Settings]', TEncoding.Unicode) do
     begin
-      SaveToFile(INI.FileName);
+      SaveToFile(ini.FileName);
       Free;
     end;
   end;
@@ -424,95 +455,99 @@ begin
     with GlobalSettings do
     begin
 
-      INI.WriteString('Settings', 'Language', langname);
-      INI.WriteBool('Settings', 'AutoUPD', AutoUPD);
-      INI.WriteBool('Settings', 'ShowWhatsNew', ShowWhatsNew);
-      INI.WriteBool('Settings', 'UseLookAndFeel', UseLookAndFeel);
-      INI.WriteString('Settings', 'SkinName', SkinName);
-      INI.WriteBool('Settings', 'MenuCaptions', MenuCaptions);
-      INI.WriteBool('Settings', 'Tips', Tips);
-      INI.WriteBool('Settings', 'Dist', UseDist);
-      INI.WriteBool('Settings', 'WriteEXIF', GlobalSettings.WriteEXIF);
-      INI.WriteBool('Settings', 'UseBlackList', GlobalSettings.UseBlackList);
-      INI.WriteInteger('Settings', 'SemiJob', integer(GlobalSettings.SemiJob));
-      INI.WriteBool('Settings', 'UncheckBlacklisted',
+      ini.WriteString('Settings', 'Language', langname);
+      ini.WriteBool('Settings', 'AutoUPD', AutoUPD);
+      // INI.WriteBool('Settings', 'IncSkins', IncSkins);
+      ini.WriteBool('Settings', 'ShowWhatsNew', ShowWhatsNew);
+      ini.WriteBool('Settings', 'UseLookAndFeel', UseLookAndFeel);
+      ini.WriteString('Settings', 'SkinName', SkinName);
+      ini.WriteBool('Settings', 'MenuCaptions', MenuCaptions);
+      ini.WriteBool('Settings', 'Tips', Tips);
+      ini.WriteBool('Settings', 'Dist', UseDist);
+      ini.WriteBool('Settings', 'WriteEXIF', GlobalSettings.WriteEXIF);
+      ini.WriteBool('Settings', 'UseBlackList', GlobalSettings.UseBlackList);
+      ini.WriteInteger('Settings', 'SemiJob', integer(GlobalSettings.SemiJob));
+      ini.WriteBool('Settings', 'UncheckBlacklisted',
         GlobalSettings.UncheckBlacklisted);
-      INI.WriteInteger('Settings', 'StopSignalTimer',
+      ini.WriteInteger('Settings', 'StopSignalTimer',
         GlobalSettings.StopSignalTimer);
 
       with Downl do
       begin
-        INI.WriteInteger('Download', 'ThreadCount', ThreadCount);
-        INI.WriteInteger('Download', 'Retries', Retries);
-        INI.WriteBool('Download', 'UsePerResource', UsePerRes);
-        INI.WriteInteger('Download', 'PerResourceThreadCount', PerResThreads);
-        INI.WriteInteger('Download', 'PictureThreadCount', PicThreads);
-        INI.WriteBool('Download', 'AutoUncheckInvisible', AutoUncheckInvisible);
+        ini.WriteInteger('Download', 'ThreadCount', ThreadCount);
+        ini.WriteInteger('Download', 'Retries', Retries);
+        ini.WriteBool('Download', 'UsePerResource', UsePerRes);
+        ini.WriteInteger('Download', 'PerResourceThreadCount', PerResThreads);
+        ini.WriteInteger('Download', 'PictureThreadCount', PicThreads);
+        ini.WriteBool('Download', 'AutoUncheckInvisible', AutoUncheckInvisible);
       end;
 
-      INI.WriteInteger('Download', 'Speed', idThrottler.BitsPerSec);
+      ini.WriteInteger('Download', 'Speed', idThrottler.BitsPerSec);
 
       with Proxy do
       begin
-        INI.WriteInteger('Proxy', 'UseProxy', UseProxy);
-        INI.WriteInteger('Proxy', 'Type', integer(ptype));
-        INI.WriteString('Proxy', 'Host', Host);
-        INI.WriteInteger('Proxy', 'Port', Port);
-        INI.WriteBool('Proxy', 'Authetication', Auth);
-        INI.WriteString('Proxy', 'Login', Login);
+        ini.WriteInteger('Proxy', 'UseProxy', UseProxy);
+        ini.WriteInteger('Proxy', 'Type', integer(ptype));
+        ini.WriteString('Proxy', 'Host', Host);
+        ini.WriteInteger('Proxy', 'Port', Port);
+        ini.WriteBool('Proxy', 'Authetication', Auth);
+        ini.WriteString('Proxy', 'Login', Login);
         if Password <> '' then
-          INI.WriteString('Proxy', 'Password', EncryptString(Password,
+          ini.WriteString('Proxy', 'Password', EncryptString(Password,
             KeyString))
         else
-          INI.WriteString('Proxy', 'Password', Password);
+          ini.WriteString('Proxy', 'Password', '');
+
+        ini.WriteBool('Proxy', 'UsePAC', UsePac);
+        ini.WriteString('Proxy', 'PACHost', PACHost);
       end;
 
-      INI.EraseSection('ignorelist');
+      ini.EraseSection('ignorelist');
 
       for i := 0 to length(IgnoreList) - 1 do
-        INI.WriteString('IgnoreList', IgnoreList[i][0], IgnoreList[i][1]);
+        ini.WriteString('IgnoreList', IgnoreList[i][0], IgnoreList[i][1]);
 
-      INI.EraseSection('BlackList');
+      ini.EraseSection('BlackList');
 
       for i := 0 to length(BlackList) - 1 do
-        INI.WriteString('BlackList', IntToStr(i) + '_' + BlackList[i][0],
+        ini.WriteString('BlackList', IntToStr(i) + '_' + BlackList[i][0],
           BlackList[i][1]);
 
     end;
   finally
-    INI.Free;
+    ini.Free;
   end;
 end;
 
 procedure SaveGUISettings(values: tGUIValues);
 var
-  INI: TINIFile;
+  ini: tINIFile;
 
 begin
-  INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+  ini := tINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
   try
     with GlobalSettings.GUI do
     begin
       if gvSizes in values then
       begin
-        INI.WriteInteger('GUI', 'WindowWidth', FormWidth);
-        INI.WriteInteger('GUI', 'WindowHeight', FormHeight);
-        INI.WriteBool('GUI', 'WindowMaximized', FormState);
-        INI.WriteInteger('GUI', 'PanelPage', PanelPage);
-        INI.WriteInteger('GUI', 'PanelWidth', PanelWidth);
+        ini.WriteInteger('GUI', 'WindowWidth', FormWidth);
+        ini.WriteInteger('GUI', 'WindowHeight', FormHeight);
+        ini.WriteBool('GUI', 'WindowMaximized', FormState);
+        ini.WriteInteger('GUI', 'PanelPage', PanelPage);
+        ini.WriteInteger('GUI', 'PanelWidth', PanelWidth);
       end;
       if gvResSet in values then
-        INI.WriteString('GUI', 'LastUsedResourceSet', LastUsedSet);
-      INI.WriteBool('GUI', 'NewListFavorites', NewListFavorites);
-      INI.WriteBool('GUI', 'NewListShowHint', NewListShowHint);
+        ini.WriteString('GUI', 'LastUsedResourceSet', LastUsedSet);
+      ini.WriteBool('GUI', 'NewListFavorites', NewListFavorites);
+      ini.WriteBool('GUI', 'NewListShowHint', NewListShowHint);
       if gvGridFields in values then
       begin
-        INI.WriteString('GUI', 'LastUsedGridFields', LastUsedFields);
-        INI.WriteString('GUI', 'LastUsedGridGrouping', LastUsedGrouping);
+        ini.WriteString('GUI', 'LastUsedGridFields', LastUsedFields);
+        ini.WriteString('GUI', 'LastUsedGridGrouping', LastUsedGrouping);
       end;
     end;
   finally
-    INI.Free;
+    ini.Free;
   end;
 end;
 
@@ -560,76 +595,76 @@ end;
 
 function LoadPathList: String;
 var
-  INI: TINIFile;
+  ini: tINIFile;
   Items: TStringList;
   i: integer;
 begin
-  INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+  ini := tINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
   try
     Items := TStringList.Create;
     try
-      INI.ReadSection('pathlist', Items);
+      ini.ReadSection('pathlist', Items);
       for i := 0 to Items.Count - 1 do
-        Items[i] := INI.ReadString('pathlist', Items[i], '');
+        Items[i] := ini.ReadString('pathlist', Items[i], '');
       result := Items.Text;
     finally
       Items.Free;
     end;
   finally
-    INI.Free;
+    ini.Free;
   end;
 end;
 
 procedure SavePathList(list: TStrings);
 var
   i: integer;
-  INI: TINIFile;
+  ini: tINIFile;
 begin
-  INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+  ini := tINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
   try
     for i := 0 to list.Count - 1 do
-      INI.WriteString('pathlist', 'item' + IntToStr(i), list[i]);
+      ini.WriteString('pathlist', 'item' + IntToStr(i), list[i]);
   finally
-    INI.Free;
+    ini.Free;
   end;
 
 end;
 
 procedure LoadFavList(dest: TStrings);
 var
-  INI: TINIFile;
+  ini: tINIFile;
   // items: tstringlist;
   i: integer;
 begin
-  INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+  ini := tINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
   try
     // items := tstringlist.Create;
     dest.Clear;
     // try
-    INI.ReadSection('favtaglist', dest);
+    ini.ReadSection('favtaglist', dest);
     for i := 0 to dest.Count - 1 do
-      dest[i] := INI.ReadString('favtaglist', dest[i], '');
+      dest[i] := ini.ReadString('favtaglist', dest[i], '');
     // result := items.Text;
     // finally
     // items.Free;
     // end;
   finally
-    INI.Free;
+    ini.Free;
   end;
 end;
 
 procedure SaveFavList(src: TStrings);
 var
   i: integer;
-  INI: TINIFile;
+  ini: tINIFile;
 begin
-  INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
-  INI.EraseSection('favtaglist');
+  ini := tINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+  ini.EraseSection('favtaglist');
   try
     for i := 0 to src.Count - 1 do
-      INI.WriteString('favtaglist', 'item' + IntToStr(i), src[i]);
+      ini.WriteString('favtaglist', 'item' + IntToStr(i), src[i]);
   finally
-    INI.Free;
+    ini.Free;
   end;
 end;
 
@@ -655,8 +690,25 @@ procedure SetConSettings(r: TResourceList; list: boolean = true;
   pics: boolean = true);
 var
   ps: tproxyrec;
+  h: tMyIdHTTP;
+  s: String;
 begin
   ps := GlobalSettings.Proxy;
+
+  if ps.UsePac and (length(ps.PACHost) > 0) and
+    Assigned(r.ThreadHandler.PACParser) and
+    (not r.ThreadHandler.PACParser.Initiated or r.ThreadHandler.PACParser.Reload)
+  then
+  begin
+    h := CreateHTTP;
+    try
+      s := h.Get(ps.PACHost);
+      r.ThreadHandler.PACParser.LoadScript(PANSIChar(ANSIString(s)));
+    finally
+      h.Free;
+    end;
+  end;
+
   if list then
   begin
     if GlobalSettings.Downl.UsePerRes then
@@ -704,20 +756,34 @@ begin
     r.LogMode := GLOBAL_LOGMODE;
 end;
 
-procedure SaveFavResource(r: TResource; INI: TINIFile = nil);
+procedure SaveFavResource(r: TResource; ini: tINIFile = nil);
 begin
-  if not Assigned(INI) then
-    INI := TINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
+  if not Assigned(ini) then
+    ini := tINIFile.Create(IncludeTrailingPathDelimiter(rootdir) + profname);
 
   try
 
-    INI.WriteBool('resource-' + r.Name, 'Favorite', r.Favorite);
+    ini.WriteBool('resource-' + r.Name, 'Favorite', r.Favorite);
 
   finally
-    if Assigned(INI) then
-      INI.Free;
+    if Assigned(ini) then
+      ini.Free;
   end;
 
+end;
+
+procedure SaveCurrentProfile;
+var
+  ini: tINIFile;
+begin
+  ini := tINIFile.Create(IncludeTrailingPathDelimiter(rootdir) +
+    'settings.ini');
+  try
+    ini.WriteString('settings', 'profile', profname);
+    // INI.WriteBool('settings', 'incskins', GlobalSettings.IncSkins);
+  finally
+    ini.Free;
+  end;
 end;
 
 initialization

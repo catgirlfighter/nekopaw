@@ -262,9 +262,6 @@ object fNewList: TfNewList
         OptionsView.GridLineColor = clBtnShadow
         OptionsView.RowHeaderWidth = 125
         TabOrder = 0
-        ExplicitLeft = 3
-        ExplicitTop = 18
-        ExplicitHeight = 255
         Version = 1
       end
       object lHint: TcxLabel
@@ -275,9 +272,6 @@ object fNewList: TfNewList
         Style.BorderStyle = ebsUltraFlat
         Transparent = True
         OnClick = lHintClick
-        ExplicitLeft = 80
-        ExplicitTop = 16
-        ExplicitWidth = 46
       end
     end
   end

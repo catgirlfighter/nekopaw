@@ -1,7 +1,7 @@
 object fSettings: TfSettings
   Left = 0
   Top = 0
-  Width = 611
+  Width = 451
   Height = 304
   Align = alClient
   Font.Charset = DEFAULT_CHARSET
@@ -11,19 +11,18 @@ object fSettings: TfSettings
   Font.Style = []
   ParentFont = False
   TabOrder = 0
-  ExplicitWidth = 451
+  OnClick = FrameClick
   object pButtons: TPanel
     AlignWithMargins = True
     Left = 3
     Top = 3
-    Width = 605
+    Width = 445
     Height = 26
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitWidth = 445
     DesignSize = (
-      605
+      445
       26)
     object btnOk: TcxButton
       Left = 0
@@ -45,7 +44,7 @@ object fSettings: TfSettings
     end
     object btnApply: TcxButton
       Left = 162
-      Top = 1
+      Top = 0
       Width = 75
       Height = 25
       Caption = 'btnApply'
@@ -53,7 +52,7 @@ object fSettings: TfSettings
       OnClick = btnApplyClick
     end
     object lHelp: TcxLabel
-      Left = 1431
+      Left = 2533
       Top = 3
       Cursor = crHandPoint
       Anchors = [akTop, akRight]
@@ -65,10 +64,19 @@ object fSettings: TfSettings
       Properties.Alignment.Horz = taRightJustify
       Transparent = True
       OnClick = lHelpClick
-      ExplicitLeft = 1271
       Height = 17
       Width = 113
-      AnchorX = 1544
+      AnchorX = 2646
+    end
+    object btnProfile: TcxButton
+      Left = 252
+      Top = 0
+      Width = 75
+      Height = 25
+      Caption = 'btnProfile'
+      DropDownMenu = pmProfile
+      TabOrder = 4
+      OnClick = btnProfileClick
     end
   end
   object tlList: TcxTreeList
@@ -88,22 +96,25 @@ object fSettings: TfSettings
     OptionsView.ColumnAutoWidth = True
     OptionsView.Headers = False
     TabOrder = 1
+    OnExpanding = tlListExpanding
     OnFocusedNodeChanged = tlListFocusedNodeChanged
     Data = {
-      00000500B50100000F00000044617461436F6E74726F6C6C6572310100000012
-      000000546378537472696E6756616C75655479706507000000445855464D5400
+      00000500E90100000F00000044617461436F6E74726F6C6C6572310100000012
+      000000546378537472696E6756616C75655479706508000000445855464D5400
       000900000049006E007400650072006600610063006500445855464D54000007
       0000005400680072006500610064007300445855464D54000005000000500072
       006F0078007900445855464D540000090000005200650073006F007500720063
-      0065007300445855464D5400000700000044006F00750062006C006500730044
-      5855464D5400000A00000042006C00610063006B0020004C0069007300740044
-      5855464D54000005000000410062006F00750074000700000000000000080200
-      00000000000000FFFFFFFFFFFFFFFFFFFFFFFF01000000080001000000010000
-      00FFFFFFFFFFFFFFFFFFFFFFFF0200000008000200000002000000FFFFFFFFFF
-      FFFFFFFFFFFFFF0300000008000300000003000000FFFFFFFFFFFFFFFFFFFFFF
-      FF0400000008020400000004000000FFFFFFFFFFFFFFFFFFFFFFFF0500000008
-      000600000006000000FFFFFFFFFFFFFFFFFFFFFFFF0600000008020500000005
-      000000FFFFFFFFFFFFFFFFFFFFFFFF1A0007000000}
+      0065007300445855464D54000005000000440075006D006D007900445855464D
+      5400000700000044006F00750062006C0065007300445855464D5400000A0000
+      0042006C00610063006B0020004C00690073007400445855464D540000050000
+      00410062006F0075007400070000000000000008020000000000000000FFFFFF
+      FFFFFFFFFFFFFFFFFF0100000008000100000001000000FFFFFFFFFFFFFFFFFF
+      FFFFFF0200000008000200000002000000FFFFFFFFFFFFFFFFFFFFFFFF030000
+      000A00010000000300000003000000FFFFFFFFFFFFFFFFFFFFFFFF0400000008
+      00FFFFFFFF00000000FFFFFFFFFFFFFFFFFFFFFFFF0500000008020400000004
+      000000FFFFFFFFFFFFFFFFFFFFFFFF0600000008000600000006000000FFFFFF
+      FFFFFFFFFFFFFFFFFF0700000008020500000005000000FFFFFFFFFFFFFFFFFF
+      FFFFFF0A0007000000}
     object tlcCaption: TcxTreeListColumn
       DataBinding.ValueType = 'String'
       Position.ColIndex = 0
@@ -124,21 +135,19 @@ object fSettings: TfSettings
   object pcMain: TcxPageControl
     Left = 172
     Top = 32
-    Width = 439
+    Width = 279
     Height = 272
     Align = alClient
     TabOrder = 3
     Properties.ActivePage = cxTabSheet1
     Properties.CustomButtons.Buttons = <>
     Properties.HideTabs = True
-    ExplicitWidth = 279
     ClientRectBottom = 272
-    ClientRectRight = 439
+    ClientRectRight = 279
     ClientRectTop = 0
     object cxTabSheet1: TcxTabSheet
       Caption = 'cxTabSheet1'
       ImageIndex = 0
-      ExplicitWidth = 279
       object lcLanguage: TcxLabel
         Left = 6
         Top = 5
@@ -162,18 +171,17 @@ object fSettings: TfSettings
       end
       object lCheckNow: TcxLabel
         Left = 6
-        Top = 54
+        Top = 81
         Cursor = crHandPoint
         Caption = 'lCheckNow'
         ParentColor = False
-        Style.TextColor = clHotLight
         Style.TextStyle = [fsUnderline]
         Transparent = True
         OnClick = lCheckNowClick
       end
       object chbShowWhatsNew: TcxCheckBox
         Left = 6
-        Top = 77
+        Top = 104
         Caption = 'chbShowWhatsNew'
         TabOrder = 4
         Transparent = True
@@ -181,13 +189,13 @@ object fSettings: TfSettings
       end
       object lSkin: TcxLabel
         Left = 6
-        Top = 104
+        Top = 131
         Caption = 'lSkin'
         Transparent = True
       end
       object cbSkin: TcxComboBox
         Left = 206
-        Top = 102
+        Top = 129
         Properties.DropDownListStyle = lsFixedList
         Properties.Items.Strings = (
           '<None>')
@@ -196,7 +204,7 @@ object fSettings: TfSettings
       end
       object chbUseLookAndFeel: TcxCheckBox
         Left = 6
-        Top = 129
+        Top = 156
         Caption = 'chbUseLookAndFeel'
         TabOrder = 7
         Transparent = True
@@ -204,7 +212,7 @@ object fSettings: TfSettings
       end
       object chbMenuCaptions: TcxCheckBox
         Left = 6
-        Top = 156
+        Top = 183
         Caption = 'chbMenuCaptions'
         TabOrder = 8
         Transparent = True
@@ -212,7 +220,7 @@ object fSettings: TfSettings
       end
       object chbTips: TcxCheckBox
         Left = 6
-        Top = 183
+        Top = 210
         Caption = 'chbTips'
         TabOrder = 9
         Transparent = True
@@ -220,19 +228,26 @@ object fSettings: TfSettings
       end
       object chbLogMode: TcxCheckBox
         Left = 6
-        Top = 210
+        Top = 237
         Caption = 'chbLogMode'
         TabOrder = 10
         Transparent = True
         Width = 339
       end
+      object chbIncludeSkins: TcxCheckBox
+        Left = 6
+        Top = 54
+        Caption = 'chbIncludeSkins'
+        TabOrder = 11
+        Transparent = True
+        Width = 329
+      end
     end
     object cxTabSheet2: TcxTabSheet
       Caption = 'cxTabSheet2'
       ImageIndex = 1
-      ExplicitWidth = 279
       DesignSize = (
-        439
+        279
         272)
       object eThreads: TcxSpinEdit
         Left = 206
@@ -250,8 +265,7 @@ object fSettings: TfSettings
         Caption = 'chbUseThreadPerRes'
         TabOrder = 1
         Transparent = True
-        ExplicitWidth = 265
-        Width = 425
+        Width = 265
       end
       object eThreadPerRes: TcxSpinEdit
         Left = 206
@@ -330,8 +344,7 @@ object fSettings: TfSettings
         Caption = 'chbUseDistr'
         TabOrder = 12
         Transparent = True
-        ExplicitWidth = 265
-        Width = 425
+        Width = 265
       end
       object eStopSignalTimer: TcxSpinEdit
         Left = 206
@@ -351,9 +364,8 @@ object fSettings: TfSettings
     object cxTabSheet3: TcxTabSheet
       Caption = 'cxTabSheet3'
       ImageIndex = 2
-      ExplicitWidth = 279
       DesignSize = (
-        439
+        279
         272)
       object chbProxyAuth: TcxCheckBox
         Left = 6
@@ -363,8 +375,7 @@ object fSettings: TfSettings
         Properties.OnEditValueChanged = chbProxyAuthPropertiesEditValueChanged
         TabOrder = 0
         Transparent = True
-        ExplicitWidth = 313
-        Width = 473
+        Width = 313
       end
       object eHost: TcxTextEdit
         Left = 206
@@ -460,37 +471,49 @@ object fSettings: TfSettings
         Caption = 'lblProxyType'
         Transparent = True
       end
+      object chbPAC: TcxCheckBox
+        Left = 3
+        Top = 210
+        Anchors = [akLeft, akTop, akRight]
+        Caption = 'chbPAC'
+        Properties.OnEditValueChanged = chbProxyAuthPropertiesEditValueChanged
+        TabOrder = 14
+        Transparent = True
+        Width = 87
+      end
+      object ePACHost: TcxTextEdit
+        Left = 6
+        Top = 228
+        TabOrder = 15
+        Width = 323
+      end
     end
     object cxTabSheet4: TcxTabSheet
       Caption = 'cxTabSheet4'
       ImageIndex = 3
-      ExplicitWidth = 279
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0
-        Width = 439
+        Width = 279
         Height = 272
         Align = alClient
         OptionsView.ShowEditButtons = ecsbAlways
         OptionsView.GridLineColor = clBtnShadow
-        OptionsView.RowHeaderWidth = 148
+        OptionsView.RowHeaderWidth = 143
         TabOrder = 0
-        ExplicitWidth = 279
         Version = 1
       end
     end
     object cxTabSheet5: TcxTabSheet
       Caption = 'cxTabSheet5'
       ImageIndex = 5
-      ExplicitWidth = 279
       object gDoubles: TcxGrid
         Left = 0
         Top = 26
-        Width = 439
+        Width = 279
         Height = 246
         Align = alClient
         TabOrder = 0
-        ExplicitWidth = 279
         object tvDoubles: TcxGridTableView
           Navigator.Buttons.CustomButtons = <>
           DataController.Summary.DefaultGroupSummaryItems = <>
@@ -528,17 +551,15 @@ object fSettings: TfSettings
       object bcDoubles: TdxBarDockControl
         Left = 0
         Top = 0
-        Width = 439
+        Width = 279
         Height = 26
         Align = dalTop
         BarManager = BarManager
-        ExplicitWidth = 279
       end
     end
     object cxTabSheet7: TcxTabSheet
       Caption = 'cxTabSheet7'
       ImageIndex = 6
-      ExplicitWidth = 279
       object chbUseBlackList: TcxCheckBox
         Left = 0
         Top = 0
@@ -546,38 +567,34 @@ object fSettings: TfSettings
         Caption = 'chbUseBlackList'
         TabOrder = 0
         Transparent = True
-        ExplicitWidth = 279
-        Width = 439
+        Width = 279
       end
       object Panel1: TPanel
         Left = 0
         Top = 21
-        Width = 439
+        Width = 279
         Height = 251
         Align = alClient
         BevelOuter = bvNone
         Caption = 'Panel1'
         TabOrder = 1
         ExplicitTop = 0
-        ExplicitWidth = 279
         ExplicitHeight = 272
         object dxBarDockControl1: TdxBarDockControl
           Left = 0
           Top = 0
-          Width = 439
+          Width = 279
           Height = 26
           Align = dalTop
           BarManager = BarManager
-          ExplicitWidth = 279
         end
         object gBlackList: TcxGrid
           Left = 0
           Top = 26
-          Width = 439
+          Width = 279
           Height = 225
           Align = alClient
           TabOrder = 1
-          ExplicitWidth = 279
           object tvBlackList: TcxGridTableView
             Navigator.Buttons.CustomButtons = <>
             DataController.Summary.DefaultGroupSummaryItems = <>
@@ -613,7 +630,6 @@ object fSettings: TfSettings
     object cxTabSheet6: TcxTabSheet
       Caption = 'cxTabSheet6'
       ImageIndex = 4
-      ExplicitWidth = 279
       object cxLabel1: TcxLabel
         Left = 6
         Top = 3
@@ -1117,5 +1133,31 @@ object fSettings: TfSettings
           0000000000000000000000000000000000000000000000000000000000000000
           000001000050080507190604050C0E090C250A07095500000000}
       end>
+  end
+  object dlgOpen: TOpenDialog
+    DefaultExt = '.ini'
+    Filter = 'Profile config (*.ini)|*.ini'
+    Left = 392
+    Top = 76
+  end
+  object pmProfile: TPopupMenu
+    AutoHotkeys = maManual
+    Left = 352
+    Top = 212
+    object N1: TMenuItem
+      Caption = '-'
+    end
+    object pmmSave: TMenuItem
+      Caption = 'Save As New'
+      OnClick = pmmSaveClick
+    end
+    object pmmLoad: TMenuItem
+      Caption = 'Load From File'
+      OnClick = pmmLoadClick
+    end
+    object pmmRemove: TMenuItem
+      Caption = 'Remove from list'
+      OnClick = pmmRemoveClick
+    end
   end
 end

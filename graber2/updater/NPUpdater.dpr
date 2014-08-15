@@ -9,7 +9,8 @@ uses
   LangString in '..\LangString.pas',
   IdHTTP in '..\IdHTTP.pas',
   MyXMLParser in '..\MyXMLParser.pas',
-  ZIP in '..\ZIP.pas';
+  ZIP in '..\ZIP.pas',
+  pac in '..\pac.pas';
 {  GraberU in '..\GraberU.pas',
   md5 in '..\md5.pas'; }
 

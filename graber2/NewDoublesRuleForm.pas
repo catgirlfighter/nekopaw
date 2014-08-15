@@ -214,10 +214,11 @@ end;
 procedure TfmDoublesNewRule.tvValuesEditValueChanged
   (Sender: TcxCustomGridTableView; AItem: TcxCustomGridTableItem);
 begin
-  if AItem = cChWhat then
-    Sender.DataController.Values[Sender.DataController.FocusedRecordIndex,
-      cChWith.Index] := Sender.DataController.Values
-      [Sender.DataController.FocusedRecordIndex, AItem.Index];
+  with Sender.DataController do
+    if (AItem = cChWhat) and (VarToStr(Values[FocusedRecordIndex, cChWith.Index]) = '')
+    then
+      Values[FocusedRecordIndex, cChWith.Index] :=
+        DisplayTexts[FocusedRecordIndex, AItem.Index];
 end;
 
 end.

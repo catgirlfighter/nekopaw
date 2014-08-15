@@ -1590,8 +1590,6 @@ function FileToStr(FileName: String): RawByteString;
 var
   F: tFileStream;
   MN: array[0..2] of byte;
-  wds: widestring;
-  ans: ansistring;
 begin
   F := tFileStream.Create(FileName, fmOpenRead or fmShareDenyNone);
   try

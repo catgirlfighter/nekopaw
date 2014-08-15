@@ -1,0 +1,33 @@
+object fProgress: TfProgress
+  Left = 0
+  Top = 0
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsDialog
+  Caption = 'Progress'
+  ClientHeight = 30
+  ClientWidth = 331
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  OldCreateOrder = False
+  Position = poDesktopCenter
+  OnCloseQuery = FormCloseQuery
+  OnCreate = FormCreate
+  PixelsPerInch = 96
+  TextHeight = 13
+  object pBar: TcxProgressBar
+    Left = 0
+    Top = 0
+    Align = alClient
+    AutoSize = False
+    Properties.AssignedValues.Min = True
+    Properties.Max = 100.000000000000000000
+    Properties.PeakValue = 1.000000000000000000
+    TabOrder = 0
+    Height = 30
+    Width = 331
+  end
+end

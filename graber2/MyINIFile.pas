@@ -6,10 +6,10 @@ uses SysUtils, Windows, RTLConsts, INIFiles;
 
 type
   TINIFile = class(INIFiles.TINIFile)
-  private
-    FEncoding: TEncoding;
+  //private
+  //  FEncoding: TEncoding;
   public
-    property Encoding: TEncoding read FEncoding write FEncoding;
+    //property Encoding: TEncoding read FEncoding write FEncoding;
     function ReadString(const Section, Ident, Default: WideString): WideString;
       reintroduce;
     procedure WriteString(const Section, Ident, Value: WideString); reintroduce;

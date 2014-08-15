@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ComCtrls, unit_win7taskbar, AppEvnts, MyHTTP,GraberU;
+  Dialogs, StdCtrls, ComCtrls, unit_win7taskbar, AppEvnts, MyHTTP, GraberU;
 
 type
   TForm1 = class(TForm)
@@ -29,7 +29,7 @@ type
   private
     Msg_TaskbarButtonCreated: Cardinal;
     { Private declarations }
-    l1,l2: TResourceList;
+    l1, l2: TResourceList;
   public
     { Public declarations }
   end;
@@ -37,10 +37,41 @@ type
 var
   Form1: TForm1;
 
+  // int pacparser_init(void);
+function _pacparser_init: integer; cdecl; stdcall; external 'pac.dll' name 'pacparser_init';
+function pacparser_init: integer;
+// void pacparser_cleanup(void);
+procedure pacparser_cleanup; cdecl; stdcall; external 'pac.dll';
+
+function pacparser_version: pansichar; cdecl; stdcall; external 'pac.dll';
+
+function pacparser_parse_pac_string(const pacstring: pansichar
+  // PAC string to parse
+  ): integer; cdecl; stdcall; external 'pac.dll';
+
+function pacparser_find_proxy(const url,          // URL to find proxy for
+                              host: pansichar           // Host part of the URL
+                           ): pansichar; cdecl; stdcall; external 'pac.dll';
+
+
+
 implementation
 
 {$R *.dfm}
+
 uses common, MyXMLParser;
+
+function pacparser_init: integer;
+var
+  w: word;
+begin
+  w := Get8087CW;
+  Set8087CW($133F); try
+  Result := _pacparser_init;
+  finally
+    Set8087CW(w);
+  end;
+end;
 
 procedure TForm1.ApplicationEvents1Message(var Msg: tagMSG;
   var Handled: Boolean);
@@ -62,14 +93,14 @@ var
   ext: string;
   p: array of char;
 begin
-  setlength(p,1000);
+  setlength(p, 1000);
   if OpenDialog1.Execute then
   begin
-    f := tfilestream.Create(OpenDialog1.FileName,fmOpenRead);
+    f := tfilestream.Create(OpenDialog1.FileName, fmOpenRead);
     try
-      f.Read(p[0],1000);
+      f.Read(p[0], 1000);
       ext := ImageFormat(@p[0]);
-      memo1.Text := ext;
+      Memo1.Text := ext;
     finally
       f.Free;
     end;
@@ -77,21 +108,21 @@ begin
 end;
 
 procedure TForm1.Button2Click(Sender: TObject);
-//var
-//  res: tresource;
+// var
+// res: tresource;
 begin
-  //if not reslist.ListFinished then
-  //begin
-  //  ShowMessage('still working');
-  //  Exit;
-  //end;
+  // if not reslist.ListFinished then
+  // begin
+  // ShowMessage('still working');
+  // Exit;
+  // end;
 
-  //res := reslist.ItemByName('donmai.us');
-  //res.Fields['login'] := 'avil';
-  //res.Fields['password'] := '1ashnazg';
-  //res.Relogin := true;
-  //reslist.StartJob(JOB_LOGIN);
-  //memo1.Lines.Add('loging in');
+  // res := reslist.ItemByName('donmai.us');
+  // res.Fields['login'] := 'avil';
+  // res.Fields['password'] := '1ashnazg';
+  // res.Relogin := true;
+  // reslist.StartJob(JOB_LOGIN);
+  // memo1.Lines.Add('loging in');
 end;
 
 procedure TForm1.Button3Click(Sender: TObject);
@@ -102,46 +133,55 @@ end;
 procedure TForm1.Button4Click(Sender: TObject);
 begin
 
-//  progressbar1.Min := 0;
-//  progressbar1.Max := 1000;
-//  InitializeTaskBarAPI;
+  // progressbar1.Min := 0;
+  // progressbar1.Max := 1000;
+  // InitializeTaskBarAPI;
 
-  SetTaskbarProgressValue(1,100)
-{  progressbar1.Style := pbstMarquee;
-  progressbar1.Position := 400;
-  SetTaskbarProgressValue(400,1000);
-  progressbar1.Position := 500;
-  SetTaskbarProgressValue(500,1000);
-  //  w7taskbar.SetProgress(50,100);  }
-//  w7taskbar.State := tbpsNormal;
+  SetTaskbarProgressValue(1, 100)
+  { progressbar1.Style := pbstMarquee;
+    progressbar1.Position := 400;
+    SetTaskbarProgressValue(400,1000);
+    progressbar1.Position := 500;
+    SetTaskbarProgressValue(500,1000);
+    //  w7taskbar.SetProgress(50,100); }
+  // w7taskbar.State := tbpsNormal;
 end;
 
 procedure TForm1.Button5Click(Sender: TObject);
 var
-  fname: string;
-  f: tfilestream;
-  buff: array[0..21] of byte;
+  p: pansichar;
+  v: integer;
+  s: tstringlist;
 begin
-  fname := ExtractFilePath(paramstr(0)) + 'file.bin';
-
-  f := tfilestream.Create(fname,fmOpenRead);
-  try
-    f.Read(buff,22);
-    memo1.Lines.Insert(0,ImageFormat(@buff[0]));
+  p := '';
+  p := pacparser_version;
+  Memo1.Lines.Add('version: ' + p);
+  // pacparser_just_find_proxy(p,p,p);
+  Memo1.Lines.Add('_init');
+  v := pacparser_init; try
+  //p := 'function FindProxyForURL(url, host) { return "DIRET"; }';
+  s := tstringlist.Create;    try
+  s.LoadFromFile('proxy.pac');
+  v := pacparser_parse_pac_string(PANSICHAR(ANSIString(s.Text)));
   finally
-    f.Free;
+    s.Free;
+  end;
+  p := pacparser_find_proxy('http://google.com/','google.com');
+  memo1.Lines.Add('result: ' + p);
+  Memo1.Lines.Add('_cleanup');
+  finally
+    pacparser_cleanup;
   end;
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-    l2 := nil;
-    l1 := TResourcelist.Create;
-    l1.LoadList(extractfilepath(paramstr(0)) + '..\..\..\..\compiled\resources');
-    memo1.Lines.Add('Resource count: ' + IntToStr(l1.Count)) ;
-      //Msg_TaskbarButtonCreated := RegisterWindowMessage('TaskbarButtonCreated');
+  l2 := nil;
+  l1 := TResourceList.Create;
+  l1.LoadList(extractfilepath(paramstr(0)) + '..\..\..\..\compiled\resources');
+  Memo1.Lines.Add('Resource count: ' + IntToStr(l1.Count));
+  // Msg_TaskbarButtonCreated := RegisterWindowMessage('TaskbarButtonCreated');
 end;
-
 
 procedure TForm1.FormDestroy(Sender: TObject);
 begin
