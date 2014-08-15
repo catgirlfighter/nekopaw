@@ -12,9 +12,8 @@ uses
   cxExtEditRepositoryItems, cxVGrid,
   cxButtonEdit, cxDropDownEdit, cxMRUEdit,
   {graber}
-  cxmycombobox, cxmymultirow,
-  GraberU, common, OpBase, dxBar, ActnList, IdBaseComponent, IdIntercept,
-  IdInterceptThrottler, MyHTTP;
+  cxmycombobox, cxmymultirow,  MyINIFile,
+  GraberU, common, OpBase, dxBar, ActnList, MyHTTP, pac;
 
 type
   TFavProc = procedure(Value: String);
@@ -37,7 +36,6 @@ type
     erURLText: TcxEditRepositoryButtonItem;
     il: TcxImageList;
     erPathText: TcxEditRepositoryMRUItem;
-    IdInterceptThrottler1: TIdInterceptThrottler;
     erCSVListEdit: TcxEditRepositoryButtonItem;
     procedure erPathBrowsePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
@@ -51,6 +49,7 @@ type
     { Private declarations }
   private
     FCookie: TMyCookieList;
+    fPACParser: tPACParser;
   protected
     procedure OnGetTagItems(Sender: TObject; SearchWord: string;
       Items: TStrings);
@@ -62,8 +61,9 @@ type
       AName, ACaption, ComboItems: string; FieldType: TFieldType;
       Category: TcxCustomRow; DefaultValue: Variant; ReadOnly: boolean = false)
       : TcxCustomRow;
-    procedure LoadFullResList(r: tResourceList);
+    procedure LoadFullResList(r: tResourceList; ini: tinifile = nil);
     property Cookie: TMyCookieList read FCookie;
+    property PACParser: tPACParser read fPACParser;
     { Public declarations }
   end;
 
@@ -182,6 +182,8 @@ var
   I: Integer;
   n: Integer;
 begin
+  if FirstRec < 0 then
+    FirstRec := 0;
   for I := FirstRec to a.ColumnCount - 1 do
   begin
     if FirstRec <> 0 then
@@ -338,11 +340,9 @@ begin
 end;
 
 procedure Tdm.DataModuleCreate(Sender: TObject);
-// var
-// r: tresourcestream;
-// b: tdxBarItemLink;
 begin
   FCookie := TMyCookieList.Create;
+  fPACParser := tPACParser.Create;
   erPathText.Properties.Items.Text := LoadPathList;
   erPathText.Properties.IncrementalSearch := false;
 
@@ -380,6 +380,7 @@ end;
 
 procedure Tdm.DataModuleDestroy(Sender: TObject);
 begin
+  fPACParser.Free;
   FCookie.Free;
 end;
 
@@ -482,8 +483,8 @@ begin
           SW_SHOWNORMAL) < 33 then
           if ShellExecute(0, nil, PCHAR(ExtractFilePath(ExtractFileDir(s))),
             nil, nil, SW_SHOWNORMAL) < 33 then
-            MessageDlg(format(lang('_NO_DIRECTORY_'), [ExtractFileDir(s)]), mtInformation,
-              [mbOk], 0);
+            MessageDlg(format(lang('_NO_DIRECTORY_'), [ExtractFileDir(s)]),
+              mtInformation, [mbOk], 0);
       end;
   end;
 end;
@@ -495,14 +496,19 @@ begin
     SW_SHOWNORMAL);
 end;
 
-procedure Tdm.LoadFullResList(r: tResourceList);
+procedure Tdm.LoadFullResList(r: tResourceList; ini: tinifile = nil);
 begin
   r.LoadList(resources_dir);
-  LoadResourceSettings(r);
+  if assigned(ini) then
+    LoadResourceSettings(r,ini)
+  else
+    LoadResourceSettings(r);
   r.ThreadHandler.Cookies := FCookie;
-  r.ThreadHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
+  //r.ThreadHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
+  r.ThreadHandler.PACParser := PACParser;
   r.DWNLDHandler.Cookies := FCookie;
-  r.DWNLDHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
+  //r.DWNLDHandler.ThreadCount := GlobalSettings.Downl.ThreadCount;
+  r.DWNLDHandler.PACParser := PACParser;
 end;
 
 end.

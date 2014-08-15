@@ -4192,8 +4192,8 @@ object fStart: TfStart
     Width = 169
     Height = 25
     Caption = 'bLoad'
-    Enabled = False
     TabOrder = 1
+    OnClick = bLoadClick
   end
   object bSettings: TcxButton
     Left = 360

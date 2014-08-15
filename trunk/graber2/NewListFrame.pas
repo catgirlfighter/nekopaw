@@ -5,7 +5,7 @@ interface
 uses
   {base}
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, Menus, StdCtrls, INIFiles, ShellAPI, Clipbrd, Types,
+  Dialogs, Menus, StdCtrls, INIFiles, ShellAPI, Clipbrd, Types, UITypes,
   {devexp}
   cxGraphics, cxControls, cxLookAndFeels, cxTextEdit,
   cxLookAndFeelPainters, cxStyles, cxCustomData, cxFilter, cxData,
@@ -129,7 +129,7 @@ type
     procedure refillRec(DataController: TcxGridDataController;
       RecordIndex, ItemOffset: Integer);
     procedure fillRec(r: TResourceList; DataController: TcxGridDataController;
-      RecordIndex, ItemOffset: Integer);
+      RecordIndex, ItemOffset: Integer; add: Boolean = false);
     procedure refillRecs;
   public
     State: TListFrameState;
@@ -137,7 +137,7 @@ type
     procedure RemoveItem(index: Integer);
     procedure CreateSettings(rs: TResource);
     procedure SaveSettings;
-    procedure LoadItems;
+    procedure LoadItems(fPList: TResourceList = nil);
     procedure ResetItems;
     procedure SetLang;
     procedure OnErrorEvent(Sender: TObject; Msg: String; Data: Pointer);
@@ -161,10 +161,9 @@ implementation
 uses OpBase, LangString, utils, LoginForm, TextEditorForm;
 
 {$R *.dfm}
-
-//const
-//  SJobNum: array[tSemiListJob] of byte = (0,1,2);
-//  NumSJob: array[0..2] of tSemiListJob = (sljNone,sljPostproc,sljPics);
+// const
+// SJobNum: array[tSemiListJob] of byte = (0,1,2);
+// NumSJob: array[0..2] of tSemiListJob = (sljNone,sljPostproc,sljPics);
 
 var
   // LList: array of TcxLabelProperties;
@@ -184,32 +183,23 @@ var
   N: TResource;
 begin
   Result := false;
-  for i := 0 to FullResList.Count - 1 do
-    FullResList[i].Relogin := false;
+  { for i := 0 to FullResList.Count - 1 do
+    FullResList[i].Relogin := false; }
   if idx = 0 then
     for i := 1 to tvRes.DataController.RecordCount - 1 do
     begin
       N := Pointer(Integer(tvRes.DataController.Values[i, 0]));
-      // n := n.Parent;
-      if not N.Parent.Relogin and ((N.ScriptStrings.Login <> '') or
-        (N.HTTPRec.CookieStr <> '') and
-        (N.LoginPrompt or (nullstr(N.Fields['login']) <> ''))) then
-      begin
+      if not N.Parent.Relogin then
         N.Parent.Fields.Assign(N.Fields);
-        N.Parent.Relogin := true;
-        Result := true;
-      end;
+      Result := Result or N.Parent.ResetRelogin;
     end
   else
   begin
     N := Pointer(idx);
-    if (N.ScriptStrings.Login <> '') or (N.HTTPRec.CookieStr <> '') and
-      (N.LoginPrompt or (nullstr(N.Fields['login']) <> '')) then
-    begin
+    // N.ResetRelogin;
+    if not N.Parent.Relogin then
       N.Parent.Fields.Assign(N.Fields);
-      N.Parent.Relogin := true;
-      Result := true;
-    end;
+    Result := N.Parent.ResetRelogin;
   end;
 end;
 
@@ -236,12 +226,14 @@ begin
         [ActualResList.CopyResource
         (TResource(Integer(tvFull.DataController.Values[index, 1])))];
       r.Parent := TResource(Integer(tvFull.DataController.Values[index, 1]));
+      r.IsNew := True;
       tvRes.DataController.Values[i, 0] := Integer(r);
       { tvFull.DataController.Values[index, 1]; }
       tvRes.DataController.Values[i, 1] := tvFull.DataController.Values
         [index, 2];
-      tvRes.DataController.Values[i, 2] := r.Name;{tvFull.DataController.Values
-        [index, 3]};
+      tvRes.DataController.Values[i, 2] := r.Name;
+      { tvFull.DataController.Values
+        [index, 3] };
       tvRes.DataController.Values[i, 3] := tvFull.DataController.Values
         [index, 4];
       // tvFull.DataController.DeleteRecord(index);
@@ -289,7 +281,7 @@ procedure TfNewList.btnNextClick(Sender: TObject);
 begin
   if pcMain.ActivePage = tsSettings then
   begin
-    FLoggedOn := true;
+    FLoggedOn := True;
     if ResetRelogin then
     begin
       SetConSettings(FullResList);
@@ -301,14 +293,16 @@ begin
   else
   begin
     pcMain.ActivePage := tsSettings;
-    Application.MainForm.ActiveControl := vgSettings;
+    if Assigned(Parent) then
+      Application.MainForm.ActiveControl := vgSettings;
+    // vgSettings.SetFocus;
 
     if tvRes.ViewData.RowCount < 3 then
       tvRes.Controller.FocusedRowIndex := 1
     else
       tvRes.Controller.FocusedRowIndex := 0;
 
-    vgSettings.RowByName('vgitag').Focused := true;
+    vgSettings.RowByName('vgitag').Focused := True;
   end;
 end;
 
@@ -322,7 +316,7 @@ begin
   else if pcMain.ActivePage = tsSettings then
     pcMain.ActivePage := tsList
   else
-    SendMsg(true);
+    SendMsg(True);
 end;
 
 procedure TfNewList.lHintClick(Sender: TObject);
@@ -330,7 +324,7 @@ begin
   GlobalSettings.GUI.NewListShowHint := not GlobalSettings.GUI.NewListShowHint;
 
   if GlobalSettings.GUI.NewListShowHint then
-    lHint.AutoSize := true
+    lHint.AutoSize := True
   else
   begin
     lHint.AutoSize := false;
@@ -360,171 +354,184 @@ var
 begin
   if (vgSettings.Rows.Count > 0) and Assigned(fCurrItem) then
     SaveSettings;
-  vgSettings.BeginUpdate; try
-  vgSettings.ClearRows;
+  vgSettings.BeginUpdate;
+  try
+    vgSettings.ClearRows;
 
-  if Assigned(rs) then
-  begin
-    fCurrItem := rs;
-    vgSettings.Tag := Integer(fCurrItem);
-  end
-  else
-  begin
-    fCurrItem := FullResList[0];
-    vgSettings.Tag := Integer(FullResList);
-  end;
-
-  if not Assigned(rs) then
-  begin
-    lHint.Visible := true;
-    lHint.Caption := lang('_EXAMPLE_') + #13#10 + 'tag: tag_1 tag_2';
-
-    c := dm.CreateCategory(vgSettings, 'vgimain', lang('_MAINCONFIG_'));
-
-    if FullResList[0].KeywordList.Count > 0 then
-      s := '<list>'
-    else
-      s := VarToStr(FullResList[0].Fields['tag']);
-    dm.CreateField(vgSettings, 'vgitag', lang('_TAGSTRING_'), '',
-      ftTagText, c, s);
-
-    with (dm.ertagedit.Properties as TcxCustomEditProperties) do
+    if Assigned(rs) then
     begin
-      OnButtonClick := OnTagstringButtonClick;
-      Buttons[2].Visible := false;
-      if FullResList[0].KeywordList.Count > 0 then
-      begin
-        ReadOnly := true;
-      end
-      else
-        ReadOnly := false;
+      fCurrItem := rs;
+      vgSettings.Tag := Integer(fCurrItem);
+    end
+    else
+    begin
+      fCurrItem := FullResList[0];
+      vgSettings.Tag := Integer(FullResList);
     end;
 
-    dm.CreateField(vgSettings, 'vgidwpath', lang('_SAVEPATH_'), '', ftPathText,
-      c, fCurrItem.NameFormat);
-    dm.CreateField(vgSettings, 'vgisdalf', lang('_LISTPW_'),
-    '"'+lang('_NOTHING_')+'","'+lang('_SPPS_')+'","'+lang('_SPDS_')+'"', ftIndexCombo, c,
-      Integer(GlobalSettings.SemiJob));
-    dm.CreateField(vgSettings, 'vgiexif', lang('_WRITEEXIF_'), '', ftCheck, c,
-      GlobalSettings.WriteEXIF);
-  end
-  else
-    with fCurrItem do
+    if not Assigned(rs) then
     begin
-      if KeywordHint = '' then
-        lHint.Visible := false
-      else
-      begin
-        lHint.Visible := true;
-        lHint.Caption := lang('_EXAMPLE_') + #13#10 + KeywordHint;
-      end;
+      lHint.Visible := True;
+      lHint.Caption := lang('_EXAMPLE_') + #13#10 + 'tag: tag_1 tag_2';
 
-      c := dm.CreateCategory(vgSettings, 'vgimain', lang('_MAINCONFIG_') + ' ' +
-        fCurrItem.Name);
+      c := dm.CreateCategory(vgSettings, 'vgimain', lang('_MAINCONFIG_'));
 
-      dm.CreateField(vgSettings, 'vgiinherit', lang('_INHERIT_'), '', ftCheck,
-        c, Inherit);
-
-      if KeywordList.Count > 0 then
+      if FullResList[0].KeywordList.Count > 0 then
         s := '<list>'
       else
-        s := VarToStr(Fields['tag']);
-
-      if ((s = '') or Inherit) and (KeywordList.Count = 0) and
-        (FullResList[0].KeywordList.Count = 0) and
-        (VarToStr(FullResList[0].Fields['tag']) <> '') then
-        s := fCurrItem.FormatTagString(VarToStr(FullResList[0].Fields['tag']),
-          FullResList[0].HTTPRec.TagTemplate) + fCurrItem.HTTPRec.TagTemplate.Separator;
-
-      with dm.ertagedit.Properties, fCurrItem.HTTPRec do
-      begin
-        Spacer := TagTemplate.Spacer;
-        Separator := TagTemplate.Separator;
-        Isolator := TagTemplate.Isolator;
-      end;
-
+        s := VarToStr(FullResList[0].Fields['tag']);
       dm.CreateField(vgSettings, 'vgitag', lang('_TAGSTRING_'), '',
         ftTagText, c, s);
 
       with (dm.ertagedit.Properties as TcxCustomEditProperties) do
       begin
         OnButtonClick := OnTagstringButtonClick;
-        Buttons[2].Visible := fCurrItem.CheatSheet <> '';
-        if KeywordList.Count > 0 then
+        // Buttons[1].Visible := fCurrItem.isNew;
+        Buttons[2].Visible := false;
+        if (FullResList[0].KeywordList.Count > 0) then
         begin
-          ReadOnly := true;
+          ReadOnly := True;
         end
         else
           ReadOnly := false;
       end;
 
-      s := NameFormat;
-      if (s = '') or Inherit then
-        s := FullResList[0].NameFormat;
-
       dm.CreateField(vgSettings, 'vgidwpath', lang('_SAVEPATH_'), '',
-        ftPathText, c, s);
-
-      d := FullResList[0].Fields.Count;
-
-      c := nil;
-
-      r := nil;
-
-      if fCurrItem.Fields.Count > d then
-        with fCurrItem.Fields do
+        ftPathText, c, fCurrItem.NameFormat);
+      dm.CreateField(vgSettings, 'vgisdalf', lang('_LISTPW_'),
+        '"' + lang('_NOTHING_') + '","' + lang('_SPPS_') + '","' +
+        lang('_SPDS_') + '"', ftIndexCombo, c, Integer(GlobalSettings.SemiJob));
+      dm.CreateField(vgSettings, 'vgiexif', lang('_WRITEEXIF_'), '', ftCheck, c,
+        GlobalSettings.WriteEXIF);
+    end
+    else
+      with fCurrItem do
+      begin
+        if KeywordHint = '' then
+          lHint.Visible := false
+        else
         begin
-          for i := d to Count - 1 do
-            if Items[i].restype <> ftNone then
-            begin
-              c := dm.CreateCategory(vgSettings, 'vgieditional',
-                lang('_EDITIONALCONFIG_'));
-              Break;
-            end else
-              inc(d);
-
-          for i := d to Count - 1 do
-            if Items[i].restype <> ftNone then
-              with fCurrItem.Fields.Items[i]^ do
-                if InMulti then
-                  dm.CreateField(vgSettings, 'evgi' + resname, restitle,
-                    resitems, restype, r, resvalue)
-                else
-                  r := dm.CreateField(vgSettings, 'evgi' + resname, restitle,
-                    resitems, restype, c, resvalue);
+          lHint.Visible := True;
+          lHint.Caption := lang('_EXAMPLE_') + #13#10 + KeywordHint;
         end;
 
-      c := dm.CreateCategory(vgSettings, 'vgispecial',
-        lang('_SPECIALSETTINGS_'));
-      if not Parent.ThreadCounter.UseUserSettings and (Parent.ThreadCounter.UseProxy = -1)
-      and (HTTPRec.StartCount = 0) and (HTTPRec.MaxCount = 0) then
-        c.Expanded := false;
+        c := dm.CreateCategory(vgSettings, 'vgimain', lang('_MAINCONFIG_') + ' '
+          + fCurrItem.Name);
 
+        //if IsNew then
+          (dm.CreateField(vgSettings, 'vgiinherit', lang('_INHERIT_'), '',
+            ftCheck, c, false) as tcxEditorRow).Visible := IsNew;
 
-      r :=  dm.CreateField(vgSettings,'vgicountlimit','','',ftMultiEdit,c,null);
-      dm.CreateField(vgSettings,'vgimincount',lang('_COUNTLIMIT_'),'',ftNumber,r,HTTPRec.StartCount);
-      dm.CreateField(vgSettings,'vgimaxcount','','',ftNumber,r,HTTPRec.MaxCount);
+        if KeywordList.Count > 0 then
+          s := '<list>'
+        else
+          s := VarToStr(Fields['tag']);
 
-      dm.CreateField(vgSettings, 'vgiproxy', lang('_USE_PROXY_'),
-        lang('_PROXY_DEFAULT_')+','+lang('_PROXY_DISABLED_')+','+
-        lang('_PROXY_ALWAYS_')+','+lang('_PROXY_LIST_')+','+lang('_PROXY_PICS_'),
-        ftIndexCombo, c, Parent.ThreadCounter.UseProxy + 1);
-      dm.CreateField(vgSettings, 'vgiinheritstt', lang('_OWNSETTINGS_'), '',
-        ftCheck, c, Parent.ThreadCounter.UseUserSettings);
-      dm.CreateField(vgSettings, 'vgithreadcount', lang('_THREAD_COUNT_'), '',
-        ftNumber, c, Parent.ThreadCounter.UserSettings.MaxThreadCount);
-      dm.CreateField(vgSettings, 'vgithreaddelay', lang('_QUERY_DELAY_'), '',
-        ftNumber, c, Parent.ThreadCounter.UserSettings.PageDelay);
-      dm.CreateField(vgSettings, 'vgipicdelay', lang('_PIC_DELAY_'), '',
-        ftNumber, c, Parent.ThreadCounter.UserSettings.PicDelay);
+        if ((s = '') or Inherit) and (KeywordList.Count = 0) and
+          (FullResList[0].KeywordList.Count = 0) and
+          (VarToStr(FullResList[0].Fields['tag']) <> '') then
+          s := fCurrItem.FormatTagString(VarToStr(FullResList[0].Fields['tag']),
+            FullResList[0].HTTPRec.TagTemplate) +
+            fCurrItem.HTTPRec.TagTemplate.Separator;
 
-    end;
+        with dm.ertagedit.Properties, fCurrItem.HTTPRec do
+        begin
+          Spacer := TagTemplate.Spacer;
+          Separator := TagTemplate.Separator;
+          Isolator := TagTemplate.Isolator;
+        end;
 
-  dm.ertagedit.Properties.Spacer := fCurrItem.HTTPRec.TagTemplate.Spacer;
-  dm.ertagedit.Properties.Separator := fCurrItem.HTTPRec.TagTemplate.Separator;
-  dm.ertagedit.Properties.Isolator := fCurrItem.HTTPRec.TagTemplate.Isolator;
+        dm.CreateField(vgSettings, 'vgitag', lang('_TAGSTRING_'), '',
+          ftTagText, c, s);
 
-  finally vgSettings.EndUpdate; end;
+        with (dm.ertagedit.Properties as TcxCustomEditProperties) do
+        begin
+          OnButtonClick := OnTagstringButtonClick;
+          Buttons[1].Enabled := isNew;
+          Buttons[2].Visible := fCurrItem.CheatSheet <> '';
+          if not isNew or (KeywordList.Count > 0) then
+          begin
+            ReadOnly := True;
+          end
+          else
+            ReadOnly := false;
+        end;
+
+        s := NameFormat;
+        if (s = '') or Inherit then
+          s := FullResList[0].NameFormat;
+
+        dm.CreateField(vgSettings, 'vgidwpath', lang('_SAVEPATH_'), '',
+          ftPathText, c, s);
+
+        d := FullResList[0].Fields.Count;
+
+        c := nil;
+
+        r := nil;
+
+        if fCurrItem.IsNew and (fCurrItem.Fields.Count > d) then
+          with fCurrItem.Fields do
+          begin
+            for i := d to Count - 1 do
+              if Items[i].restype <> ftNone then
+              begin
+                c := dm.CreateCategory(vgSettings, 'vgieditional',
+                  lang('_EDITIONALCONFIG_'));
+                Break;
+              end
+              else
+                inc(d);
+
+            for i := d to Count - 1 do
+              if Items[i].restype <> ftNone then
+                with fCurrItem.Fields.Items[i]^ do
+                  if InMulti then
+                    dm.CreateField(vgSettings, 'evgi' + resname, restitle,
+                      resitems, restype, r, resvalue)
+                  else
+                    r := dm.CreateField(vgSettings, 'evgi' + resname, restitle,
+                      resitems, restype, c, resvalue);
+          end;
+
+        c := dm.CreateCategory(vgSettings, 'vgispecial',
+          lang('_SPECIALSETTINGS_'));
+        if not Parent.ThreadCounter.UseUserSettings and
+          (Parent.ThreadCounter.UseProxy = -1) and (HTTPRec.StartCount = 0) and
+          (HTTPRec.MaxCount = 0) then
+          c.Expanded := false;
+
+        r := dm.CreateField(vgSettings, 'vgicountlimit', '', '',
+          ftMultiEdit, c, null);
+        dm.CreateField(vgSettings, 'vgimincount', lang('_COUNTLIMIT_'), '',
+          ftNumber, r, HTTPRec.StartCount);
+        dm.CreateField(vgSettings, 'vgimaxcount', '', '', ftNumber, r,
+          HTTPRec.MaxCount);
+
+        dm.CreateField(vgSettings, 'vgiproxy', lang('_USE_PROXY_'),
+          lang('_PROXY_DEFAULT_') + ',' + lang('_PROXY_DISABLED_') + ',' +
+          lang('_PROXY_ALWAYS_') + ',' + lang('_PROXY_LIST_') + ',' +
+          lang('_PROXY_PICS_'), ftIndexCombo, c,
+          Parent.ThreadCounter.UseProxy + 1);
+        dm.CreateField(vgSettings, 'vgiinheritstt', lang('_OWNSETTINGS_'), '',
+          ftCheck, c, Parent.ThreadCounter.UseUserSettings);
+        dm.CreateField(vgSettings, 'vgithreadcount', lang('_THREAD_COUNT_'), '',
+          ftNumber, c, Parent.ThreadCounter.UserSettings.MaxThreadCount);
+        dm.CreateField(vgSettings, 'vgithreaddelay', lang('_QUERY_DELAY_'), '',
+          ftNumber, c, Parent.ThreadCounter.UserSettings.PageDelay);
+        dm.CreateField(vgSettings, 'vgipicdelay', lang('_PIC_DELAY_'), '',
+          ftNumber, c, Parent.ThreadCounter.UserSettings.PicDelay);
+
+      end;
+
+    dm.ertagedit.Properties.Spacer := fCurrItem.HTTPRec.TagTemplate.Spacer;
+    dm.ertagedit.Properties.Separator :=
+      fCurrItem.HTTPRec.TagTemplate.Separator;
+    dm.ertagedit.Properties.Isolator := fCurrItem.HTTPRec.TagTemplate.Isolator;
+
+  finally
+    vgSettings.EndUpdate;
+  end;
 end;
 
 procedure TfNewList.erAuthButtonPropertiesButtonClick(Sender: TObject;
@@ -571,7 +578,8 @@ begin
     if bbFavorite.Down and not r.Favorite then
       tvFull.Controller.DeleteSelection
     else
-      refillRec(tvFull.DataController,tvFull.Controller.FocusedRow.RecordIndex,1);
+      refillRec(tvFull.DataController,
+        tvFull.Controller.FocusedRow.RecordIndex, 1);
   end;
 end;
 
@@ -603,16 +611,17 @@ begin
     JOB_LOGIN:
       begin
         SetIntrfEnabled(false);
-        lTip.Caption := Format(lang('_LOGGINGIN_'), [btnPrevious.Caption]);
+        lTip.Caption := Format(lang('_LOGGINGIN_PLEASEWAIT_'),
+          [btnPrevious.Caption]);
       end;
     JOB_STOPLIST:
       begin
-        SetIntrfEnabled(true);
+        SetIntrfEnabled(True);
         if Assigned(fLogin) then
           if FLoggedOn or FullResList.Canceled then
             fLogin.Close
           else
-            fLogin.bOk.Enabled := true
+            fLogin.bOk.Enabled := True
         else if FLoggedOn then
           SendMsg;
       end;
@@ -620,7 +629,8 @@ begin
 end;
 
 procedure TfNewList.fillRec(r: TResourceList;
-  DataController: TcxGridDataController; RecordIndex, ItemOffset: Integer);
+  DataController: TcxGridDataController; RecordIndex, ItemOffset: Integer;
+  add: Boolean = false);
 var
   s: String;
   N: Integer;
@@ -633,13 +643,17 @@ begin
     try
       if r[RecordIndex].IconFile <> '' then
       begin
-        s := FileToStr(rootdir + '\resources\icons\' + r[RecordIndex]
-          .IconFile);
+        s := String(FileToStr(rootdir + '\resources\icons\' + r[RecordIndex].IconFile));
         Values[N, ItemOffset + 1] := s;
       end;
 
       if not bbFavorite.Down and r[RecordIndex].Favorite then
-        Values[N, ItemOffset + 2] := r[RecordIndex].Name + ' ☆'
+        if add then
+          Values[N, ItemOffset + 2] := '[ ' + r[RecordIndex].Name + ' ] ☆'
+        else
+          Values[N, ItemOffset + 2] := r[RecordIndex].Name + ' ☆'
+      else if add then
+        Values[N, ItemOffset + 2] := '[ ' + r[RecordIndex].Name + ' ]'
       else
         Values[N, ItemOffset + 2] := r[RecordIndex].Name;
       Values[N, ItemOffset + 3] := r[RecordIndex].Short;
@@ -652,21 +666,20 @@ procedure TfNewList.refillRec(DataController: TcxGridDataController;
   RecordIndex, ItemOffset: Integer);
 var
   s: String;
-  r: tResource;
-  //N: Integer;
+  r: TResource;
+  // N: Integer;
 begin
   with DataController do
   begin
-    //N := RecordCount;
-    //RecordCount := RecordCount + 1;
-    //Values[N, ItemOffset] := Integer(r[RecordIndex]);
-    r := tResource(Integer(Values[RecordIndex,ItemOffset]));
+    // N := RecordCount;
+    // RecordCount := RecordCount + 1;
+    // Values[N, ItemOffset] := Integer(r[RecordIndex]);
+    r := TResource(Integer(Values[RecordIndex, ItemOffset]));
 
     try
       if r.IconFile <> '' then
       begin
-        S := FileToStr(rootdir + '\resources\icons\' + r
-          .IconFile);
+        s := String(FileToStr(rootdir + '\resources\icons\' + r.IconFile));
         Values[RecordIndex, ItemOffset + 1] := s;
       end;
 
@@ -682,12 +695,12 @@ begin
   end;
 end;
 
-procedure TfNewList.LoadItems;
+procedure TfNewList.LoadItems(fPList: TResourceList = nil);
 
 var
   i: Integer;
   s: tstringlist;
-
+  N: Integer;
 begin
   // fPathList := TStringList.Create;
   if not Assigned(FullResList) then
@@ -700,7 +713,7 @@ begin
   end;
 
   if GlobalSettings.GUI.NewListShowHint then
-    lHint.AutoSize := true
+    lHint.AutoSize := True
   else
   begin
     lHint.AutoSize := false;
@@ -711,37 +724,76 @@ begin
   FAutoAdd := false;
   gFull.BeginUpdate;
   gRes.BeginUpdate;
-  // pic := TPicture.Create;
-
-  with tvRes.DataController do
-  begin
-    RecordCount := 1;
-    Values[0, 0] := 0;
-    Values[0, 2] := lang('_GENERAL_');
-  end;
-
-  s := tstringlist.Create;
   try
-    s.Text := StrToStrList(GlobalSettings.GUI.LastUsedSet, ',');
+    // pic := TPicture.Create;
 
-    for i := 1 to FullResList.Count - 1 do
+    with tvRes.DataController do
     begin
+      RecordCount := 1;
+      Values[0, 0] := 0;
+      Values[0, 2] := lang('_GENERAL_');
+    end;
 
-      if not bbFavorite.Down or bbFavorite.Down and FullResList[i].Favorite then
-        fillRec(FullResList, tvFull.DataController, i, 1);
+    //if  then
+    //begin
 
-      if s.IndexOf(FullResList[i].Name) <> -1 then
+      s := tstringlist.Create;
+      try
+        s.Text := StrToStrList(GlobalSettings.GUI.LastUsedSet, ',');
+
+        for i := 1 to FullResList.Count - 1 do
+        begin
+
+          if not bbFavorite.Down or bbFavorite.Down and FullResList[i].Favorite
+          then
+            fillRec(FullResList, tvFull.DataController, i, 1);
+
+          if State = lfsNew then
+          if s.IndexOf(FullResList[i].Name) <> -1 then
+          begin
+            with ActualResList[ActualResList.CopyResource(FullResList[i])] do
+            begin
+              Parent := FullResList[i];
+              IsNew := True;
+            end;
+            fillRec(ActualResList, tvRes.DataController,
+              ActualResList.Count - 1, 0)
+          end;
+        end;
+      finally
+        s.Free;
+      end;
+    //end
+    //else
+    if State = lfsEdit then
+    begin
+      for i := 0 to fPList.Count - 1 do
       begin
-        ActualResList[ActualResList.CopyResource(FullResList[i])].Parent :=
-          FullResList[i];
-        fillRec(ActualResList, tvRes.DataController, ActualResList.Count - 1, 0)
+        ActualResList.CopyResource(fPList[i]);
+        fillRec(ActualResList, tvRes.DataController,
+          ActualResList.Count - 1, 0, True);
+
+        if not Assigned(fPList[i].MainResource) then
+        begin
+          N := FFullResList.findByName(fPList[i].Name);
+          if N = -1 then
+            raise Exception.Create('Unknown resource: ' + fPList[i].Name);
+
+          FFullResList[N].MainResource := fPList[i];
+          //FFullResList[N].FreeThreadCounter;
+          //FFullResList[N].SetThreadCounter(fPList[i].ThreadCounter);
+          fFullResList[n].ThreadCounter^ := fPList[i].ThreadCounter^;
+          ActualResList[i].Parent := FFullResList[N];
+          FFullResList[N].MainResource := fPList[i];
+          ActualResList[i].Inherit := false;
+        end;
+
       end;
     end;
-  finally
-    s.Free;
-  end;
 
-  gRes.EndUpdate;
+  finally
+    gRes.EndUpdate;
+  end;
 
   if tvRes.DataController.RecordCount > 1 then
     btnNext.Click;
@@ -799,12 +851,15 @@ var
 begin
   FAutoAdd := false;
   tvFull.DataController.Filter.Clear;
-  tvFull.BeginUpdate; try
+  tvFull.BeginUpdate;
+  try
     tvFull.DataController.RecordCount := 0;
     for i := 1 to FullResList.Count - 1 do
       if not bbFavorite.Down or bbFavorite.Down and FullResList[i].Favorite then
-          fillRec(FullResList, tvFull.DataController, i, 1);
-  finally tvFull.EndUpdate; end;
+        fillRec(FullResList, tvFull.DataController, i, 1);
+  finally
+    tvFull.EndUpdate;
+  end;
 end;
 
 procedure TfNewList.Release;
@@ -836,7 +891,7 @@ end;
 
 procedure TfNewList.RemoveItem(index: Integer);
 
-  procedure rem(index: Integer);
+  function rem(index: Integer): boolean;
   var
     i: Integer;
   begin
@@ -847,8 +902,15 @@ procedure TfNewList.RemoveItem(index: Integer);
     // tvFull.DataController.Values[i, 3] := tvRes.DataController.Values[index, 2];
     // tvFull.DataController.Values[i, 4] := tvRes.DataController.Values[index, 3];
     i := tvRes.DataController.Values[index, 0];
+    if not TResource(Pointer(i)).IsNew then
+    begin
+      //MessageDlg(lang('_CANTREMLITEMS_'),mtError,[mbOk],0);
+      Exit(false);
+    end;
+
     ActualResList.Remove(Pointer(i));
     tvRes.DataController.DeleteRecord(index);
+    Result := true;
   end;
 
 var
@@ -872,11 +934,21 @@ begin
         index := 0;
         end; }
 
+      i := 1;
       if index = 0 then
-        for i := 1 to tvRes.DataController.RecordCount - 1 do
-          rem(1)
+        while i < tvRes.DataController.RecordCount  do
+          if not rem(i) then
+            inc(i)
+          else
+
+        //for i := 1 to tvRes.DataController.RecordCount - 1 do
+        //  rem(1)
       else
-        rem(index);
+        if not rem(index) then
+        begin
+          MessageDlg(lang('_CANTREMLITEMS_'),mtError,[mbOK],0);
+          Exit;
+        end;
 
       tvRes.DataController.FocusedRecordIndex :=
         Min(index, tvRes.DataController.RecordCount - 1);
@@ -897,10 +969,10 @@ begin
   N := TMenuItem.Create(pmFavList);
   N.Caption := lang('_ADDTOFAVORITES_');
   N.OnClick := AddToFavoritesClick;
-  AddFav1.Add(N);
+  AddFav1.add(N);
   N := TMenuItem.Create(pmFavList);
   N.Caption := '-';
-  AddFav1.Add(N);
+  AddFav1.add(N);
   LoadFavs(AddFav1, SetFavoriteClick);
   ResetRemFav;
 end;
@@ -930,7 +1002,7 @@ begin
       FullResList[0].HTTPRec.TagTemplate);
     N.OnClick := Event;
     N.Tag := i;
-    pm.Add(N);
+    pm.add(N);
   end;
 end;
 
@@ -949,10 +1021,10 @@ begin
   begin
     slist := tstringlist.Create;
     try
-      slist.Add(ActualResList[0].Name);
+      slist.add(ActualResList[0].Name);
       for i := 1 to ActualResList.Count - 1 do
         if slist.IndexOf(ActualResList[i].Name) = -1 then
-          slist.Add(ActualResList[i].Name);
+          slist.add(ActualResList[i].Name);
 
       s := slist[0];
       for i := 1 to slist.Count - 1 do
@@ -987,7 +1059,8 @@ begin
     if fCurrItem = FullResList[0] then
     begin
       GlobalSettings.SemiJob :=
-        tSemiListJob(IndexOfStr('"'+lang('_NOTHING_')+'","'+lang('_SPPS_')+'","'+lang('_SPDS_')+'"',
+        tSemiListJob(IndexOfStr('"' + lang('_NOTHING_') + '","' + lang('_SPPS_')
+        + '","' + lang('_SPDS_') + '"',
         (vgSettings.RowByName('vgisdalf') as TcxEditorRow).Properties.Value));
       GlobalSettings.WriteEXIF :=
         (vgSettings.RowByName('vgiexif') as TcxEditorRow).Properties.Value;
@@ -1004,7 +1077,7 @@ begin
 
       r := nil;
 
-      if Fields.Count > d then
+      if IsNew and (Fields.Count > d) then
         with Fields do
           for i := d to Count - 1 do
             if Items[i].restype <> ftNone then
@@ -1041,10 +1114,11 @@ begin
       rec.MaxCount := r.Properties.Editors[1].Value;
       HTTPRec := rec;
 
-      Parent.ThreadCounter.UseProxy := IndexOfStr(
-        lang('_PROXY_DEFAULT_')+','+lang('_PROXY_DISABLED_')+','+
-        lang('_PROXY_ALWAYS_')+','+lang('_PROXY_LIST_')+','+lang('_PROXY_PICS_'),
-        (vgSettings.RowByName('vgiproxy') as TcxEditorRow).Properties.Value) -1;
+      Parent.ThreadCounter.UseProxy :=
+        IndexOfStr(lang('_PROXY_DEFAULT_') + ',' + lang('_PROXY_DISABLED_') +
+        ',' + lang('_PROXY_ALWAYS_') + ',' + lang('_PROXY_LIST_') + ',' +
+        lang('_PROXY_PICS_'), (vgSettings.RowByName('vgiproxy') as TcxEditorRow)
+        .Properties.Value) - 1;
 
       Parent.ThreadCounter.UseUserSettings :=
         (vgSettings.RowByName('vgiinheritstt') as TcxEditorRow)
@@ -1074,14 +1148,14 @@ begin
   end;
 
   SaveSet;
-  case State of
-    lfsNew:
+  //case State of
+  //  lfsNew:
       PostMessage(Application.MainForm.Handle, CM_APPLYNEWLIST,
         Integer(Parent), 0);
-    lfsEdit:
-      PostMessage(Application.MainForm.Handle, CM_APPLYEDITLIST,
-        Integer(Parent), 0);
-  end;
+  //  lfsEdit:
+  //    PostMessage(Application.MainForm.Handle, CM_APPLYEDITLIST,
+  //      Integer(Parent), 0);
+  //end;
 end;
 
 procedure TfNewList.SetFavoriteClick(Sender: TObject);
@@ -1123,7 +1197,7 @@ begin
     r.Fields['password'] := Password;
     if ResetRelogin(N) then
     begin
-      FLoggedOn := true;
+      FLoggedOn := True;
       SetConSettings(FullResList);
       FullResList.StartJob(JOB_LOGIN);
     end
@@ -1168,14 +1242,14 @@ begin
     if fCurrItem.KeywordList.Count > 0 then
     begin
       (vgSettings.RowByName('vgitag') as TcxEditorRow)
-        .Properties.RepositoryItem.Properties.ReadOnly := true;
+        .Properties.RepositoryItem.Properties.ReadOnly := True;
       // (vgSettings.RowByName('vgitag') as TcxEditorRow).inProperties.Values[0] := '<list>';
       // (vgSettings.RowByName('vgitag') as TcxEditorRow).Properties.
       // vgSettings.InplaceEditor.RepositoryItem
       // vgSettings.InplaceEditor.RepositoryItem.Properties.ReadOnly := true;
       vgSettings.InplaceEditor.EditValue := '<list>';
       vgSettings.InplaceEditor.PostEditValue;
-      vgSettings.InplaceEditor.InternalProperties.ReadOnly := true;
+      vgSettings.InplaceEditor.InternalProperties.ReadOnly := True;
     end
     else
     begin
@@ -1241,7 +1315,7 @@ begin
   if Sender.ViewData.RecordCount = 1 then
   begin
     AddItem(Sender.DataController.FocusedRecordIndex);
-    FAutoAdd := true;
+    FAutoAdd := True;
   end;
 end;
 
@@ -1253,7 +1327,7 @@ begin
 
     if tvFull.Controller.FocusedColumnIndex < 2 then
       tvFull.Controller.FocusedColumnIndex := 2;
-    tvFull.ViewData.FilterRow.Focused := true;
+    tvFull.ViewData.FilterRow.Focused := True;
     // tvFull.Controller.EditingController.ShowEdit;
 
     // (tvFull.Controller.EditingController.Edit as TcxTextEdit).SetFocus;

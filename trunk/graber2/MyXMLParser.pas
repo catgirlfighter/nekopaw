@@ -96,6 +96,8 @@ type
       overload;
     procedure GetList(Tags: array of string; AAttrs: array of TAttrList;
       AList: TTagList); overload;
+    procedure GetGroupList(Tags: array of string; AAttrs: array of TAttrList;
+      AList: TTagList);
     procedure CopyList(AList: TTagList; Parent: TTag);
     procedure ExportToFile(FName: string; Comments: tTagCommentState = []);
     function FirstItemByName(tagname: string): TTag;
@@ -632,9 +634,64 @@ begin
       if lx = length(Tags) then
         lx := 0;
 
+      for l := 0 to length(Tags) - 1 do
+        if SameText(Items[i].Name, Tags[l]) and
+          not(Assigned(AAttrs[l]) and AAttrs[l].NoParameters { and (Items[i].Attrs.Count > 0) } ) then
+        begin
+          b := true;
+          if Assigned(AAttrs[l]) then
+            for j := 0 to AAttrs[l].Count - 1 do
+            begin
+              S := Items[i].Attrs.Value(AAttrs[l][j].Name);
+              if not CheckRule(S, AAttrs[l][j].Value, AAttrs[l][j].Compare) and
+                not((AAttrs[l][j].Value = '') and (S <> '')) then
+              begin
+                b := false;
+                break;
+              end;
+            end;
+
+          if b then
+          begin
+            //lx := l + 1;
+            t := AList.CopyTag(Items[i]);
+            if Assigned(AAttrs[l]) then
+              t.Tag := AAttrs[l].Tag;
+            break;
+          end;
+        end
+        //else
+        //  break;
+
+      // if not b then
+      // Items[i].Childs.GetList(Tags,AAttrs,AList);
+    end;
+end;
+
+procedure TTagList.GetGroupList(Tags: array of string; AAttrs: array of TAttrList;
+  AList: TTagList);
+var
+  i, j, l, lx: Integer;
+  b: boolean;
+  S: string;
+  t: TTag;
+begin
+  // Tag := lowercase(Tag);
+  lx := 0;
+
+  if length(Tags) <> length(AAttrs) then
+    raise Exception.Create('Incorrect tags and parameters count');
+  for i := 0 to Count - 1 do
+    if (Items[i].Kind = tkTag) then
+    begin
+      //b := false;
+
+      if lx = length(Tags) then
+        lx := 0;
+
       for l := lx to length(Tags) - 1 do
         if SameText(Items[i].Name, Tags[l]) and
-          not(AAttrs[l].NoParameters { and (Items[i].Attrs.Count > 0) } ) then
+          not(Assigned(AAttrs[l]) and AAttrs[l].NoParameters { and (Items[i].Attrs.Count > 0) } ) then
         begin
           b := true;
           if Assigned(AAttrs[l]) then
@@ -653,7 +710,8 @@ begin
           begin
             lx := l + 1;
             t := AList.CopyTag(Items[i]);
-            t.Tag := AAttrs[l].Tag;
+            if Assigned(AAttrs[l]) then
+              t.Tag := AAttrs[l].Tag;
             break;
           end;
         end

@@ -3,9 +3,15 @@ unit MyHTTP;
 interface
 
 uses IdHTTP, IdInterceptThrottler, Classes, SysUtils, SyncObjs, Strutils,
-  Variants, Common, IdURI, MyIdURI, HTTPApp;
+  Variants, Common, IdURI, MyIdURI, idHTTPHeaderInfo, HTTPApp, pac;
 
 type
+  tIdProxyRec = record
+    Auth: Boolean;
+    User, Password, Host: String;
+    Port: integer;
+  end;
+
   TMyCookieList = class(TStringList)
   private
     FCS: TCriticalSection;
@@ -39,11 +45,14 @@ type
   TMyIdHTTP = class(TIdCustomHTTP)
   private
     FCookieList: TMyCookieList;
+    fPACParser: tPACParser;
+    fPAC: Boolean;
     procedure SetCookieList(Value: TMyCookieList);
   protected
     procedure DoSetCookies(AURL: String; ARequest: TIdHTTPRequest);
     procedure DoProcessCookies(ARequest: TIdHTTPRequest;
       AResponse: TIdHTTPResponse);
+    procedure doPAC(AURL: String);
   public
     { procedure Get(AURL: string; AResponseContent: TStream;
       AIgnoreReplies: array of SmallInt); }
@@ -56,6 +65,8 @@ type
     procedure ReadCookies(url: string; AResponse: TIdHTTPResponse);
     procedure WriteCookies(url: string; ARequest: TIdHTTPRequest);
     property CookieList: TMyCookieList read FCookieList write SetCookieList;
+    property PACParser: tPACParser read fPACParser write fPACParser;
+    property UsePAC: Boolean read fPAC write fPAC;
     procedure Head(AURL: string; AIgnoreReplies: array of SmallInt); overload;
   end;
 
@@ -66,6 +77,9 @@ function AddURLVar(url, Variable: String; Value: Variant): String;
 function GetURLDomain(url: string): string;
 procedure GetPostStrings(s: string; outs: TStrings);
 function CheckProto(url, referer: string): string;
+function GetProxyParams(const pp: tIdProxyConnectionInfo): tIdProxyRec;
+procedure SetProxyParams(const pp: tIdProxyConnectionInfo;
+  const p: tIdProxyRec);
 
 var
   idThrottler: tidInterceptThrottler;
@@ -128,6 +142,7 @@ begin
     'Mozilla/5.0 (Windows NT 6.1; rv:23.0) Gecko/20100101 Firefox/23.0';
   result.ConnectTimeout := 10000;
   result.ReadTimeout := 10000;
+  // result.ProxyParams
   // Result.Request.AcceptLanguage := 'en-us,en;q=0.8';
   // Result.Request.AcceptEncoding := 'gzip, deflate';
   // Result.Request.Accept := 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
@@ -223,7 +238,7 @@ begin
   result := CopyFromTo(Cookie, '=', ';');
 end;
 
-function SameDomain(s1, s2: string): boolean;
+function SameDomain(s1, s2: string): Boolean;
 begin
   if s1 = s2 then
     result := true
@@ -233,6 +248,25 @@ begin
     result := true
   else
     result := False;
+end;
+
+function GetProxyParams(const pp: tIdProxyConnectionInfo): tIdProxyRec;
+begin
+  result.Auth := pp.BasicAuthentication;
+  result.User := pp.ProxyUsername;
+  result.Password := pp.ProxyPassword;
+  result.Host := pp.ProxyServer;
+  result.Port := pp.ProxyPort;
+end;
+
+procedure SetProxyParams(const pp: tIdProxyConnectionInfo;
+  const p: tIdProxyRec);
+begin
+  pp.BasicAuthentication := p.Auth;
+  pp.ProxyServer := p.Host;
+  pp.ProxyPort := p.Port;
+  pp.ProxyUsername := p.User;
+  pp.ProxyPassword := p.Password;
 end;
 
 constructor TMyCookieList.Create;
@@ -249,7 +283,7 @@ end;
 
 procedure TMyCookieList.ChangeCookie(CookieDomain, CookieString: String);
 
-  function DelleteIfExist(Cookie: string): boolean;
+  function DelleteIfExist(Cookie: string): Boolean;
   var
     i: integer;
   begin
@@ -331,7 +365,7 @@ var
   i: integer;
 
 begin
-//  CookieDomain := CopyTo(CookieDomain,'/');
+  // CookieDomain := CopyTo(CookieDomain,'/');
   result := '';
   FCS.Enter;
   try
@@ -369,29 +403,43 @@ end;
 
 procedure TMyIdHTTP.Head(AURL: string; AIgnoreReplies: array of SmallInt);
 begin
+  // if fPAC and Assigned(fPACParser) then
+  doPAC(AURL);
+
   DoRequest(Id_HTTPMethodHead, AURL, nil, nil, AIgnoreReplies);
+
+  // if fPAC and Assigned(fPACParser) then
+  // SetProxyParams(ProxyParams,p);
 end;
 
 function TMyIdHTTP.Get(AURL: string; AResponse: TStream): string;
 begin
+  doPAC(AURL);
+
   if AResponse = nil then
     result := inherited Get(AURL)
   else
+  begin
+    result := '';
     inherited Get(AURL, AResponse);
+  end;
 end;
 
 function TMyIdHTTP.Get(AURL: string; AIgnoreReplies: array of SmallInt): string;
 begin
+  doPAC(AURL);
   result := inherited Get(AURL, AIgnoreReplies);
 end;
 
-function TMyIdHTTP.Post(AURL: string; ASource: TStrings): string;
+function TMyIdHTTP.Post(AURL: string; ASource: TStrings): String;
 begin
+  doPAC(AURL);
   result := inherited Post(AURL, ASource);
 end;
 
 procedure TMyIdHTTP.Post(AURL: string; ASource: TStrings; AResponse: TStream);
 begin
+  doPAC(AURL);
   inherited Post(AURL, ASource, AResponse);
 end;
 
@@ -436,16 +484,41 @@ begin
   // end;
 end;
 
+procedure TMyIdHTTP.doPAC(AURL: String);
+var
+  Host: string;
+  Port, i: integer;
+begin
+  if not(fPAC and Assigned(fPACParser)) then
+    Exit;
+
+  Host := fPACParser.GetProxy(ANSIString(AURL), ANSIString(GetURLDomain(AURL)));
+  if SameText(Host, 'direct') then
+    Host := '';
+
+  i := pos(':', Host);
+  if i > 0 then
+  begin
+    Port := StrToInt(CopyFromTo(Host, ':', ''));
+    Host := Copy(Host, 1, i - 1);
+  end
+  else
+    Port := 80;
+
+  with ProxyParams do
+  begin
+    BasicAuthentication := False;
+    ProxyServer := Host;
+    ProxyPort := Port;
+    ProxyUsername := '';
+    ProxyPassword := '';
+  end;
+end;
+
 procedure TMyIdHTTP.DoProcessCookies(ARequest: TIdHTTPRequest;
   AResponse: TIdHTTPResponse);
 begin
-  // cs.Acquire;
-  // try
   ReadCookies(ARequest.Host, AResponse);
-  // finally
-  // cs.Release;
-  // end;
-  // WriteCookies(ARequest.Host,ARequest);
 end;
 
 procedure TMyIdHTTP.SetCookieList(Value: TMyCookieList);

@@ -30,6 +30,7 @@ type
     FCheckURL: String;
     FString: String;
     FEventHandle: THandle;
+    fincSkins: Boolean;
     procedure IdHTTPWorkBegin(ASender: TObject; AWorkMode: TWorkMode;
       AWorkCountMax: Int64);
     procedure IdHTTPWork(ASender: TObject; AWorkMode: TWorkMode;
@@ -44,6 +45,7 @@ type
     property ListURL: String read FListURL write FListURL;
     property Error: String read FString write FString;
     property MsgHWND: HWND read FHWND write FHWND;
+    property IncSkins: Boolean read fIncSkins write fIncSkins;
   end;
 
 implementation
@@ -96,7 +98,10 @@ begin
   xml.Parse(s);
 
   // items := TTagList.Create;
-  xml.TagList.GetList('item', nil, items);
+  if incSkins then
+    xml.TagList.GetList(['item','skin'], [nil,nil], items)
+  else
+    xml.TagList.GetList('item', nil, items);
 
   if items.Count = 0 then
     raise Exception.Create

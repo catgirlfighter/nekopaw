@@ -429,6 +429,19 @@ object mf: Tmf
         end
         item
           Visible = True
+          ItemName = 'bbLoad'
+        end
+        item
+          Visible = True
+          ItemName = 'bbSave'
+        end
+        item
+          BeginGroup = True
+          Visible = True
+          ItemName = 'bbChange'
+        end
+        item
+          Visible = True
           ItemName = 'bbStartList'
         end
         item
@@ -440,10 +453,7 @@ object mf: Tmf
           ItemName = 'bbSignalTimer'
         end
         item
-          Visible = True
-          ItemName = 'btnSave'
-        end
-        item
+          BeginGroup = True
           Visible = True
           ItemName = 'bbAdvanced'
         end
@@ -518,12 +528,29 @@ object mf: Tmf
       ImageIndex = 24
       OnClick = bbSignalTimerClick
     end
-    object btnSave: TdxBarButton
-      Caption = 'btnSave'
+    object bbSave: TdxBarButton
+      Caption = 'bbSave'
       Category = 0
-      Hint = 'btnSave'
+      Hint = 'bbSave'
       Visible = ivAlways
-      OnClick = btnSaveClick
+      ImageIndex = 26
+      OnClick = bbSaveClick
+    end
+    object bbLoad: TdxBarButton
+      Caption = 'bbLoad'
+      Category = 0
+      Hint = 'bbLoad'
+      Visible = ivAlways
+      ImageIndex = 27
+      OnClick = bbLoadClick
+    end
+    object bbChange: TdxBarButton
+      Caption = 'bbChange'
+      Category = 0
+      Hint = 'bbChange'
+      Visible = ivAlways
+      ImageIndex = 28
+      OnClick = bbChangeClick
     end
   end
   object ApplicationEvents1: TApplicationEvents
@@ -564,11 +591,19 @@ object mf: Tmf
     end
   end
   object dlgSave: TSaveDialog
-    DefaultExt = '.csv'
+    DefaultExt = '.nkp'
     Filter = 
       'CSV (name+md5+tags, only downloaded)|*.csv|NKP (full progress li' +
       'st)|*.nkp'
+    FilterIndex = 2
+    Options = [ofOverwritePrompt, ofHideReadOnly, ofEnableSizing]
     Left = 328
+    Top = 188
+  end
+  object dlgOpen: TOpenDialog
+    DefaultExt = '.nkp'
+    Filter = 'NKP (nekopaw grabber progress list)|*.nkp|ALL|*.*'
+    Left = 276
     Top = 188
   end
 end

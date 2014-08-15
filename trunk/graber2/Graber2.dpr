@@ -6,6 +6,7 @@ uses
   Forms,
   SysUtils,
   common in 'common.pas',
+  pac in 'pac.pas',
   md5 in 'md5.pas',
   MainForm in 'MainForm.pas' {mf},
   graberU in 'graberU.pas' {GraberU},
@@ -31,9 +32,8 @@ uses
   MyINIFile in 'MyINIFile.pas',
   TextEditorForm in 'TextEditorForm.pas' {fTextEdit},
   Newsv2Form in 'Newsv2Form.pas' {fmNewsv2},
-  NekoProvider in 'NekoProvider.pas',
-  fontScale in 'fontScale.pas',
-  ThreadUtils in 'ThreadUtils.pas';
+  ThreadUtils in 'ThreadUtils.pas',
+  ProgressForm in 'ProgressForm.pas' {fProgress};
 
 {$R *.res}
 
@@ -52,6 +52,7 @@ begin
   Application.CreateForm(Tdm, dm);
   Application.CreateForm(TfmDoublesNewRule, fmDoublesNewRule);
   Application.CreateForm(TfTextEdit, fTextEdit);
+  //Application.CreateForm(TfProgress, fProgress);
   // Application.CreateForm(TfmNewsv2, fmNewsv2);
   // Application.CreateForm(TfWhatsNew, fWhatsNew);
   // Application.CreateForm(TfPathEditor, fPathEditor);

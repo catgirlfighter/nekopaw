@@ -39,7 +39,6 @@ object fPathEditor: TfPathEditor
       Top = 8
       Cursor = crHandPoint
       Caption = 'lHelp'
-      Style.TextColor = clHighlight
       Style.TextStyle = [fsUnderline]
       StyleHot.TextColor = clHotLight
       Transparent = True
@@ -107,7 +106,6 @@ object fPathEditor: TfPathEditor
     Top = 114
     Cursor = crHandPoint
     Caption = 'wiki'
-    Style.TextColor = clHighlight
     Style.TextStyle = [fsUnderline]
     StyleHot.TextColor = clHotLight
     Transparent = True
@@ -118,7 +116,6 @@ object fPathEditor: TfPathEditor
     Top = 127
     Cursor = crHandPoint
     Caption = 'wiki'
-    Style.TextColor = clHighlight
     Style.TextStyle = [fsUnderline]
     StyleHot.TextColor = clHotLight
     Transparent = True

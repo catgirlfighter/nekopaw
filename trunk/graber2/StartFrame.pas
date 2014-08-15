@@ -37,6 +37,7 @@ type
       Shift: TShiftState; X, Y: Integer);
     procedure FrameMouseUp(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
+    procedure bLoadClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -59,6 +60,11 @@ end;
 procedure TfStart.bExitClick(Sender: TObject);
 begin
   PostMessage(mf.Handle, WM_CLOSE, 0, 0);
+end;
+
+procedure TfStart.bLoadClick(Sender: TObject);
+begin
+  PostMessage(mf.Handle, CM_LOADLIST, 0, 0);
 end;
 
 procedure TfStart.bNewClick(Sender: TObject);

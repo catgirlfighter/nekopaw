@@ -6,7 +6,7 @@ uses Classes, Types, Messages, Windows, SysUtils, SyncObjs, Variants, VarUtils,
   IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP,
   MyXMLParser, DateUtils, IdException, MyHTTP, IdHTTPHeaderInfo, StrUtils, DB,
   IdStack, idSocks, IdSSLOpenSSL, Math, Dialogs, CCR.EXIF, CCR.EXIF.XMPUtils,
-  ThreadUtils, IdExceptionCore, zLib;
+  ThreadUtils, IdExceptionCore, zLib, pac;
 
 const
   UNIQUE_ID = 'GRABER2LOCK';
@@ -31,6 +31,8 @@ const
   CM_MENUSTYLECHANGED = WM_USER + 20;
   CM_JOBPROGRESS = WM_USER + 21;
   CM_LOGMODECHANGED = WM_USER + 22;
+  CM_LOADLIST = WM_USER + 23;
+  CM_CHANGELIST = WM_USER + 24;
 
   THREAD_STOP = 0;
   THREAD_START = 1;
@@ -58,7 +60,7 @@ const
   JOB_POSTPROCINPROGRESS = 15;
   JOB_BLACKLISTED = 16;
 
-  SAVEFILE_VERSION = 0;
+  SAVEFILE_VERSION: Integer = 0;
 
   LIST_SCRIPT = 'listscript'; // default section for getting list script
   DOWNLOAD_SCRIPT = 'dwscript'; // default section for download picture script
@@ -94,14 +96,16 @@ type
     Login: string;
     Password: string;
     SavePWD: Boolean;
+    UsePAC: Boolean;
+    PACHost: String;
   end;
 
   TDownloadRec = record
-    ThreadCount: integer;
+    ThreadCount: Integer;
     UsePerRes: Boolean;
-    PerResThreads: integer;
-    PicThreads: integer;
-    Retries: integer;
+    PerResThreads: Integer;
+    PicThreads: Integer;
+    Retries: Integer;
     // Interval: integer;
     // BeforeU: boolean;
     // BeforeP: boolean;
@@ -114,9 +118,9 @@ type
   TGUISettings = record
     NewListFavorites: Boolean;
     NewListShowHint: Boolean;
-    FormWidth, FormHeight: integer;
-    PanelPage: integer;
-    PanelWidth: integer;
+    FormWidth, FormHeight: Integer;
+    PanelPage: Integer;
+    PanelWidth: Integer;
     FormState: Boolean;
     LastUsedSet: string;
     LastUsedFields: String;
@@ -129,6 +133,7 @@ type
     Downl: TDownloadRec;
     // Formats: TFormatRec;
     AutoUPD: Boolean;
+    IncSkins: Boolean;
     CHKServ: String;
     UPDServ: String;
     OneInstance: Boolean;
@@ -146,7 +151,7 @@ type
     WriteEXIF: Boolean;
     SemiJob: tSemiListJob;
     UncheckBlacklisted: Boolean;
-    StopSignalTimer: integer;
+    StopSignalTimer: Integer;
   end;
 
   TScriptsRec = record
@@ -188,13 +193,13 @@ type
     TagTemplate: TTagTemplate;
     EXIFTemplate: tEXIFRec;
     Method: THTTPMethod;
-    StartCount, MaxCount, AddToMax, Count: integer;
-    Theor: Word;
+    StartCount, MaxCount, AddToMax, Count: Integer;
+    Theor: word;
     PageByPage: Boolean;
     TryAgain: Boolean;
     AcceptError: Boolean;
-    PageDelay: integer;
-    PicDelay: integer;
+    PageDelay: Integer;
+    PicDelay: Integer;
     DelayPostProc: Boolean;
     AddUnchecked: Boolean;
     // CheckFNameExt: Boolean;
@@ -203,6 +208,8 @@ type
   TPicChange = (pcProgress, pcSize, pcLabel, pcDelete, pcChecked, pcData);
 
   TPicChanges = Set of TPicChange;
+
+  TCallBackProgress = procedure(aPos, aMax: int64; var Cancel: Boolean) of object;
 
   // TXMPPacketHelper = class(TXMPPacket)
   // public
@@ -222,7 +229,7 @@ type
   private
     FNodouble: Boolean;
   protected
-    function Get(Index: integer): TTagedListValue;
+    function Get(Index: Integer): TTagedListValue;
     function GetValue(ItemName: String): Pointer;
     procedure SetValue(ItemName: String; Value: Pointer);
     function FindItem(ItemName: String): TTagedListValue;
@@ -232,7 +239,7 @@ type
     procedure Assign(List: TTagedList; AOperator: TListAssignOp = laCopy);
     constructor Create;
     // procedure Add(ItemName: String; Value: Variant);
-    property Items[Index: integer]: TTagedListValue read Get;
+    property Items[Index: Integer]: TTagedListValue read Get;
     property ItemByName[ItemName: String]: TTagedListValue read FindItem;
     property Values[ItemName: String]: Pointer read GetValue
       write SetValue; default;
@@ -259,7 +266,7 @@ type
 
   TValueList = class(TTagedList)
   protected
-    function Get(ItemIndex: integer): TListValue;
+    function Get(ItemIndex: Integer): TListValue;
     function GetValue(ItemName: String): Variant;
     procedure SetValue(ItemName: String; Value: Variant);
     procedure Assign(List: TValueList; AOperator: TListAssignOp = laCopy);
@@ -267,7 +274,7 @@ type
     procedure SetLink(ItemName: String; Value: PVariant); // Dispose OLD VALUE
   public
     procedure SaveToStream(fStream: tStream);
-    property Items[ItemIndex: integer]: TListValue read Get;
+    property Items[ItemIndex: Integer]: TListValue read Get;
     property Values[ItemName: String]: Variant read GetValue
       write SetValue; default;
     property Links[ItemName: String]: PVariant read GetLink write SetLink;
@@ -282,8 +289,8 @@ type
   protected
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
-    function FindPosition(Value: Variant; var i: integer): Boolean;
-    function Add(Value: Variant; Pos: integer): PVariant;
+    function FindPosition(Value: Variant; var i: Integer): Boolean;
+    function Add(Value: Variant; Pos: Integer): PVariant;
     destructor Destroy; override;
     property ValueType: DB.TFieldType read FType write SetValueType;
     property VariantType: TVarType read FVariantType;
@@ -330,12 +337,12 @@ type
 
   TWorkList = class(TList)
   protected
-    function Get(Index: integer): PWorkItem;
+    function Get(Index: Integer): PWorkItem;
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
-    function Add(Section: TScriptSection; Obj: TObject): integer;
+    function Add(Section: TScriptSection; Obj: TObject): Integer;
     destructor Destroy; override;
-    property Items[Index: integer]: PWorkItem read Get;
+    property Items[Index: Integer]: PWorkItem read Get;
   end;
 
   TScriptSection = class(TScriptItem)
@@ -344,6 +351,7 @@ type
     FChildSections: TScriptItemList;
     FNoParam: Boolean;
     FInUse: Boolean;
+    fSectionName: String;
   public
     constructor Create;
     destructor Destroy; override;
@@ -360,18 +368,19 @@ type
     property ChildSections: TScriptItemList read FChildSections;
     property NoParameters: Boolean read FNoParam write FNoParam;
     property InUse: Boolean read FInUse;
+    property SectionName: String read fSectionName write fSectionName;
   end;
 
   TScriptItemList = class(TList)
   private
-    function Get(Index: integer): TScriptItem;
+    function Get(Index: Integer): TScriptItem;
   protected
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
     procedure Assign(s: TScriptItemList);
     destructor Destroy; override;
     function AsString(level: byte = 0): String;
-    property Items[Index: integer]: TScriptItem read Get; default;
+    property Items[Index: Integer]: TScriptItem read Get; default;
   end;
 
   TDownloadThread = class;
@@ -398,7 +407,7 @@ type
 
   TResourceFields = class(TList)
   protected
-    function Get(Index: integer): PResourceField;
+    function Get(Index: Integer): PResourceField;
     // procedure Put(Index: integer; Value: TResourceField);
     function GetValue(ItemName: String): Variant;
     procedure SetValue(ItemName: String; Value: Variant);
@@ -406,22 +415,22 @@ type
   public
     procedure Assign(List: TResourceFields; AOperator: TListAssignOp = laCopy);
     function AddField(resname: string; restitle: string; restype: TFieldType;
-      resvalue: Variant; resitems: String; InMulti: Boolean): integer;
-    function FindField(resname: String): integer;
+      resvalue: Variant; resitems: String; InMulti: Boolean): Integer;
+    function FindField(resname: String): Integer;
     destructor Destroy; override;
-    property Items[Index: integer]: PResourceField read Get { write Put };
+    property Items[Index: Integer]: PResourceField read Get { write Put };
     property Values[ItemName: String]: Variant read GetValue
       write SetValue; default;
   end;
 
-  TThreadEvent = function(t: TDownloadThread): integer of object;
+  TThreadEvent = function(t: TDownloadThread): Integer of object;
 
   TDownloadThread = class(TThread)
   private
     FHTTP: TMyIdHTTP;
     FEventHandle: THandle;
     FSSLHandler: TIdSSLIOHandlerSocketOpenSSL;
-    FJob: integer;
+    FJob: Integer;
     // FThreadJob: integer;
     FJobComplete: TThreadEvent;
     FFinish: TThreadEvent;
@@ -444,13 +453,13 @@ type
     FChild: TTPicture;
     FLnkPic: TTPicture;
     FSTOPERROR: Boolean;
-    FJobId: integer;
-    FJobIDX: integer;
+    FJobId: Integer;
+    FJobIDX: Integer;
     FCSData: TCriticalSection;
     FCSFiles: TCriticalSection;
     FResource: TResource;
-    FMaxRetries: integer;
-    FRetries: integer;
+    FMaxRetries: Integer;
+    FRetries: Integer;
     FPicsAdded: Boolean;
     FURLList: TArrayOfString;
     FLogMode: Boolean;
@@ -475,14 +484,14 @@ type
     procedure DE(ItemName: String; ItemValue: Variant; LinkedObj: TObject);
     procedure FE(const Item: TScriptSection; LinkedObj: TObject);
     procedure IdHTTPWorkBegin(ASender: TObject; AWorkMode: TWorkMode;
-      AWorkCountMax: Int64);
+      AWorkCountMax: int64);
     procedure IdHTTPWork(ASender: TObject; AWorkMode: TWorkMode;
-      AWorkCount: Int64);
+      AWorkCount: int64);
     procedure PicChanged;
     procedure ProcHTTP;
     procedure ProcPic;
     procedure ProcLogin;
-    function AddURLToList(s: String; Referer: String = ''): integer;
+    function AddURLToList(s: String; Referer: String = ''): Integer;
     procedure ProcPost;
     function TrackRedirect(Url: String): String;
     procedure WriteEXIF(s: tStream);
@@ -500,7 +509,7 @@ type
     property HTTP: TMyIdHTTP read FHTTP;
     property SSL: TIdSSLIOHandlerSocketOpenSSL read FSSLHandler;
     property Socks: tidSocksInfo read fSocksInfo;
-    property Job: integer read FJob write FJob;
+    property Job: Integer read FJob write FJob;
     property EventHandle: THandle read FEventHandle;
     property Error: String read FErrorString;
     // property ErrorCode: integer read FErrorCode;
@@ -522,14 +531,14 @@ type
     property PictureList: TPictureList read FPicList { write FPictureList };
     property LPictureList: TPictureList read FLPicList write FLPicList;
     property STOPERROR: Boolean read FSTOPERROR write FSTOPERROR;
-    property JobId: integer read FJobId write FJobId;
-    property JobIdx: integer read FJobIDX write FJobIDX;
+    property JobId: Integer read FJobId write FJobId;
+    property JobIdx: Integer read FJobIDX write FJobIDX;
     property Picture: TTPicture read FPicture write FPicture;
     property LnkPic: TTPicture read FLnkPic write FLnkPic;
     property CSData: TCriticalSection read FCSData write FCSData;
     property CSFiles: TCriticalSection read FCSFiles write FCSFiles;
     property Resource: TResource read FResource write FResource;
-    property MaxRetries: integer read FMaxRetries write FMaxRetries;
+    property MaxRetries: Integer read FMaxRetries write FMaxRetries;
     property PicsAdded: Boolean read FPicsAdded;
     property URLList: TArrayOfString read FURLList;
     property LogMode: Boolean read FLogMode write FLogMode;
@@ -542,22 +551,23 @@ type
 
   TThreadHandler = class(TThreadList)
   private
-    FCount: integer;
+    FCount: Integer;
     FFinishThreads: Boolean;
     FFinishQueue: Boolean;
     FCreateJob: TJobEvent;
     FProxy: TProxyRec;
     FCookie: TMyCookieList;
+    fPACParser: tPACParser;
     FOnAllThreadsFinished: TNotifyEvent;
     FOnError: TLogEvent;
-    FThreadCount: integer;
+    FThreadCount: Integer;
     FCSData: TCriticalSection;
     FCSFiles: TCriticalSection;
-    FRetries: integer;
+    FRetries: Integer;
     FLogMode: Boolean;
-    fTag: integer;
+    fTag: Integer;
   protected
-    function Finish(t: TDownloadThread): integer;
+    function Finish(t: TDownloadThread): Integer;
     procedure CheckIdle(ALL: Boolean = false);
     // procedure AddToQueue(R: TResource);
     procedure ThreadTerminate(ASender: TObject);
@@ -570,7 +580,7 @@ type
     procedure FinishQueue;
     property Finishing: Boolean read FFinishThreads;
     property CreateJob: TJobEvent read FCreateJob write FCreateJob;
-    property Count: integer read FCount;
+    property Count: Integer read FCount;
     property Proxy: TProxyRec read FProxy write FProxy;
     // property SSLProxy: TProxyRec read FProxy write FProxy;
     // property SOCKSProxy: TProxyRec read FProxy write FProxy;
@@ -578,10 +588,11 @@ type
     property OnAllThreadsFinished: TNotifyEvent read FOnAllThreadsFinished
       write FOnAllThreadsFinished;
     property OnError: TLogEvent read FOnError write FOnError;
-    property ThreadCount: integer read FThreadCount write FThreadCount;
-    property Retries: integer read FRetries write FRetries;
+    property ThreadCount: Integer read FThreadCount write FThreadCount;
+    property Retries: Integer read FRetries write FRetries;
     property LogMode: Boolean read FLogMode write FLogMode;
-    property Tag: integer read fTag write fTag;
+    property Tag: Integer read fTag write fTag;
+    property PACParser: tPACParser read fPACParser write fPACParser;
     // property FinishThreads: boolean read FFinishThread;
   end;
 
@@ -590,9 +601,9 @@ type
   TPictureTag = class(TObject)
   private
     FLinked: TPictureLinkList;
-    fTag: integer;
+    fTag: Integer;
     fIgnore: Boolean;
-    fSaveIndex: integer;
+    fSaveIndex: Integer;
     FName: String;
     // fAttribute: tAttribute;
   public
@@ -601,9 +612,9 @@ type
     constructor Create;
     destructor Destroy; override;
     property Linked: TPictureLinkList read FLinked;
-    property Tag: integer read fTag write fTag;
+    property Tag: Integer read fTag write fTag;
     property Ignore: Boolean read fIgnore write fIgnore;
-    property SaveIndex: integer read fSaveIndex write fSaveIndex;
+    property SaveIndex: Integer read fSaveIndex write fSaveIndex;
   end;
 
   TPictureTagLinkList = class(TList)
@@ -616,24 +627,24 @@ type
     // fIsolator: String;
     // fSeparator: String;
   protected
-    function FindPosition(Value: String; var Index: integer): Boolean;
-    function Get(Index: integer): TPictureTag;
-    procedure Put(Index: integer; Item: TPictureTag);
+    function FindPosition(Value: String; var Index: Integer): Boolean;
+    function Get(Index: Integer): TPictureTag;
+    procedure Put(Index: Integer; Item: TPictureTag);
   public
     constructor Create;
     function StartSearch(Value: string; fmt: TTagTemplate;
-      cnt: integer = 5): string;
+      cnt: Integer = 5): string;
     function ContinueSearch(Value: string; fmt: TTagTemplate;
-      cnt: integer = 5): string;
+      cnt: Integer = 5): string;
     destructor Destroy; override;
     procedure Clear; override;
-    property Items[Index: integer]: TPictureTag read Get write Put; default;
+    property Items[Index: Integer]: TPictureTag read Get write Put; default;
     property Count;
-    function AsString(fmt: TTagTemplate; cnt: integer = 0;
+    function AsString(fmt: TTagTemplate; cnt: Integer = 0;
       List: Boolean = false): String; overload;
-    function AsString(cnt: integer = 0; List: Boolean = false): String;
+    function AsString(cnt: Integer = 0; List: Boolean = false): String;
       overload;
-    function AsString(Separator, Isolator, Spacer: string; cnt: integer = 0;
+    function AsString(Separator, Isolator, Spacer: string; cnt: Integer = 0;
       List: Boolean = false): String; overload;
     // property Spacer: String read fSpacer write fSpacer;
     // property Isolator: String read fIsolator write fIsolator;
@@ -652,22 +663,23 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    function Add(TagName: String; p: TTPicture = nil): integer; overload;
+    function Add(TagName: String; p: TTPicture = nil): Integer; overload;
     function Add(TagName: String; p: TTPicture; Template: TTagTemplate)
-      : integer; overload;
-    function Find(TagName: String): integer;
+      : Integer; overload;
+    function Find(TagName: String): Integer;
     procedure ClearZeros;
     procedure LoadListFromFile(FName: string);
     procedure CopyTagList(t: TPictureTagList);
     procedure SaveToFile(FName: string);
     procedure SavePrepare;
     procedure SaveToStream(fStream: tStream);
+    procedure LoadFromStream(fStream: tStream; fversion: Integer);
     property Items;
     property Count;
   end;
 
   tNameCounter = record
-    Counter: Word;
+    Counter: word;
     Last: TTPicture;
     First: TTPicture;
   end;
@@ -689,11 +701,12 @@ type
     FLinked: TPictureLinkList;
     FTags: TPictureTagLinkList;
     FChecked: Boolean;
-    FStatus: integer;
+    FStatus: Integer;
     FRemoved: Boolean;
     // FQueueN: integer;
     FList: TPictureList;
     FResource: TResource;
+    fResourceIndex: Integer;
     FDisplayLabel: String;
     FPicName: String;
     FFileName: String;
@@ -702,19 +715,19 @@ type
     FNameUpdated: Boolean;
     FPrevPic: TTPicture;
     FNextPic: TTPicture;
-    FNameNo: integer;
+    FNameNo: Integer;
     FNameRemake: Boolean;
     FFactFileName: String;
     FExt: String;
-    FSize: Int64;
-    FPos: Int64;
-    FLastPos: Int64;
+    FSize: int64;
+    FPos: int64;
+    FLastPos: int64;
     fDTStart, fDTEnd: TDateTime;
 
     FPicChange: TPicChangeEvent;
     FChanges: TPicChanges;
-    FBookMark: integer;
-    FIndex: integer;
+    FBookMark: Integer;
+    FIndex: Integer;
     FPostProc: Boolean;
     FMD5: PVariant;
     // fSaveIndex: integer;
@@ -731,9 +744,11 @@ type
     procedure SetPicName(Value: String);
     procedure MakeMD5(s: tStream);
     procedure DeleteFile;
+    procedure SaveToStream(fStream: tStream);
+    procedure LoadFromStream(fStream: tStream; fversion: Integer);
     property Removed: Boolean read FRemoved write SetRemoved;
     { removed from list, i.e. deleted and prepare to be freed from memory }
-    property Status: integer read FStatus write FStatus;
+    property Status: Integer read FStatus write FStatus;
     { working status, OK, ERROR etc }
     property Checked: Boolean read FChecked write FChecked;
     property Parent: TTPicture read FParent write SetParent;
@@ -758,19 +773,20 @@ type
     property PicName: String read FPicName write SetPicName;
     { picture's "preinstalled" file's name, without ext and path }
     property Resource: TResource read FResource write FResource;
+    property ResourceIndex: Integer read fResourceIndex write fResourceIndex;
     { resource picture attached to }
-    property Size: Int64 read FSize write FSize;
+    property Size: int64 read FSize write FSize;
     { pictures' size (sued when downloading) }
-    property Pos: Int64 read FPos write FPos;
+    property Pos: int64 read FPos write FPos;
     { picture's current downloaded amount of bytes }
-    property Lastpos: Int64 read FLastPos write FLastPos;
+    property Lastpos: int64 read FLastPos write FLastPos;
     { pic's last pos (in prevous size get) }
     property OnPicChanged: TPicChangeEvent read FPicChange write FPicChange;
     property Changes: TPicChanges read FChanges write FChanges;
     { current changes list, sued to update visible data in table }
-    property BookMark: integer read FBookMark write FBookMark;
+    property BookMark: Integer read FBookMark write FBookMark;
     { position in table }
-    property Index: integer read FIndex write FIndex;
+    property Index: Integer read FIndex write FIndex;
     { position in pictures list }
     property PostProcessed: Boolean read FPostProc write FPostProc;
     { picture is postprocessed }
@@ -780,7 +796,7 @@ type
     { picture need filename remake AFTER it downloded, i.e. if you need to get ext from header or to get REAL md5 in name }
     property NameCounter: pNameCounter read FNameCounter write FNameCounter;
     { $fn$ counter }
-    property NameNo: integer read FNameNo write FNameNo;
+    property NameNo: Integer read FNameNo write FNameNo;
     { number in $fn$ counter }
     property prevPic: TTPicture read FPrevPic write FPrevPic;
     { prev. for curr. pic in $fn$ counter }
@@ -795,7 +811,7 @@ type
   end;
 
   TPicCounter = record
-    OK, ERR, SKP, UNCH, IGN, EXS, FSH, BLK: Word;
+    OK, ERR, SKP, UNCH, IGN, EXS, FSH, BLK: word;
   end;
 
   TPictureLinkList = class(TList)
@@ -803,31 +819,31 @@ type
     FBeforePictureList: TNotifyEvent;
     FAfterPictureList: TNotifyEvent;
     FLinkedOn: TPictureList;
-    FFinishCursor: integer;
-    FCursor: integer;
-    FPostCursor: integer;
-    FPostFinishCursor: integer;
+    FFinishCursor: Integer;
+    FCursor: Integer;
+    FPostCursor: Integer;
+    FPostFinishCursor: Integer;
     FPicCounter: TPicCounter;
     FChildMode: Boolean;
-    FLastJobIdx: integer;
-    FLastPostJobIdx: integer;
-    FParentCount, FChildCount: integer;
+    FLastJobIdx: Integer;
+    FLastPostJobIdx: Integer;
+    FParentCount, FChildCount: Integer;
   protected
-    function Get(Index: integer): TTPicture;
-    procedure Put(Index: integer; Item: TTPicture);
-    procedure SetParentsCount(Value: integer);
-    procedure SetChildsCount(Value: integer);
+    function Get(Index: Integer): TTPicture;
+    procedure Put(Index: Integer; Item: TTPicture);
+    procedure SetParentsCount(Value: Integer);
+    procedure SetChildsCount(Value: Integer);
   public
     procedure BeginAddList;
     procedure EndAddList;
     procedure ResetCursors;
     procedure ResetPicCounter;
     procedure CheckExists;
-    procedure RestartCursor(AFrom: integer = 0);
-    procedure RestartPostCursor(AFrom: integer = 0);
+    procedure RestartCursor(AFrom: Integer = 0);
+    procedure RestartPostCursor(AFrom: Integer = 0);
     procedure ResetPost;
     // procedure ResetPost;
-    property Items[Index: integer]: TTPicture read Get write Put; default;
+    property Items[Index: Integer]: TTPicture read Get write Put; default;
     property OnBeginAddList: TNotifyEvent read FBeforePictureList
       write FBeforePictureList;
     property OnEndAddList: TNotifyEvent read FAfterPictureList
@@ -836,19 +852,19 @@ type
     function AllFinished(incerrs: Boolean = true;
       incposts: Boolean = false): Boolean;
     function PostProcessFinished: Boolean;
-    function NextJob(Status: integer): TTPicture;
+    function NextJob(Status: Integer): TTPicture;
     function NextPostProcJob: TTPicture;
     function eol: Boolean;
     function posteol: Boolean;
     procedure Reset;
-    property Cursor: integer read FCursor;
-    property LastJobIdx: integer read FLastJobIdx;
-    property LastPostJobIdx: integer read FLastPostJobIdx;
-    property PostProccessCursor: integer read FPostCursor;
+    property Cursor: Integer read FCursor;
+    property LastJobIdx: Integer read FLastJobIdx;
+    property LastPostJobIdx: Integer read FLastPostJobIdx;
+    property PostProccessCursor: Integer read FPostCursor;
     property PicCounter: TPicCounter read FPicCounter;
     property ChildMode: Boolean read FChildMode write FChildMode;
-    property ParentCount: integer read FParentCount;
-    property ChildCount: integer read FChildCount;
+    property ParentCount: Integer read FParentCount;
+    property ChildCount: Integer read FChildCount;
     procedure SaveToCSV(FName: string); overload;
     procedure SaveToCSV(fStream: tStream); overload;
   end;
@@ -859,6 +875,7 @@ type
 
   TCheckFunction = function(Pic: TTPicture): Boolean of object;
   TSameNamesEvent = procedure(Sender: TObject; FFileName: String);
+  TResourceList = class;
 
   TPictureList = class(TPictureLinkList)
   private
@@ -869,12 +886,13 @@ type
     FIgnoreList: TDSArray;
     FUseBlackList: Boolean;
     FBlackList: TDSArray;
-    FDoublesTickCount: integer;
+    FDoublesTickCount: Integer;
     FDirList: TStringList;
     FFileNames: TStringList;
     FMakeNames: Boolean;
     FSameNames: TSameNamesEvent;
-    function DirNumber(Dir: String): Word;
+    fResourceList: TResourceList;
+    function DirNumber(Dir: String): word;
     procedure disposeDirList;
     procedure SetPicChange(Value: TPicChangeEvent);
     // function fNameNumber(FileName: String): pNameCounter;
@@ -893,14 +911,16 @@ type
   public
     constructor Create(makenames: Boolean);
     destructor Destroy; override;
-    function Add(APicture: TTPicture; Resource: TResource): integer;
+    function Add(APicture: TTPicture; Resource: TResource): Integer;
     procedure AddPicList(APicList: TPictureList; ParentPic: TTPicture = nil);
     function CopyPicture(Pic: TTPicture; Child: Boolean = false): TTPicture;
     function CheckDoubles(Pic: TTPicture): Boolean;
-    procedure MakePicFileName(Index: integer; Format: String; Child: Boolean;
+    procedure MakePicFileName(Index: Integer; Format: String; Child: Boolean;
       InstUp: Boolean = false);
     function CheckBlackList(Pic: TTPicture): Boolean;
-    procedure SaveToStream(fStream: tStream);
+    procedure SaveToStream(fStream: tStream; fCB: TCallBackProgress);
+    procedure LoadFromStream(fStream: tStream; fversion: Integer;
+      fCB: TCallBackProgress);
     property Tags: TPictureTagList read FTags;
     property Items;
     property Count;
@@ -914,19 +934,20 @@ type
     property Meta: TTagedList read FMetaContainer;
     property ParentCount;
     property ChildCount;
-    property DoublestickCount: integer read FDoublesTickCount;
+    property DoublestickCount: Integer read FDoublesTickCount;
     property makenames: Boolean read FMakeNames;
+    property ResourceList: TResourceList read fResourceList write fResourceList;
   end;
 
   TResourceEvent = procedure(R: TResource) of object;
 
   TJobRec = record
     // LPic: TTPicture;
-    id: integer;
+    id: Integer;
     Url: string;
     Referer: string;
     // Kind: integer;
-    Status: integer;
+    Status: Integer;
   end;
 
   PJobRec = ^TJobRec;
@@ -934,33 +955,33 @@ type
   TJobList = class(TList)
   private
     FLastAdded: PJobRec;
-    FCursor: integer;
-    FFinishCursor: integer;
-    FOkCount: integer;
-    FErrCount: integer;
+    FCursor: Integer;
+    FFinishCursor: Integer;
+    FOkCount: Integer;
+    FErrCount: Integer;
   protected
-    function Get(Value: integer): PJobRec;
+    function Get(Value: Integer): PJobRec;
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
-    function Add(id: integer): integer;
+    function Add(id: Integer): Integer;
     function AllFinished(incerrs: Boolean = true): Boolean;
-    function NextJob(Status: integer): integer;
-    function LastJob(Status: integer): integer;
+    function NextJob(Status: Integer): Integer;
+    function LastJob(Status: Integer): Integer;
     function eol: Boolean;
     destructor Destroy; override;
-    property Items[Index: integer]: PJobRec read Get; default;
+    property Items[Index: Integer]: PJobRec read Get; default;
     procedure Reset;
     procedure Clear; override;
-    property Cursor: integer read FCursor;
-    property FinishCursor: integer read FFinishCursor;
-    property ErrorCount: integer read FErrCount;
-    property OkCount: integer read FOkCount;
+    property Cursor: Integer read FCursor;
+    property FinishCursor: Integer read FFinishCursor;
+    property ErrorCount: Integer read FErrCount;
+    property OkCount: Integer read FOkCount;
   end;
 
   tGeneralSettings = record
-    MaxThreadCount: integer;
-    PicDelay: integer;
-    PageDelay: integer;
+    MaxThreadCount: Integer;
+    PicDelay: Integer;
+    PageDelay: Integer;
   end;
 
   pThreadCounter = ^tThreadCounter;
@@ -970,9 +991,9 @@ type
     UseProxy: shortint;
     UserSettings: tGeneralSettings;
     UseUserSettings: Boolean;
-    MaxThreadCount: integer;
-    CurrThreadCount: integer;
-    PictureThreadCount: integer;
+    MaxThreadCount: Integer;
+    CurrThreadCount: Integer;
+    PictureThreadCount: Integer;
     Queue: tThreadQueue;
     // PageDelay: integer;
     // PicDelay: integer;
@@ -981,10 +1002,11 @@ type
     LastPicTime: TDateTime;
   end;
 
-  tResourceList = class;
+  // tResourceList = class;
 
   TResource = class(TObject)
   private
+    fNew: Boolean;
     FFavorite: Boolean;
     fUserFav: Boolean;
     FCheatSheet: String;
@@ -1027,25 +1049,25 @@ type
     FOnPageComplete: TNotifyEvent;
     // FTemplateFile: String;
     FKeywordList: TStringList;
-    fResourceList: tResourceList;
-    fSaveIndex: integer;
+    fResourceList: TResourceList;
+    fSaveIndex: Integer;
     fLoadFailed: Boolean;
     procedure SetFavorite(Value: Boolean);
   protected
     procedure DeclorationEvent(ItemName: String; ItemValue: Variant;
       LinkedObj: TObject);
-    function JobComplete(t: TDownloadThread): integer;
+    function JobComplete(t: TDownloadThread): Integer;
     function StringFromFile(FName: string): string;
-    function PicJobComplete(t: TDownloadThread): integer;
-    function LoginJobComplete(t: TDownloadThread): integer;
-    function PostProcJobComplete(t: TDownloadThread): integer;
+    function PicJobComplete(t: TDownloadThread): Integer;
+    function LoginJobComplete(t: TDownloadThread): Integer;
+    function PostProcJobComplete(t: TDownloadThread): Integer;
   public
     constructor Create;
     destructor Destroy; override;
     procedure LoadConfigFromFile(FName: String);
     function CreateFullFieldList: TStringList;
     procedure CreateJob(t: TDownloadThread);
-    procedure StartJob(JobType: integer);
+    procedure StartJob(JobType: Integer);
     procedure Assign(R: TResource);
     procedure GetSectors(s: string; R: TValueList);
     function CanAddThread: Boolean;
@@ -1060,12 +1082,14 @@ type
     function PageDelayed: Boolean;
     function PicDelayed: Boolean;
     procedure SaveToStream(fStream: tStream);
+    procedure LoadFromStream(fStream: tStream; fversion: word);
+    function ResetRelogin: boolean;
     property CheatSheet: String read FCheatSheet write FCheatSheet;
     property FileName: String read FFileName;
     property Name: String read FResName write FResName;
     // property TemplateFile: String read FTemplateFile;
     // property Url: String read FURL;
-    property Relogin: Boolean read FRelogin write FRelogin;
+    property Relogin: Boolean read FRelogin{ write FRelogin};
     property IconFile: String read FIconFile;
     property Fields: TResourceFields read FFields;
     property Parent: TResource read FParent write FParent;
@@ -1106,36 +1130,37 @@ type
     property KeywordList: TStringList read FKeywordList;
     property Favorite: Boolean read FFavorite write SetFavorite;
     property KeywordHint: String read FKeywordHint write FKeywordHint;
-    property ResourceList: tResourceList read fResourceList write fResourceList;
-    property SaveIndex: integer read fSaveIndex write fSaveIndex;
+    property ResourceList: TResourceList read fResourceList write fResourceList;
+    property SaveIndex: Integer read fSaveIndex write fSaveIndex;
     property LoadFailed: Boolean read fLoadFailed;
+    property IsNew: Boolean read fNew write fNew;
   end;
 
   TResourceLinkList = class(TList)
   protected
-    function Get(Index: integer): TResource;
+    function Get(Index: Integer): TResource;
   public
     procedure GetAllResourceFields(List: TStrings);
     procedure GetAllPictureFields(List: TStrings; withparam: Boolean = false);
 
-    property Items[Index: integer]: TResource read Get; default;
+    property Items[Index: Integer]: TResource read Get; default;
   end;
 
-  TActionNotifyEvent = procedure(Sender: TObject; Action: integer) of object;
+  TActionNotifyEvent = procedure(Sender: TObject; Action: Integer) of object;
 
   TResourceMode = (rmNormal, rmLogin { , rmPostProcess } );
 
-  tResourceList = class(TResourceLinkList)
+  TResourceList = class(TResourceLinkList)
   private
     FThreadHandler: TThreadHandler;
     FDwnldHandler: TThreadHandler;
     FJobChanged: TActionNotifyEvent;
-    FQueueIndex: integer;
-    FPicQueue: integer;
+    FQueueIndex: Integer;
+    FPicQueue: Integer;
     FPageMode: Boolean;
     FMode: TResourceMode;
     FOnError: TLogEvent;
-    FMaxThreadCount: integer;
+    FMaxThreadCount: Integer;
     // FListFileFormat: String;
     FPictureList: TPictureList;
     FOnResPageComplete: TNotifyEvent;
@@ -1168,12 +1193,12 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    procedure StartJob(JobType: integer);
-    function CopyResource(R: TResource): integer;
+    procedure StartJob(JobType: Integer);
+    function CopyResource(R: TResource): Integer;
     procedure CreatePicFields;
     procedure NextPage;
     procedure SetPageMode(Value: Boolean);
-    procedure SetMaxThreadCount(Value: integer);
+    procedure SetMaxThreadCount(Value: Integer);
     function AllFinished: Boolean;
     function AllPicsFinished: Boolean;
     procedure UncheckDoubles;
@@ -1182,8 +1207,14 @@ type
     procedure ApplyInherit;
     procedure HandleKeywordList;
     procedure HandleParentLinks;
-    procedure SaveToStream(fStream: tStream);
-    procedure SaveToFile(FName: string);
+    procedure SaveToStream(fStream: tStream; fCB: TCallBackProgress);
+    procedure SaveToFile(FName: string; fCB: TCallBackProgress);
+    procedure LoadFromStream(fStream: tStream; fversion: word;
+      fCB: TCallBackProgress);
+    procedure LoadFromFile(FName: string; fCB: TCallBackProgress);
+    function CreateResource: Integer;
+    function NeedRelogin: boolean;
+    function findByName(rname: string): integer;
     property ThreadHandler: TThreadHandler read FThreadHandler;
     property DWNLDHandler: TThreadHandler read FDwnldHandler;
     procedure LoadList(Dir: String);
@@ -1192,7 +1223,7 @@ type
     property ListFinished: Boolean read GetListFinished;
     property PicsFinished: Boolean read GetPicsFinished;
     property OnError: TLogEvent read FOnError write SetOnError;
-    property MaxThreadCount: integer read FMaxThreadCount
+    property MaxThreadCount: Integer read FMaxThreadCount
       write SetMaxThreadCount;
     // property ListFileFormat: String read FListFileFormat write FListFileFormat;
     property PictureList: TPictureList read FPictureList;
@@ -1210,11 +1241,13 @@ type
     property UncheckBlacklisted: Boolean read fUncheckBlacklisted
       write fUncheckBlacklisted;
     property OnSendStop: TLogEvent read fOnSendStop write fOnSendStop;
+    property Mode: TResourceMode read fMode;
   end;
 
-function strFind(Value: string; List: TStringList; var Index: integer): Boolean;
+function strFind(Value: string; List: TStringList; var Index: Integer): Boolean;
 function tagFmt(Spacer, Separator, Isolator: String): TTagTemplate;
 procedure WriteStr(s: String; fStream: tStream);
+function ReadStr(fStream: tStream): String;
 procedure WriteVar(s: Variant; fStream: tStream);
 function ReadVar(fStream: tStream): Variant;
 
@@ -1235,7 +1268,7 @@ function CalcValue(s: Variant; VE: TValueEvent; Lnk: TObject;
 
   function doubles(s: string; ch: Char): string;
   var
-    i: integer;
+    i: Integer;
   begin
     i := PosEx(ch, s);
     while i <> 0 do
@@ -1252,13 +1285,13 @@ const
   p = ['$', '%', '#', '@'];
   isl: array [0 .. 1] of string = ('""', '''''');
 var
-  n1, n2: integer;
+  n1, n2: Integer;
   cstr: string;
   rstr: Variant;
   vt: WideString;
   vt2: Double;
   VRESULT: HRESULT;
-  tmp: integer;
+  tmp: Integer;
   rsv: Variant;
   b, NKey: Boolean;
 
@@ -1439,7 +1472,7 @@ begin
   end;
 end;
 
-function TTagedList.Get(Index: integer): TTagedListValue;
+function TTagedList.Get(Index: Integer): TTagedListValue;
 begin
   Result := inherited Get(Index);
 end;
@@ -1488,7 +1521,7 @@ end;
 
 function TTagedList.FindItem(ItemName: String): TTagedListValue;
 var
-  i: integer;
+  i: Integer;
 begin
   if ItemName = '' then
   begin
@@ -1523,7 +1556,7 @@ end;
 
 procedure TTagedList.Assign(List: TTagedList; AOperator: TListAssignOp);
 var
-  i: integer;
+  i: Integer;
   p: TTagedListValue;
 begin
   case AOperator of
@@ -1607,7 +1640,7 @@ end;
 
 // TValueList
 
-function TValueList.Get(ItemIndex: integer): TListValue;
+function TValueList.Get(ItemIndex: Integer): TListValue;
 begin
   Result := (inherited Items[ItemIndex]) as TListValue;
 end;
@@ -1670,7 +1703,7 @@ end;
 
 procedure TValueList.SaveToStream(fStream: tStream);
 var
-  i: integer;
+  i: Integer;
 begin
   fStream.WriteData(Count);
   for i := 0 to Count - 1 do
@@ -1713,7 +1746,7 @@ end;
 
 procedure TValueList.Assign(List: TValueList; AOperator: TListAssignOp);
 var
-  i: integer;
+  i: Integer;
   p: TListValue;
 begin
   { if not Assigned(List) then
@@ -1792,9 +1825,9 @@ begin
   inherited;
 end;
 
-function TMetaList.FindPosition(Value: Variant; var i: integer): Boolean;
+function TMetaList.FindPosition(Value: Variant; var i: Integer): Boolean;
 var
-  Hi, Lo: integer;
+  Hi, Lo: Integer;
 
 begin
   if Count = 0 then
@@ -1847,7 +1880,7 @@ begin
   end;
 end;
 
-function TMetaList.Add(Value: Variant; Pos: integer): PVariant;
+function TMetaList.Add(Value: Variant; Pos: Integer): PVariant;
 var
   p: PVariant;
 
@@ -1916,7 +1949,7 @@ begin
   Inherited;
 end;
 
-function TWorkList.Get(Index: integer): PWorkItem;
+function TWorkList.Get(Index: Integer): PWorkItem;
 
 begin
   Result := inherited Get(Index);
@@ -1935,7 +1968,7 @@ begin
   end;
 end;
 
-function TWorkList.Add(Section: TScriptSection; Obj: TObject): integer;
+function TWorkList.Add(Section: TScriptSection; Obj: TObject): Integer;
 var
   p: PWorkItem;
 
@@ -2001,7 +2034,7 @@ const
   Cons = ['=', '<', '>', '!'];
 
 var
-  i, l, n, p { ,tmpi1,tmpi2 } : integer;
+  i, l, n, p { ,tmpi1,tmpi2 } : Integer;
   v1, v2, tmp: string;
   Child: TScriptSection;
   ChItem: TScriptItem;
@@ -2251,7 +2284,7 @@ procedure TScriptSection.Process(const SE: TScriptEvent;
 
 var
   Calced: TValueList;
-  i, j, loopcounter: integer;
+  i, j, loopcounter: Integer;
   ALnk, Lnk: TObject;
   Obj: TObject;
   cont: Boolean;
@@ -2409,6 +2442,7 @@ begin
     begin
 
       // FParent := s.Parent;
+      fSectionName := (s as TScriptSection).SectionName;
       FNoParam := (s as TScriptSection).NoParameters;
       Fparameters.Assign((s as TScriptSection).parameters);
       // FKind := s.Kind;
@@ -2424,7 +2458,7 @@ end;
 
 function TScriptSection.AsString(level: byte = 0): String;
 var
-  i: integer;
+  i: Integer;
 begin
   case Kind of
     sikNone:
@@ -2499,7 +2533,7 @@ end;
 
 procedure TScriptItemList.Assign(s: TScriptItemList);
 var
-  i: integer;
+  i: Integer;
   p: TScriptItem;
 
 begin
@@ -2532,7 +2566,7 @@ end;
 
 function TScriptItemList.AsString(level: byte = 0): String;
 var
-  i: integer;
+  i: Integer;
 begin
   if Count = 0 then
   begin
@@ -2552,7 +2586,7 @@ begin
   inherited;
 end;
 
-function TScriptItemList.Get(Index: integer): TScriptItem;
+function TScriptItemList.Get(Index: Integer): TScriptItem;
 begin
   Result := inherited Get(Index);
 end;
@@ -2561,7 +2595,7 @@ end;
 
 function TJobList.AllFinished(incerrs: Boolean): Boolean;
 var
-  i: integer;
+  i: Integer;
 begin
   { if not(FLastAdded.status in [JOB_ERROR,JOB_FINISHED]) then
     begin
@@ -2583,9 +2617,9 @@ begin
   Result := true;
 end;
 
-function TJobList.NextJob(Status: integer): integer;
+function TJobList.NextJob(Status: Integer): Integer;
 var
-  i: integer;
+  i: Integer;
 
 begin
   if FCursor < Count then
@@ -2614,7 +2648,7 @@ begin
     Result := -1;
 end;
 
-function TJobList.LastJob(Status: integer): integer;
+function TJobList.LastJob(Status: Integer): Integer;
 begin
   if FCursor = Count - 1 then
     Result := NextJob(Status)
@@ -2629,7 +2663,7 @@ end;
 
 procedure TJobList.Reset;
 var
-  i: integer;
+  i: Integer;
 
 begin
   FErrCount := 0;
@@ -2672,7 +2706,7 @@ begin
   Result := not(FCursor < Count);
 end;
 
-function TJobList.Get(Value: integer): PJobRec;
+function TJobList.Get(Value: Integer): PJobRec;
 begin
   Result := inherited Get(Value);
 end;
@@ -2690,7 +2724,7 @@ begin
   end;
 end;
 
-function TJobList.Add(id: integer): integer;
+function TJobList.Add(id: Integer): Integer;
 begin
   New(FLastAdded);
   // FLastAdded.LPic := Nil;
@@ -2707,8 +2741,8 @@ end;
 procedure TResource.ApplyInherit(R: TResource);
 var
   p: TResource;
-  n: integer;
-  i: integer;
+  n: Integer;
+  i: Integer;
 begin
   p := R.Parent;
 
@@ -2716,7 +2750,7 @@ begin
     while Assigned(p.Parent) do
       p := p.Parent;
 
-  if FInherit then
+  if FInherit and Assigned(p) then
   begin
     // FFields.Assign(R.Parent.Fields, laOr);
     if (FKeywordList.Count = 0) then
@@ -2918,6 +2952,28 @@ begin
   end;
 end;
 
+function TResource.ResetRelogin: boolean;
+begin
+  //N := Pointer(idx);
+  if fRelogin or Assigned(MainResource) then
+  begin
+    fRelogin := false;
+    Exit(false);
+  end;
+
+  if ((ScriptStrings.Login <> '') or (HTTPRec.CookieStr <> '')) and
+    (LoginPrompt or (VarToStr(Fields['login']) <> '')) then
+  begin
+    //N.Parent.Fields.Assign(N.Fields);
+    fRelogin := true;
+    Result := true;
+  end else
+  begin
+    fRelogin := false;
+    Result := false;
+  end;
+end;
+
 function TResource.RestoreTagString(Tag: String;
   NewFormat: TTagTemplate): String;
 var
@@ -2955,7 +3011,7 @@ const
   isl: array [0 .. 2] of string = ('""', '''''', '``');
   brk: array [0 .. 1] of string = ('{}', '()');
 var
-  n1, n2: integer;
+  n1, n2: Integer;
   pr: String;
 
 begin
@@ -3010,17 +3066,26 @@ end;
 
 procedure TResource.SaveToStream(fStream: tStream);
 var
-  i: integer;
+  i: Integer;
 begin
   WriteStr(ExtractFileName(FFileName), fStream);
+  WriteStr(FNameFormat, fStream);
   fStream.WriteData(FJobInitiated);
+  if Assigned(FPostProc) then
+    WriteStr(FPostProc.SectionName, fStream)
+  else
+    WriteStr('', fStream);
+  if Assigned(FXMLScript) then
+    WriteStr(FXMLScript.SectionName, fStream)
+  else
+    WriteStr('', fStream);
   fStream.WriteData(FKeepQueue);
 
   if Assigned(MainResource) then // MainResource
     fStream.WriteData(MainResource.SaveIndex)
   else
   begin
-    fStream.WriteData(-1);
+    fStream.WriteData(Integer(-1));
     with FThreadCounter^ do
     begin
       fStream.WriteData(DefinedSettings.MaxThreadCount);
@@ -3116,7 +3181,7 @@ begin
   FThreadCounter := Value;
 end;
 
-procedure TResource.StartJob(JobType: integer);
+procedure TResource.StartJob(JobType: Integer);
 begin
 
   if not Assigned(FThreadCounter) then
@@ -3160,6 +3225,7 @@ begin
           if not Assigned(FInitialScript) then
             FInitialScript := TScriptSection.Create;
 
+          FInitialScript.SectionName := FScripts.List;
           FInitialScript.ParseValues(FSectors[FScripts.List]);
 
           FJobList.Add(0);
@@ -3177,6 +3243,7 @@ begin
           if not Assigned(FInitialScript) then
             FInitialScript := TScriptSection.Create;
 
+          FInitialScript.SectionName := FScripts.Login;
           FInitialScript.ParseValues(FSectors[FScripts.Login]);
         end
         else if Assigned(FInitialScript) then
@@ -3198,6 +3265,7 @@ begin
         if not Assigned(FPicScript) then
         begin
           FPicScript := TScriptSection.Create;
+          FPicScript.SectionName := FScripts.Download;
           FPicScript.ParseValues(FSectors[FScripts.Download]);
         end;
 
@@ -3258,7 +3326,7 @@ procedure TResource.CreateJob(t: TDownloadThread);
 { var
   n: integer; }
 var
-  id: integer;
+  id: Integer;
 begin
   // t.JobId := ;
 
@@ -3419,7 +3487,7 @@ procedure TResource.DeclorationEvent(ItemName: String; ItemValue: Variant;
     s, v: String;
     FSct: TValueList;
     FSS: TScriptSection;
-    i: integer;
+    i: Integer;
     f, p: PResourceField;
   begin
     if SameText(ItemName, '$main.url') then
@@ -3592,10 +3660,10 @@ begin
   // end;
 end;
 
-function TResource.JobComplete(t: TDownloadThread): integer;
+function TResource.JobComplete(t: TDownloadThread): Integer;
 // procedure, called when thread finish it job
 var
-  i, n: integer;
+  i, n: Integer;
   // s: LongInt;
 begin
   try
@@ -3735,9 +3803,10 @@ begin
   end;
 end;
 
-function TResource.LoginJobComplete(t: TDownloadThread): integer;
+function TResource.LoginJobComplete(t: TDownloadThread): Integer;
 begin
   if (t.ReturnValue <> THREAD_COMPLETE) or (t.Job = JOB_ERROR) then
+  begin
     if t.ReturnValue = THREAD_FINISH then
       FOnError(Self, t.Resource.Name + ' login is canceled', nil)
     else if Assigned(FOnError) then
@@ -3745,14 +3814,15 @@ begin
         FOnError(Self, t.Resource.Name + ' unknown login error', nil)
       else
         FOnError(Self, t.Resource.Name + ' error: ' + t.Error, nil);
+  end else
+    FRelogin := false;
   FHTTPRec.LoginResult := t.HTTPRec.LoginResult;
-  FRelogin := false;
   dec(FThreadCounter.CurrThreadCount);
   FOnJobFinished(Self);
   Result := THREAD_START;
 end;
 
-function TResource.PostProcJobComplete(t: TDownloadThread): integer;
+function TResource.PostProcJobComplete(t: TDownloadThread): Integer;
 begin
 
   if not Assigned(t.Picture) then
@@ -3875,6 +3945,7 @@ begin
   mainscript := TScriptSection.Create;
   try
     try
+      mainscript.SectionName := 'main';
       mainscript.ParseValues(Sectors['main']);
       mainscript.Process(nil, DeclorationEvent, nil, nil);
     except
@@ -3891,6 +3962,151 @@ begin
   FResName := ChangeFileExt(ExtractFileName(FName), '');
 end;
 
+procedure TResource.LoadFromStream(fStream: tStream; fversion: word);
+var
+  path: string;
+  i, n: Integer;
+  rname: string;
+  rvalue: Variant;
+  b: byte;
+  bl: Boolean;
+begin
+  path := ExtractFilePath(paramstr(0)) + 'resources\';
+  FFileName := path + ReadStr(fStream);
+  if not fileexists(FFileName) then
+    raise Exception.Create('Resource file ' + FFileName + ' does not exist');
+  LoadConfigFromFile(FFileName);
+  FNameFormat := ReadStr(fStream);
+  fStream.ReadData(FJobInitiated);
+  rname := ReadStr(fStream);
+  if rname <> '' then
+  begin
+    if not Assigned(FPostProc) then
+      FPostProc := TScriptSection.Create;
+
+    FPostProc.SectionName := rname;
+    FPostProc.ParseValues(VarToStr(FSectors[rname]));
+  end;
+
+  rname := ReadStr(fStream);
+  if rname <> '' then
+  begin
+    if not Assigned(FXMLScript) then
+      FXMLScript := TScriptSection.Create;
+
+    FXMLScript.SectionName := rname;
+    FXMLScript.ParseValues(VarToStr(FSectors[rname]));
+  end;
+
+  // WriteStr(fPostProc.SectionName);
+  // WriteStr(fXMLScript.SectionName);
+  fStream.ReadData(FKeepQueue);
+  fStream.ReadData(n);
+
+  if n = -1 then
+    with FThreadCounter^ do
+    begin
+      fStream.ReadData(DefinedSettings.MaxThreadCount);
+      fStream.ReadData(DefinedSettings.PicDelay);
+      fStream.ReadData(DefinedSettings.PageDelay);
+      fStream.ReadData(UseUserSettings);
+      fStream.ReadData(UserSettings.MaxThreadCount);
+      fStream.ReadData(UserSettings.PicDelay);
+      fStream.ReadData(UserSettings.PageDelay);
+      fStream.ReadData(UseProxy);
+    end
+  else
+  begin
+    MainResource := ResourceList[n];
+    FreeThreadCounter;
+    FThreadCounter := MainResource.ThreadCounter;
+  end;
+
+  fStream.ReadData(n);
+
+  for i := 0 to n - 1 do
+  begin
+    rname := ReadStr(fStream);
+    rvalue := ReadVar(fStream);
+    n := Fields.FindField(rname);
+    if n = -1 then
+      Fields.AddField(rname, '', ftNone, rvalue, '', false)
+    else
+      Fields.Items[n].resvalue := rvalue;
+  end;
+
+  FHTTPRec.DefUrl := ReadStr(fStream);
+  FHTTPRec.Url := ReadStr(fStream);
+  FHTTPRec.Post := ReadStr(fStream);
+  FHTTPRec.Referer := ReadStr(fStream);
+  FHTTPRec.ParseMethod := ReadStr(fStream);
+  FHTTPRec.JSONItem := ReadStr(fStream);
+  FHTTPRec.CookieStr := ReadStr(fStream);
+  FHTTPRec.LoginStr := ReadStr(fStream);
+  FHTTPRec.LoginPost := ReadStr(fStream);
+  fStream.ReadData(FHTTPRec.LoginResult);
+  fStream.ReadData(FHTTPRec.UseTryExt);
+
+  fStream.ReadData(b);
+  case b of
+    0:
+      FHTTPRec.Encoding := TEncoding.Default;
+    1:
+      FHTTPRec.Encoding := TEncoding.ASCII;
+    2:
+      FHTTPRec.Encoding := TEncoding.UTF7;
+    3:
+      FHTTPRec.Encoding := TEncoding.UTF8;
+    4:
+      FHTTPRec.Encoding := TEncoding.UNICODE;
+  else
+    raise Exception.Create('Unknown encoding');
+  end;
+
+  FHTTPRec.PicTemplate.Name := ReadStr(fStream);
+  FHTTPRec.PicTemplate.Ext := ReadStr(fStream);
+  fStream.ReadData(FHTTPRec.PicTemplate.ExtFromHeader);
+
+  FHTTPRec.TagTemplate.Spacer := ReadStr(fStream);
+  FHTTPRec.TagTemplate.Separator := ReadStr(fStream);
+  FHTTPRec.TagTemplate.Isolator := ReadStr(fStream);
+
+  fStream.ReadData(FHTTPRec.EXIFTemplate.UseEXIF);
+  FHTTPRec.EXIFTemplate.Author := ReadStr(fStream);
+  FHTTPRec.EXIFTemplate.Title := ReadStr(fStream);
+  FHTTPRec.EXIFTemplate.Theme := ReadStr(fStream);
+  FHTTPRec.EXIFTemplate.Score := ReadStr(fStream);
+  FHTTPRec.EXIFTemplate.Keywords := ReadStr(fStream);
+  FHTTPRec.EXIFTemplate.Comment := ReadStr(fStream);
+
+  fStream.ReadData(byte(FHTTPRec.Method));
+  fStream.ReadData(FHTTPRec.StartCount);
+  fStream.ReadData(FHTTPRec.MaxCount);
+  fStream.ReadData(FHTTPRec.AddToMax);
+  fStream.ReadData(FHTTPRec.Count);
+  fStream.ReadData(FHTTPRec.Theor);
+  fStream.ReadData(FHTTPRec.PageByPage);
+  fStream.ReadData(FHTTPRec.TryAgain);
+  fStream.ReadData(FHTTPRec.AcceptError);
+  fStream.ReadData(FHTTPRec.PageDelay);
+  fStream.ReadData(FHTTPRec.PicDelay);
+  fStream.ReadData(FHTTPRec.DelayPostProc);
+  fStream.ReadData(FHTTPRec.AddUnchecked);
+
+  fStream.ReadData(n);
+  for i := 0 to n - 1 do
+    with FJobList[FJobList.Add(0)]^ do
+    begin
+      fStream.ReadData(id);
+      fStream.ReadData(bl);
+      if bl then
+        Status := JOB_FINISHED;
+      Url := ReadStr(fStream);
+      Referer := ReadStr(fStream);
+    end;
+  ResetRelogin;
+end;
+
 function TResource.PageDelayed: Boolean;
 begin
   Result := MillisecondsBetween(ThreadCounter.LastPageTime, Date + Time) <
@@ -3903,7 +4119,7 @@ begin
     FHTTPRec.PicDelay;
 end;
 
-function TResource.PicJobComplete(t: TDownloadThread): integer;
+function TResource.PicJobComplete(t: TDownloadThread): Integer;
 begin
   if not Assigned(t.Picture) then
   begin
@@ -4043,14 +4259,14 @@ end;
 
 // TResourceLinkList
 
-function TResourceLinkList.Get(Index: integer): TResource;
+function TResourceLinkList.Get(Index: Integer): TResource;
 begin
   Result := inherited Get(Index);
 end;
 
 procedure TResourceLinkList.GetAllResourceFields(List: TStrings);
 var
-  n, i, j: integer;
+  n, i, j: Integer;
 begin
   if Count < 0 then
     Exit;
@@ -4072,13 +4288,13 @@ end;
 procedure TResourceLinkList.GetAllPictureFields(List: TStrings;
   withparam: Boolean = false);
 var
-  i, j: integer;
+  i, j: Integer;
   l: TStringList;
   s: string;
 
-  function AddItem(s: string): integer;
+  function AddItem(s: string): Integer;
   var
-    i: integer;
+    i: Integer;
     R: string;
     n1, n2: string;
     d1, d2: string;
@@ -4125,9 +4341,9 @@ end;
 
 // TResourceList
 
-function tResourceList.AllFinished: Boolean;
+function TResourceList.AllFinished: Boolean;
 var
-  i: integer;
+  i: Integer;
 begin
   for i := 0 to Count - 1 do
   begin
@@ -4142,9 +4358,9 @@ begin
   Result := true;
 end;
 
-function tResourceList.PostProcessFinished(incdelay: Boolean = false): Boolean;
+function TResourceList.PostProcessFinished(incdelay: Boolean = false): Boolean;
 var
-  i: integer;
+  i: Integer;
 begin
   for i := 0 to Count - 1 do
     if (not Items[i].HTTPRec.DelayPostProc or incdelay) and
@@ -4158,7 +4374,7 @@ begin
   Result := true;
 end;
 
-function tResourceList.CopyResource(R: TResource): integer;
+function TResourceList.CopyResource(R: TResource): Integer;
 var
   NR: TResource;
 begin
@@ -4182,7 +4398,7 @@ begin
   Result := Add(NR);
 end;
 
-constructor tResourceList.Create;
+constructor TResourceList.Create;
 begin
   inherited;
   FThreadHandler := TThreadHandler.Create;
@@ -4194,6 +4410,7 @@ begin
   FDwnldHandler.OnAllThreadsFinished := OnHandlerFinished;
   FDwnldHandler.CreateJob := CreateDWNLDJob;
   FPictureList := TPictureList.Create(true);
+  FPictureList.ResourceList := Self;
   FDwnldHandler.Tag := 3;
   fPostProcDelayed := false;
   fUncheckBlacklisted := true;
@@ -4203,16 +4420,16 @@ begin
   fPicDW := false;
 end;
 
-function tResourceList.CreateDWNLDJob(t: TDownloadThread): Boolean;
+function TResourceList.CreateDWNLDJob(t: TDownloadThread): Boolean;
 
 var
   // R { , DR } : TResource;
-  i: integer;
-  n: integer;
+  i: Integer;
+  n: Integer;
 
-  function NextNotEOL(n: integer): integer;
+  function NextNotEOL(n: Integer): Integer;
   var
-    i: integer;
+    i: Integer;
 
   begin
     if not fUseDist then
@@ -4238,7 +4455,7 @@ var
 
   end;
 
-  function doCreateJob(n: integer; R: TResource;
+  function doCreateJob(n: Integer; R: TResource;
     DoNextNotEOL: Boolean = false): Boolean;
   begin
     if (n > R.ThreadCounter.PictureThreadCount) then
@@ -4330,7 +4547,7 @@ begin
   // Result := false;
 end;
 
-function tResourceList.AllPicsFinished: Boolean;
+function TResourceList.AllPicsFinished: Boolean;
 begin
   FPictureList.Reset;
   if not FPictureList.AllFinished(false) then
@@ -4341,18 +4558,18 @@ begin
   Result := true;
 end;
 
-procedure tResourceList.ApplyInherit;
+procedure TResourceList.ApplyInherit;
 var
-  i: integer;
+  i: Integer;
 begin
   for i := 0 to Count - 1 do
     Items[i].ApplyInherit(Items[i].Parent);
 end;
 
-function tResourceList.CreateJob(t: TDownloadThread): Boolean;
+function TResourceList.CreateJob(t: TDownloadThread): Boolean;
 var
   R, DR: TResource;
-  i: integer;
+  i: Integer;
 
 begin
   DR := nil;
@@ -4464,23 +4681,23 @@ begin
 
 end;
 
-procedure tResourceList.SetMaxThreadCount(Value: integer);
+procedure TResourceList.SetMaxThreadCount(Value: Integer);
 begin
   FMaxThreadCount := Value;
 end;
 
-procedure tResourceList.SetOnPageComplete(Value: TNotifyEvent);
+procedure TResourceList.SetOnPageComplete(Value: TNotifyEvent);
 var
-  i: integer;
+  i: Integer;
 begin
   FOnResPageComplete := Value;
   for i := 0 to Count - 1 do
     Items[i].OnPageComplete := Value;
 end;
 
-procedure tResourceList.SetOnError(Value: TLogEvent);
+procedure TResourceList.SetOnError(Value: TLogEvent);
 var
-  i: integer;
+  i: Integer;
 begin
   FOnError := Value;
   FThreadHandler.OnError := Value;
@@ -4489,21 +4706,21 @@ begin
     Items[i].OnError := Value;
 end;
 
-function tResourceList.GetListFinished: Boolean;
+function TResourceList.GetListFinished: Boolean;
 begin
   Result := (ThreadHandler.Count = 0) { and
     ((FMode <> rmPostProcess) or (DWNLDHandler.Count = 0)) };
 end;
 
-function tResourceList.GetPicsFinished: Boolean;
+function TResourceList.GetPicsFinished: Boolean;
 begin
   Result := (DWNLDHandler.Count = 0) { or (FMode = rmPostProcess) };
 end;
 
-procedure tResourceList.HandleKeywordList;
+procedure TResourceList.HandleKeywordList;
 var
-  i, j, l: integer;
-  n: integer;
+  i, j, l: Integer;
+  n: Integer;
 begin
   // at first handle "general" keyword list
 
@@ -4521,9 +4738,9 @@ begin
     end;
 end;
 
-procedure tResourceList.HandleParentLinks;
+procedure TResourceList.HandleParentLinks;
 var
-  i: integer;
+  i: Integer;
 begin
   for i := 0 to Count - 1 do
   begin
@@ -4537,9 +4754,9 @@ begin
   end;
 end;
 
-function tResourceList.ItemByName(AName: String): TResource;
+function TResourceList.ItemByName(AName: String): TResource;
 var
-  i: integer;
+  i: Integer;
 begin
   for i := 0 to Count - 1 do
     if SameText(Items[i].Name, AName) then
@@ -4550,7 +4767,7 @@ begin
   Result := nil;
 end;
 
-destructor tResourceList.Destroy;
+destructor TResourceList.Destroy;
 // var
 // i: integer;
 begin
@@ -4564,9 +4781,19 @@ begin
   inherited;
 end;
 
-procedure tResourceList.CreatePicFields;
+function TResourceList.findByName(rname: string): integer;
 var
-  i, j: integer;
+  i: integer;
+begin
+  for i := 0 to Count-1 do
+    if Sametext(rname,Items[i].Name) then
+      Exit(i);
+  Result := -1
+end;
+
+procedure TResourceList.CreatePicFields;
+var
+  i, j: Integer;
   l, f: TStringList;
   p: TMetaList;
   s, n: string;
@@ -4618,9 +4845,43 @@ begin
   end;
 end;
 
-procedure tResourceList.JobFinished(R: TResource);
+function TResourceList.CreateResource: Integer;
 var
-  i: integer;
+  R: TResource;
+begin
+  R := TResource.Create;
+  R.PictureList.Link := PictureList;
+  R.CheckIdle := ThreadHandler.CheckIdle;
+  R.PicCheckIdle := DWNLDHandler.CheckIdle;
+  R.OnJobFinished := JobFinished;
+  R.OnPicJobFinished := PicJobFinished;
+  R.OnError := FOnError;
+  R.OnPageComplete := OnPageComplete;
+  R.ResourceList := Self;
+  Result := Add(R);
+  { if not Assigned(R) then
+    raise Exception.Create('copied resource is not assigned');
+
+    NR := TResource.Create;
+    // NR.AddToQueue := AddToQueue;
+    NR.Assign(R);
+    NR.PictureList.Link := PictureList;
+    NR.CheckIdle := ThreadHandler.CheckIdle;
+    NR.PicCheckIdle := DWNLDHandler.CheckIdle;
+    NR.OnJobFinished := JobFinished;
+    NR.OnPicJobFinished := PicJobFinished;
+    NR.OnError := FOnError;
+    NR.OnPageComplete := OnPageComplete;
+    NR.ResourceList := Self;
+    if NR.HTTPRec.DelayPostProc then
+    fPostProcDelayed := true;
+    // NR.PictureList.CheckDouble := CheckDouble;
+    Result := Add(NR); }
+end;
+
+procedure TResourceList.JobFinished(R: TResource);
+var
+  i: Integer;
 
 begin
   if FMode = rmLogin then
@@ -4635,6 +4896,9 @@ begin
     for i := 0 to Count - 1 do
       if Items[i].Relogin then
         Exit;
+
+    FStopTick := 0;
+    ThreadHandler.FinishQueue;
   end
   else
   begin
@@ -4644,15 +4908,26 @@ begin
     for i := 0 to Count - 1 do
       if not Items[i].JobList.AllFinished then
         Exit;
+
+    FStopTick := 0;
+    ThreadHandler.FinishQueue;
   end;
 
-  FStopTick := 0;
-  ThreadHandler.FinishQueue;
 end;
 
-procedure tResourceList.NextPage;
+function TResourceList.NeedRelogin: boolean;
 var
   i: integer;
+begin
+  for i := 0 to Count-1 do
+    if Items[i].Relogin then
+      Exit(true);
+  Result := false;
+end;
+
+procedure TResourceList.NextPage;
+var
+  i: Integer;
 
 begin
   for i := 0 to Count - 1 do
@@ -4663,7 +4938,7 @@ begin
     end;
 end;
 
-procedure tResourceList.Notify(Ptr: Pointer; Action: TListNotification);
+procedure TResourceList.Notify(Ptr: Pointer; Action: TListNotification);
 var
   p: TResource;
 begin
@@ -4676,9 +4951,9 @@ begin
   end;
 end;
 
-procedure tResourceList.StartJob(JobType: integer);
+procedure TResourceList.StartJob(JobType: Integer);
 var
-  i: integer;
+  i: Integer;
   pf: Boolean;
 
 begin
@@ -4728,6 +5003,13 @@ begin
     JOB_LIST:
       if ListFinished then
       begin
+        for i := 0 to Count - 1 do
+         if Items[i].Relogin then
+         begin
+           StartJOB(JOB_LOGIN);
+           Exit;
+         end;
+
         FMode := rmNormal;
 
         if AllFinished then
@@ -4772,12 +5054,20 @@ begin
     JOB_LOGIN:
       if ListFinished then
       begin
-        FQueueIndex := 0;
+        pf := false;
         for i := 0 to Count - 1 do
+        begin
+          pf := pf or Items[i].Relogin;
           if Items[i].Relogin then
             with Items[i] do
               // ThreadCounter.MaxThreadCount := 1;
               StartJob(JobType);
+        end;
+
+        if not pf then
+          Exit;
+
+        FQueueIndex := 0;
         FMode := rmLogin;
         ThreadHandler.CreateThreads;
         ThreadHandler.CheckIdle;
@@ -4859,7 +5149,7 @@ begin
   // ThreadHandler.CheckIdle(true);
 end;
 
-procedure tResourceList.UncheckDoubles;
+procedure TResourceList.UncheckDoubles;
 { var
   i,j: integer; }
 begin
@@ -4875,13 +5165,13 @@ end;
   FThreadHandler.AddToQueue(R);
   end; }
 
-procedure tResourceList.SetPageMode(Value: Boolean);
+procedure TResourceList.SetPageMode(Value: Boolean);
 begin
   if ListFinished then
     FPageMode := Value;
 end;
 
-procedure tResourceList.OnHandlerFinished(Sender: TObject);
+procedure TResourceList.OnHandlerFinished(Sender: TObject);
 begin
   if Sender = FThreadHandler then
     if (FThreadHandler.Count = 0) then
@@ -4897,21 +5187,14 @@ begin
     if (FDwnldHandler.Count = 0) then
     begin
       FStopPicsTick := 0;
-      // if FMode = rmPostProcess then
-      // begin
-      // if Assigned(FJobChanged) and ListFinished then
-      // FJobChanged(Self, JOB_STOPLIST);
-      // FMode := rmNormal;
-      // end
-      // else
       if Assigned(FJobChanged) then
         FJobChanged(Self, JOB_STOPPICS);
     end;
 end;
 
-procedure tResourceList.PicJobFinished(R: TResource);
+procedure TResourceList.PicJobFinished(R: TResource);
 var
-  i: integer;
+  i: Integer;
 
 begin
   for i := 0 to Count - 1 do
@@ -4924,7 +5207,67 @@ begin
   // FThreadHandler.FinishQueue;
 end;
 
-procedure tResourceList.LoadList(Dir: String);
+procedure TResourceList.LoadFromFile(FName: string; fCB: TCallBackProgress);
+var
+  f: TFileStream;
+  z: tDecompressionStream;
+  v: Integer;
+begin
+  f := TFileStream.Create(FName, FmOpenRead);
+  try
+    z := tDecompressionStream.Create(f, 15);
+    try
+      z.ReadData(v);
+      // f.ReadData(v);
+      LoadFromStream(z, v, fCB);
+    finally
+      z.Free;
+    end;
+  finally
+    f.Free;
+  end;
+end;
+
+procedure TResourceList.LoadFromStream(fStream: tStream; fversion: word;
+  fCB: TCallBackProgress);
+var
+  b: byte;
+  w: Integer;
+  i: Integer;
+  R: TResource;
+begin
+  fStream.ReadData(FMaxThreadCount);
+  fStream.ReadData(fPostProcDelayed);
+  fStream.ReadData(b);
+  fSemiListJob := tSemiListJob(b);
+  fStream.ReadData(fUncheckBlacklisted);
+  fStream.ReadData(fUseDist);
+  fStream.ReadData(fWriteEXIF);
+  fStream.ReadData(w);
+
+  for i := 0 to w - 1 do
+  begin
+    R := Items[CreateResource];
+    R.LoadFromStream(fStream, fversion);
+  end;
+  CreatePicFields;
+
+  PictureList.LoadFromStream(fStream, fversion, fCB);
+  {
+    for i := 0 to PictureList.Count - 1 do
+    begin
+    w := PictureList[i].ResourceIndex;
+    PictureList[i].Resource := Items[w];
+    Items[w].PictureList.Add(PictureList[i]);
+    if Assigned(Items[w].Parent) then
+    inc(Items[w].PictureList.FChildCount)
+    else
+    inc(Items[w].PictureList.FParentCount);
+    end;
+  }
+end;
+
+procedure TResourceList.LoadList(Dir: String);
 var
   a: TSearchRec;
   R: TResource;
@@ -4933,6 +5276,7 @@ begin
   Clear;
 
   R := TResource.Create;
+  r.IsNew := true;
   R.Inherit := false;
   R.Name := 'general';
   R.PictureList.Link := PictureList;
@@ -4985,17 +5329,18 @@ begin
   end;
 end;
 
-procedure tResourceList.SaveToFile(FName: string);
+procedure TResourceList.SaveToFile(FName: string; fCB: TCallBackProgress);
 var
   z: tCompressionStream;
   f: TFileStream;
 begin
   f := TFileStream.Create(FName, fmCreate or fmOpenWrite);
   try
-    z := tCompressionStream.Create(f, zcMax, 15);
+    z := tCompressionStream.Create(f, zcFastest, 15);
     try
       z.WriteData(SAVEFILE_VERSION);
-      SaveToStream(z);
+      // f.WriteData(SAVEFILE_VERSION);
+      SaveToStream(z, fCB);
     finally
       z.Free;
     end;
@@ -5004,9 +5349,9 @@ begin
   end;
 end;
 
-procedure tResourceList.SaveToStream(fStream: tStream);
+procedure TResourceList.SaveToStream(fStream: tStream; fCB: TCallBackProgress);
 var
-  i: integer;
+  i: Integer;
 begin
   fStream.WriteData(FMaxThreadCount);
   fStream.WriteData(fPostProcDelayed);
@@ -5016,7 +5361,11 @@ begin
   fStream.WriteData(fWriteEXIF);
 
   for i := 0 to Count - 1 do
+  begin
+    // if Assigned(fCB) then
+    // fCB(i+1,Count);
     Items[i].SaveIndex := i;
+  end;
 
   // PictureList.SavePrepare;
 
@@ -5024,11 +5373,11 @@ begin
   for i := 0 to Count - 1 do
     Items[i].SaveToStream(fStream);
 
-  PictureList.SaveToStream(fStream);
+  PictureList.SaveToStream(fStream, fCB);
 
 end;
 
-procedure tResourceList.SetLogMode(Value: Boolean);
+procedure TResourceList.SetLogMode(Value: Boolean);
 begin
   FLogMode := Value;
   FThreadHandler.LogMode := Value;
@@ -5039,7 +5388,7 @@ end;
 
 procedure TDownloadThread.Execute;
 var
-  oldstat: integer;
+  oldstat: Integer;
 begin
   // ReturnValue := THREAD_STOP;
 
@@ -5177,7 +5526,7 @@ begin
   Result := FPicture;
 end;
 
-function TDownloadThread.AddURLToList(s: String; Referer: String = ''): integer;
+function TDownloadThread.AddURLToList(s: String; Referer: String = ''): Integer;
 begin
   SetLength(FURLList, length(FURLList) + 1);
   FURLList[length(FURLList) - 1].val1 := s;
@@ -5270,7 +5619,7 @@ function TDownloadThread.SE(const Item: TScriptSection;
 var
   l, s: TTagList;
   p: TWorkList;
-  i, j: integer;
+  i, j: Integer;
   a: array of TAttrList;
   Tags: array of string;
   // tmp: ttag;
@@ -5348,7 +5697,7 @@ begin
                 // Tags[j] :=  Item.ChildSections[j].ClassName;
                 Tags[j] := Name;
                 a[j] := TAttrList.Create;
-                a[j].Tag := integer(Item.ChildSections[j]);
+                a[j].Tag := Integer(Item.ChildSections[j]);
 
                 for i := 0 to parameters.Count - 1 do
                   a[j].Add(Copy(parameters.Items[i].Name, 1,
@@ -5362,7 +5711,7 @@ begin
 
             try
 
-              s.GetList(Tags, a, l);
+              s.GetGroupList(Tags, a, l);
 
             finally
               for j := 0 to length(a) - 1 do
@@ -5414,7 +5763,7 @@ var
   t: ttag;
   s, tmp: string;
   p1, p2, p3, p4: string;
-  n, n2, i: integer;
+  n, n2, i: Integer;
   c: Char;
 begin
   // Value := lowrcase(Value);
@@ -5663,8 +6012,8 @@ begin
           else if SameText(s, 'copy') then
           begin
             s := gVal(Value);
-            Result := Copy(Clc(nVal(s)), integer(Clc(nVal(s))),
-              integer(Clc(nVal(s))));
+            Result := Copy(Clc(nVal(s)), Integer(Clc(nVal(s))),
+              Integer(Clc(nVal(s))));
           end
           else if SameText(s, 'copyto') then
           begin
@@ -5938,7 +6287,7 @@ begin
         if Score <> '' then
         begin
           v := VarToStr(CalcValue(Score, VE, R));
-          case integer(v) of
+          case Integer(v) of
             0:
               EXIF.UserRating := urUndefined;
             1:
@@ -6035,18 +6384,24 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
   var
     // p: TTPicture;
     s, v1, v2, r1, r2, r3 { , r4 } : string;
-    n: integer;
+    n: Integer;
     fcln: TTPicture;
     sl: TStringList;
   begin
     if SameText(Name, '$thread.url') then
       FHTTPRec.Url := Value
     else if SameText(Name, '$thread.xml') then
-      FXMLScript.ParseValues(VarToStr(FSectors[Value]))
+    begin
+      FXMLScript.SectionName := VarToStr(Value);
+      FXMLScript.ParseValues(VarToStr(FSectors[Value]));
+    end
     else if SameText(Name, '$thread.onerror') then
       FErrorScript.ParseValues(VarToStr(FSectors[Value]))
     else if SameText(Name, '$thread.postprocess') then
-      FPostProc.ParseValues(VarToStr(FSectors[Value]))
+    begin
+      FPostProc.SectionName := VarToStr(Value);
+      FPostProc.ParseValues(VarToStr(FSectors[Value]));
+    end
     else if SameText(Name, '$thread.xmlcontent') then
       FHTTPRec.ParseMethod := Value
     else if SameText(name, '$thread.method') then
@@ -6282,9 +6637,12 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
                 if Job in [JOB_PICS, JOB_POSTPROCESS] then
                 begin
                   CSData.Enter;
-                  // V
-                  FLPicList.Tags.Add(s, FPicture, FHTTPRec.TagTemplate);
-                  CSData.Leave;
+                  try
+                    // V
+                    FLPicList.Tags.Add(s, FPicture, FHTTPRec.TagTemplate);
+                  finally
+                    CSData.Leave;
+                  end;
                 end
                 else
                   // V
@@ -6338,7 +6696,7 @@ begin
 end;
 
 procedure TDownloadThread.IdHTTPWorkBegin(ASender: TObject;
-  AWorkMode: TWorkMode; AWorkCountMax: Int64);
+  AWorkMode: TWorkMode; AWorkCountMax: int64);
 begin
   if ReturnValue = THREAD_FINISH then
     HTTP.Disconnect;
@@ -6355,7 +6713,7 @@ begin
 end;
 
 procedure TDownloadThread.IdHTTPWork(ASender: TObject; AWorkMode: TWorkMode;
-  AWorkCount: Int64);
+  AWorkCount: int64);
 begin
   if ReturnValue = THREAD_FINISH then
     HTTP.Disconnect;
@@ -6396,8 +6754,8 @@ var // used if need to parse content
   tmp, Url: string;
   Post: TStringList;
   debug_name: string;
-  ms: Int64;
-  i: integer;
+  ms: int64;
+  i: Integer;
 
   // t: tTag;
 begin
@@ -6573,6 +6931,8 @@ begin
           FXML.TagList.ExportToFile(tmp, [tcsContent, tcsHelp]);
           FHTTP.CookieList.SaveToFile(ExtractFilePath(paramstr(0)) + 'log\' +
             debug_name + '_' + IntToStr(i) + '.cookie');
+          Result.SaveToFile(ExtractFilePath(paramstr(0)) + 'log\' + debug_name +
+            '_' + IntToStr(i) + '.raw');
           // SaveStrToFile('<!-- ' + Url + '-->' + #13#10 + Result.DataString,
           // ExtractFilePath(paramstr(0)) + 'log\' + debug_name + '.src');
         end;
@@ -6629,7 +6989,7 @@ var
   FExt: string;
   { tmp, } FName: string;
   Url: string;
-  ms: Int64;
+  ms: int64;
   not_resume: Boolean;
   h: THandle;
   // frec: tSearchRec;
@@ -7266,7 +7626,7 @@ begin
 end;
 
 function TPictureTagLinkList.ContinueSearch(Value: string; fmt: TTagTemplate;
-  cnt: integer = 5): string;
+  cnt: Integer = 5): string;
 begin
   if Value = '' then
   begin
@@ -7306,9 +7666,9 @@ begin
 end;
 
 function TPictureTagLinkList.FindPosition(Value: String;
-  var Index: integer): Boolean;
+  var Index: Integer): Boolean;
 var
-  Hi, Lo: integer;
+  Hi, Lo: Integer;
 
 begin
   if Count = 0 then
@@ -7355,20 +7715,20 @@ begin
   end;
 end;
 
-function TPictureTagLinkList.Get(Index: integer): TPictureTag;
+function TPictureTagLinkList.Get(Index: Integer): TPictureTag;
 begin
   Result := inherited Get(Index);
 end;
 
-procedure TPictureTagLinkList.Put(Index: integer; Item: TPictureTag);
+procedure TPictureTagLinkList.Put(Index: Integer; Item: TPictureTag);
 begin
   inherited Put(Index, Item);
 end;
 
 function TPictureTagLinkList.StartSearch(Value: string; fmt: TTagTemplate;
-  cnt: integer = 5): string;
+  cnt: Integer = 5): string;
 var
-  i: integer;
+  i: Integer;
 
 begin
   Value := ReplaceStr(lowercase(Value), fmt.Spacer, fTagTemplate.Spacer);
@@ -7390,7 +7750,7 @@ begin
   Result := fsearchstack.AsString(fmt, cnt, true);
 end;
 
-function TPictureTagLinkList.AsString(fmt: TTagTemplate; cnt: integer = 0;
+function TPictureTagLinkList.AsString(fmt: TTagTemplate; cnt: Integer = 0;
   List: Boolean = false): String;
 
 // function makename(s: string): string;
@@ -7399,7 +7759,7 @@ function TPictureTagLinkList.AsString(fmt: TTagTemplate; cnt: integer = 0;
 // end;
 
 var
-  i: integer;
+  i: Integer;
 begin
   if cnt = 0 then
     cnt := Count
@@ -7427,7 +7787,7 @@ begin
   end;
 end;
 
-function TPictureTagLinkList.AsString(cnt: integer = 0;
+function TPictureTagLinkList.AsString(cnt: Integer = 0;
   List: Boolean = false): String;
 var
   fmt: TTagTemplate;
@@ -7440,7 +7800,7 @@ begin
 end;
 
 function TPictureTagLinkList.AsString(Separator, Isolator, Spacer: string;
-  cnt: integer = 0; List: Boolean = false): String;
+  cnt: Integer = 0; List: Boolean = false): String;
 var
   fmt: TTagTemplate;
 begin
@@ -7452,7 +7812,7 @@ end;
 
 procedure TPictureTagLinkList.SaveToStream(fStream: tStream);
 var
-  i: integer;
+  i: Integer;
 begin
   fStream.WriteData(Count);
   for i := 0 to Count - 1 do
@@ -7477,9 +7837,9 @@ begin
   inherited;
 end;
 
-function TPictureTagList.Add(TagName: String; p: TTPicture): integer;
+function TPictureTagList.Add(TagName: String; p: TTPicture): Integer;
 var
-  n: integer;
+  n: Integer;
   t: TPictureTag;
   IGN: Boolean;
 begin
@@ -7525,21 +7885,30 @@ begin
 end;
 
 function TPictureTagList.Add(TagName: String; p: TTPicture;
-  Template: TTagTemplate): integer;
+  Template: TTagTemplate): Integer;
 begin
   Result := Add(ReplaceStr(TagName, Template.Spacer, fTagTemplate.Spacer), p);
 end;
 
-function TPictureTagList.Find(TagName: String): integer;
+function TPictureTagList.Find(TagName: String): Integer;
 begin
   if not FindPosition(TagName, Result) then
     Result := -1;
 end;
 
+procedure TPictureTagList.LoadFromStream(fStream: tStream; fversion: Integer);
+var
+  i, c: Integer;
+begin
+  fStream.ReadData(c);
+  for i := 0 to c - 1 do
+    Add(ReadStr(fStream));
+end;
+
 procedure TPictureTagList.LoadListFromFile(FName: string);
 var
   s: TStringList;
-  i: integer;
+  i: Integer;
 begin
   s := TStringList.Create;
   try
@@ -7553,7 +7922,7 @@ end;
 
 procedure TPictureTagList.ClearZeros;
 var
-  i: integer;
+  i: Integer;
 begin
   i := 0;
   while i < Count - 1 do
@@ -7563,7 +7932,7 @@ end;
 
 procedure TPictureTagList.CopyTagList(t: TPictureTagList);
 var
-  i: integer;
+  i: Integer;
 begin
   for i := 0 to t.Count - 1 do
     Add(t[i].Name, nil, t.TagTemplate);
@@ -7585,7 +7954,7 @@ end;
 
 procedure TPictureTagList.SavePrepare;
 var
-  i: integer;
+  i: Integer;
 begin
   for i := 0 to Count - 1 do
     Items[i].SaveIndex := i;
@@ -7594,12 +7963,15 @@ end;
 procedure TPictureTagList.SaveToFile(FName: string);
 var
   s: TStringList;
-  i: integer;
+  i: Integer;
   e: TEncoding;
 begin
   s := TStringList.Create;
   try
     for i := 0 to Count - 1 do
+    if Items[i].Ignore then
+      s.Add(#9 + Items[i].Name)
+    else
       s.Add(Items[i].Name);
     e := TUnicodeEncoding.Create;
     s.SaveToFile(FName, e);
@@ -7611,11 +7983,11 @@ end;
 
 procedure TPictureTagList.SaveToStream(fStream: tStream);
 var
-  i: integer;
+  i: Integer;
 begin
   fStream.WriteData(Count);
-  for i := 0 to Count-1 do
-    WriteStr(Items[i].Name,fStream);
+  for i := 0 to Count - 1 do
+    WriteStr(Items[i].Name, fStream);
 end;
 
 // TTPicture
@@ -7669,6 +8041,7 @@ begin
   FNameNo := 0;
   FPrevPic := nil;
   FNextPic := nil;
+  fResourceIndex := -1;
   // FObj := nil;
 end;
 
@@ -7689,10 +8062,99 @@ begin
   inherited;
 end;
 
+procedure TTPicture.LoadFromStream(fStream: tStream; fversion: Integer);
+var
+  c, i, n: Integer;
+  m: TMetaList;
+  b: Boolean;
+  mName: String;
+  mValue: Variant;
+  t: TPictureTag;
+begin
+  fStream.ReadData(fResourceIndex);
+
+  fStream.ReadData(c);
+  if c > -1 then
+    Parent := List[c];
+
+  FResource := List.ResourceList[ResourceIndex];
+  List.ResourceList[ResourceIndex].PictureList.Add(Self);
+  if Assigned(Parent) then
+    inc(List.ResourceList[ResourceIndex].PictureList.FChildCount)
+  else
+    inc(List.ResourceList[ResourceIndex].PictureList.FParentCount);
+
+  fStream.ReadData(FChecked);
+  FDisplayLabel := ReadStr(fStream);
+  FExt := ReadStr(fStream);
+  FFactFileName := ReadStr(fStream);
+  FFileName := ReadStr(fStream);
+  mValue := ReadVar(fStream);
+  if tVarData(mValue).VType <> varEmpty then
+  begin
+    m := FList.Meta.Items[0].Value;
+
+    if not m.FindPosition(mValue, i) then
+      FMD5 := m.Add(mValue, i)
+    else
+      FMD5 := m[i];
+  end;
+
+  FOrigFileName := ReadStr(fStream);
+  FPicName := ReadStr(fStream);
+  fStream.ReadData(FPostProc);
+  fStream.ReadData(b);
+  if b then
+    FStatus := JOB_FINISHED;
+
+  fStream.ReadData(c);
+  for i := 0 to c - 1 do
+  begin
+    mName := ReadStr(fStream);
+    mValue := ReadVar(fStream);
+    FList.AddPicMeta(Self, mName, mValue);
+  end;
+
+  fStream.ReadData(c);
+  for i := 0 to c - 1 do
+  begin
+    fStream.ReadData(c);
+    t := FList.Tags[c];
+    Tags.FindPosition(t.Name, n);
+    Tags.Insert(n, t);
+    t.Linked.Add(Self);
+  end;
+
+  {
+    if Assigned(Parent) then // parent
+    fStream.WriteData(Parent.Index)
+    else
+    fStream.WriteData(integer(-1));
+    fStream.WriteData(Checked);
+    WriteStr(DisplayLabel, fStream);
+    WriteStr(Ext, fStream);
+    WriteStr(FactFileName, fStream);
+    WriteStr(FileName, fStream);
+    if Assigned(MD5) then // possible MD5
+    WriteVar(MD5^, fStream)
+    else
+    WriteVar(Unassigned, fStream);
+    WriteStr(OriginalFileName, fStream);
+    WriteStr(PicName, fStream);
+    fStream.WriteData(PostProcessed);
+    fStream.WriteData(Status = JOB_FINISHED);
+    Meta.SaveToStream(fStream);
+
+    fStream.WriteData(Tags.Count);
+    for i := 0 to Tags.Count - 1 do
+    fStream.WriteData(Tags[i].SaveIndex);
+  }
+end;
+
 procedure TTPicture.MakeMD5(s: tStream);
 var
   m: TMetaList;
-  i: integer;
+  i: Integer;
   v: Variant;
 begin
   v := lowercase(MD5DigestToStr(MD5Stream(s)));
@@ -7704,15 +8166,37 @@ begin
     FMD5 := m[i];
 end;
 
+procedure TTPicture.SaveToStream(fStream: tStream);
+var
+  i: Integer;
+begin
+  fStream.WriteData(Resource.SaveIndex);
+  if Assigned(Parent) then // parent
+    fStream.WriteData(Parent.Index)
+  else
+    fStream.WriteData(Integer(-1));
+  fStream.WriteData(Checked);
+  WriteStr(DisplayLabel, fStream);
+  WriteStr(Ext, fStream);
+  WriteStr(FactFileName, fStream);
+  WriteStr(FileName, fStream);
+  if Assigned(MD5) then // possible MD5
+    WriteVar(MD5^, fStream)
+  else
+    WriteVar(Unassigned, fStream);
+  WriteStr(OriginalFileName, fStream);
+  WriteStr(PicName, fStream);
+  fStream.WriteData(PostProcessed);
+  fStream.WriteData(Status = JOB_FINISHED);
+  Meta.SaveToStream(fStream);
+
+  fStream.WriteData(Tags.Count);
+  for i := 0 to Tags.Count - 1 do
+    fStream.WriteData(Tags[i].SaveIndex);
+end;
+
 procedure TTPicture.SetParent(Item: TTPicture);
 begin
-  // if Parent = Item then
-  // Exit;
-  // if (Parent <> nil) and (not Parent.Removed) then
-  // Parent.Linked.Remove(Self);
-  // Parent := Item;
-  // if Parent <> nil then
-  // Parent.Linked.Add(Self);
   FParent := Item;
 end;
 
@@ -7737,22 +8221,22 @@ begin
     FAfterPictureList(Self);
 end;
 
-function TPictureLinkList.Get(Index: integer): TTPicture;
+function TPictureLinkList.Get(Index: Integer): TTPicture;
 begin
   Result := inherited Get(Index);
 end;
 
-procedure TPictureLinkList.Put(Index: integer; Item: TTPicture);
+procedure TPictureLinkList.Put(Index: Integer; Item: TTPicture);
 begin
   inherited Put(Index, Item);
 end;
 
-procedure TPictureLinkList.SetParentsCount(Value: integer);
+procedure TPictureLinkList.SetParentsCount(Value: Integer);
 begin
   FParentCount := Value;
 end;
 
-procedure TPictureLinkList.SetChildsCount(Value: integer);
+procedure TPictureLinkList.SetChildsCount(Value: Integer);
 begin
   FChildCount := Value;
 end;
@@ -7765,7 +8249,7 @@ end;
 
 procedure TPictureLinkList.CheckExists;
 var
-  i: integer;
+  i: Integer;
 begin
   for i := 0 to Count - 1 do
   begin
@@ -7780,7 +8264,7 @@ end;
 
 function TPictureLinkList.PostProcessFinished: Boolean;
 var
-  i: integer;
+  i: Integer;
 begin
   for i := FPostFinishCursor to Count - 1 do
     if Items[i].Checked and not Items[i].PostProcessed then
@@ -7797,7 +8281,7 @@ end;
 function TPictureLinkList.AllFinished(incerrs: Boolean;
   incposts: Boolean): Boolean;
 var
-  i: integer;
+  i: Integer;
   dp: set of byte;
 
   function rule(p: TTPicture): Boolean;
@@ -7830,9 +8314,9 @@ begin
   Result := true;
 end;
 
-function TPictureLinkList.NextJob(Status: integer): TTPicture;
+function TPictureLinkList.NextJob(Status: Integer): TTPicture;
 var
-  i: integer;
+  i: Integer;
 
 begin
   if Status = JOB_POSTPROCESS then
@@ -7889,7 +8373,7 @@ end;
 
 function TPictureLinkList.NextPostProcJob: TTPicture;
 var
-  i: integer;
+  i: Integer;
 
 begin
   Result := nil;
@@ -7948,7 +8432,7 @@ end;
 
 procedure TPictureLinkList.SaveToCSV(fStream: tStream);
 var
-  i: integer;
+  i: Integer;
   s: UnicodeString;
   fmt: TTagTemplate;
 begin
@@ -7971,7 +8455,7 @@ end;
 
 // TTPictureList
 
-function TPictureList.Add(APicture: TTPicture; Resource: TResource): integer;
+function TPictureList.Add(APicture: TTPicture; Resource: TResource): Integer;
 begin
   Result := inherited Add(APicture);
   APicture.OnPicChanged := OnPicChanged;
@@ -7986,9 +8470,9 @@ begin
   // FOnAddPicture(APicture);
 end;
 
-function TPictureList.DirNumber(Dir: String): Word;
+function TPictureList.DirNumber(Dir: String): word;
 var
-  n: integer;
+  n: Integer;
   v: PWORD;
 begin
   Dir := lowercase(Dir);
@@ -8013,7 +8497,7 @@ procedure TPictureList.disposeDirList;
 var
   v: pNameCounter;
   v2: PWORD;
-  i: integer;
+  i: Integer;
   // s: PString;
 begin
   for i := 0 to FDirList.Count - 1 do
@@ -8106,7 +8590,7 @@ end;
 function TPictureList.fNamePatchDec(APic: TTPicture; FName: string)
   : pNameCounter;
 var
-  n: integer;
+  n: Integer;
   v: pNameCounter;
   LPic: TTPicture;
 begin
@@ -8140,54 +8624,76 @@ begin
     Result := nil;
 end;
 
-// procedure TPictureList.SavePrepare;
-// var
-// i: integer;
-// begin
-// FTags.SavePrepare;
-// end;
-
-procedure TPictureList.SaveToStream(fStream: tStream);
+procedure TPictureList.LoadFromStream(fStream: tStream; fversion: Integer;
+  fCB: TCallBackProgress);
 var
-  i,j: integer;
+  i, c: Integer;
+  p: TTPicture;
+  cancel: boolean;
 begin
-  fTags.SavePrepare;
-  fTags.SaveToStream(fStream);
+  cancel := false;
+  FTags.LoadFromStream(fStream, fversion);
+  fStream.ReadData(c);
+
+  //if Assigned(fCB) then
+  //  fCB(0, c);
+
+  for i := 0 to c - 1 do
+  begin
+    p := TTPicture.Create;
+    p.Index := i;
+    Add(p, nil);
+    p.LoadFromStream(fStream, fversion);
+    if Assigned(p.Parent) then
+    begin
+      p.Parent.Linked.Add(p);
+      inc(p.Parent.Linked.FParentCount);
+      p.BookMark := p.Parent.Linked.Count;
+      inc(FChildCount);
+    end
+    else
+    begin
+      inc(FParentCount);
+      p.BookMark := FParentCount;
+    end;
+    if Assigned(fCB) and (i mod 1000 = 0) then
+    begin
+      fCB(i + 1, c, cancel);
+      if cancel then
+        raise Exception.Create('Loading aborted');
+    end;
+  end;
+  if Assigned(fCB) then
+    fCB(c, c, cancel);
+end;
+
+procedure TPictureList.SaveToStream(fStream: tStream; fCB: TCallBackProgress);
+var
+  i: Integer;
+  cancel: boolean;
+begin
+  cancel := false;
+  FTags.SavePrepare;
+  FTags.SaveToStream(fStream);
 
   fStream.WriteData(Count);
   for i := 0 to Count - 1 do
   begin
-    // Items[i].SaveIndex := i;
-    // fStream.WriteData(Items[i].Resource.SaveIndex);
-    if Assigned(Items[i].Parent) then // parent
-      fStream.WriteData(Items[i].Parent.Index)
-    else
-      fStream.WriteData(-1);
-    fStream.WriteData(Items[i].Checked);
-    WriteStr(Items[i].DisplayLabel, fStream);
-    WriteStr(Items[i].Ext, fStream);
-    WriteStr(Items[i].FactFileName, fStream);
-    WriteStr(Items[i].FileName, fStream);
-    if Assigned(Items[i].MD5) then // possible MD5
-      WriteVar(Items[i].MD5^, fStream)
-    else
-      WriteVar(null, fStream);
-    WriteStr(Items[i].OriginalFileName, fStream);
-    WriteStr(Items[i].PicName, fStream);
-    fStream.WriteData(Items[i].PostProcessed);
-    fStream.WriteData(Items[i].Status = JOB_FINISHED);
-    Items[i].Meta.SaveToStream(fStream);
-
-    fStream.WriteData(Items[i].Tags.Count);
-    for j := 0 to Items[i].Tags.Count-1 do
-      fStream.WriteData(Items[i].Tags[j].SaveIndex);
+    Items[i].SaveToStream(fStream);
+    if Assigned(fCB) and (i mod 1000 = 0) then
+    begin
+      fCB(i + 1, Count, cancel);
+      if cancel then raise Exception.Create('Saving aborted');
+    end;
   end;
 
+  if Assigned(fCB) then
+    fCB(Count, Count, cancel);
 end;
 
 procedure TPictureList.SetPicChange(Value: TPicChangeEvent);
 var
-  i: integer;
+  i: Integer;
 begin
   FPicChange := Value;
   for i := 0 to Count - 1 do
@@ -8197,7 +8703,7 @@ end;
 function TPictureList.AddfName(APic: TTPicture; FName: string; InstUp: Boolean)
   : pNameCounter;
 var
-  n: integer;
+  n: Integer;
   v: pNameCounter;
   R: Boolean;
 begin
@@ -8275,7 +8781,7 @@ end;
 function TPictureList.AddfNamePatch(APic: TTPicture; FName: string;
   InstUp: Boolean): pNameCounter;
 var
-  n: integer;
+  n: Integer;
   v: pNameCounter;
 begin
   if not Assigned(APic.NameCounter) then
@@ -8295,7 +8801,7 @@ end;
 procedure TPictureList.AddPicList(APicList: TPictureList;
   ParentPic: TTPicture = nil);
 var
-  i, j { , v } : integer;
+  i, j { , v } : Integer;
   n: DWORD;
   t, ch: TTPicture;
 begin
@@ -8353,7 +8859,7 @@ procedure TPictureList.AddPicMeta(Pic: TTPicture; MetaName: String;
   MetaValue: Variant);
 var
   v: PVariant;
-  n: integer;
+  n: Integer;
   p: TMetaList;
 begin
   try
@@ -8382,7 +8888,7 @@ end;
 
 function TPictureList.CopyPicture(Pic: TTPicture; Child: Boolean): TTPicture;
 var
-  i: integer;
+  i: Integer;
 begin
   if not Assigned(Pic) then
   begin
@@ -8475,7 +8981,7 @@ begin
   inherited;
 end;
 
-procedure TPictureList.MakePicFileName(Index: integer; Format: String;
+procedure TPictureList.MakePicFileName(Index: Integer; Format: String;
   Child: Boolean; InstUp: Boolean = false);
 const
   FN_LN = 199;
@@ -8489,7 +8995,7 @@ var
 
     function formatstr(Value: Variant; aformat: string; d: byte): string;
     var
-      t: integer;
+      t: Integer;
       pt, ndr: Boolean;
     begin
       case d of
@@ -8544,7 +9050,7 @@ var
   var
     n: TListValue;
     s, p, tmp: string;
-    c: integer;
+    c: Integer;
     d: byte; // path mode; 0 - not a path, 1 - path without drive, 2 - path with drive
     // nc: pNameCounter;
   begin
@@ -8683,7 +9189,7 @@ var
   function ParseValues(Pic: TTPicture; bfr, s, aft: String; level: byte;
     b: Boolean = true): String;
   var
-    i, n: integer;
+    i, n: Integer;
     genval, // generic (%%) value exists
     gvalrs, // generic (%%) value have result
     conval, // constant ($$) value exists
@@ -8766,7 +9272,7 @@ var
 // check "<>" sections
   function ParseSections(Pic: TTPicture; s: string): string;
   var
-    i, n, l, level: integer;
+    i, n, l, level: Integer;
   begin
     // s := ParseValues(pic,s, false);
     fncounter := 0;
@@ -8892,7 +9398,7 @@ var
   end;
 
 var
-  i: integer;
+  i: Integer;
 
 begin
   if not makenames then
@@ -8910,7 +9416,7 @@ end;
 procedure TPictureList.Notify(Ptr: Pointer; Action: TListNotification);
 var
   p: TTPicture;
-  i: integer;
+  i: Integer;
 begin
   case Action of
     lnDeleted:
@@ -8935,7 +9441,7 @@ end;
 
 procedure TPictureList.DeallocateMeta;
 var
-  i: integer;
+  i: Integer;
   p: TMetaList;
 begin
   for i := 0 to FMetaContainer.Count - 1 do
@@ -8948,7 +9454,7 @@ end;
 
 procedure TPictureLinkList.Reset;
 var
-  i: integer;
+  i: Integer;
 
 begin
   ResetPicCounter;
@@ -9026,7 +9532,7 @@ end;
 
 procedure TPictureLinkList.ResetPost;
 var
-  i: integer;
+  i: Integer;
 begin
   FPostFinishCursor := 0;
   PostProcessFinished;
@@ -9036,9 +9542,9 @@ begin
       Items[i].Status := JOB_NOJOB;
 end;
 
-procedure TPictureLinkList.RestartCursor(AFrom: integer = 0);
+procedure TPictureLinkList.RestartCursor(AFrom: Integer = 0);
 var
-  i: integer;
+  i: Integer;
 begin
   // if FCursor < AFrom then
   // Exit
@@ -9057,9 +9563,9 @@ begin
   FCursor := Count;
 end;
 
-procedure TPictureLinkList.RestartPostCursor(AFrom: integer = 0);
+procedure TPictureLinkList.RestartPostCursor(AFrom: Integer = 0);
 var
-  i: integer;
+  i: Integer;
 begin
   // if FCursor < AFrom then
   // Exit
@@ -9077,7 +9583,7 @@ end;
 
 function TPictureList.CheckBlackList(Pic: TTPicture): Boolean;
 var
-  i, l: integer;
+  i, l: Integer;
 begin
   for i := 0 to length(FBlackList) - 1 do
     if SameText(FBlackList[i][0], 'tags') then
@@ -9098,11 +9604,11 @@ end;
 
 function TPictureList.CheckDoubles(Pic: TTPicture): Boolean;
 var
-  i: integer;
+  i: Integer;
   sstr, rstr, srfield, chfield: String;
   v1: Variant;
   m: TMetaList;
-  Pos: integer;
+  Pos: Integer;
 begin
   Result := false;
   for i := 0 to length(FIgnoreList) - 1 do
@@ -9153,7 +9659,7 @@ end;
 procedure TResourceFields.Assign(List: TResourceFields;
   AOperator: TListAssignOp);
 var
-  i: integer;
+  i: Integer;
   // p: PResourceField;
 
 begin
@@ -9193,9 +9699,9 @@ begin
   inherited;
 end;
 
-function TResourceFields.FindField(resname: String): integer;
+function TResourceFields.FindField(resname: String): Integer;
 var
-  i: integer;
+  i: Integer;
 begin
   resname := lowercase(resname);
   for i := 0 to Count - 1 do
@@ -9220,7 +9726,7 @@ begin
   end;
 end;
 
-function TResourceFields.Get(Index: integer): PResourceField;
+function TResourceFields.Get(Index: Integer): PResourceField;
 begin
   Result := inherited Items[Index];
 end;
@@ -9235,7 +9741,7 @@ end;
 
 function TResourceFields.GetValue(ItemName: String): Variant;
 var
-  i: integer;
+  i: Integer;
 begin
   ItemName := lowercase(ItemName);
   for i := 0 to Count - 1 do
@@ -9249,7 +9755,7 @@ end;
 
 procedure TResourceFields.SetValue(ItemName: String; Value: Variant);
 var
-  i: integer;
+  i: Integer;
 
 begin
   ItemName := lowercase(ItemName);
@@ -9259,12 +9765,12 @@ begin
       Items[i].resvalue := Value;
       Exit;
     end;
-  raise Exception.Create('field does not exist' + ItemName);
+  raise Exception.Create('field does not exist: ' + ItemName);
 end;
 
 function TResourceFields.AddField(resname: string; restitle: string;
   restype: TFieldType; resvalue: Variant; resitems: String;
-  InMulti: Boolean): integer;
+  InMulti: Boolean): Integer;
 var
   p: PResourceField;
 begin
@@ -9303,13 +9809,14 @@ begin
     d.Finish := Finish;
     d.OnTerminate := ThreadTerminate;
     d.HTTP.CookieList := FCookie;
+    d.HTTP.PACParser := PACParser;
     d.MaxRetries := Retries;
     d.LogMode := LogMode;
     Add(d);
   end;
 end;
 
-function TThreadHandler.Finish(t: TDownloadThread): integer;
+function TThreadHandler.Finish(t: TDownloadThread): Integer;
 begin
   if t.STOPERROR then
   begin
@@ -9335,7 +9842,7 @@ end;
 
 procedure TThreadHandler.FinishQueue;
 var
-  i: integer;
+  i: Integer;
   l: TList;
   p: TDownloadThread;
 
@@ -9356,7 +9863,7 @@ end;
 
 procedure TThreadHandler.FinishThreads(Force: Boolean);
 var
-  i: integer;
+  i: Integer;
   p: TDownloadThread;
   l: TList;
 
@@ -9398,6 +9905,12 @@ procedure TThreadHandler.SetProxy(t: TDownloadThread);
 begin
   if not Assigned(t.Resource) then
     Exit;
+
+  if Proxy.UsePAC and (Proxy.PACHost <> '') then
+  begin
+    t.HTTP.UsePAC := Proxy.UsePAC;
+    Exit;
+  end;
 
   if (t.Resource.ThreadCounter.UseProxy = -1) and (Proxy.UseProxy > 0) or
     (t.Resource.ThreadCounter.UseProxy = 1) or
@@ -9445,7 +9958,7 @@ end;
 procedure TThreadHandler.CheckIdle(ALL: Boolean = false);
 var
   l: TList;
-  i: integer;
+  i: Integer;
   p: TDownloadThread;
 
 begin
@@ -9487,9 +10000,9 @@ begin
   // inherited;
 end;
 
-function strFind(Value: string; List: TStringList; var Index: integer): Boolean;
+function strFind(Value: string; List: TStringList; var Index: Integer): Boolean;
 var
-  Hi, Lo: integer;
+  Hi, Lo: Integer;
 
 begin
   if List.Count = 0 then
@@ -9506,9 +10019,9 @@ begin
   try
     while (Hi - Lo) > 0 do
     begin
-      if Value = List[index] then
+      if SameText(Value, List[index]) then
         Break
-      else if Value < List[index] then
+      else if lowercase(Value) < lowercase(List[index]) then
         Hi := index - 1
       else
         Lo := index + 1;
@@ -9538,27 +10051,39 @@ end;
 
 procedure WriteStr(s: String; fStream: tStream);
 var
-  w: Word;
+  w: word;
 begin
   w := length(s) * SizeOf(Char);
-  fStream.WriteData(w);
-  fStream.Write(s[1], length(s) * SizeOf(Char));
+  // fStream.WriteData(w);
+  fStream.Write(w, SizeOf(word));
+  fStream.Write(s[1], w);
   // fStream.WriteData(0);
+end;
+
+function ReadStr(fStream: tStream): String;
+var
+  w: word;
+begin
+  // fStream.ReadData(w);
+  fStream.Read(w, SizeOf(word));
+  SetLength(Result, w div SizeOf(Char));
+  if w > 0 then
+    fStream.Read(Result[1], w);
 end;
 
 procedure WriteVar(s: Variant; fStream: tStream);
 var
-  vType: Word;
-  vSize: Word;
+  VType: word;
+  vSize: word;
   vData: Pointer;
 
 begin
   // VarAsType(
   // p := VarArrayLock(s); try
   // w := VarArrayHighBound(s,1) - VarArrayLowBound(s,1) + 1;
-  vType := tVarData(s).vType;
-  fStream.WriteData(vType);
-  case vType of
+  VType := tVarData(s).VType;
+  fStream.WriteData(VType);
+  case VType of
     varEmpty:
       begin
         vSize := 0;
@@ -9576,7 +10101,7 @@ begin
       end;
     varInteger:
       begin
-        vSize := SizeOf(integer);
+        vSize := SizeOf(Integer);
         vData := @tVarData(s).VInteger;
       end;
     varSingle:
@@ -9607,7 +10132,7 @@ begin
       end;
     varBoolean:
       begin
-        vSize := SizeOf(Boolean);
+        vSize := SizeOf(WordBool);
         vData := @tVarData(s).VBoolean;
       end;
     varShortInt:
@@ -9622,7 +10147,7 @@ begin
       end;
     varWord:
       begin
-        vSize := SizeOf(Word);
+        vSize := SizeOf(word);
         vData := @tVarData(s).VWord;
       end;
     varLongWord:
@@ -9632,7 +10157,7 @@ begin
       end;
     varInt64:
       begin
-        vSize := SizeOf(Int64);
+        vSize := SizeOf(int64);
         vData := @tVarData(s).VInt64;
       end;
     varUInt64:
@@ -9660,14 +10185,100 @@ begin
     raise Exception.Create('Unknown type of data');
   end;
 
-  if (vType = varOleStr) or (vType = varString) or (vType = varUString) then
+  if (VType = varOleStr) or (VType = varString) or (VType = varUString) then
     fStream.WriteData(vSize);
   fStream.Write(vData^, vSize);
 end;
 
 function ReadVar(fStream: tStream): Variant;
+var
+  w, sz: word;
+  v: pVarData;
 begin
+  // SetVarType(
+  // SetLength(s, 0);
+  v := @tVarData(Result);
+  Result := Unassigned;
+  fStream.ReadData(w);
+  v.VType := w;
+  case w of
+    varEmpty:
+      ;
 
+    varNull:
+      Result := null;
+
+    varSmallInt:
+      fStream.ReadData(v.VSmallInt);
+
+    varInteger:
+      fStream.ReadData(v.VInteger);
+
+    varSingle:
+      fStream.ReadData(v.VSingle);
+
+    varDouble:
+      fStream.ReadData(v.VDouble);
+
+    varCurrency:
+      fStream.Read(v.VCurrency, SizeOf(Currency));
+
+    varDate:
+      fStream.Read(v.VDate, SizeOf(TDateTime));
+
+    varOleStr:
+      begin
+        fStream.ReadData(sz);
+        SetLength(WideString(Pointer(v.VOleStr)), sz div SizeOf(WideChar));
+        fStream.Read(v.VOleStr^, sz);
+      end;
+
+    varBoolean:
+      fStream.Read(v.VBoolean, SizeOf(WordBool));
+
+    varShortInt:
+      fStream.ReadData(v.VShortInt);
+
+    varByte:
+      fStream.ReadData(v.VByte);
+
+    varWord:
+      fStream.ReadData(v.VWord);
+
+    varLongWord:
+      fStream.ReadData(v.VLongWord);
+
+    varInt64:
+      fStream.ReadData(v.VInt64);
+
+    varUInt64:
+      fStream.ReadData(v.VUInt64);
+
+    varString:
+      begin
+        fStream.ReadData(sz);
+        SetLength(AnsiString(v.VString), sz);
+        fStream.Read(v.VString^, sz);
+      end;
+
+    varUString:
+      begin
+        fStream.ReadData(sz);
+        SetLength(UnicodeString(v.VUString), sz div SizeOf(WideChar));
+        fStream.Read(v.VUString^, sz);
+      end;
+
+    varDispatch:
+      raise Exception.Create('Type "Dispatch" is not supported');
+
+    varUnknown:
+      raise Exception.Create('Type "Unknown" is not supported');
+
+    varAny:
+      raise Exception.Create('Type "Any" is not supported');
+  else
+    raise Exception.Create('Unknown type of data');
+  end;
 end;
 
 initialization
