@@ -1,4 +1,4 @@
-<item file="Graber2.exe"   archive="Graber2.zip"     version=124 />
+<item file="Graber2.exe"   archive="Graber2.zip"     version=125 />
 <item file="libeay32.sys"  archive="libeay32.zip"    version=0 deleted=1 />
 <item file="ssleay32.sys"  archive="ssleay32.zip"    version=0 deleted=1 />
 <item file="libeay32.dll"  archive="libeay32.zip"    version=0 />
@@ -10,7 +10,7 @@
 <item file="resources\danbooru2.tmpl"              version=7  />
 <item file="resources\gelbooru.tmpl"               version=18 />
 
-<item file="resources\analbooru.com.cfg"           version=4 />
+<item file="resources\analbooru.com.cfg"           version=5 />
 <item file="resources\allthefallen.org.cfg"        version=1 />
 <item file="resources\anime-pictures.net.cfg"      version=7 />
 <item file="resources\behoimi.org.cfg"             version=2 />
@@ -29,16 +29,16 @@
 <item file="resources\exhentai.org.cfg"            version=10 />
 <item file="resources\furaffinity.net.cfg"         version=14 />
 <item file="resources\gelbooru.com.cfg"            version=3 />
-<item file="resources\hentai-foundry.com.cfg"      version=13 />
+<item file="resources\hentai-foundry.com.cfg"      version=14 />
 <item file="resources\konachan.com.cfg"            version=3 />
 <item file="resources\mangahere.com.cfg"           version=6 />
-<item file="resources\mgbooru.net.cfg"             version=3 />
+<item file="resources\mgbooru.net.cfg"             version=4 />
 <item file="resources\minitokyo.net.cfg"           version=13 />
 <item file="resources\nabyn.com.cfg"               version=6 />
 <item file="resources\nhentai.net.cfg"             version=1 />
-<item file="resources\seiga.nicovideo.jp.cfg"      version=3 />
+<item file="resources\seiga.nicovideo.jp.cfg"      version=4 />
 <item file="resources\nihonomaru.com.cfg"          version=1 />
-<item file="resources\rule34.paheal.net.cfg"       version=11 />
+<item file="resources\rule34.paheal.net.cfg"       version=13 />
 <item file="resources\pixiv.net.cfg"               version=24 />
 <item file="resources\pururin.com.cfg"             version=0 />
 <item file="resources\rmart.org.cfg"               version=13 />
