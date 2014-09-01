@@ -55,11 +55,15 @@ $gui_thumbs_dir = 'preview/';
 $gui_images_dir = '';
 $gui_thumbs_part = '';
 $gui_images_part = '';
+$rplfrom = "";
+$rplto = "_";
 
 
 @addfield("src","Source","indexlistbox",0,"Posts","Pool ID");
 
 [listscript]
+
+$tag = @replace($rplto,$rplfrom,$tag);
 
 ;unknown ext mode;
 ?$tryext=1{$thread.tryext = "jpg,gif,png,swf";};
@@ -82,7 +86,7 @@ $gui_images_part = '';
 			$thread.xml = 'listxml';	
 		}
 
-		$thread.url = "$main.url+'post/index.'+$fpxml+'?limit=100&tags='+@httpencode($tag)+'&page='+$thread.counter+1";
+		$thread.url = "'" + $main.url + "post/index." + $fpxml + "?limit=100&tags=" + @httpencode(@isolate("'",$tag)) + "&page='+$thread.counter+1";
 		$thread.xmlcontent = $fpxml;
 		$thread.execute();
 		$thread.xml = 'listxml';
@@ -94,7 +98,7 @@ $gui_images_part = '';
 	?$src=1{
 		$thread.xmlcontent = 'xml';
 		$thread.xml = 'poolxml';
-		$thread.url = "'"+$main.url+"pool/show.xml?id="+@httpencode($tag)+"&page='+$thread.counter+1";
+		$thread.url = "'"+$main.url+"pool/show.xml?id="+@httpencode(@isolate("'",$tag))+"&page='+$thread.counter+1";
 		;$thread.url = "'"+$main.url+"pool/show.xml?id="+@httpencode($tag)+"'";
 		@thread.execute;
 				

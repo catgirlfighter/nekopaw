@@ -6,7 +6,7 @@
 <item file="pac.dll"       archive="pac.zip"         version=0 />
 <item file="versionlog.txt"                          version=-1 />
 
-<item file="resources\danbooru.tmpl"               version=31 />
+<item file="resources\danbooru.tmpl"               version=32 />
 <item file="resources\danbooru2.tmpl"              version=7  />
 <item file="resources\gelbooru.tmpl"               version=18 />
 
@@ -42,7 +42,7 @@
 <item file="resources\pixiv.net.cfg"               version=24 />
 <item file="resources\pururin.com.cfg"             version=0 />
 <item file="resources\rmart.org.cfg"               version=13 />
-<item file="resources\rule34hentai.net.cfg"        version=0 />
+<item file="resources\rule34hentai.net.cfg"        version=1 />
 <item file="resources\safebooru.org.cfg"           version=3 />
 <item file="resources\chan.sankakucomplex.com.cfg" version=14 />
 <item file="resources\idol.sankakucomplex.com.cfg" version=12 />
