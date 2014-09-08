@@ -8,7 +8,7 @@
 
 <item file="resources\danbooru.tmpl"               version=32 />
 <item file="resources\danbooru2.tmpl"              version=7  />
-<item file="resources\gelbooru.tmpl"               version=18 />
+<item file="resources\gelbooru.tmpl"               version=19 />
 
 <item file="resources\analbooru.com.cfg"           version=5 />
 <item file="resources\allthefallen.org.cfg"        version=1 />
@@ -28,7 +28,7 @@
 <item file="resources\e621.net.cfg"                version=4 />
 <item file="resources\exhentai.org.cfg"            version=10 />
 <item file="resources\furaffinity.net.cfg"         version=14 />
-<item file="resources\gelbooru.com.cfg"            version=3 />
+<item file="resources\gelbooru.com.cfg"            version=4 />
 <item file="resources\hentai-foundry.com.cfg"      version=14 />
 <item file="resources\konachan.com.cfg"            version=3 />
 <item file="resources\mangahere.com.cfg"           version=6 />
