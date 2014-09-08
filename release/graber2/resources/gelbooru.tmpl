@@ -21,7 +21,9 @@ $pwdstring = 'pass';
 $main.login = '$main.url+$addpath+"index.php?page=account&s=login&code=00"';
 $main.loginpost = '$userstring+"="+$login+"&"+$pwdstring+"="+$password+"&submit=Log in"';
 
+$picture.template.ext = '%ext%';
 $source = 'api';
+$tryext = 0;
 $picsperpage = 28;
 $gui_thumbs_dir = 'thumbs/';
 $gui_images_dir = 'images/';
@@ -33,7 +35,9 @@ $gui_images_part = '';
 
 ?$src = 0{
 	?$source = 'api'{
+		$thread.xmlcontent = 'html';
 		;$thread.url = "$main.url+$addpath+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)";
+		?$tryext=1{$thread.tryext = "jpg,jpeg,gif,png";}
 		$thread.url = "$main.url+$addpath+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)+'&pid='+$thread.counter";
 		$thread.xml = 'firstpagexml';
 		$thread.execute();
@@ -42,6 +46,7 @@ $gui_images_part = '';
 	?$source = 'gui'{
 		$thread.xmlcontent = 'html';
 		;$thread.url = "$main.url+$addpath+'index.php?page=post&s=list&tags='+@httpencode($tag)";
+		?$tryext=1{$thread.tryext = "jpg,jpeg,gif,png";}
 		$thread.url = "$main.url+$addpath+'index.php?page=post&s=list&tags='+@httpencode($tag)+'&pid='+$thread.counter*$picsperpage";
 		$thread.xml = 'fpgui';
 		$thread.execute();
@@ -59,6 +64,7 @@ $gui_images_part = '';
 
 [dwscript]
 $thread.url = $picture%url;
+?$tryext=1{$thread.url = @changeext("%ext%",$thread.url);}
 $thread.referer = $picture%post_url;
 
 [firstpagexml]
@@ -82,6 +88,8 @@ $thread.referer = $picture%post_url;
 			%tags=csv(#tags," ")
 		);
 		$picture.filename = @emptyname(#file_url);
+		?$tryext=1{$picture.filename = @changeext("%ext%",@emptyname(#file_url));}
+		?$tryext=0{$picture.filename = @emptyname(#file_url);}
 	}
 }
 
@@ -103,7 +111,8 @@ $thread.referer = $picture%post_url;
 			%aspect_ratio=#width/#height,
 			%tags=csv(#tags," ")
 		);
-		$picture.filename = @emptyname(#file_url);
+		?$tryext=1{$picture.filename = @changeext("%ext%",@emptyname(#file_url));}
+		?$tryext=0{$picture.filename = @emptyname(#file_url);}
 	}
 }
 
