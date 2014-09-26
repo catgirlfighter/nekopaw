@@ -37,7 +37,7 @@ $gui_images_part = '';
 	?$source = 'api'{
 		$thread.xmlcontent = 'html';
 		;$thread.url = "$main.url+$addpath+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)";
-		?$tryext=1{$thread.tryext = "jpg,jpeg,gif,png";}
+		?$tryext=1{$thread.tryext = "jpg,jpeg,gif,png,bmp";}
 		$thread.url = "$main.url+$addpath+'index.php?page=dapi&s=post&q=index&tags='+@httpencode($tag)+'&pid='+$thread.counter";
 		$thread.xml = 'firstpagexml';
 		$thread.execute();
