@@ -8,7 +8,7 @@
 
 <item file="resources\danbooru.tmpl"               version=32 />
 <item file="resources\danbooru2.tmpl"              version=7  />
-<item file="resources\gelbooru.tmpl"               version=19 />
+<item file="resources\gelbooru.tmpl"               version=20 />
 
 <item file="resources\analbooru.com.cfg"           version=5 />
 <item file="resources\allthefallen.org.cfg"        version=1 />
