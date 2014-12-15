@@ -1,4 +1,4 @@
-<item file="Graber2.exe"   archive="Graber2.zip"     version=131 />
+<item file="Graber2.exe"   archive="Graber2.zip"     version=132 />
 <item file="libeay32.sys"  archive="libeay32.zip"    version=0 deleted=1 />
 <item file="ssleay32.sys"  archive="ssleay32.zip"    version=0 deleted=1 />
 <item file="libeay32.dll"  archive="libeay32.zip"    version=0 />
@@ -27,7 +27,7 @@
 <item file="resources\e-shuushuu.net.cfg"          version=4 />
 <item file="resources\e621.net.cfg"                version=4 />
 <item file="resources\exhentai.org.cfg"            version=10 />
-<item file="resources\furaffinity.net.cfg"         version=14 />
+<item file="resources\furaffinity.net.cfg"         version=15 />
 <item file="resources\gelbooru.com.cfg"            version=4 />
 <item file="resources\hentai-foundry.com.cfg"      version=16 />
 <item file="resources\konachan.com.cfg"            version=3 />
@@ -38,7 +38,7 @@
 <item file="resources\nhentai.net.cfg"             version=1 />
 <item file="resources\seiga.nicovideo.jp.cfg"      version=4 />
 <item file="resources\nihonomaru.com.cfg"          version=1 />
-<item file="resources\rule34.paheal.net.cfg"       version=14 />
+<item file="resources\rule34.paheal.net.cfg"       version=15 />
 <item file="resources\pixiv.net.cfg"               version=32 />
 <item file="resources\pururin.com.cfg"             version=1 />
 <item file="resources\rmart.org.cfg"               version=13 />
