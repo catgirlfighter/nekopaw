@@ -1,5 +1,5 @@
-# nekopaw
-About Graber 2 "Nekopaw"
+# About Graber 2 "Nekopaw"
+
 
 Win32 utility with visual interface for saving images from any galleries (like standart *booru, devintart, pixiv and other). Program based on script-files with algorithms to access needed resources.
 
