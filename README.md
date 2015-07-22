@@ -1,26 +1,25 @@
-# About Graber 2 "Nekopaw"
+# About Nekopaw Grabber
+Former name is Graber 2 "Nekopaw"
 
-Win32 utility with visual interface for saving images from any galleries (like standart *booru, devintart, pixiv and other). Program based on script-files with algorithms to access needed resources.
+It's Win32 utility with a visual interface for saving images from any galleries (like standart *booru, devintart, pixiv and other). Program based on script-files with algorithms to access needed resources.
 
-Currently is an alpha test (and no one know, when it becomes an beta).
-
-Ask and suggest you can here.
+Currently is an alpha test (and no one knows, when it'll become a beta).
 
 Update log you can see in versionlog.txt (in the nekopaw directory).
 
 Features:
 
-✓ downloading pictures from listed resources (scripts stored in "resources" directory);
+✓ download pictures from listed resources (scripts stored in "resources" directory);
 
-✓ tabs system, on every tab own list;
+✓ tab system, on every tab it's own list;
 
-✓ creating of custom lists with multiple resources at the same time (even the same resources with diffirent options);
+✓ creation of custom lists with multiple resources at the same time (even the same resources with diffirent options);
 
-✓ the simultaneous gathering of lists from multiple sources, simultaneously downloading several pages;
+✓ the simultaneous gathering of lists from multiple sources, simultaneously downloading from several pages;
 
-✓ looking for duplicates by parameters, gathered from resources, before download picture;
+✓ looking for duplicates by parameters, gathered from resources, before download a picture;
 
-✓ feature to make custom names using gathered parameters and built-in variables;
+✓ feature to make custom file names using gathered parameters and built-in variables;
 
 search block
 
