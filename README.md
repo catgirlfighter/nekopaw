@@ -7,6 +7,14 @@ Currently is an alpha test (and no one knows, when it'll become a beta).
 
 Update log you can see in versionlog.txt (in the nekopaw directory).
 
+How to install:
+
+Download an archive
+
+https://github.com/catgirlfighter/nekopaw/blob/master/release/graber2/NPUpdater.zip
+
+Copy and extract it to a directory, where you want the Nekopaw Grabber to be installed. Execute NPUpdater.exe. Done.
+
 Features:
 
 ✓ download pictures from listed resources (scripts stored in "resources" directory);
