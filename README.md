@@ -13,7 +13,7 @@ Download an archive
 
 https://github.com/catgirlfighter/nekopaw/blob/master/release/graber2/NPUpdater.zip
 
-Copy and extract it to a directory, where you want the Nekopaw Grabber to be installed. Execute NPUpdater.exe. Done.
+Copy and extract it to a directory, where you want Nekopaw Grabber to be installed. Execute NPUpdater.exe. Done.
 
 Features:
 
