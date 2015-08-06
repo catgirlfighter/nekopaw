@@ -21,19 +21,6 @@ uses
   {graber2}
   common, OpBase, graberU, MyHTTP, UPDUnit, Balloon, Vcl.Menus {, dxSkinBlack}
     , ProgressForm, dxBarExtItems;
-{ skins }
-{ dxSkinsCore, dxSkinBlack, dxSkinBlue, dxSkinBlueprint, dxSkinCaramel,
-  dxSkinCoffee, dxSkinDarkRoom, dxSkinDarkSide, dxSkinDevExpressDarkStyle,
-  dxSkinDevExpressStyle, dxSkinFoggy, dxSkinGlassOceans, dxSkinHighContrast,
-  dxSkiniMaginary, dxSkinLilian, dxSkinLiquidSky, dxSkinLondonLiquidSky,
-  dxSkinMcSkin, dxSkinMoneyTwins, dxSkinOffice2007Black, dxSkinOffice2007Blue,
-  dxSkinOffice2007Green, dxSkinOffice2007Pink, dxSkinOffice2007Silver,
-  dxSkinOffice2010Black, dxSkinOffice2010Blue, dxSkinOffice2010Silver,
-  dxSkinPumpkin, dxSkinSeven, dxSkinSevenClassic, dxSkinSharp, dxSkinSharpPlus,
-  dxSkinSilver, dxSkinSpringTime, dxSkinStardust, dxSkinSummer2008,
-  dxSkinTheAsphaltWorld, dxSkinsDefaultPainters, dxSkinValentine, dxSkinVS2010,
-  dxSkinWhiteprint, dxSkinXmas2008Blue, dxSkinsForm, dxSkinscxPCPainter,
-  dxSkinsdxNavBarPainter, dxSkinsdxDockControlPainter, dxSkinsdxBarPainter }
 
 type
 
@@ -262,92 +249,8 @@ end;
 destructor TMycxTabSheet.Destroy;
 begin
   FTimer.Free;
-  { if Assigned(MainFrame) then
-    begin
-    if (MainFrame is TfGrid) then
-    (MainFrame as TfGrid).Relise;
-    MainFrame.Free;
-    end;
-    if Assigned(SecondFrame) then
-    SecondFrame.Free; }
   inherited;
 end;
-
-{ procedure TcxPageControl.DoClose;
-  begin
-  if Assigned(FOnPageClose) then
-  FOnPageClose(Self, ActivePage)
-  else
-  inherited;
-  end; }
-
-{ TmycxGridTableView }
-
-{ constructor TmycxGridTableView.Create(AOwner: TComponent);
-  begin
-  inherited Create(AOwner);
-  OnGetExpandable := nil;
-  end;
-
-  function TmycxGridTableView.GetViewDataClass: TcxCustomGridViewDataClass;
-  begin
-  Result := TmycxGridViewData;
-  end; }
-
-{ TmycxGridViewData }
-
-{ function TmycxGridViewData.GetRecordClass(ARecordInfo: TcxRowInfo)
-  : TcxCustomGridRecordClass;
-  begin
-  Result := inherited GetRecordClass(ARecordInfo);
-  if Result = TcxGridMasterDataRow then
-  Result := TmycxGridMasterDataRow;
-  end; }
-
-{ TmycxGridGroupRow }
-
-{ function TmycxGridMasterDataRow.GetExpandable: Boolean;
-  begin
-  Result := false;
-  if Assigned((GridView as TmycxGridTableView).OnGetExpandable) then
-  (GridView as TmycxGridTableView).OnGetExpandable(Self, Result) else Result
-  := inherited GetExpandable;
-  end; }
-
-{ Tmf }
-
-{ procedure Tmf.tvMainRecordExpandable(MasterDataRow: TcxGridMasterDataRow;
-  var Expandable: Boolean);
-  begin
-  Expandable := MasterDataRow.RecordIndex > 0;
-  end; }
-
-{ procedure Tmf.EXPANDROW(var Msg: TMessage);
-  var
-  mr: TcxCustomGridRecord;
-  gv: TcxGridTableView;
-  cl: TcxCustomGridView;
-  begin
-  if not((TObject(Msg.WParam) is TcxCustomGridRecord) and
-  (TObject(Msg.LParam) is TcxGridTableView)) then
-  Exit;
-  mr := TcxCustomGridRecord(Msg.WParam);
-  gv := TcxGridTableView(Msg.LParam);
-  cl := gv.Clones[gv.CloneCount - 1];
-  cl.BeginUpdate;
-  try
-  if mr.RecordIndex = 1 then
-
-  with cl.DataController do
-  begin
-  cl.DataController.RecordCount := 2;
-  cl.DataController.Values[0, 1] := 'album1url1';
-  cl.DataController.Values[1, 1] := 'album1url2';
-  end;
-  finally
-  cl.EndUpdate;
-  end;
-  end; }
 
 procedure Tmf.WMActivate(var Msg: TWMActivate);
 begin
@@ -512,59 +415,65 @@ begin
   else
     FCurPic := a;
 
-  vgCurMain.BeginUpdate;
-  try
-
-    if FCurPic = nil then
-    begin
-      vgCurMain.ClearRows;
-      chlbTags.Clear;
-      Exit;
-    end;
-
+  if FCurPic = nil then
+  begin
     vgCurMain.ClearRows;
-    dm.CreateField(vgCurMain, 'vgiRName', lang('_RESNAME_'), '', ftString, nil,
-      a.Resource.name, true);
-
-    if (a.Linked.Count = 0) and ((a.PicName <> '') or (a.Ext <> '')) then
-      dm.CreateField(vgCurMain, 'vgiName', lang('_FILENAME_'), '', ftString,
-        nil, a.PicName + '.' + a.Ext, true);
-
-    if (a.FactFileName = '') then
-      if a.Linked.Count > 0 then
-        dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '',
-          ftPathText, nil, ExtractFilePath(a.Linked[0].FileName), true)
-      else
-        dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '',
-          ftPathText, nil, a.FileName, true)
-    else
-      dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '',
-        ftPathText, nil, a.FactFileName, true);
-
-    for i := 0 to a.Meta.Count - 1 do
-      with a.Meta.Items[i] do
-        dm.CreateField(vgCurMain, 'avgi' + Name, Name, '', VrType(Value), nil,
-          VarToStr(Value), true);
-
-    if assigned(a.MD5) then
-      dm.CreateField(vgCurMain, 'vgiMD5', lang('_MD5_'), '', ftString, nil,
-        a.MD5^, true);
-
-  finally
-    vgCurMain.EndUpdate;
+    chlbTags.Clear;
+    Exit;
   end;
 
-  chlbTags.Items.BeginUpdate;
+  a.List.LockList{('PicInfo')};
   try
 
-    chlbTags.Clear;
+    vgCurMain.BeginUpdate;
+    try
 
-    for i := 0 to a.Tags.Count - 1 do
-      chlbTags.AddItem(a.Tags[i].name + ' (' +
-        IntTOStr(a.Tags[i].Linked.Count) + ')');
+      vgCurMain.ClearRows;
+      dm.CreateField(vgCurMain, 'vgiRName', lang('_RESNAME_'), '', ftString,
+        nil, a.Resource.name, true);
 
+      if (a.Linked.Count = 0) and ((a.PicName <> '') or (a.Ext <> '')) then
+        dm.CreateField(vgCurMain, 'vgiName', lang('_FILENAME_'), '', ftString,
+          nil, a.PicName + '.' + a.Ext, true);
+
+      if (a.FactFileName = '') then
+        if a.Linked.Count > 0 then
+          dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '',
+            ftPathText, nil, ExtractFilePath(a.Linked.ItemList[0].FileName), true)
+        else
+          dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '',
+            ftPathText, nil, a.FileName, true)
+      else
+        dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '',
+          ftPathText, nil, a.FactFileName, true);
+
+      for i := 0 to a.Meta.Count - 1 do
+        with a.Meta.Items[i] do
+          dm.CreateField(vgCurMain, 'avgi' + Name, Name, '', VrType(Value), nil,
+            VarToStr(Value), true);
+
+      if assigned(a.MD5) then
+        dm.CreateField(vgCurMain, 'vgiMD5', lang('_MD5_'), '', ftString, nil,
+          a.MD5^, true);
+
+    finally
+      vgCurMain.EndUpdate;
+    end;
+
+    chlbTags.Items.BeginUpdate;
+    try
+
+      chlbTags.Clear;
+
+      for i := 0 to a.Tags.Count - 1 do
+        chlbTags.AddItem(a.Tags[i].name + ' (' +
+          IntToStr(a.Tags[i].Linked.Count) + ')');
+
+    finally
+      chlbTags.Items.EndUpdate;
+    end;
   finally
-    chlbTags.Items.EndUpdate;
+    a.List.UnlockList;
   end;
 end;
 
@@ -631,16 +540,9 @@ begin
     begin
       chlbFullTags.Items.BeginUpdate;
       try
-        // chlbFullTags.Clear;
-
-        // t := (sender as tpicturetaglist);
         l := t.Count - 1;
         for i := 0 to l do
-          // if (n < chlbFullTags.Items.Count)and(chlbFullTags.Items[n].Tag = Integer(ResList.PictureList.Tags[i])) then
           if (t[i].Tag > -1) then
-            // if (t[i].Tag < chlbFullTags.Items.Count)
-            // and(chlbFullTags.Items[t[i].Tag].Tag = Integer(
-            // ResList.PictureList.Tags[t[i].Tag])) then
             if (ResList.PictureList.Tags[t[i].Tag].Tag <> 0) then
             begin
               ACheckItem := TcxCheckListBoxItem
@@ -692,7 +594,7 @@ var
   f: TfNewList;
   f2: tfGrid;
   isnew: Boolean;
-  l: tResourceList;
+  l: TResourceList;
 begin
   n := TMycxTabSheet(Msg.WParam);
 
@@ -707,16 +609,16 @@ begin
     l.CreatePicFields;
     f2 := tfGrid.Create(n);
     f2.SetList(l);
+    f2.Autorun := true;
     // f2.CreateList;
     f2.OnError := OnError;
     f2.OnLog := OnLog;
 
     if (VarToStr(f.FullResList[0].Fields['tag']) <> '') then
       n.Caption := trim(f.FullResList[0].Fields['tag'])
-    else if (l.Count < 2) and
-      (VarToStr(l[0].Fields['tag']) <> '') then
-      n.Caption := trim(l[0].RestoreTagString(f.ActualResList[0]
-        .Fields['tag'], l[0].HTTPRec.TagTemplate));
+    else if (l.Count < 2) and (VarToStr(l[0].Fields['tag']) <> '') then
+      n.Caption := trim(l[0].RestoreTagString(f.ActualResList[0].Fields['tag'],
+        l[0].HTTPRec.TagTemplate));
 
     f2.ResList.OnPageComplete := DoRefreshResInfo;
 
@@ -738,7 +640,8 @@ begin
     f2.OnPicChanged := DoPicInfo;
     f2.Setlang;
     f2.SetMenus;
-  end else
+  end
+  else
   begin
     f.Release;
     FreeAndNil(n.SecondFrame);
@@ -937,9 +840,21 @@ end;
 procedure Tmf.CANCELNEWLIST(var Msg: TMessage);
 var
   n: TMycxTabSheet;
-
+  f: tfnewList;
+  f2: tfGrid;
 begin
   n := Pointer(Msg.WParam);
+  f := n.SecondFrame as tfNewlist;
+  if Assigned(f) and (f.State = lfsEdit) then
+  begin
+    f.Release;
+    FreeAndNil(n.SecondFrame);
+    f2 := n.MainFrame as tfGrid;
+    f2.Visible := true;
+    ShowPanels;
+    Exit;
+  end;
+
   CloseTab(n);
 end;
 
@@ -1051,7 +966,7 @@ var
   i: Integer;
   p: DUint64;
 begin
-  if (pcTables.ActivePage <> nil) and (WPARAM(pcTables.ActivePage) = Msg.WParam)
+  if (pcTables.ActivePage <> nil) and (WParam(pcTables.ActivePage) = Msg.WParam)
   then
   begin
     updateTab;
@@ -1064,7 +979,7 @@ begin
     end;
   end;
 
-  if assigned(w7taskbar) and (Msg.WParam = WPARAM(w7taskbar.Tag)) then
+  if assigned(w7taskbar) and (Msg.WParam = WParam(w7taskbar.Tag)) then
   begin
     for i := 0 to TabList.Count - 1 do
       if TMycxTabSheet(TabList[i]).MainFrame is tfGrid then
@@ -1376,7 +1291,7 @@ var
   p: PDUInt64;
 begin
   if assigned(w7taskbar) then
-    if Msg.WParam = WPARAM(w7taskbar.Tag) then
+    if Msg.WParam = WParam(w7taskbar.Tag) then
     begin
       p := PDUInt64(Msg.LParam);
       w7taskbar.SetProgress(p.V1, p.V2);
@@ -1641,14 +1556,15 @@ begin
   // Bhint.Description := 'derp';
   // Bhint.ShowHint(ClientToScreen(bmbMain.ItemLinks[2].ItemRect.BottomRight));
 
-  if not GlobalSettings.Tips or not Active or not Visible then
+  if not GlobalSettings.Tips or not Active or not Visible or
+    (bbStartPics.ImageIndex = 6) then
     Exit;
 
   if assigned(FBalloon) then
     FBalloon.Hide;
 
-  p.X := bmbMain.ItemLinks[2].ItemRect.Left + 15;
-  p.Y := bmbMain.ItemLinks[2].ItemRect.Bottom - 10;
+  p.X := bmbMain.ItemLinks[5].ItemRect.Left + 15;
+  p.Y := bmbMain.ItemLinks[5].ItemRect.Bottom - 10;
   p := ClientToScreen(p);
   FBalloon := TBalloon.CreateNew(Self);
   FBalloon.OnRelease := OnBalloonExitTimer;
@@ -1702,7 +1618,7 @@ begin
   f := TfSettings.Create(SttPanel);
   f.OnError := OnError;
   f.Setlang;
-  //f.CreateResources;
+  // f.CreateResources;
   f.LoadProfiles;
   f.LoadSettings;
   SttPanel.MainFrame := f;
@@ -1850,36 +1766,7 @@ begin
         end;
       end;
     end;
-
-  { if Assigned(pcTables.ActivePage)
-    and Assigned(p.Data)
-    and (TMycxTabSheet(pcTables.ActivePage).MainFrame is tfGrid)
-    and(TMycxTabSheet(pcTables.ActivePage).MainFrame = p.Frame) then
-    with tfGrid(TMycxTabSheet(pcTables.ActivePage).MainFrame) do
-    begin
-    if TObject(p.Data) is TTPicture then
-    begin
-    pic := TTPicture(p.Data);
-    vGrid.Controller.ClearSelection;
-    if Assigned(pic.Parent) then
-    vGrid.Controller.FocusedRecordIndex := pic.BookMark-1
-    else
-    vGrid.Controller.FocusedRecordIndex := pic.BookMark-1;
-    //tMycxTabSheet(pcTables.ActivePage).MainFrame.SetFocus;
-    Grid.SetFocus;
-    vGrid.Focused := True;
-    vGrid.Controller.FocusedRecord.Selected := True;
-    end;
-    end;
-  }
 end;
-
-{ procedure Tmf.gLevel2GetGridView(Sender: TcxGridLevel;
-  AMasterRecord: TcxCustomGridRecord; var AGridView: TcxCustomGridView);
-
-  begin
-  PostMessage(Handle, CM_EXPROW, integer(AMasterRecord), integer(AGridView));
-  end; }
 
 procedure Tmf.HideBalloon;
 begin

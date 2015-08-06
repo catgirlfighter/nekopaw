@@ -773,19 +773,17 @@ begin
         fillRec(ActualResList, tvRes.DataController,
           ActualResList.Count - 1, 0, True);
 
+        N := FFullResList.findByName(fPList[i].Name);
+        if N = -1 then
+          raise Exception.Create('Unknown resource: ' + fPList[i].Name);
+
+        ActualResList[i].Inherit := false;
+        ActualResList[i].Parent := FFullResList[N];
+
         if not Assigned(fPList[i].MainResource) then
         begin
-          N := FFullResList.findByName(fPList[i].Name);
-          if N = -1 then
-            raise Exception.Create('Unknown resource: ' + fPList[i].Name);
-
           FFullResList[N].MainResource := fPList[i];
-          //FFullResList[N].FreeThreadCounter;
-          //FFullResList[N].SetThreadCounter(fPList[i].ThreadCounter);
-          fFullResList[n].ThreadCounter^ := fPList[i].ThreadCounter^;
-          ActualResList[i].Parent := FFullResList[N];
-          FFullResList[N].MainResource := fPList[i];
-          ActualResList[i].Inherit := false;
+          fFullResList[N].ThreadCounter^ := fPList[i].ThreadCounter^;
         end;
 
       end;

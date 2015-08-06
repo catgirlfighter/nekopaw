@@ -142,6 +142,7 @@ begin
     'Mozilla/5.0 (Windows NT 6.1; rv:23.0) Gecko/20100101 Firefox/23.0';
   result.ConnectTimeout := 10000;
   result.ReadTimeout := 10000;
+  result.RedirectMaximum := 5;
   // result.ProxyParams
   // Result.Request.AcceptLanguage := 'en-us,en;q=0.8';
   // Result.Request.AcceptEncoding := 'gzip, deflate';
@@ -450,10 +451,10 @@ var
 
 begin
   for i := 0 to AResponse.RawHeaders.Count - 1 do
-    if pos('Set-Cookie: ', AResponse.RawHeaders[i]) > 0 then
+    if ContainsText(AResponse.RawHeaders[i], 'Set-Cookie: ') then
     begin
       Cookie := SysUtils.StringReplace(AResponse.RawHeaders[i],
-        'Set-Cookie: ', '', []);
+        'Set-Cookie: ', '', [rfIgnoreCase]);
       FCookieList.ChangeCookie(GetURLDomain(url), Cookie);
     end;
 end;

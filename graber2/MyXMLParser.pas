@@ -141,6 +141,7 @@ type
     property TagList: TTagList read FTagList;
   end;
 
+function JSONUnescape(const S: String): string;
 procedure JSONParseChilds(Parent: TTag; TagList: TTagList; tagname, S: string);
 procedure JSONParseValue(Tag: TTag; TagList: TTagList; S: string);
 procedure JSONParseTag(Tag: TTag; TagList: TTagList; S: String);
@@ -324,7 +325,83 @@ const
   JSONISL: array [0 .. 0] of string = ('""');
   JSONBRK: array [0 .. 1] of string = ('[]', '{}');
 
-  // parse childs
+function JSONUnescape(const S: String): string;
+var
+  i: Integer;
+  j: Integer;
+  c: Integer;
+begin
+  // Make result at least large enough. This prevents too many reallocs
+  setlength(Result, length(S));
+  i := 1;
+  j := 1;
+  while i <= length(S) do
+  begin
+    if S[i] = '\' then
+    begin
+      if i < length(S) then
+      begin
+        // escaped backslash?
+        case S[i + 1] of
+          '''':
+            begin
+              Result[j] := '''';
+              inc(i, 2);
+            end;
+          '\':
+            begin
+              Result[j] := '\';
+              inc(i, 2);
+            end;
+          '/':
+            begin
+              Result[j] := '/';
+              inc(i, 2);
+            end;
+          'r':
+            begin
+              Result[j] := #13;
+              inc(i, 2);
+            end;
+          'n':
+            begin
+              Result[j] := #10;
+              inc(i, 2);
+            end;
+          't':
+          begin
+            Result[j] := #9;
+            inc(i,2);
+          end;
+          'u':
+            if (i + 1 + 4 <= length(S)) and
+              TryStrToInt('$' + string(copy(S, i + 2, 4)), c) then
+            begin
+              inc(i, 6);
+              Result[j] := WideChar(c);
+            end else  raise exception.CreateFmt('Invalid format: %s',[copy(S, i, 6)]);
+        else
+          raise Exception.CreateFmt('Invalid code: %s', [copy(S, i, 2)]);
+        end;
+      end
+      else
+      begin
+        raise Exception.Create('Unexpected end of string');
+      end;
+    end
+    else
+    begin
+      Result[j] := WideChar(S[i]);
+      inc(i);
+    end;
+    inc(j);
+  end;
+
+  // Trim result in case we reserved too much space
+  setlength(Result, j - 1);
+end;
+
+// parse childs
 procedure JSONParseChilds(Parent: TTag; TagList: TTagList; tagname, S: string);
 var
   n: string;
@@ -372,7 +449,7 @@ begin
   S := StringReplace(S, '\"', '&quot;', [rfReplaceAll]);
 
   tagname := TrimEx(CopyTo(S, ':', JSONISL, JSONBRK, true), [' ', '"']);
-  S := TrimEx(S, [' ', '"']);
+  S := Trim(S);
 
   if S = '' then
   begin
@@ -401,9 +478,9 @@ begin
         // tag.Attrs := TAttrList.Create;
       end;
       if tagname = '' then
-        Tag.Childs.CreateChild(Tag, TrimEx(Value, '"'), tkText)
+        Tag.Childs.CreateChild(Tag, JSONUnescape(TrimEx(Value, '"')), tkText)
       else
-        Tag.Attrs.Add(tagname, Value);
+        Tag.Attrs.Add(tagname, JSONUnescape(TrimEx(Value, '"')));
     end;
   end;
 
@@ -629,14 +706,15 @@ begin
   for i := 0 to Count - 1 do
     if (Items[i].Kind = tkTag) then
     begin
-      //b := false;
+      // b := false;
 
       if lx = length(Tags) then
         lx := 0;
 
       for l := 0 to length(Tags) - 1 do
         if SameText(Items[i].Name, Tags[l]) and
-          not(Assigned(AAttrs[l]) and AAttrs[l].NoParameters { and (Items[i].Attrs.Count > 0) } ) then
+          not(Assigned(AAttrs[l]) and
+          AAttrs[l].NoParameters { and (Items[i].Attrs.Count > 0) } ) then
         begin
           b := true;
           if Assigned(AAttrs[l]) then
@@ -653,23 +731,23 @@ begin
 
           if b then
           begin
-            //lx := l + 1;
+            // lx := l + 1;
             t := AList.CopyTag(Items[i]);
             if Assigned(AAttrs[l]) then
               t.Tag := AAttrs[l].Tag;
             break;
           end;
         end
-        //else
-        //  break;
+      // else
+      // break;
 
       // if not b then
       // Items[i].Childs.GetList(Tags,AAttrs,AList);
     end;
 end;
 
-procedure TTagList.GetGroupList(Tags: array of string; AAttrs: array of TAttrList;
-  AList: TTagList);
+procedure TTagList.GetGroupList(Tags: array of string;
+  AAttrs: array of TAttrList; AList: TTagList);
 var
   i, j, l, lx: Integer;
   b: boolean;
@@ -684,14 +762,15 @@ begin
   for i := 0 to Count - 1 do
     if (Items[i].Kind = tkTag) then
     begin
-      //b := false;
+      // b := false;
 
       if lx = length(Tags) then
         lx := 0;
 
       for l := lx to length(Tags) - 1 do
         if SameText(Items[i].Name, Tags[l]) and
-          not(Assigned(AAttrs[l]) and AAttrs[l].NoParameters { and (Items[i].Attrs.Count > 0) } ) then
+          not(Assigned(AAttrs[l]) and
+          AAttrs[l].NoParameters { and (Items[i].Attrs.Count > 0) } ) then
         begin
           b := true;
           if Assigned(AAttrs[l]) then
@@ -1038,7 +1117,7 @@ var
       if isparam then
       begin
         if (pe < lbr) and (istag = 2) and not closetag then
-        // create tag if it is tag name (first param)
+          // create tag if it is tag name (first param)
           if Assigned(FTag) then
             FTag := FTag.Childs.CreateChild(FTag, copy(S, ps, i - ps), tkTag)
           else
@@ -1049,7 +1128,7 @@ var
 
           if (FTag.State in [tsOnlyText]) // if is text only mode
             and not SameText(FTag.Name, copy(S, ps, i - ps)) then
-          // and close tag not the same as current tag
+            // and close tag not the same as current tag
             istag := 0 // just leave tag without actions
           else
           begin
@@ -1063,7 +1142,7 @@ var
             end;
             closetag := false;
             if istag = 1 then
-            // if is searching mode then not need to go into create mode
+              // if is searching mode then not need to go into create mode
               istag := 0;
           end;
         end; // else
@@ -1181,7 +1260,7 @@ begin
                     rbr := i;
 
                     if Assigned(FTag) then
-                    // add all non-tag text to the current tag
+                      // add all non-tag text to the current tag
                       FTag.Childs.CreateChild(FTag,
                         copy(S, lstart, lbr - lstart), tkText)
                     else
@@ -1275,7 +1354,7 @@ begin
                       else if (S[ps] = '/') and
                         not(FTag.ContentState in [csContent]) or
                         (FTag.ContentState in [csEmpty]) then
-                      // if empty tag then
+                        // if empty tag then
                         FTag := FTag.Parent; // return to the parent
                   end;
 
@@ -1311,7 +1390,7 @@ begin
           if (istag <> 0) and (comm = 0) then
             if (ps = 0) then
               if (istag = 1) then
-              // if param start is separator, then is invalid tag
+                // if param start is separator, then is invalid tag
                 istag := 0
               else
                 i := rbr
@@ -1323,7 +1402,7 @@ begin
           if (istag <> 0) then
             if (qt = 0) and (comm = 0) then
               if (ps = 0) or closetag then
-              // if param start is separator, then is invalid tag
+                // if param start is separator, then is invalid tag
                 if istag = 1 then
                   istag := 0
                 else
@@ -1405,7 +1484,7 @@ begin
                   vs := i + 1;
                 end
                 else if (qtp > eq) and (S[qtp] = S[i]) then
-                // else it is broken value assign (with isol symbols inside)
+                  // else it is broken value assign (with isol symbols inside)
                   ve := i - 1;
               1:
                 begin

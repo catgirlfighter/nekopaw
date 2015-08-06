@@ -186,6 +186,7 @@ type
     fCallBackProgress: tCallbackProgress;
     fProgress: tfProgress;
     fWindowList: TTaskWindowList;
+    fAutorun: boolean;
     procedure DoOnError(Sender: TObject; Msg: String; Data: Pointer);
   public
     ResList: TResourceList;
@@ -243,6 +244,7 @@ type
     property OnLog: TLogEvent read FOnLog write FOnLog;
     property OnError: TLogEvent read FOnError write FOnError;
     property Loading: Boolean read fLoading write fLoading;
+    property Autorun: Boolean read fAutorun write fAutorun;
     { Public declarations }
   end;
 
@@ -553,6 +555,7 @@ procedure TfGrid.DeleteMD5Doubles;
 var
   i, n, c: Integer;
   md5list: tMetaList;
+  // p: ttpicture;
 begin
   if MessageDlg(lang('_CONFIRM_DELETEMD5_'), mtConfirmation, [mbYes, mbNo], 0)
     <> mrYes then
@@ -562,15 +565,25 @@ begin
   md5list := tMetaList.Create;
   md5list.ValueType := DB.ftString;
   try
-    for i := 0 to ResList.PictureList.Count - 1 do
-      if Assigned(ResList.PictureList[i].MD5) then
-        if md5list.FindPosition(ResList.PictureList[i].MD5^, n) then
+    with ResList.PictureList do
+    begin
+      ResList.PictureList.LockList{('deletemd5')};
+      try
+        for i := 0 to ResList.PictureList.Count - 1 do
         begin
-          ResList.PictureList[i].DeleteFile;
-          inc(c);
-        end
-        else
-          md5list.Add(ResList.PictureList[i].MD5^, n);
+          if Assigned(ItemList[i].MD5) then
+            if md5list.FindPosition(ItemList[i].MD5^, n) then
+            begin
+              ItemList[i].DeleteFile;
+              inc(c);
+            end
+            else
+              md5list.Add(ItemList[i].MD5^, n);
+        end;
+      finally
+        ResList.PictureList.UnlockList;
+      end;
+    end;
     Log(Format(lang('_DELETED_COUNT_'), [c]));
   finally
     md5list.Free;
@@ -730,13 +743,21 @@ begin
 
   vGrid.BeginUpdate;
   try
-    for i := 0 to vGrid.DataController.RecordCount - 1 do
+    with ResList.PictureList do
     begin
-      b := not vGrid.DataController.Values[i, FCheckColumn.Index];
-      vGrid.DataController.Values[i, FCheckColumn.Index] := b;
-      ResList.PictureList[i].Checked := b;
-      if ResList.PictureList[i].Linked.Count > 0 then
-        Recheck(i);
+      ResList.PictureList.LockList{('inverse')};
+      try
+        for i := 0 to vGrid.DataController.RecordCount - 1 do
+        begin
+          b := not vGrid.DataController.Values[i, FCheckColumn.Index];
+          vGrid.DataController.Values[i, FCheckColumn.Index] := b;
+          ItemList[i].Checked := b;
+          if ItemList[i].Linked.Count > 0 then
+            Recheck(i);
+        end;
+      finally
+        ResList.PictureList.UnlockList;
+      end;
     end;
     vGrid.DataController.Post(true);
   finally
@@ -767,18 +788,25 @@ begin
     vGrid.DataController.RecordCount := ResList.PictureList.ParentCount;
 
     with vGrid.DataController, ResList do
-      for i := c to RecordCount - 1 do
-      begin
-        Values[i, FCheckColumn.Index] := PictureList[i].Checked;
-        Values[i, FIdColumn.Index] := Integer(PictureList[i]);
-        Values[i, FResColumn.Index] := PictureList[i].Resource.Name;
-        Values[i, FLabelColumn.Index] := PictureList[i].DisplayLabel;
-        FillRecord(vGrid.DataController, i, PictureList[i]);
+    begin
+      PictureList.LockList{('endpic')};
+      try
+        for i := c to RecordCount - 1 do
+        begin
+          Values[i, FCheckColumn.Index] := PictureList.ItemList[i].Checked;
+          Values[i, FIdColumn.Index] := Integer(PictureList.ItemList[i]);
+          Values[i, FResColumn.Index] := PictureList.ItemList[i].Resource.Name;
+          Values[i, FLabelColumn.Index] := PictureList.ItemList[i].DisplayLabel;
+          FillRecord(vGrid.DataController, i, PictureList.ItemList[i]);
 
-        if Assigned(fCallBackProgress) and (i mod 1000 = 0) then
-          fCallBackProgress(i + 1, RecordCount, cnc);
+          if Assigned(fCallBackProgress) and (i mod 1000 = 0) then
+            fCallBackProgress(i + 1, RecordCount, cnc);
 
+        end;
+      finally
+        PictureList.UnlockList;
       end;
+    end;
 
     if Assigned(fCallBackProgress) then
       fCallBackProgress(vGrid.DataController.RecordCount,
@@ -801,13 +829,16 @@ begin
       IntToStr(ResList.PictureList.PicCounter.BLK) + ' TBL ' + IntToStr(t3 - t1)
       + 'ms' + ' DBL ' + IntToStr(ResList.PictureList.DoublestickCount) + 'ms';
 
-  if not fLoading and ResList.PicsFinished and not ResList.PostProcDelayed and
+  if fAutorun and not fLoading and ResList.PicsFinished and not ResList.PostProcDelayed and
     (GlobalSettings.SemiJob <> sljNone) and (ResList.Count > 0) then
-    case GlobalSettings.SemiJob of
-      sljPostProc:
-        ResList.StartJob(JOB_POSTPROCESS);
-      sljPics:
-        ResList.StartJob(JOB_PICS);
+    begin
+      fAutorun := false;
+      case GlobalSettings.SemiJob of
+        sljPostProc:
+          ResList.StartJob(JOB_POSTPROCESS);
+        sljPics:
+          ResList.StartJob(JOB_PICS);
+      end;
     end;
 end;
 
@@ -823,7 +854,14 @@ begin
       FChangesList.Add(Pic);
   end
   else
-    updatepic(Pic);
+  //begin
+    //ResList.PictureList.LockList;
+    //try
+      updatepic(Pic);
+    //finally
+    //  ResList.PictureList.UnlockList;
+    //end;
+  //end;
 end;
 
 procedure TfGrid.OnSendStop(Sender: TObject; Msg: String; Data: Pointer);
@@ -1267,12 +1305,20 @@ begin
 
   vGrid.BeginUpdate;
   try
-    for i := 0 to vGrid.DataController.RecordCount - 1 do
+    with ResList.PictureList do
     begin
-      vGrid.DataController.Values[i, FCheckColumn.Index] := b;
-      ResList.PictureList[i].Checked := b;
-      if ResList.PictureList[i].Linked.Count > 0 then
-        Recheck(i);
+      ResList.PictureList.LockList{('selAll')};
+      try
+        for i := 0 to vGrid.DataController.RecordCount - 1 do
+        begin
+          vGrid.DataController.Values[i, FCheckColumn.Index] := b;
+          ItemList[i].Checked := b;
+          if ItemList[i].Linked.Count > 0 then
+            Recheck(i);
+        end;
+      finally
+        ResList.PictureList.UnlockList;
+      end;
     end;
     vGrid.DataController.Post(true);
   finally
@@ -1289,14 +1335,22 @@ begin
 
   vGrid.BeginUpdate;
   try
-    for i := 0 to vGrid.DataController.RecordCount - 1 do
-      if ResList.PictureList.CheckBlackList(ResList.PictureList[i]) then
-      begin
-        vGrid.DataController.Values[i, FCheckColumn.Index] := b;
-        ResList.PictureList[i].Checked := b;
-        if ResList.PictureList[i].Linked.Count > 0 then
-          Recheck(i);
+    with ResList.PictureList do
+    begin
+      ResList.PictureList.LockList{('selBL')};
+      try
+        for i := 0 to vGrid.DataController.RecordCount - 1 do
+          if ResList.PictureList.CheckBlackList(ResList.PictureList[i]) then
+          begin
+            vGrid.DataController.Values[i, FCheckColumn.Index] := b;
+            ItemList[i].Checked := b;
+            if ItemList[i].Linked.Count > 0 then
+              Recheck(i);
+          end;
+      finally
+        ResList.PictureList.UnlockList;
       end;
+    end;
     vGrid.DataController.Post(true);
   finally
     vGrid.EndUpdate;
@@ -1312,13 +1366,21 @@ begin
 
   vGrid.BeginUpdate;
   try
-    for i := 0 to vGrid.ViewData.RowCount - 1 do
-    begin
-      vGrid.DataController.Values[vGrid.ViewData.Rows[i].RecordIndex,
-        FCheckColumn.Index] := b;
-      ResList.PictureList[vGrid.ViewData.Rows[i].RecordIndex].Checked := b;
-      if ResList.PictureList[i].Linked.Count > 0 then
-        Recheck(i);
+    ResList.PictureList.LockList{('selFil')};
+    try
+      with ResList.PictureList do
+      begin
+        for i := 0 to vGrid.ViewData.RowCount - 1 do
+        begin
+          vGrid.DataController.Values[vGrid.ViewData.Rows[i].RecordIndex,
+            FCheckColumn.Index] := b;
+          ItemList[vGrid.ViewData.Rows[i].RecordIndex].Checked := b;
+          if ItemList[i].Linked.Count > 0 then
+            Recheck(i);
+        end;
+      end;
+    finally
+      ResList.PictureList.UnlockList;
     end;
     vGrid.DataController.Post(true);
   finally
@@ -1336,27 +1398,35 @@ begin
 
   vGrid.BeginUpdate;
   try
-    if Grid.FocusedView = vGrid then
-      for i := 0 to vGrid.Controller.SelectedRecordCount - 1 do
-      begin
-        vGrid.Controller.SelectedRecords[i].Values[FCheckColumn.Index] := b;
-        ResList.PictureList[vGrid.Controller.SelectedRecords[i].RecordIndex]
-          .Checked := b;
-        if ResList.PictureList[i].Linked.Count > 0 then
-          Recheck(i);
-      end
-    else
-      with (Grid.FocusedView as TcxGridTableView) do
-        for i := 0 to Controller.SelectedRecordCount - 1 do
-        begin
-          Pic := TTPicture(Integer(Controller.SelectedRecords[i].Values
-            [FChildIdColumn.Index]));
-          Controller.SelectedRecords[i].Values[FChildCheckColumn.Index] := b;
-          Pic.Checked := b;
-          Pic.Parent.Checked := true;
-          Pic.Parent.Changes := [pcChecked];
-          updatepic(Pic.Parent);
-        end;
+    ResList.PictureList.LockList{('SelSel')};
+    try
+      with ResList.PictureList do
+        if Grid.FocusedView = vGrid then
+          for i := 0 to vGrid.Controller.SelectedRecordCount - 1 do
+          begin
+            vGrid.Controller.SelectedRecords[i].Values[FCheckColumn.Index] := b;
+            ItemList[vGrid.Controller.SelectedRecords[i].RecordIndex]
+              .Checked := b;
+            if ItemList[i].Linked.Count > 0 then
+              Recheck(i);
+          end
+        else
+          with (Grid.FocusedView as TcxGridTableView) do
+            for i := 0 to Controller.SelectedRecordCount - 1 do
+            begin
+              Pic := TTPicture
+                (Integer(Controller.SelectedRecords[i].Values
+                [FChildIdColumn.Index]));
+              Controller.SelectedRecords[i].Values
+                [FChildCheckColumn.Index] := b;
+              Pic.Checked := b;
+              Pic.Parent.Checked := true;
+              Pic.Parent.Changes := [pcChecked];
+              updatepic(Pic.Parent);
+            end;
+    finally
+      ResList.PictureList.UnlockList;
+    end;
 
     vGrid.DataController.Post(true);
   finally
@@ -1433,6 +1503,7 @@ procedure TfGrid.SetList(l: TResourceList);
 begin
   // if not Assigned(ResList) then
   // begin
+  fAutorun := false;
   ResList := l;
   ResList.PictureList.OnPicChanged := OnListPicChanged;
   ResList.OnJobChanged := OnStartJob;
@@ -1509,13 +1580,19 @@ var
 begin
   vGrid.BeginUpdate;
   try
-    for i := 0 to vGrid.DataController.RecordCount - 1 do
-      if vGrid.DataController.FilteredIndexByRecordIndex[i] = -1 then
-      begin
-        vGrid.DataController.Values[i, FCheckColumn.Index] := false;
-        ResList.PictureList[i].Checked := false;
-      end;
+    ResList.PictureList.LockList{('UnInvi')};
+    try
+      with ResList.PictureList do
+        for i := 0 to vGrid.DataController.RecordCount - 1 do
+          if vGrid.DataController.FilteredIndexByRecordIndex[i] = -1 then
+          begin
+            vGrid.DataController.Values[i, FCheckColumn.Index] := false;
+            ItemList[i].Checked := false;
+          end;
 
+    finally
+      ResList.PictureList.UnlockList;
+    end;
     vGrid.DataController.Post(true);
   finally
     vGrid.EndUpdate;
@@ -1526,24 +1603,30 @@ procedure TfGrid.Recheck(n: Integer);
 var
   // n: Integer;
   i: Integer;
+  p: TTPicture;
 begin
   // if AItem.Index <> FCheckColumn.Index then
   // Exit;
   // n := vGrid.DataController.FocusedRecordIndex;
   vGrid.BeginUpdate;
   try
+
     if n > -1 then
     begin
-      ResList.PictureList[n].Checked := vGrid.DataController.Values
-        [n, FCheckColumn.Index];
-      if ResList.PictureList[n].Linked.Count > 0 then
-        for i := 0 to ResList.PictureList[n].Linked.Count - 1 do
-        begin
-          ResList.PictureList[n].Linked[i].Checked :=
-            vGrid.DataController.Values[n, FCheckColumn.Index];
-          ResList.PictureList[n].Linked[i].Changes := [pcChecked];
-          updatepic(ResList.PictureList[n].Linked[i]);
-        end;
+      p := ResList.PictureList.LockList(n{,'recheck'});
+      try
+        p.Checked := vGrid.DataController.Values[n, FCheckColumn.Index];
+        if p.Linked.Count > 0 then
+          for i := 0 to p.Linked.Count - 1 do
+          begin
+            p.Linked.ItemList[i].Checked := vGrid.DataController.Values
+              [n, FCheckColumn.Index];
+            p.Linked.ItemList[i].Changes := [pcChecked];
+            updatepic(p.Linked[i]);
+          end;
+      finally
+        ResList.PictureList.UnlockList;
+      end;
     end;
   finally
     vGrid.EndUpdate;
@@ -1553,21 +1636,27 @@ end;
 procedure TfGrid.updatechecks;
 var
   i: Integer;
+//  p: TTPicture;
 begin
   vGrid.BeginUpdate;
   try
-    for i := 0 to vGrid.DataController.RecordCount - 1 do
-    begin
-      vGrid.DataController.Values[i, FPosColumn.Index] := null;
-      vGrid.DataController.Values[i, FSizeColumn.Index] := null;
-      if not ResList.PictureList[i].Checked and vGrid.DataController.Values[i, 0]
-      then
-      begin
-        vGrid.DataController.Values[i, FProgressColumn.Index] := 'SKIP';
-        vGrid.DataController.Values[i, FCheckColumn.Index] := false;
-      end
-      else
-        vGrid.DataController.Values[i, FProgressColumn.Index] := null;
+    ResList.PictureList.LockList{('updChecks')};
+    try
+      with ResList.PictureList do
+        for i := 0 to vGrid.DataController.RecordCount - 1 do
+        begin
+          vGrid.DataController.Values[i, FPosColumn.Index] := null;
+          vGrid.DataController.Values[i, FSizeColumn.Index] := null;
+          if not ItemList[i].Checked and vGrid.DataController.Values[i, 0] then
+          begin
+            vGrid.DataController.Values[i, FProgressColumn.Index] := 'SKIP';
+            vGrid.DataController.Values[i, FCheckColumn.Index] := false;
+          end
+          else
+            vGrid.DataController.Values[i, FProgressColumn.Index] := null;
+        end;
+    finally
+      ResList.PictureList.UnlockList;
     end;
   finally
     vGrid.EndUpdate;
@@ -1812,21 +1901,26 @@ begin
 
   viewClone.DataController.BeginUpdate;
   try
-    Pic := TTPicture(Integer(AMasterRecord.Values[FIdColumn.Index]));
-    // viewClone.DataController.RecordCount := 5;
-    //
-    // for i:=0 to viewClone.DataController.RecordCount-1 do
-    // viewClone.DataController.Values[i,FChildLabelColumn.Index] := 'Row: '+inttostr(i+1);
-    viewClone.DataController.RecordCount := Pic.Linked.Count;
-    for i := 0 to Pic.Linked.Count - 1 do
-    begin
-      viewClone.DataController.Values[i, FChildIdColumn.Index] :=
-        Integer(Pic.Linked[i]);
-      viewClone.DataController.Values[i, FChildCheckColumn.Index] :=
-        Pic.Linked[i].Checked;
-      viewClone.DataController.Values[i, FChildLabelColumn.Index] :=
-        Pic.Linked[i].DisplayLabel;
-      updatepic(Pic.Linked[i]);
+    ResList.PictureList.LockList{('detailExpanded')};
+    try
+      Pic := TTPicture(Integer(AMasterRecord.Values[FIdColumn.Index]));
+      // viewClone.DataController.RecordCount := 5;
+      //
+      // for i:=0 to viewClone.DataController.RecordCount-1 do
+      // viewClone.DataController.Values[i,FChildLabelColumn.Index] := 'Row: '+inttostr(i+1);
+      viewClone.DataController.RecordCount := Pic.Linked.Count;
+      for i := 0 to Pic.Linked.Count - 1 do
+      begin
+        viewClone.DataController.Values[i, FChildIdColumn.Index] :=
+          Integer(Pic.Linked[i]);
+        viewClone.DataController.Values[i, FChildCheckColumn.Index] :=
+          Pic.Linked.ItemList[i].Checked;
+        viewClone.DataController.Values[i, FChildLabelColumn.Index] :=
+          Pic.Linked.ItemList[i].DisplayLabel;
+        updatepic(Pic.Linked[i]);
+      end;
+    finally
+      ResList.PictureList.UnlockList;
     end;
 
   finally
@@ -1839,24 +1933,22 @@ procedure TfGrid.vGridEditValueChanged(Sender: TcxCustomGridTableView;
   AItem: TcxCustomGridTableItem);
 var
   n: Integer;
+  p: TTPicture;
   // i: Integer;
 begin
   if AItem.Index <> FCheckColumn.Index then
     Exit;
   n := vGrid.DataController.FocusedRecordIndex;
-  if n > -1 then
-  begin
-    ResList.PictureList[n].Checked := vGrid.DataController.Values
-      [n, AItem.Index];
-    if ResList.PictureList[n].Linked.Count > 0 then
-      Recheck(n);
-    // for i := 0 to ResList.PictureList[n].Linked.Count - 1 do
-    // begin
-    // ResList.PictureList[n].Linked[i].Checked := vGrid.DataController.Values
-    // [n, AItem.Index];
-    // ResList.PictureList[n].Linked[i].Changes := [pcChecked];
-    // updatepic(ResList.PictureList[n].Linked[i]);
-    // end;
+  p := ResList.PictureList.LockList(n{,'ValueChanged'});
+  try
+    if n > -1 then
+    begin
+      p.Checked := vGrid.DataController.Values[n, AItem.Index];
+      if p.Linked.Count > 0 then
+        Recheck(n);
+    end;
+  finally
+    ResList.PictureList.UnlockList;
   end;
 end;
 

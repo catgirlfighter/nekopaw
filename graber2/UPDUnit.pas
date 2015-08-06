@@ -3,7 +3,8 @@ unit UPDUnit;
 interface
 
 uses Windows, SysUtils, Classes, Messages, MyHTTP, MyXMLParser, INIFiles,
-  common, IdComponent, ZIP, ActiveX;
+  common, IdBaseComponent, IdComponent, IdIOHandler,
+  IdIOHandlerSocket, IdIOHandlerStack, IdSSL, IdSSLOpenSSL, ZIP, ActiveX;
 
 const
   CM_UPDATE = WM_USER + 13;
@@ -24,6 +25,7 @@ type
   TUpdThread = class(TThread)
   private
     FHTTP: TMyIdHTTP;
+    FIOHandler: TIdSSLIOHandlerSocketOpenSSL;
     FHWND: HWND;
     FJob: Integer;
     FListURL: String;
@@ -271,6 +273,14 @@ var
 begin
   WaitForSingleObject(FEventHandle, INFINITE);
   FHTTP := TMyIdHTTP.Create;
+  if (pos('https:',lowercase(FCheckURL)) = 1)
+  or (pos('https:',lowercase(FListURL)) = 1) then
+  begin
+    FIOHandler := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+    FHTTP.IOHandler := fIOHandler;
+  end else
+    FIOHandler := nil;
+
   items := TTagList.Create;
   try
     FHTTP.ConnectTimeout := 10000;
@@ -282,7 +292,7 @@ begin
           FHTTP.Get(FCheckURL);
       except
       end;
-      s := FHTTP.Get(FListURL + 'version.xml');
+      s := FHTTP.Get(FListURL + 'version.xml'{,[302]});
 
       // checking critical parts
       if s = '' then
@@ -315,6 +325,8 @@ begin
   finally
     items.Free;
     FHTTP.Free;
+    if Assigned(fIOHandler) then
+      fIOHandler.Free;
     SendMessage(FHWND, CM_UPDATE, ReturnValue, Integer(Self));
   end;
 end;

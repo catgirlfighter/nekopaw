@@ -6,7 +6,7 @@ uses Classes, Variants, SysUtils, Math, Forms,
   StdCtrls, ExtCtrls, ComCtrls,
   Controls, DateUtils, StrUtils,
   HTTPApp, ShellAPI, Windows, Graphics, JPEG,
-  GIFImg, PNGImage, VarUtils;
+  GIFImg, PNGImage, VarUtils, IOUtils;
 
 type
   TArrayOfWord = array of word;
@@ -53,7 +53,7 @@ function ExtractFolder(s: string): string;
 function MoveDir(const fromDir, toDir: string): boolean;
 procedure MultWordArrays(var a1: TArrayOfWord; a2: TArrayOfWord);
 procedure _Delay(dwMilliseconds: Longint);
-function ValidFName(FName: String; bckslsh: boolean = false;
+function ValidFName(const FName: String; bckslsh: boolean = false;
   nodrive: boolean = false): String;
 function strlisttostr(s: tStrings; del: Char = ';'; ins: Char = '"'): string;
 function strtostrlist(s: string; del: Char = ';'; ins: Char = '"'): string;
@@ -101,6 +101,9 @@ function FindExistingDir(Dir: string): string;
 function PosBack(const substr, str: String; Offset: Integer = 1): Integer;
 function TimeString(secs: int64): string;
 procedure StreamToFile(astream: tstream; fname: string);
+
+var
+  InvalidFileNameChars: String;
 
 implementation
 
@@ -681,7 +684,7 @@ END;
 
 function GetNextS(var s: string; del: String = ';'; ins: String = ''): string;
 var
-  n: Integer;
+  n,d: Integer;
 begin
   Result := '';
 
@@ -689,7 +692,8 @@ begin
     while true do
     begin
       n := pos(ins, s);
-      if (n > 0) and (pos(del, s) > n) then
+      d := pos(del, s);
+      if (n > 0) and ((d > n) or (d = 0)) then
       begin
         Result := Result + copy(s, 1, n - 1);
         Delete(s, 1, n + length(ins) - 1);
@@ -951,18 +955,36 @@ begin
   until (iStop - iStart) >= DWORD(dwMilliseconds);
 end;
 
-function ValidFName(FName: String; bckslsh: boolean; nodrive: boolean): String;
-const
-  n = ['\', '/', ':', '*', '"', '<', '>', '|', '?', #13, #10];
+function ValidFName(const FName: String; bckslsh: boolean; nodrive: boolean): String;
 var
   i: Integer;
+  sa: AnsiString;
 begin
-  for i := 1 to length(FName) do
-    if CharInSet(FName[i], n) and
-      (not bckslsh or not((FName[i] = '\') or not nodrive and (FName[i] = ':')))
-    then
-      FName[i] := '_';
   Result := FName;
+
+  for i := 1 to length(FName) do
+  begin
+
+{    if (length(sa)=0) then
+    begin
+      Result[i] := '_';
+      Continue;
+    end;
+}
+
+
+    if (pos(FName[i], InvalidFileNameChars) > 0) then
+      if (not bckslsh or not((FName[i] in ['\','/']) or not nodrive and (FName[i] = ':'))) then
+        Result[i] := '_'
+      else
+    else
+    begin
+      sa := ANSIString(FName[i]);  //ANSI symbol cheking for older systems (winXP, FAT/FAT32)
+                                   //some generic uni symobls can be fobidden in ANSI
+      if (length(sa) = 0) or (sa <> '?') and (pos(String(sa),InvalidFileNameChars) > 0) then
+        Result[i] := '_';
+    end;
+  end;
 end;
 
 function strlisttostr(s: tStrings; del, ins: Char): string;
@@ -1631,14 +1653,8 @@ end;
 
 function MathCalcStr(s: variant): variant;
 const
-  ops = ['+', '-', '/', '|', '\', '*', '<', '=', '>', '!'];
-  { lvl1 = ['+', '-'];
-    lvl2 = ['*', '/', '|', '\'];
-    lvl3 = ['<', '>', '!', '=']; }
-  { p = 0 root
-    p = 1 + -
-    p = 2 * / | \
-    p = 3 < = > ! }
+  ops = ['+', '-', '/', '|', '\', '*', '<', '=', '>', '!', '^', '&'];
+
   function Proc(const p: byte; var s: string; var i: Integer; const l: Integer;
     var ls: variant; const isstring: boolean = false): variant;
   var
@@ -1649,6 +1665,7 @@ const
     vt: WideString;
     vt2: Double;
     VRESULT: HRESULT;
+
   label cc; // looooool
 
   begin
@@ -1694,7 +1711,7 @@ const
 
             op := true;
           end;
-        '+', '-', '/', '|', '\', '*', '<', '=', '>', '!', '&', '~':
+        '+', '-', '/', '|', '\', '*', '<', '=', '>', '!', '&', '~', '^':
           begin
             if not op and (s[i] <> '!') then
               if s[i] = '-' then
@@ -1715,6 +1732,8 @@ const
                 lvl := 4;
               '*', '/':
                 lvl := 5;
+              '^':
+                lvl := 6;
             end;
 
             if (lvl <= p) and not isstring then
@@ -1747,6 +1766,8 @@ const
 
             try
               case s[tmp] of
+                '^':
+                  Result := exp(d * ln (Result));
                 '&':
                   Result := Result and d;
                 '|':
@@ -1761,8 +1782,8 @@ const
                 '*':
                   Result := Result * d;
                 '/':
-                  if (Result = 0) and (d = 0) then
-                    raise Exception.Create('deviding by zero, lol')
+                  if {(Result = 0) and }(d = 0) then
+                    raise Exception.Create('creation of black hole was prevented')
                   else
                     Result := Result / d;
                 '<':
@@ -2407,4 +2428,16 @@ begin
   end;
 end;
 
+procedure CharArrayToStr(const a: tCharArray; var s: String);
+var
+  l: integer;
+begin
+  SetLength(s, length(a));
+  for l := 0 to length(a) do
+    s[l+1] := a[l];
+end;
+
+initialization
+
+  CharArrayToStr(tpath.GetInvalidFileNameChars,InvalidFileNameChars);
 end.

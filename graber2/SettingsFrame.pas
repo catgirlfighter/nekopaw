@@ -435,41 +435,48 @@ var
   i, idx: Integer;
   item: TcxTreeListNode;
   bmp: tbitmap;
+  foc: tCursor;
 begin
-  if not Assigned(FullResList) then
-  begin
-    FFullResList := TResourceList.Create;
-    FFullResList.OnError := OnErrorEvent;
-    FFullResList.OnJobChanged := JobStatus;
-  end;
-
-  if Assigned(ini) then
-    dm.LoadFullResList(FFullResList, ini)
-  else
-    dm.LoadFullResList(FFullResList);
-
-  tlList.Items[3].DeleteChildren;
-
-  if filCount = 0 then
-    filCount := il.Count
-  else
-    for i := il.Count - 1 downto filCount do
-      il.Delete(il.Count - 1);
-
-  bmp := tbitmap.Create;
+  foc := Screen.Cursor;
+  Screen.Cursor := crHourGlass;
   try
-    for i := 1 to FullResList.Count - 1 do
+    if not Assigned(FullResList) then
     begin
-      item := tlList.Items[3].AddChild;
-      item.Values[0] := FullResList[i].Name;
-      if FullResList[i].IconFile <> '' then
-        bmp.LoadFromFile(rootdir + '\resources\icons\' + FullResList[i]
-          .IconFile);
-      idx := il.Add(bmp, nil);
-      item.ImageIndex := idx;
+      FFullResList := TResourceList.Create;
+      FFullResList.OnError := OnErrorEvent;
+      FFullResList.OnJobChanged := JobStatus;
+    end;
+
+    if Assigned(ini) then
+      dm.LoadFullResList(FFullResList, ini)
+    else
+      dm.LoadFullResList(FFullResList);
+
+    tlList.Items[3].DeleteChildren;
+
+    if filCount = 0 then
+      filCount := il.Count
+    else
+      for i := il.Count - 1 downto filCount do
+        il.Delete(il.Count - 1);
+
+    bmp := tbitmap.Create;
+    try
+      for i := 1 to FullResList.Count - 1 do
+      begin
+        item := tlList.Items[3].AddChild;
+        item.Values[0] := FullResList[i].Name;
+        if FullResList[i].IconFile <> '' then
+          bmp.LoadFromFile(rootdir + '\resources\icons\' + FullResList[i]
+            .IconFile);
+        idx := il.Add(bmp, nil);
+        item.ImageIndex := idx;
+      end;
+    finally
+      bmp.Free;
     end;
   finally
-    bmp.Free;
+    Screen.Cursor := foc;
   end;
 end;
 
@@ -955,7 +962,7 @@ procedure TfSettings.tlListFocusedNodeChanged(Sender: TcxCustomTreeList;
 begin
   if AFocusedNode.Parent = tlList.Root then
   begin
-    if (AFocusedNode.index in [3,5]) and not Assigned(FullResList) then
+    if (AFocusedNode.index in [3, 4, 5]) and not Assigned(FullResList) then
     begin
       CreateResources;
       LoadBlackList;

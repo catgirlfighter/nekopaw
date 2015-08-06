@@ -142,9 +142,20 @@ begin
   INI := TINIFile.Create(ExtractFilePath(paramstr(0)) + 'settings.ini');
   IncSkins := INI.ReadBool('settings', 'incskins', false);
   UPDServ := INI.ReadString('settings', 'updserver',
-    'http://nekopaw.googlecode.com/svn/trunk/release/graber2/');
+    {'http://nekopaw.googlecode.com/svn/trunk/release/graber2/'}
+    'https://raw.githubusercontent.com/catgirlfighter/nekopaw/master/release/graber2/');
   CHKServ := INI.ReadString('settings', 'chkserver',
-    'http://code.google.com/p/nekopaw/');
+    {'http://code.google.com/p/nekopaw/'}
+    'https://github.com/catgirlfighter/nekopaw');
+
+  if FileExists(ExtractFilePath(paramstr(0)) + 'ssleay32.dll')
+  and not ini.ValueExists('update','ssleay32.dll') then
+    INI.WriteInteger('update','ssleay32.dll',0);
+
+  if FileExists(ExtractFilePath(paramstr(0)) + 'libeay32.dll')
+  and not ini.ValueExists('update','libeay32.dll') then
+    INI.WriteInteger('update','libeay32.dll',0);
+
   INI.WriteInteger('settings', 'delupd', 1);
   INI.Free;
 end;
