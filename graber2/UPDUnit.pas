@@ -85,7 +85,7 @@ end;
 procedure TUpdThread.MoveUpdates(items: tTagList);
 var
   i: Integer;
-  root, aroot, fname, aname, dir: string;
+  root, aroot, fname, aname, dir, tmp: string;
   v1: Integer;
   ini: tinifile;
   z: tzipfile;
@@ -104,7 +104,12 @@ begin
       begin
         fname := items[i].Attrs.Value('file');
         aname := items[i].Attrs.Value('archive');
-        v1 := StrToInt(items[i].Attrs.Value('version'));
+        tmp := items[i].Attrs.Value('newversion');
+
+        if tmp = '' then
+          v1 := StrToInt(items[i].Attrs.Value('version'))
+        else
+          v1 := StrToInt(tmp);
 
         if fileexists(root + fname) then
           DeleteFile(root + fname)
@@ -164,8 +169,8 @@ var
   xml: TMyXMLParser;
   // items: TTagList;
   ini: tinifile;
-  i, j, v: Integer;
-  root, fname: string;
+  i, j, v, v1: Integer;
+  root, fname, tmp: string;
   deleted: Boolean;
 begin
   root := ExtractFilePath(paramstr(0));
@@ -193,6 +198,13 @@ begin
     fname := items[i].Attrs.Value('file');
     v := ini.ReadInteger('update', fname, -1);
     deleted := items[i].Attrs.Value('deleted') = '1';
+    tmp := items[i].Attrs.Value('newversion');
+
+    if tmp = '' then
+      v1 := StrToInt(items[i].Attrs.Value('version'))
+    else
+      v1 := StrToInt(tmp);
+
     if deleted then
       if (v > -1) then
         case FJob of
@@ -210,10 +222,10 @@ begin
         end
       else
         items.Delete(i)
-    else if (StrToInt(items[i].Attrs.Value('version')) > v)
+    else if (v1 > v)
     { or (StrToInt(items[i].Attrs.Value('version')) = -1) } then
       inc(i)
-    else if (StrToInt(items[i].Attrs.Value('version')) = -1) then
+    else if (v1 = -1) then
     begin
       inc(i);
       dec(j);
@@ -234,7 +246,7 @@ var
   i, v1, v2: Integer;
   root: string;
   aroot: string;
-  fname, aname, pname, o, dir: string;
+  fname, aname, pname, o, dir, tmp: string;
   f: TFileStream;
   ini: tinifile;
   // z: tzipfile;
@@ -258,7 +270,13 @@ begin
       begin
         SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILEPOS, i);
         fname := items[i].Attrs.Value('file');
-        v1 := StrToInt(items[i].Attrs.Value('version'));
+
+        tmp := items[i].Attrs.Value('newversion');
+        if tmp = '' then
+          v1 := StrToInt(items[i].Attrs.Value('version'))
+        else
+          v1 := StrToInt(tmp);
+
         v2 := ini.ReadInteger('update', fname, -1);
 
         aname := items[i].Attrs.Value('archive');

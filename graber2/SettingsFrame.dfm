@@ -139,7 +139,7 @@ object fSettings: TfSettings
     Height = 272
     Align = alClient
     TabOrder = 3
-    Properties.ActivePage = cxTabSheet6
+    Properties.ActivePage = cxTabSheet1
     Properties.CustomButtons.Buttons = <>
     Properties.HideTabs = True
     ClientRectBottom = 272
@@ -491,6 +491,8 @@ object fSettings: TfSettings
     object cxTabSheet4: TcxTabSheet
       Caption = 'cxTabSheet4'
       ImageIndex = 3
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object vgSettings: TcxVerticalGrid
         Left = 0
         Top = 0
@@ -571,15 +573,13 @@ object fSettings: TfSettings
       end
       object Panel1: TPanel
         Left = 0
-        Top = 21
+        Top = 0
         Width = 279
-        Height = 251
+        Height = 272
         Align = alClient
         BevelOuter = bvNone
         Caption = 'Panel1'
         TabOrder = 1
-        ExplicitTop = 0
-        ExplicitHeight = 272
         object dxBarDockControl1: TdxBarDockControl
           Left = 0
           Top = 0
@@ -592,9 +592,10 @@ object fSettings: TfSettings
           Left = 0
           Top = 26
           Width = 279
-          Height = 225
+          Height = 246
           Align = alClient
           TabOrder = 1
+          ExplicitHeight = 225
           object tvBlackList: TcxGridTableView
             Navigator.Buttons.CustomButtons = <>
             DataController.Summary.DefaultGroupSummaryItems = <>
