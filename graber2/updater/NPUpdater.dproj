@@ -82,6 +82,7 @@
             <Form>mf</Form>
         </DCCReference>
         <DCCReference Include="..\UPDUnit.pas"/>
+        <DCCReference Include="..\MyIdHTTP.pas"/>
         <DCCReference Include="..\MyHTTP.pas"/>
         <DCCReference Include="..\common.pas"/>
         <DCCReference Include="..\LangString.pas"/>

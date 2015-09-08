@@ -5,6 +5,7 @@ program Graber2;
 uses
   Forms,
   SysUtils,
+  myidhttp in 'myidhttp.pas',
   common in 'common.pas',
   pac in 'pac.pas',
   md5 in 'md5.pas',

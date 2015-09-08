@@ -2,7 +2,7 @@ unit MyHTTP;
 
 interface
 
-uses IdHTTP, IdInterceptThrottler, Classes, SysUtils, SyncObjs, Strutils,
+uses MyIdHTTP, IdInterceptThrottler, Classes, SysUtils, SyncObjs, Strutils,
   Variants, Common, IdURI, MyIdURI, idHTTPHeaderInfo, HTTPApp, pac;
 
 type

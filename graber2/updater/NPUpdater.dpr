@@ -4,6 +4,7 @@ uses
   Forms,
   MainForm in 'MainForm.pas' {mf},
   UPDUnit in '..\UPDUnit.pas',
+  MyIdHTTP in '..\MyIdHTTP.pas',
   MyHTTP in '..\MyHTTP.pas',
   Common in '..\common.pas',
   LangString in '..\LangString.pas',

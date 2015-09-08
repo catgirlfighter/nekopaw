@@ -20,6 +20,7 @@ const
   UPD_FILEDELETED = 5;
   UPD_FILEUNZIP = 6;
   UPD_DWDONE = 7;
+
 type
 
   TUpdThread = class(TThread)
@@ -38,16 +39,17 @@ type
     procedure IdHTTPWork(ASender: TObject; AWorkMode: TWorkMode;
       AWorkCount: Int64);
   public
+    procedure MoveUpdates(items: tTagList);
     property Event: THandle read FEventHandle;
     procedure Execute; override;
-    function CheckUpdates(s: string; items: TTagList): boolean;
-    procedure DownloadUpdates(items: TTagList; HTTP: TMyIdHTTP);
+    function CheckUpdates(s: string; items: tTagList): Boolean;
+    procedure DownloadUpdates(items: tTagList; HTTP: TMyIdHTTP);
     property Job: Integer read FJob write FJob;
     property CheckURL: String read FCheckURL write FCheckURL;
     property ListURL: String read FListURL write FListURL;
     property Error: String read FString write FString;
     property MsgHWND: HWND read FHWND write FHWND;
-    property IncSkins: Boolean read fIncSkins write fIncSkins;
+    property IncSkins: Boolean read fincSkins write fincSkins;
   end;
 
 implementation
@@ -80,28 +82,99 @@ begin
   SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILESIZE, AWorkCountMax);
 end;
 
+procedure TUpdThread.MoveUpdates(items: tTagList);
+var
+  i: Integer;
+  root, aroot, fname, aname, dir: string;
+  v1: Integer;
+  ini: tinifile;
+  z: tzipfile;
+begin
+  CoInitialize(nil);
+  try
+
+    root := ExtractFilePath(paramstr(0));
+    aroot := IncludeTrailingPathDelimiter(root + 'update');
+
+    ini := tinifile.Create(root + 'settings.ini');
+
+    try
+
+      for i := 0 to items.Count - 1 do // Moving files to main dir
+      begin
+        fname := items[i].Attrs.Value('file');
+        aname := items[i].Attrs.Value('archive');
+        v1 := StrToInt(items[i].Attrs.Value('version'));
+
+        if fileexists(root + fname) then
+          DeleteFile(root + fname)
+        else
+        begin
+          dir := ExtractFilePath(root + fname);
+
+          if not DirectoryExists(dir) then
+            CreateDirExt(dir);
+        end;
+
+        if aname <> '' then
+        begin
+          // if (SameText(aname, 'libeay32.zip') or SameText(aname, 'ssleay32.zip'))
+          // then
+          // begin
+          // UnLoadOpenSSLLibrary;
+          // sslunloaded := true;
+          // end;
+          // FreeAndNil(SSLIsLoaded);
+          // end;
+          // begin
+          // FreeAndNil(fIOHandler);
+          // FreeAndNil(FHTTP);
+          // end;
+          SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILEUNZIP, LongInt(@aname));
+          z := tzipfile.Create;
+          try
+            z.ExtractZipFile(aroot + aname, root);
+          finally
+            z.Free;
+          end;
+          DeleteFile(aroot + aname);
+        end
+        else
+          MoveFile(PWideChar(aroot + fname), PWideChar(root + fname));
+
+        ini.WriteInteger('update', fname, v1);
+      end;
+    finally
+      ini.Free;
+    end;
+
+  finally
+    CoUninitialize;
+  end;
+end;
+
 procedure TUpdThread.IdHTTPWork(ASender: TObject; AWorkMode: TWorkMode;
   AWorkCount: Int64);
 begin
   SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILEPROGRESS, AWorkCount);
 end;
 
-function TUpdThread.CheckUpdates(s: string; items: TTagList): boolean;
+function TUpdThread.CheckUpdates(s: string; items: tTagList): Boolean;
 var
   xml: TMyXMLParser;
   // items: TTagList;
-  INI: TINIFile;
+  ini: tinifile;
   i, j, v: Integer;
   root, fname: string;
-  deleted: boolean;
+  deleted: Boolean;
 begin
   root := ExtractFilePath(paramstr(0));
   xml := TMyXMLParser.Create;
   xml.Parse(s);
 
   // items := TTagList.Create;
-  if incSkins then
-    xml.TagList.GetList(['item','skin'], [nil,nil], items)
+  if IncSkins then
+    xml.TagList.GetList(['item', 'skin'], [nil, nil], items)
   else
     xml.TagList.GetList('item', nil, items);
 
@@ -109,7 +182,7 @@ begin
     raise Exception.Create
       ('Result of parsing VERSION.XML is ZERO. It can not be ZERO');
 
-  INI := TINIFile.Create(root + 'settings.ini');
+  ini := tinifile.Create(root + 'settings.ini');
 
   // result := false;
 
@@ -118,7 +191,7 @@ begin
   while i < items.Count do
   begin
     fname := items[i].Attrs.Value('file');
-    v := INI.ReadInteger('update', fname, -1);
+    v := ini.ReadInteger('update', fname, -1);
     deleted := items[i].Attrs.Value('deleted') = '1';
     if deleted then
       if (v > -1) then
@@ -129,9 +202,10 @@ begin
             begin
               if fileexists(ExtractFilePath(paramstr(0)) + fname) then
                 DeleteFile(ExtractFilePath(paramstr(0)) + fname);
-              INI.DeleteKey('update', fname);
+              ini.DeleteKey('update', fname);
               items.Delete(i);
-              SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILEDELETED, LongInt(@fname));
+              SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILEDELETED,
+                LongInt(@fname));
             end
         end
       else
@@ -150,20 +224,20 @@ begin
 
   result := i + j > 0;
 
-  INI.Free;
+  ini.Free;
   // items.Free;
   xml.Free;
 end;
 
-procedure TUpdThread.DownloadUpdates(items: TTagList; HTTP: TMyIdHTTP);
+procedure TUpdThread.DownloadUpdates(items: tTagList; HTTP: TMyIdHTTP);
 var
   i, v1, v2: Integer;
   root: string;
   aroot: string;
   fname, aname, pname, o, dir: string;
   f: TFileStream;
-  INI: TINIFile;
-  z: tzipfile;
+  ini: tinifile;
+  // z: tzipfile;
 begin
   root := ExtractFilePath(paramstr(0));
   aroot := IncludeTrailingPathDelimiter(root + 'update');
@@ -171,164 +245,145 @@ begin
   if not DirectoryExists(aroot) then
     CreateDirExt(aroot);
 
-  INI := TINIFile.Create(aroot + 'update.ini');
-  CoInitialize(nil);
+  ini := tinifile.Create(aroot + 'update.ini');
+  try
 
-  SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILECOUNT, items.Count);
+    SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILECOUNT, items.Count);
 
-  HTTP.OnWorkBegin := IdHTTPWorkBegin;
-  HTTP.OnWork := IdHTTPWork;
+    HTTP.OnWorkBegin := IdHTTPWorkBegin;
+    HTTP.OnWork := IdHTTPWork;
 
-  try // downloading
-    for i := 0 to items.Count - 1 do
-    begin
-      SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILEPOS, i);
-      fname := items[i].Attrs.Value('file');
-      v1 := StrToInt(items[i].Attrs.Value('version'));
-      v2 := INI.ReadInteger('update', fname, -1);
-
-      aname := items[i].Attrs.Value('archive');
-
-      if aname <> '' then
-        pname := aname
-      else
-        pname := fname;
-
-      if (v1 > -1) and (v2 >= v1) and (fileexists(aroot + aname)) then
-        Continue;
-
-      SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILENAME, LongInt(@fname));
-
-      o := FListURL + StringReplace(pname, '\', '/', [rfReplaceAll]);
-
-      dir := ExtractFilePath(aroot + pname);
-
-      if not DirectoryExists(dir) then
-        CreateDirExt(dir);
-
-      f := TFileStream.Create(aroot + pname, fmCREATE);
-      try  try
-          HTTP.Get(o, f);
-        finally
-          f.Free;
-        end;
-      except
-        if fileexists(aroot + pname) then
-          DeleteFile(aroot + pname);
-        raise;
-      end;
-
-      if v1 > -1 then
-        INI.WriteInteger('update', fname, v1); // save "DOWNLOADED"
-    end;
-
-    FreeAndNil(INI);
-
-    INI := TINIFile.Create(root + 'settings.ini');
-
-    for i := 0 to items.Count - 1 do // Moving files to main dir
-    begin
-      fname := items[i].Attrs.Value('file');
-      aname := items[i].Attrs.Value('archive');
-      v1 := StrToInt(items[i].Attrs.Value('version'));
-
-      if fileexists(root + fname) then
-        DeleteFile(root + fname)
-      else
+    try // downloading
+      for i := 0 to items.Count - 1 do
       begin
-        dir := ExtractFilePath(root + fname);
+        SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILEPOS, i);
+        fname := items[i].Attrs.Value('file');
+        v1 := StrToInt(items[i].Attrs.Value('version'));
+        v2 := ini.ReadInteger('update', fname, -1);
+
+        aname := items[i].Attrs.Value('archive');
+
+        if aname <> '' then
+          pname := aname
+        else
+          pname := fname;
+
+        if (v1 > -1) and (v2 >= v1) and (fileexists(aroot + aname)) then
+          Continue;
+
+        SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILENAME, LongInt(@fname));
+
+        o := FListURL + StringReplace(pname, '\', '/', [rfReplaceAll]);
+
+        dir := ExtractFilePath(aroot + pname);
 
         if not DirectoryExists(dir) then
           CreateDirExt(dir);
+
+        f := TFileStream.Create(aroot + pname, fmCREATE);
+        try
+          try
+            HTTP.Get(o, f);
+          finally
+            f.Free;
+          end;
+        except
+          if fileexists(aroot + pname) then
+            DeleteFile(aroot + pname);
+          raise;
+        end;
+
+        if v1 > -1 then
+          ini.WriteInteger('update', fname, v1); // save "DOWNLOADED"
       end;
 
-      if aname <> '' then
-      begin
-        SendMessage(FHWND, CM_UPDATEPROGRESS, UPD_FILEUNZIP, LongInt(@aname));
-        z := tzipfile.Create; try
-        z.ExtractZipFile(aroot + aname,root);
-        finally
-          z.Free;
-        end;
-        DeleteFile(aroot + aname);
-      end
-      else
-        MoveFile(PWideChar(aroot + fname), PWideChar(root + fname));
-
-      INI.WriteInteger('update', fname, v1);
+    finally
+      HTTP.OnWorkBegin := nil;
+      HTTP.OnWork := nil;
     end;
+
   finally
-    CoUninitialize;
-    if Assigned(INI) then
-      INI.Free;
-    HTTP.OnWorkBegin := nil;
-    HTTP.OnWork := nil;
+    ini.Free;
   end;
 end;
 
 procedure TUpdThread.Execute;
 var
   s: string;
-  items: TTagList;
+  items: tTagList;
 begin
   WaitForSingleObject(FEventHandle, INFINITE);
-  FHTTP := TMyIdHTTP.Create;
-  if (pos('https:',lowercase(FCheckURL)) = 1)
-  or (pos('https:',lowercase(FListURL)) = 1) then
-  begin
-    FIOHandler := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
-    FHTTP.IOHandler := fIOHandler;
-  end else
-    FIOHandler := nil;
 
-  items := TTagList.Create;
+  items := tTagList.Create;
   try
-    FHTTP.ConnectTimeout := 10000;
-    FHTTP.ReadTimeout := 10000;
-    ReturnValue := -1;
+
+    FHTTP := TMyIdHTTP.Create;
+    if (pos('https:', lowercase(FCheckURL)) = 1) or
+      (pos('https:', lowercase(FListURL)) = 1) then
+    begin
+      FIOHandler := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+      FHTTP.IOHandler := FIOHandler;
+    end
+    else
+      FIOHandler := nil;
+
     try
+      FHTTP.ConnectTimeout := 10000;
+      FHTTP.ReadTimeout := 10000;
+      ReturnValue := -1;
       try
-        if FCheckURL <> '' then
-          FHTTP.Get(FCheckURL);
-      except
-      end;
-      s := FHTTP.Get(FListURL + 'version.xml'{,[302]});
+        try
+          if FCheckURL <> '' then
+            FHTTP.Get(FCheckURL);
+        except
+        end;
+        s := FHTTP.Get(FListURL + 'version.xml' { ,[302] } );
 
-      // checking critical parts
-      if s = '' then
-        raise Exception.Create('VERSION.XML is EMPTY. It can not be EMPTY');
+        // checking critical parts
+        if s = '' then
+          raise Exception.Create('VERSION.XML is EMPTY. It can not be EMPTY');
 
-      case Job of
-        UPD_CHECK_UPDATES:
-          if CheckUpdates(s, items) then
-            ReturnValue := 1
-          else
-            ReturnValue := 2;
-        UPD_DOWNLOAD_UPDATES:
-          begin
+        case Job of
+          UPD_CHECK_UPDATES:
             if CheckUpdates(s, items) then
-            begin
-              DownloadUpdates(items, FHTTP);
-              ReturnValue := 1;
-            end
+              ReturnValue := 1
             else
               ReturnValue := 2;
-          end;
+          UPD_DOWNLOAD_UPDATES:
+            begin
+              if CheckUpdates(s, items) then
+              begin
+                DownloadUpdates(items, FHTTP);
+                ReturnValue := 1;
+              end
+              else
+                ReturnValue := 2;
+            end;
+        end;
+      except
+        on e: Exception do
+        begin
+          ReturnValue := 0;
+          FString := e.Message;
+        end;
       end;
-    except
-      on e: Exception do
+    finally
+      FHTTP.Free;
+      if Assigned(FIOHandler) then
       begin
-        ReturnValue := 0;
-        FString := e.Message;
+        FIOHandler.Free;
+        UnLoadOpenSSLLibrary;
       end;
     end;
+
+    if Job = UPD_DOWNLOAD_UPDATES then
+      MoveUpdates(items);
+
   finally
-    items.Free;
-    FHTTP.Free;
-    if Assigned(fIOHandler) then
-      fIOHandler.Free;
     SendMessage(FHWND, CM_UPDATE, ReturnValue, Integer(Self));
+    items.Free;
   end;
+
 end;
 
 end.

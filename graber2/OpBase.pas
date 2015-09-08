@@ -289,7 +289,7 @@ begin
     UseLookAndFeel := ini.ReadBool('settings', 'uselookandfeel', false);
     SkinName := ini.ReadString('settings', 'skinname', '');
     UPDServ := ini.ReadString('settings', 'updserver',
-      'http://nekopaw.googlecode.com/svn/trunk/release/graber2/');
+      'https://raw.githubusercontent.com/catgirlfighter/nekopaw/master/release/graber2/');
     CHKServ := ini.ReadString('settings', 'updserver',
       'http://code.google.com/p/nekopaw/');
     langname := ini.ReadString('settings', 'language', '');

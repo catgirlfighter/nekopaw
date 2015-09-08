@@ -494,7 +494,7 @@ end;
 
 procedure TfSettings.cxLabel5Click(Sender: TObject);
 begin
-  ShellExecute(Handle, nil, 'http://code.google.com/p/nekopaw/', nil, nil,
+  ShellExecute(Handle, nil, 'https://github.com/catgirlfighter/nekopaw', nil, nil,
     SW_SHOWNORMAL);
 end;
 

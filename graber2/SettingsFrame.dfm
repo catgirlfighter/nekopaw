@@ -139,7 +139,7 @@ object fSettings: TfSettings
     Height = 272
     Align = alClient
     TabOrder = 3
-    Properties.ActivePage = cxTabSheet1
+    Properties.ActivePage = cxTabSheet6
     Properties.CustomButtons.Buttons = <>
     Properties.HideTabs = True
     ClientRectBottom = 272
@@ -666,7 +666,7 @@ object fSettings: TfSettings
         Left = 7
         Top = 113
         Cursor = crHandPoint
-        Caption = 'http://code.google.com/p/nekopaw/'
+        Caption = 'https://github.com/catgirlfighter/nekopaw'
         Style.TextStyle = [fsUnderline]
         Properties.LineOptions.Alignment = cxllaBottom
         Transparent = True

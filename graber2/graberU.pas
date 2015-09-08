@@ -7331,6 +7331,9 @@ begin
           Url := CheckProto(ReplaceStr(HTTPRec.Url, FHTTPRec.PicTemplate.Ext,
             FExt), HTTPRec.Referer);
 
+        //FSSLHandler.FREE;
+        //FSSLHandler.cre
+
         // Delay feature for retarted resources
         // 2.0.2.115 NOW is a queue
 
@@ -7431,6 +7434,15 @@ begin
             f.Seek(f.Size, soBeginning);
 
         end;
+
+{        FHTTP.Free;
+        FHTTP := CreateHTTP;
+        FSSLHandler := TIdSSLIOHandlerSocketOpenSSL.Create(FHTTP);
+        // fSSLHandler.Owner := fHTTP;
+        FHTTP.IOHandler := FSSLHandler;
+        fSocksInfo := tidSocksInfo.Create(FSSLHandler);
+        // fSocksInfo.Owner := fSSLHandler;
+        FSSLHandler.TransparentProxy := fSocksInfo;    }
 
         try
           HTTP.Get(Url, f);
