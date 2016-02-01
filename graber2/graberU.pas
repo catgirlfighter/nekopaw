@@ -9607,6 +9607,8 @@ var
     end;
   end;
 
+
+
 // check file and directories lengths
   procedure Checklength(Pic: TTPicture);
   var
@@ -9617,7 +9619,7 @@ var
 
     while s2 <> '' do
     begin
-      s1 := CopyTo(s2, '\', [], [], true);
+      s1 := trim(CopyTo(s2, '\', [], [], true),'.');
 
       if length(s1) > FN_LN then
         if s2 = '' then

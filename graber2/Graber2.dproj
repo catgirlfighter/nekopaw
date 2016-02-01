@@ -75,10 +75,10 @@
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
         <VerInfo_MinorVer>1</VerInfo_MinorVer>
         <VerInfo_Release>0</VerInfo_Release>
-        <VerInfo_Build>144</VerInfo_Build>
+        <VerInfo_Build>145</VerInfo_Build>
         <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
         <VerInfo_Locale>1033</VerInfo_Locale>
-        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=2.1.0.144;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=2.1.0.145;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
@@ -88,9 +88,9 @@
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
         <VerInfo_Release>0</VerInfo_Release>
         <VerInfo_MinorVer>1</VerInfo_MinorVer>
-        <VerInfo_Build>137</VerInfo_Build>
+        <VerInfo_Build>138</VerInfo_Build>
         <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
-        <VerInfo_Keys>CompanyName=Catgirl Group;FileDescription=;FileVersion=2.1.0.137;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=NEKOPAW Grabber;ProductVersion=2.0;Comments=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=Catgirl Group;FileDescription=;FileVersion=2.1.0.138;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=NEKOPAW Grabber;ProductVersion=2.0;Comments=</VerInfo_Keys>
         <VerInfo_Locale>1033</VerInfo_Locale>
     </PropertyGroup>
     <ItemGroup>
