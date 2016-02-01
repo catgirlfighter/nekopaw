@@ -952,6 +952,7 @@ begin
   t.ListURL := GlobalSettings.UPDServ;
   lUPD.Show;
   lUPD.BringToFront;
+
   SetEvent(t.Event);
 end;
 
@@ -1032,7 +1033,7 @@ begin
     // - 1: In XE3 cause error
     // CheckUpdates;
     0:
-      OnError(Self, 'Update check is failed: ' + TUPDThread(Msg.LParam)
+      OnError(Self, 'Update check failed: ' + TUPDThread(Msg.LParam)
         .Error, nil);
     1:
       if MessageDlg(lang('_NEWUPDATES_'), mtConfirmation, [mbYes, mbNo], 0) = mrYes
@@ -1579,6 +1580,9 @@ begin
   begin
     // bmbMain.Visible := true;
     ds.Show;
+
+    //if lUPD.Visible then
+    //  lUPD.BringToFront;
   end;
 end;
 
@@ -1590,6 +1594,11 @@ begin
   PicInfo(nil, nil);
   if not dsLogs.AutoHide then
     dsLogs.Visible := true;
+  //if lupd.Visible then
+  //begin
+  //  lupd.Top := mf.ClientHeight - lupd.Height - 5;
+  //  lupd.Anchors := [akbottom, akright];
+  //end;
 end;
 
 procedure Tmf.SHOWSETTINGS(var Msg: TMessage);
@@ -1659,13 +1668,21 @@ begin
     GlobalSettings.GUI.FormHeight);
   dsTags.ActiveChildIndex := GlobalSettings.GUI.PanelPage;
   dsTags.Width := GlobalSettings.GUI.PanelWidth;
+  TabList := TList.Create;
+  bmbMain.Visible := false;
+
+  Setlang;
+
+  dsLogs.AutoHide := true;
+  dsLogs.Hide;
+  dsTags.Hide;
+
   STYLECHANGED(tmp);
   // ClientWidth := Globalsettings.GUI.FormWidth;
   // ClientHeight := Globalsettings.GUI.FormHeight;
   if GlobalSettings.GUI.FormState then
     WindowState := wsMaximized;
 
-  Setlang;
   // pcTables.OnPageClose := OnTabClose;
   FBalloon := nil;
   // FullResList.OnError := OnError;
@@ -1676,12 +1693,6 @@ begin
   (mFrame as tfStart).Setlang;
   mFrame.Parent := Self;
 
-  TabList := TList.Create;
-  bmbMain.Visible := false;
-
-  dsLogs.AutoHide := true;
-  dsLogs.Hide;
-  dsTags.Hide;
   FCurPic := nil;
   SendMessage(Handle, CM_MENUSTYLECHANGED, 0, 0);
   if OpBase.SHOWSETTINGS then
@@ -1789,7 +1800,11 @@ begin
     mFrame := tfStart.Create(Self);
     (mFrame as tfStart).Setlang;
     mFrame.Parent := Self;
+
+    if lUPD.Visible then
+      lUPD.BringToFront;
   end;
+
 end;
 
 end.

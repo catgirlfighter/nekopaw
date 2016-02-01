@@ -291,7 +291,7 @@ begin
     UPDServ := ini.ReadString('settings', 'updserver',
       'https://raw.githubusercontent.com/catgirlfighter/nekopaw/master/release/graber2/');
     CHKServ := ini.ReadString('settings', 'updserver',
-      'http://code.google.com/p/nekopaw/');
+      'https://github.com/catgirlfighter/nekopaw');
     langname := ini.ReadString('settings', 'language', '');
     MenuCaptions := ini.ReadBool('settings', 'menucaptions', false);
     Tips := ini.ReadBool('settings', 'tips', true);

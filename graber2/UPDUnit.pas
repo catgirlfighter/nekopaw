@@ -335,7 +335,7 @@ begin
   items := tTagList.Create;
   try
 
-    FHTTP := TMyIdHTTP.Create;
+    FHTTP := CreateHTTP;
     if (pos('https:', lowercase(FCheckURL)) = 1) or
       (pos('https:', lowercase(FListURL)) = 1) then
     begin

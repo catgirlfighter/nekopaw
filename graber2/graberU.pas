@@ -66,6 +66,8 @@ const
   DOWNLOAD_SCRIPT = 'dwscript'; // default section for download picture script
 
 type
+  MsgException = class(Exception);
+
   doublestring = record
     val1, val2: string;
   end;
@@ -3929,6 +3931,8 @@ begin
           end;
         JOB_CANCELED:
           t.Picture.Status := JOB_NOJOB;
+        JOB_ERROR:
+          t.Picture.Status := JOB_ERROR;
       end
     else if t.ReturnValue = THREAD_FINISH then
     begin
@@ -3936,6 +3940,11 @@ begin
     end
     else
       t.Picture.Status := JOB_ERROR;
+
+    if (FPictureList.eol) and (FPictureList.AllFinished(true, true)) then
+    begin
+      FOnPicJobFinished(Self);
+    end;
 
     dec(FThreadCounter.PictureThreadCount);
     Result := THREAD_START;
@@ -5439,7 +5448,6 @@ begin
 
           if (Job = JOB_PICS) and (ReturnValue <> THREAD_FINISH) then
             ProcPic;
-
         end;
 
         if Self.ReturnValue <> THREAD_FINISH then
@@ -5519,6 +5527,7 @@ begin
   inherited Create(false);
   FHTTP := CreateHTTP;
   FSSLHandler := TIdSSLIOHandlerSocketOpenSSL.Create(FHTTP);
+  FSSLHandler.SSLOptions.CipherList := '-ALL:ECDHE+AESGCM:ECDHE+AES+SHA:DHE+AES+SHA!DSS!EXPORT:RSA+AES+SHA:RSA+3DES+SHA';
   // fSSLHandler.Owner := fHTTP;
   FHTTP.IOHandler := FSSLHandler;
   fSocksInfo := tidSocksInfo.Create(FSSLHandler);
@@ -6631,10 +6640,21 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
     else if SameText(Name, '@createcookie') then
     begin
       s := Value;
-      // v1 := Clc(nVal(s));
-      // v2 := Clc(nVal(s));
-      FHTTP.CookieList.ChangeCookie(GetURLDomain(HTTPRec.DefUrl),
-        VarToStr(Clc(nVal(s))) + '=' + VarToStr(Clc(nVal(s))));
+      r1 := Clc(nVal(s));
+      r2 := Clc(nVal(s));
+      r3 := VarToStr(Clc(nVal(s)));
+      if r3 = '.' then
+        FHTTP.CookieList.ChangeCookie('.' + DeleteTo(GetURLDomain(HTTPRec.DefUrl),'.'),
+          r1 + '=' + r2)
+      else if r3 = '..' then
+        FHTTP.CookieList.ChangeCookie(      DeleteTo(GetURLDomain(HTTPRec.DefUrl),'.'),
+          r1 + '=' + r2)
+      else if r3 = '*' then
+        FHTTP.CookieList.ChangeCookie('.' +          GetURLDomain(HTTPRec.DefUrl),
+          r1 + '=' + r2)
+      else
+        FHTTP.CookieList.ChangeCookie(               GetURLDomain(HTTPRec.DefUrl),
+          r1 + '=' + r2);
     end
     else if SameText(Name, '@setvar') then
     begin
@@ -6937,6 +6957,8 @@ begin
           end;
           // Url := '';
 
+          SSL.SSLOptions.Method := sslvTLSv1;
+          SSL.SSLOptions.SSLVersions := [sslvTLSv1];
           Url := CheckProto(CalcValue(FHTTPRec.Url, VE, nil), FHTTPRec.Referer);
 
           FHTTP.Request.Referer := FHTTPRec.Referer;
@@ -7667,7 +7689,11 @@ end;
 
 procedure TDownloadThread.ProcPost;
 begin
-  FPostProc.Process(SE, DE, FE, VE, VE);
+  try
+    FPostProc.Process(SE, DE, FE, VE, VE);
+  except on e: exception do
+    SetHTTPError(e.message);
+  end;
 end;
 
 procedure TDownloadThread.ProcLogin;

@@ -269,9 +269,11 @@ object fNewList: TfNewList
         Top = 0
         Align = alTop
         Caption = 'lHint'
+        ParentColor = False
         Style.BorderStyle = ebsUltraFlat
-        Transparent = True
+        Style.Color = clWindow
         OnClick = lHintClick
+        ExplicitLeft = 3
       end
     end
   end
