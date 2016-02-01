@@ -1,4 +1,4 @@
-<item file="Graber2.exe"   archive="Graber2.zip"     version=140 />
+<item file="Graber2.exe"   archive="Graber2.zip"     version=141 />
 <item file="libeay32.sys"  archive="libeay32.zip"    version=0 deleted=1 />
 <item file="ssleay32.sys"  archive="ssleay32.zip"    version=0 deleted=1 />
 <item file="libeay32.dll"  archive="libeay32.zip"    version=0 newversion=2/>
@@ -35,7 +35,7 @@
 <item file="resources\mgbooru.net.cfg"             version=4 />
 <item file="resources\minitokyo.net.cfg"           version=13 />
 <item file="resources\nabyn.com.cfg"               version=6 />
-<item file="resources\nhentai.net.cfg"             version=1 />
+<item file="resources\nhentai.net.cfg"             version=2 />
 <item file="resources\seiga.nicovideo.jp.cfg"      version=5 />
 <item file="resources\nihonomaru.com.cfg"          version=1 />
 <item file="resources\rule34.paheal.net.cfg"       version=15 />
@@ -48,7 +48,7 @@
 <item file="resources\idol.sankakucomplex.com.cfg" version=12 />
 <item file="resources\tbib.org.cfg"                version=2 />
 <item file="resources\tentaclerape.net.cfg"        version=5 />
-<item file="resources\thedoujin.com.cfg"           version=3 />
+<item file="resources\thedoujin.com.cfg"           version=4 />
 <item file="resources\twentypercentcooler.net.cfg" version=1 />
 <item file="resources\wildcritters.net.cfg"        version=1 />
 <item file="resources\wildcritters.ws.cfg"         version=5 />
