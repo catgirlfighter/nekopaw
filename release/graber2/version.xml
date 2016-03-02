@@ -11,8 +11,8 @@
 <item file="resources\gelbooru.tmpl"               version=20 />
 
 <item file="resources\analbooru.com.cfg"           version=5 />
-<item file="resources\allthefallen.org.cfg"        version=1 />
 <item file="resources\anime-pictures.net.cfg"      version=7 />
+<item file="resources\atfbooru.ninja.cfg"          version=0 />
 <item file="resources\behoimi.org.cfg"             version=2 />
 <item file="resources\elderscrollsbooru.booru.org.cfg" version=0 />
 <item file="resources\furry.booru.org.cfg"         version=0 />
@@ -63,6 +63,7 @@
 <item file="resources\lolibooru.com.cfg"           version=2 deleted=1 />
 <item file="resources\cosplay.paheal.net.cfg"      version=6 deleted=1/>
 <item file="resources\rule63.paheal.net.cfg"       version=7 deleted=1/>
+<item file="resources\allthefallen.org.cfg"        version=1 deleted=1/>
 
 <item file="resources\icons\allthefallen.org.bmp"        version=0 />
 <item file="resources\icons\analbooru.com.bmp"           version=0 />
@@ -114,8 +115,8 @@
 <item file="resources\icons\cosplay.paheal.net.bmp"      version=0 deleted=1 />
 <item file="resources\icons\rule63.paheal.net.bmp"       version=0 deleted=1 />
 
-<item file="languages\English.ini" version=42 />
-<item file="languages\Russian.ini" version=39 />
+<item file="languages\English.ini" version=43 />
+<item file="languages\Russian.ini" version=40 />
 
 <skin file="skins\Black.skinres" version=0 />
 <skin file="skins\Blue.skinres" version=0 />
