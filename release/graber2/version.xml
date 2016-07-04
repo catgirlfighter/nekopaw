@@ -8,7 +8,7 @@
 
 <item file="resources\danbooru.tmpl"               version=32 />
 <item file="resources\danbooru2.tmpl"              version=7  />
-<item file="resources\gelbooru.tmpl"               version=20 />
+<item file="resources\gelbooru.tmpl"               version=21 />
 
 <item file="resources\analbooru.com.cfg"           version=5 />
 <item file="resources\anime-pictures.net.cfg"      version=7 />
