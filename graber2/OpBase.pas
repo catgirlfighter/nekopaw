@@ -23,7 +23,7 @@ type
     procedure OnError(Sender: TObject; Msg: String);
   end;
 
-  tGUIValue = (gvSizes, gvResSet, gvGridFields);
+  tGUIValue = (gvSizes, gvResSet, gvGridFields, gvCSVFields);
   tGUIValues = set of tGUIValue;
 
 procedure LoadProfileSettings(pname: string = ''); overload;
@@ -322,6 +322,7 @@ begin
       LastUsedFields := ini.ReadString('gui', 'lastusedgridfields',
         '@resource,@label');
       LastUsedGrouping := ini.ReadString('gui', 'lastusedgridgrouping', '');
+      LastUsedCSVFields := ini.ReadString('gui','lastusedcsvfields','');
     end;
 
     with Downl do
@@ -545,6 +546,9 @@ begin
         ini.WriteString('GUI', 'LastUsedGridFields', LastUsedFields);
         ini.WriteString('GUI', 'LastUsedGridGrouping', LastUsedGrouping);
       end;
+
+      if gvCSVFields in values then
+        ini.WriteString('GUI', 'LastUsedCSVFields', LastUsedCSVFields);
     end;
   finally
     ini.Free;

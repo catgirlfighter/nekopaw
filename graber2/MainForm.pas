@@ -6,7 +6,7 @@ uses
   {base}
   Windows, Messages, SysUtils, Variants, Classes,
   Graphics, Controls, Forms,
-  Dialogs, DB, ActnList, ExtCtrls, ImgList, rpVersionInfo,
+  Dialogs, DB, ActnList, ExtCtrls, ImgList,{ rpVersionInfo,  }
   AppEvnts, Types, ShellAPI, Math,
   StrUtils, UITypes,
   {devex}
@@ -79,7 +79,6 @@ type
     vgCurMain: TcxVerticalGrid;
     nbgCurTagsControl: TdxNavBarGroupControl;
     chlbTags: TcxCheckListBox;
-    vINFO: TrpVersionInfo;
     lUPD: TcxLabel;
     nvTags: TdxNavBar;
     nbgTagsMain: TdxNavBarGroup;
@@ -104,6 +103,7 @@ type
     dlgOpen: TOpenDialog;
     bbLoad: TdxBarButton;
     bbChange: TdxBarButton;
+    dxBarButton1: TdxBarButton;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     { procedure gLevel2GetGridView(Sender: TcxGridLevel;
@@ -213,7 +213,7 @@ var
 implementation
 
 uses StartFrame, NewListFrame, LangString, SettingsFrame, GridFrame, utils,
-  AboutForm, win7taskbar, LoginForm, Newsv2Form;
+  AboutForm, win7taskbar, LoginForm, Newsv2Form, SelectFieldsForm;
 {$R *.dfm}
 
 procedure TMycxTabSheet.OnTimer(Sender: TObject);
@@ -422,7 +422,7 @@ begin
     Exit;
   end;
 
-  a.List.LockList{('PicInfo')};
+  a.List.LockList { ('PicInfo') };
   try
 
     vgCurMain.BeginUpdate;
@@ -439,7 +439,8 @@ begin
       if (a.FactFileName = '') then
         if a.Linked.Count > 0 then
           dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '',
-            ftPathText, nil, ExtractFilePath(a.Linked.ItemList[0].FileName), true)
+            ftPathText, nil,
+            ExtractFilePath(a.Linked.ItemList[0].FileName), true)
         else
           dm.CreateField(vgCurMain, 'vgiSavePath', lang('_SAVEPATH_'), '',
             ftPathText, nil, a.FileName, true)
@@ -497,21 +498,21 @@ begin
 
         vgTagsMain.BeginUpdate;
         try
-          c := (vgTagsMain.RowByName('vgT' + IntTOStr(i)) as TcxEditorRow);
+          c := (vgTagsMain.RowByName('vgT' + IntToStr(i)) as TcxEditorRow);
           c.Properties.Value := ifn(ResList.ListFinished,
             ifn(ResList.PicsFinished, '', // if pics
-            IntTOStr(ResList[i].PictureList.PicCounter.FSH + ResList[i]
+            IntToStr(ResList[i].PictureList.PicCounter.FSH + ResList[i]
             .PictureList.PicCounter.SKP + ResList[i]
             .PictureList.PicCounter.UNCH) + '/' +
-            IntTOStr(ResList[i].PictureList.Count) +
+            IntToStr(ResList[i].PictureList.Count) +
             ifn(ResList[i].PictureList.PicCounter.ERR > 0,
-            ' err ' + IntTOStr(ResList[i].PictureList.PicCounter.ERR), '')),
+            ' err ' + IntToStr(ResList[i].PictureList.PicCounter.ERR), '')),
 
-            IntTOStr(ResList[i].JobList.OkCount) + '/' // if pages
-            + IntTOStr(ResList[i].JobList.Count) + ' (' +
-            IntTOStr(ResList[i].HTTPRec.Theor) + ')' +
+            IntToStr(ResList[i].JobList.OkCount) + '/' // if pages
+            + IntToStr(ResList[i].JobList.Count) + ' (' +
+            IntToStr(ResList[i].HTTPRec.Theor) + ')' +
             ifn(ResList[i].JobList.ErrorCount > 0,
-            ' err ' + IntTOStr(ResList[i].JobList.ErrorCount), ''));
+            ' err ' + IntToStr(ResList[i].JobList.ErrorCount), ''));
 
           c.Visible := ifn(ResList.ListFinished, ifn(ResList.PicsFinished, true,
             not(ResList[i].PictureList.PicCounter.FSH + ResList[i]
@@ -548,7 +549,7 @@ begin
               ACheckItem := TcxCheckListBoxItem
                 (ResList.PictureList.Tags[t[i].Tag].Tag);
               ACheckItem.Text := ResList.PictureList.Tags[t[i].Tag].name + ' ('
-                + IntTOStr(ResList.PictureList.Tags[t[i].Tag]
+                + IntToStr(ResList.PictureList.Tags[t[i].Tag]
                 .Linked.Count) + ')';
             end
             else
@@ -556,7 +557,7 @@ begin
               ACheckItem := chlbFullTags.Items.Insert(t[i].Tag)
                 as TcxCheckListBoxItem;
               ACheckItem.Text := ResList.PictureList.Tags[t[i].Tag].name + ' ('
-                + IntTOStr(ResList.PictureList.Tags[t[i].Tag]
+                + IntToStr(ResList.PictureList.Tags[t[i].Tag]
                 .Linked.Count) + ')';
               ACheckItem.Tag := Integer(ResList.PictureList.Tags[t[i].Tag]);
               ResList.PictureList.Tags[t[i].Tag].Tag := Integer(ACheckItem);
@@ -617,8 +618,18 @@ begin
     if (VarToStr(f.FullResList[0].Fields['tag']) <> '') then
       n.Caption := trim(f.FullResList[0].Fields['tag'])
     else if (l.Count < 2) and (VarToStr(l[0].Fields['tag']) <> '') then
-      n.Caption := trim(l[0].RestoreTagString(f.ActualResList[0].Fields['tag'],
-        l[0].HTTPRec.TagTemplate));
+    begin
+      try
+        n.Caption :=
+          trim(l[0].RestoreTagString(f.ActualResList[0].Fields['tag'],
+          l[0].HTTPRec.TagTemplate));
+      except
+        n.Caption := trim(f.ActualResList[0].Fields['tag']);
+      end;
+    end;
+
+    if length(n.Caption) > 40 then
+      n.Caption := copy(n.Caption, 1, 40);
 
     f2.ResList.OnPageComplete := DoRefreshResInfo;
 
@@ -797,6 +808,22 @@ begin
         rl.PictureList.SaveToCSV(dlgSave.FileName);
       2:
         begin
+          Application.CreateForm(tfmSelectFields, fmSelectFields);
+          try
+            rl.GetAllPictureFields(fmSelectFields.lbFullList.Items);
+            fmSelectFields.lbFieldList.Items.Text := StrToStrList(GlobalSettings.GUI.LastUsedCSVFields,',');
+            if fmSelectFields.execute then
+            begin
+              rl.PictureList.SaveToCSV(dlgSave.FileName,fmSelectFields.lbFieldList.Items);
+              GlobalSettings.GUI.LastUsedCSVFields := fmSelectFields.FieldsAsStr;
+              SaveGUISettings([gvCSVFields]);
+            end;
+          finally
+            FreeAndNil(fmSelectFields);
+          end;
+        end;
+      3:
+        begin
           Application.CreateForm(tfProgress, fProgress);
           try
             Application.ModalStarted;
@@ -840,12 +867,12 @@ end;
 procedure Tmf.CANCELNEWLIST(var Msg: TMessage);
 var
   n: TMycxTabSheet;
-  f: tfnewList;
+  f: TfNewList;
   f2: tfGrid;
 begin
   n := Pointer(Msg.WParam);
-  f := n.SecondFrame as tfNewlist;
-  if Assigned(f) and (f.State = lfsEdit) then
+  f := n.SecondFrame as TfNewList;
+  if assigned(f) and (f.State = lfsEdit) then
   begin
     f.Release;
     FreeAndNil(n.SecondFrame);
@@ -882,22 +909,22 @@ begin
       try
         for i := 0 to ResList.Count - 1 do
         begin
-          c := dm.CreateField(vgTagsMain, 'vgT' + IntTOStr(i),
+          c := dm.CreateField(vgTagsMain, 'vgT' + IntToStr(i),
             ResList[i].name + '(' + VarToStr(ResList[i].Fields['tag'] + ')'),
             '', ftString, nil, ifn(ResList.ListFinished,
             ifn(ResList.PicsFinished, '', // if pics
-            IntTOStr(ResList[i].PictureList.PicCounter.FSH + ResList[i]
+            IntToStr(ResList[i].PictureList.PicCounter.FSH + ResList[i]
             .PictureList.PicCounter.SKP + ResList[i]
             .PictureList.PicCounter.UNCH) + '/' +
-            IntTOStr(ResList[i].PictureList.Count) +
+            IntToStr(ResList[i].PictureList.Count) +
             ifn(ResList[i].PictureList.PicCounter.ERR > 0,
-            ' err ' + IntTOStr(ResList[i].PictureList.PicCounter.ERR), '')),
+            ' err ' + IntToStr(ResList[i].PictureList.PicCounter.ERR), '')),
 
-            IntTOStr(ResList[i].JobList.OkCount) + '/' // if pages
-            + IntTOStr(ResList[i].JobList.Count) + ' (' +
-            IntTOStr(ResList[i].HTTPRec.Theor) + ')' +
+            IntToStr(ResList[i].JobList.OkCount) + '/' // if pages
+            + IntToStr(ResList[i].JobList.Count) + ' (' +
+            IntToStr(ResList[i].HTTPRec.Theor) + ')' +
             ifn(ResList[i].JobList.ErrorCount > 0,
-            ' err ' + IntTOStr(ResList[i].JobList.ErrorCount), '')), true);
+            ' err ' + IntToStr(ResList[i].JobList.ErrorCount), '')), true);
 
           c.Visible := ifn(ResList.ListFinished, ifn(ResList.PicsFinished, true,
             not(ResList[i].PictureList.PicCounter.FSH + ResList[i]
@@ -928,7 +955,7 @@ begin
           for i := 0 to ResList.PictureList.Tags.Count - 1 do
           begin
             chlbFullTags.AddItem(ResList.PictureList.Tags[i].name + ' (' +
-              IntTOStr(ResList.PictureList.Tags[i].Linked.Count) + ')');
+              IntToStr(ResList.PictureList.Tags[i].Linked.Count) + ')');
           end;
 
       finally
@@ -1326,6 +1353,10 @@ begin
             n := CreateTab(pcTables);
             n.ImageIndex := 0;
             n.Caption := ExtractFileName(dlgOpen.FileName);
+
+            if length(n.Caption) > 40 then
+              n.Caption := copy(n.Caption, 1, 40);
+
             f := tfGrid.Create(n);
             try
               f.Loading := true;
@@ -1480,7 +1511,7 @@ begin
 
   n := TMycxTabSheet.Create(Self);
   // n.ImageIndex := 0;
-  n.Caption := lang('_NEWTABCAPTION_') + IntTOStr(TabList.Count + 1);
+  n.Caption := lang('_NEWTABCAPTION_') + IntToStr(TabList.Count + 1);
   // n.OnClose := dxTabClose;
   // n.Dockable := false;
   // n.ShowCaption := false;
@@ -1514,14 +1545,14 @@ procedure Tmf.Setlang;
 begin
 {$IFDEF DEBUG}
   if GLOBAL_LOGMODE then
-    Caption := FOldCaption + ' ' + vINFO.FileVersion + 'α debug log'
+    Caption := FOldCaption + ' ' + GetLocalVersion + 'α debug log'
   else
-    Caption := FOldCaption + ' ' + vINFO.FileVersion + 'α debug';
+    Caption := FOldCaption + ' ' + GetLocalVersion + 'α debug';
 {$ELSE}
   if GLOBAL_LOGMODE then
-    Caption := FOldCaption + ' ' + vINFO.FileVersion + 'α log'
+    Caption := FOldCaption + ' ' +GetLocalVersion + 'α log'
   else
-    Caption := FOldCaption + ' ' + vINFO.FileVersion + 'α';
+    Caption := FOldCaption + ' ' + GetLocalVersion + 'α';
 {$ENDIF}
   bbNew.Caption := lang('_NEWLIST_');
   bbSave.Caption := lang('_SAVELIST_');
@@ -1581,8 +1612,8 @@ begin
     // bmbMain.Visible := true;
     ds.Show;
 
-    //if lUPD.Visible then
-    //  lUPD.BringToFront;
+    // if lUPD.Visible then
+    // lUPD.BringToFront;
   end;
 end;
 
@@ -1594,11 +1625,11 @@ begin
   PicInfo(nil, nil);
   if not dsLogs.AutoHide then
     dsLogs.Visible := true;
-  //if lupd.Visible then
-  //begin
-  //  lupd.Top := mf.ClientHeight - lupd.Height - 5;
-  //  lupd.Anchors := [akbottom, akright];
-  //end;
+  // if lupd.Visible then
+  // begin
+  // lupd.Top := mf.ClientHeight - lupd.Height - 5;
+  // lupd.Anchors := [akbottom, akright];
+  // end;
 end;
 
 procedure Tmf.SHOWSETTINGS(var Msg: TMessage);

@@ -78,9 +78,10 @@ function CharPos(str: string; ch: Char; Isolators, Brackets: array of string;
 function CharPosEx(str: string; ch: TSetOfChar;
   Isolators, Brackets: array of string; From: Integer = 1): Integer;
 function GetNextS(var s: string; del: String = ';'; ins: String = ''): string;
+// function FixIsolation(const Value: String; const Isolator: String): string;
 function GetNextSEx(var s: string; del: TSetOfChar = [';'];
   ins: TSetOfChar = []): string;
-procedure StrToFile(const Value: RawByteString; FileName: String);
+procedure StrToFile(const value: RawByteString; FileName: String);
 function FileToStr(FileName: String): RawByteString;
 function MathCalcStr(s: variant): variant;
 function DateTimeStrEval(const DateTimeFormat: string;
@@ -100,10 +101,18 @@ function FindExistingDir(Dir: string): string;
 // function ReplaceStrMask(AText,AMaskText,AFromText,AToText: String): String;
 function PosBack(const substr, str: String; Offset: Integer = 1): Integer;
 function TimeString(secs: int64): string;
-procedure StreamToFile(astream: tstream; fname: string);
+procedure StreamToFile(AStream: TStream; FName: string);
+function GetVersion(sFileName: string): string;
+function GetLocalVersion: string;
 
 var
   InvalidFileNameChars: String;
+
+function fmtCSV(const val: variant; const fm: tFormatSettings): String;
+function FormatDateTimeEx(const Format: string; DateTime: TDateTime;
+  const AFormatSettings: tFormatSettings): String;
+procedure DateTimeToStringEx(var Result: string; const Format: string;
+  DateTime: TDateTime; const AFormatSettings: tFormatSettings);
 
 implementation
 
@@ -114,6 +123,499 @@ const
   _INVALID_TYPECAST_ =
     'Invalid typecast for "%s" %s "%s" near #%d in "... %s ..."';
   _INCORRECT_SYMBOL_ = 'Incorrect value "%s" near #%d in "... %s ..."';
+
+function FormatDateTimeEx(const Format: string; DateTime: TDateTime;
+  const AFormatSettings: tFormatSettings): String;
+begin
+  DateTimeToStringEx(Result, Format, DateTime, AFormatSettings);
+end;
+
+procedure DateTimeToStringEx(var Result: string; const Format: string;
+  DateTime: TDateTime; const AFormatSettings: tFormatSettings);
+var
+  BufPos, AppendLevel: Integer;
+  Buffer: array [0 .. 255] of Char;
+  DynBuffer: array of Char;
+  Sb: TCharArray;
+
+  procedure AppendChars(p: PChar; Count: Integer);
+  var
+    n, I: Integer;
+  begin
+    n := SizeOf(Buffer) div SizeOf(Char);
+    n := n - BufPos;
+    if Count > n then
+    begin
+      I := length(DynBuffer);
+      setlength(DynBuffer, I + BufPos + Count);
+      if BufPos > 0 then
+      begin
+        Move(Buffer[0], DynBuffer[I], BufPos * SizeOf(Char));
+        Inc(I, BufPos);
+      end;
+      Move(p[0], DynBuffer[I], Count * SizeOf(Char));
+      BufPos := 0;
+    end
+    else if Count > 0 then
+    begin
+      Move(p[0], Buffer[BufPos], Count * SizeOf(Char));
+      Inc(BufPos, Count);
+    end;
+  end;
+
+  procedure AppendString(const s: string);
+  begin
+    AppendChars(Pointer(s), length(s));
+  end;
+
+  procedure AppendNumber(Number, Digits: Integer);
+  const
+    Format: array [0 .. 3] of Char = '%.*d';
+  var
+    NumBuf: array [0 .. 15] of Char;
+  begin
+    AppendChars(NumBuf, FormatBuf(NumBuf, length(NumBuf), Format,
+      length(Format), [Digits, Number]));
+  end;
+
+  procedure AppendFormat(Format: PChar);
+  var
+    Starter, Token, LastToken: Char;
+    DateDecoded, TimeDecoded, Use12HourClock, BetweenQuotes: boolean;
+    p: PChar;
+    Count: Integer;
+    Year, Month, Day, Hour, Min, Sec, MSec, H: word;
+    Skip: boolean;
+
+    procedure GetCount;
+    var
+      p: PChar;
+    begin
+      p := Format;
+      while Format^ = Starter do
+        Inc(Format);
+      Count := Format - p + 1;
+    end;
+
+    procedure GetDate;
+    begin
+      if not DateDecoded then
+      begin
+        DecodeDate(DateTime, Year, Month, Day);
+        DateDecoded := true;
+      end;
+    end;
+
+    procedure GetTime;
+    begin
+      if not TimeDecoded then
+      begin
+        DecodeTime(DateTime, Hour, Min, Sec, MSec);
+        TimeDecoded := true;
+      end;
+    end;
+
+{$IFDEF MSWINDOWS}
+    function ConvertEraString(const Count: Integer): string;
+    var
+      FormatStr: string;
+      SystemTime: TSystemTime;
+      Buffer: array [byte] of Char;
+      p: PChar;
+    begin
+      Result := '';
+      SystemTime.wYear := Year;
+      SystemTime.wMonth := Month;
+      SystemTime.wDay := Day;
+
+      FormatStr := 'gg';
+      if GetDateFormat(GetThreadLocale, DATE_USE_ALT_CALENDAR, @SystemTime,
+        PChar(FormatStr), Buffer, SizeOf(Buffer)) <> 0 then
+      begin
+        Result := Buffer;
+        if Count = 1 then
+        begin
+          case SysLocale.PriLangID of
+            LANG_JAPANESE:
+              Result := copy(Result, 1, CharToBytelen(Result, 1));
+            LANG_CHINESE:
+              if (SysLocale.SubLangID = SUBLANG_CHINESE_TRADITIONAL) and
+                (ByteToCharLen(Result, length(Result)) = 4) then
+              begin
+                p := Buffer + CharToByteIndex(Result, 3) - 1;
+                SetString(Result, p, CharToBytelen(p, 2));
+              end;
+          end;
+        end;
+      end;
+    end;
+
+    function ConvertYearString(const Count: Integer): string;
+    var
+      FormatStr: string;
+      SystemTime: TSystemTime;
+      Buffer: array [byte] of Char;
+    begin
+      Result := '';
+      SystemTime.wYear := Year;
+      SystemTime.wMonth := Month;
+      SystemTime.wDay := Day;
+
+      if Count <= 2 then
+        FormatStr := 'yy' // avoid Win95 bug.
+      else
+        FormatStr := 'yyyy';
+
+      if GetDateFormat(GetThreadLocale, DATE_USE_ALT_CALENDAR, @SystemTime,
+        PChar(FormatStr), Buffer, SizeOf(Buffer)) <> 0 then
+      begin
+        Result := Buffer;
+        if (Count = 1) and (Result[1] = '0') then
+          Result := copy(Result, 2, length(Result) - 1);
+      end;
+    end;
+{$ENDIF MSWINDOWS}
+{$IFDEF POSIX}
+    function FindEra(Date: Integer): byte;
+    var
+      I: byte;
+    begin
+      Result := 0;
+      for I := 1 to EraCount do
+      begin
+        if (EraRanges[I].StartDate <= Date) and (EraRanges[I].EndDate >= Date)
+        then
+        begin
+          Result := I;
+          Exit;
+        end;
+      end;
+    end;
+
+    function ConvertEraString(const Count: Integer): String;
+    var
+      I: byte;
+    begin
+      Result := '';
+      I := FindEra(Trunc(DateTime));
+      if I > 0 then
+        Result := EraNames[I];
+    end;
+
+    function ConvertYearString(const Count: Integer): String;
+    var
+      I: byte;
+      s: string;
+    begin
+      I := FindEra(Trunc(DateTime));
+      if I > 0 then
+        s := IntToStr(Year - EraYearOffsets[I])
+      else
+        s := IntToStr(Year);
+      while length(s) < Count do
+        s := '0' + s;
+      if length(s) > Count then
+        s := copy(s, length(s) - (Count - 1), Count);
+      Result := s;
+    end;
+{$ENDIF POSIX}
+
+  begin
+    if (Format <> nil) and (AppendLevel < 2) then
+    begin
+      Inc(AppendLevel);
+      LastToken := ' ';
+      DateDecoded := false;
+      TimeDecoded := false;
+      Use12HourClock := false;
+      Skip := false;
+      while Format^ <> #0 do
+      begin
+        Starter := Format^;
+        if IsLeadChar(Starter) then
+        begin
+          AppendChars(Format, StrCharLength(Format) div SizeOf(Char));
+          Format := StrNextChar(Format);
+          LastToken := ' ';
+          Continue;
+        end;
+        Format := StrNextChar(Format);
+
+        if Skip then
+        begin
+          AppendChars(@Starter, 1);
+          Skip := false;
+          Continue;
+        end;
+
+        Token := Starter;
+        if CharInSet(Token, ['a' .. 'z']) then
+          Dec(Token, 32);
+        if CharInSet(Token, ['A' .. 'Z']) then
+        begin
+          if (Token = 'M') and (LastToken = 'H') then
+            Token := 'N';
+          LastToken := Token;
+        end;
+        case Token of
+          '!':
+            Skip := true;
+          'Y':
+            begin
+              GetCount;
+              GetDate;
+              if Count <= 2 then
+                AppendNumber(Year mod 100, 2)
+              else
+                AppendNumber(Year, 4);
+            end;
+          'G':
+            begin
+              GetCount;
+              GetDate;
+              AppendString(ConvertEraString(Count));
+            end;
+          'E':
+            begin
+              GetCount;
+              GetDate;
+              AppendString(ConvertYearString(Count));
+            end;
+          'M':
+            begin
+              GetCount;
+              GetDate;
+              case Count of
+                1, 2:
+                  AppendNumber(Month, Count);
+                3:
+                  AppendString(AFormatSettings.ShortMonthNames[Month]);
+              else
+                AppendString(AFormatSettings.LongMonthNames[Month]);
+              end;
+            end;
+          'D':
+            begin
+              GetCount;
+              case Count of
+                1, 2:
+                  begin
+                    GetDate;
+                    AppendNumber(Day, Count);
+                  end;
+                3:
+                  AppendString(AFormatSettings.ShortDayNames
+                    [DayOfWeek(DateTime)]);
+                4:
+                  AppendString(AFormatSettings.LongDayNames
+                    [DayOfWeek(DateTime)]);
+                5:
+                  AppendFormat(Pointer(AFormatSettings.ShortDateFormat));
+              else
+                AppendFormat(Pointer(AFormatSettings.LongDateFormat));
+              end;
+            end;
+          'H':
+            begin
+              GetCount;
+              GetTime;
+              BetweenQuotes := false;
+              p := Format;
+              while p^ <> #0 do
+              begin
+                if IsLeadChar(p^) then
+                begin
+                  p := StrNextChar(p);
+                  Continue;
+                end;
+                case p^ of
+                  'A', 'a':
+                    if not BetweenQuotes then
+                    begin
+                      if ((StrLIComp(p, 'AM/PM', 5) = 0) or
+                        (StrLIComp(p, 'A/P', 3) = 0) or
+                        (StrLIComp(p, 'AMPM', 4) = 0)) then
+                        Use12HourClock := true;
+                      break;
+                    end;
+                  'H', 'h':
+                    break;
+                  '''', '"':
+                    BetweenQuotes := not BetweenQuotes;
+                end;
+                Inc(p);
+              end;
+              H := Hour;
+              if Use12HourClock then
+                if H = 0 then
+                  H := 12
+                else if H > 12 then
+                  Dec(H, 12);
+              if Count > 2 then
+                Count := 2;
+              AppendNumber(H, Count);
+            end;
+          'N':
+            begin
+              GetCount;
+              GetTime;
+              if Count > 2 then
+                Count := 2;
+              AppendNumber(Min, Count);
+            end;
+          'S':
+            begin
+              GetCount;
+              GetTime;
+              if Count > 2 then
+                Count := 2;
+              AppendNumber(Sec, Count);
+            end;
+          'T':
+            begin
+              GetCount;
+              if Count = 1 then
+                AppendFormat(Pointer(AFormatSettings.ShortTimeFormat))
+              else
+                AppendFormat(Pointer(AFormatSettings.LongTimeFormat));
+            end;
+          'Z':
+            begin
+              GetCount;
+              GetTime;
+              if Count > 3 then
+                Count := 3;
+              AppendNumber(MSec, Count);
+            end;
+          'A':
+            begin
+              GetTime;
+              p := Format - 1;
+              if StrLIComp(p, 'AM/PM', 5) = 0 then
+              begin
+                if Hour >= 12 then
+                  Inc(p, 3);
+                AppendChars(p, 2);
+                Inc(Format, 4);
+                Use12HourClock := true;
+              end
+              else if StrLIComp(p, 'A/P', 3) = 0 then
+              begin
+                if Hour >= 12 then
+                  Inc(p, 2);
+                AppendChars(p, 1);
+                Inc(Format, 2);
+                Use12HourClock := true;
+              end
+              else if StrLIComp(p, 'AMPM', 4) = 0 then
+              begin
+                if Hour < 12 then
+                  AppendString(AFormatSettings.TimeAMString)
+                else
+                  AppendString(AFormatSettings.TimePMString);
+                Inc(Format, 3);
+                Use12HourClock := true;
+              end
+              else if StrLIComp(p, 'AAAA', 4) = 0 then
+              begin
+                GetDate;
+                AppendString(AFormatSettings.LongDayNames[DayOfWeek(DateTime)]);
+                Inc(Format, 3);
+              end
+              else if StrLIComp(p, 'AAA', 3) = 0 then
+              begin
+                GetDate;
+                AppendString(AFormatSettings.ShortDayNames
+                  [DayOfWeek(DateTime)]);
+                Inc(Format, 2);
+              end
+              else
+                AppendChars(@Starter, 1);
+            end;
+          'C':
+            begin
+              GetCount;
+              AppendFormat(Pointer(AFormatSettings.ShortDateFormat));
+              GetTime;
+              if (Hour <> 0) or (Min <> 0) or (Sec <> 0) or (MSec <> 0) then
+              begin
+                AppendChars(' ', 1);
+                AppendFormat(Pointer(AFormatSettings.LongTimeFormat));
+              end;
+            end;
+          '/':
+            if AFormatSettings.DateSeparator <> #0 then
+              AppendChars(@AFormatSettings.DateSeparator, 1);
+          ':':
+            if AFormatSettings.TimeSeparator <> #0 then
+              AppendChars(@AFormatSettings.TimeSeparator, 1);
+          '''', '"':
+            begin
+              p := Format;
+              while (Format^ <> #0) and (Format^ <> Starter) do
+              begin
+                if IsLeadChar(Format^) then
+                  Format := StrNextChar(Format)
+                else
+                  Inc(Format);
+              end;
+              AppendChars(p, Format - p);
+              if Format^ <> #0 then
+                Inc(Format);
+            end;
+        else
+          AppendChars(@Starter, 1);
+        end;
+      end;
+      Dec(AppendLevel);
+    end;
+  end;
+
+begin
+  BufPos := 0;
+  AppendLevel := 0;
+  if Format <> '' then
+    AppendFormat(Pointer(Format))
+  else
+    AppendFormat('C');
+  if length(DynBuffer) > 0 then
+  begin
+    setlength(Sb, length(DynBuffer) + BufPos);
+    Move(DynBuffer[0], Sb[0], length(DynBuffer) * SizeOf(Char));
+    if BufPos > 0 then
+      Move(Buffer[0], Sb[length(DynBuffer)], BufPos * SizeOf(Char));
+    Result := String.Create(Sb);
+  end
+  else
+    Result := String.Create(Buffer, 0, BufPos);
+end;
+
+function GetLocalVersion: string;
+begin
+  Result := GetVersion(paramstr(0));
+end;
+
+function GetVersion(sFileName: string): string;
+var
+  VerInfoSize: DWORD;
+  VerInfo: Pointer;
+  VerValueSize: DWORD;
+  VerValue: PVSFixedFileInfo;
+  Dummy: DWORD;
+begin
+  VerInfoSize := GetFileVersionInfoSize(PChar(sFileName), Dummy);
+  GetMem(VerInfo, VerInfoSize);
+  GetFileVersionInfo(PChar(sFileName), 0, VerInfoSize, VerInfo);
+  VerQueryValue(VerInfo, '\', Pointer(VerValue), VerValueSize);
+  with VerValue^ do
+  begin
+    Result := IntToStr(dwFileVersionMS shr 16);
+    Result := Result + '.' + IntToStr(dwFileVersionMS and $FFFF);
+    Result := Result + '.' + IntToStr(dwFileVersionLS shr 16);
+    Result := Result + '.' + IntToStr(dwFileVersionLS and $FFFF);
+  end;
+  FreeMem(VerInfo, VerInfoSize);
+end;
 
 function ClearHTML(s: string): string; // yap
 
@@ -231,27 +733,27 @@ const
   N_MLN = 7;
   N_MNC = 252;
 var
-  i, l, t, spc: Integer;
+  I, l, t, spc: Integer;
 
   function ChMnem(var s: string; const b, e: Integer): boolean;
   var
-    i: Integer;
+    I: Integer;
     c: string;
   begin
     Result := false;
     c := copy(s, b + 1, e - b - 1);
-    i := 1;
-    while i <= N_MNC do
+    I := 1;
+    while I <= N_MNC do
     begin
-      if a[i].m = c then
+      if a[I].m = c then
       begin
-        s[b] := Char(a[i].a);
+        s[b] := Char(a[I].a);
         Delete(s, b + 1, e - b);
         Result := true;
       end
-      else if a[i].m > c then
+      else if a[I].m > c then
         break;
-      inc(i);
+      Inc(I);
     end;
   end;
 
@@ -266,24 +768,24 @@ begin
 
   l := length(s);
   t := -1;
-  i := 1;
+  I := 1;
   spc := -1;
-  while i <= l do
+  while I <= l do
   begin
     case t of
       - 1:
-        case s[i] of
+        case s[I] of
           C_SPC:
             begin
-              spc := i;
+              spc := I;
               t := 0;
             end;
         end;
       0 .. 2:
-        case s[i] of
+        case s[I] of
           C_SPC:
             begin
-              spc := i;
+              spc := I;
               t := 0;
             end;
           'A' .. 'F', 'a' .. 'f':
@@ -318,7 +820,7 @@ begin
               1:
                 ;
               2:
-                if not(i - spc in [2, 3]) then
+                if not(I - spc in [2, 3]) then
                   t := -1;
             else
               t := -1;
@@ -334,23 +836,23 @@ begin
             begin
               case t of
                 1:
-                  if (i - spc <= N_MLN) and ChMnem(s, spc, i) then
+                  if (I - spc <= N_MLN) and ChMnem(s, spc, I) then
                   begin
                     l := length(s);
-                    dec(i, i - spc);
+                    Dec(I, I - spc);
                   end;
                 2:
-                  if ChNum(s, spc, i) then
+                  if ChNum(s, spc, I) then
                   begin
                     l := length(s);
-                    dec(i, i - spc);
+                    Dec(I, I - spc);
                   end;
               end;
               t := -1;
             end;
         end;
     end;
-    inc(i);
+    Inc(I);
   end;
 
   Result := s;
@@ -362,7 +864,7 @@ var
 begin
   p := length(s);
   while (p > 0) and not CharInSet(s[p], ['/', '=']) do
-    dec(p);
+    Dec(p);
   Delete(s, 1, p);
   Result := s;
 end;
@@ -463,7 +965,7 @@ end;
 
 function CreateDirExt(Dir: string): boolean;
 var
-  i, l: Integer;
+  I, l: Integer;
   CurDir: string;
 begin
   Result := DirectoryExists(Dir);
@@ -473,10 +975,10 @@ begin
     Exit;
   Dir := IncludeTrailingPathDelimiter(Dir);
   l := length(Dir);
-  for i := 1 to l do
+  for I := 1 to l do
   begin
-    CurDir := CurDir + Dir[i];
-    if Dir[i] = '\' then
+    CurDir := CurDir + Dir[I];
+    if Dir[I] = '\' then
     begin
       if not DirectoryExists(CurDir) then
         if not CreateDir(CurDir) then
@@ -494,7 +996,7 @@ begin
   while n > 1000 do
   begin
     n := n / 1024;
-    inc(l);
+    Inc(l);
   end;
 
   Result := FloatToStr(RoundTo(n, -2));
@@ -522,7 +1024,7 @@ begin
   while n > 1000 do
   begin
     n := n / 1024;
-    inc(l);
+    Inc(l);
   end;
 
   Result := FloatToStr(RoundTo(n, -2));
@@ -545,10 +1047,10 @@ end;
 function batchreplace(src: string; substr1: array of string;
   substr2: string): string;
 var
-  i: Integer;
+  I: Integer;
 begin
-  for i := 0 to length(substr1) - 1 do
-    src := StringReplace(src, substr1[i], substr2, []);
+  for I := 0 to length(substr1) - 1 do
+    src := StringReplace(src, substr1[I], substr2, []);
   Result := src;
 end;
 
@@ -559,7 +1061,7 @@ var
   l: TLabel;
   R: TRadioGroup;
   OkBtn, CancelBtn: TButton;
-  i, n: Integer;
+  I, n: Integer;
 begin
 
   Result := -1;
@@ -583,11 +1085,11 @@ begin
   R.Top := l.Top + l.Height + 4;
   R.Left := 4;
   n := -1;
-  for i := 0 to length(AItems) - 1 do
+  for I := 0 to length(AItems) - 1 do
   begin
-    R.Items.Add(AItems[i]);
-    if F.Canvas.TextWidth(AItems[i]) > n then
-      n := F.Canvas.TextWidth(AItems[i]);
+    R.Items.Add(AItems[I]);
+    if F.Canvas.TextWidth(AItems[I]) > n then
+      n := F.Canvas.TextWidth(AItems[I]);
   end;
   R.ItemIndex := 0;
   R.Width := Max(n + 8 + 24, 200);
@@ -677,14 +1179,37 @@ END;
 FUNCTION STRINGDECODE(s: STRING; HTML: boolean = false): STRING;
 BEGIN
   IF HTML THEN
-    Result := UTF8TOSTRING(RAWBYTESTRING(HTMLDECODE(s)))
+    Result := UTF8TOSTRING(RawByteString(HTMLDECODE(s)))
   ELSE
     Result := UTF8TOSTRING(HTTPDECODE(AnsiString(s)));
 END;
 
+{
+  function FixIsolation(const Value: string; const Isolator: string): string;
+  var
+  n: integer;
+  r: boolean;
+  p: integer;
+  begin
+  Result := SysUtils.Trim(Value);
+  if Pos(isolator,result) <> 1 then
+  result := isolator + result;
+  r := false;
+  p := 1;
+  repeat
+  p := pos(isolator,result,p + length(isolator));
+  if p = length(result) + length(isolator) -1 then
+  begin
+
+  end;
+
+  until p = 0;
+
+  end;
+}
 function GetNextS(var s: string; del: String = ';'; ins: String = ''): string;
 var
-  n,d: Integer;
+  n, d: Integer;
 begin
   Result := '';
 
@@ -734,56 +1259,56 @@ end;
 
 function Trim(s: String; ch: Char = ' '): String;
 var
-  i, l: Integer;
+  I, l: Integer;
 begin
   l := length(s);
-  i := 1;
-  while (i <= l) and (s[i] = ch) do
-    inc(i);
-  if i > l then
+  I := 1;
+  while (I <= l) and (s[I] = ch) do
+    Inc(I);
+  if I > l then
     Result := ''
   else
   begin
     while s[l] = ch do
-      dec(l);
-    Result := copy(s, i, l - i + 1);
+      Dec(l);
+    Result := copy(s, I, l - I + 1);
   end;
 end;
 
 function TrimEx(s: String; ch: TSetOfChar): String;
 var
-  i, l: Integer;
+  I, l: Integer;
 begin
   l := length(s);
-  i := 1;
-  while (i <= l) and (CharInSet(s[i], ch)) do
-    inc(i);
-  if i > l then
+  I := 1;
+  while (I <= l) and (CharInSet(s[I], ch)) do
+    Inc(I);
+  if I > l then
     Result := ''
   else
   begin
     while CharInSet(s[l], ch) do
-      dec(l);
-    Result := copy(s, i, l - i + 1);
+      Dec(l);
+    Result := copy(s, I, l - I + 1);
   end;
 end;
 
 function CopyTo(s, substr: string; back: boolean; re: boolean): string;
 var
-  i: Integer;
+  I: Integer;
 begin
   if back then
     s := ReverseString(s);
 
-  i := pos(substr, s);
+  I := pos(substr, s);
 
-  if i = 0 then
+  if I = 0 then
     if re then
       Result := ''
     else
       Result := copy(s, 1, length(s))
   else
-    Result := copy(s, 1, i - 1);
+    Result := copy(s, 1, I - 1);
 
   if back then
     Result := ReverseString(Result);
@@ -792,30 +1317,30 @@ end;
 
 function CopyTo(Source: String; ATo: Char; Isl, Brk: array of string): string;
 var
-  i: Integer;
+  I: Integer;
 begin
-  i := CharPos(Source, ATo, Isl, Brk);
-  if i = 0 then
+  I := CharPos(Source, ATo, Isl, Brk);
+  if I = 0 then
     Result := copy(Source, 1, length(Source))
   else
-    Result := copy(Source, 1, i - 1);
+    Result := copy(Source, 1, I - 1);
 end;
 
 function CopyTo(var Source: String; ATo: Char; Isl, Brk: array of string;
   cut: boolean = false): string;
 var
-  i: Integer;
+  I: Integer;
 begin
-  i := CharPos(Source, ATo, Isl, Brk);
-  if i = 0 then
+  I := CharPos(Source, ATo, Isl, Brk);
+  if I = 0 then
     Result := copy(Source, 1, length(Source))
   else
-    Result := copy(Source, 1, i - 1);
+    Result := copy(Source, 1, I - 1);
   if cut then
-    if i = 0 then
+    if I = 0 then
       Delete(Source, 1, length(Source))
     else
-      Delete(Source, 1, i);
+      Delete(Source, 1, I);
 end;
 
 function CopyFromTo(s, sub1, sub2: String; re: boolean = false): String;
@@ -910,10 +1435,10 @@ var
 begin
   p1 := length(s);
   while (p1 > 0) and not(CharInSet(s[p1], ['/', '\'])) do
-    dec(p1);
+    Dec(p1);
   p2 := p1 - 1;
   while (p2 > 0) and not(CharInSet(s[p2], ['/', '\'])) do
-    dec(p2);
+    Dec(p2);
   Result := copy(s, p2 + 1, p1 - p2 - 1);
 end;
 
@@ -934,14 +1459,14 @@ end;
 
 procedure MultWordArrays(var a1: TArrayOfWord; a2: TArrayOfWord);
 var
-  i, la1, la2: Integer;
+  I, la1, la2: Integer;
 begin
   la1 := length(a1);
   la2 := length(a2);
-  SetLength(a1, la1 + la2);
+  setlength(a1, la1 + la2);
 
-  for i := 0 to la2 - 1 do
-    a1[la1 + i] := a2[i];
+  for I := 0 to la2 - 1 do
+    a1[la1 + I] := a2[I];
 end;
 
 procedure _Delay(dwMilliseconds: Longint);
@@ -955,48 +1480,51 @@ begin
   until (iStop - iStart) >= DWORD(dwMilliseconds);
 end;
 
-function ValidFName(const FName: String; bckslsh: boolean; nodrive: boolean): String;
+function ValidFName(const FName: String; bckslsh: boolean;
+  nodrive: boolean): String;
 var
-  i: Integer;
+  I: Integer;
   sa: AnsiString;
 begin
   Result := FName;
 
-  for i := 1 to length(FName) do
+  for I := 1 to length(FName) do
   begin
 
-{    if (length(sa)=0) then
-    begin
+    { if (length(sa)=0) then
+      begin
       Result[i] := '_';
       Continue;
-    end;
-}
+      end;
+    }
 
-
-    if (pos(FName[i], InvalidFileNameChars) > 0) then
-      if (not bckslsh or not((FName[i] in ['\','/']) or not nodrive and (FName[i] = ':'))) then
-        Result[i] := '_'
+    if (pos(FName[I], InvalidFileNameChars) > 0) then
+      if (not bckslsh or not((FName[I] in ['\', '/']) or not nodrive and
+        (FName[I] = ':'))) then
+        Result[I] := '_'
       else
     else
     begin
-      sa := ANSIString(FName[i]);  //ANSI symbol cheking for older systems (winXP, FAT/FAT32)
-                                   //some generic uni symobls can be fobidden in ANSI
-      if (length(sa) = 0) or (sa <> '?') and (pos(String(sa),InvalidFileNameChars) > 0) then
-        Result[i] := '_';
+      sa := AnsiString(FName[I]);
+      // ANSI symbol cheking for older systems (winXP, FAT/FAT32)
+      // some generic uni symobls can be fobidden in ANSI
+      if (length(sa) = 0) or (sa <> '?') and
+        (pos(String(sa), InvalidFileNameChars) > 0) then
+        Result[I] := '_';
     end;
   end;
 end;
 
 function strlisttostr(s: tStrings; del, ins: Char): string;
 var
-  i, j: Integer;
+  I, j: Integer;
   s1, s2: string;
 begin
   Result := '';
-  for i := 0 to s.Count - 1 do
+  for I := 0 to s.Count - 1 do
   begin
     s2 := '';
-    s1 := s[i];
+    s1 := s[I];
     j := pos(ins, s1);
     while j > 0 do
     begin
@@ -1008,7 +1536,7 @@ begin
 
     if (ins <> #0) and (pos(del, s2) > 0) then
       s2 := ins + s2 + ins;
-    if i < s.Count - 1 then
+    if I < s.Count - 1 then
       Result := Result + s2 + del
     else
       Result := Result + s2;
@@ -1040,19 +1568,19 @@ begin
     val := TrimEx(CopyTo(strlist, ',', ['""'], [], true), [' ', '"']);
     if value = val then
       Exit;
-    inc(Result);
+    Inc(Result);
   end;
   Result := -1;
 end;
 
 function IndexOfStr(list: tStrings; value: string): Integer;
 var
-  i: Integer;
+  I: Integer;
 begin
-  for i := 0 to list.Count - 1 do
-    if SameText(list[i], value) then
+  for I := 0 to list.Count - 1 do
+    if SameText(list[I], value) then
     begin
-      Result := i;
+      Result := I;
       Exit;
     end;
   Result := -1;
@@ -1310,7 +1838,7 @@ end;
 function ImageFormat(Start: Pointer): string;
 type
   ByteArray = array [0 .. 10] of byte;
-  Str3 = array [0..2] of ANSICHAR;
+  Str3 = array [0 .. 2] of ANSIChar;
 
 var
   PB: ^ByteArray absolute Start;
@@ -1331,7 +1859,7 @@ begin
   else if PW^ = $D8FF then
     Result := 'jpeg'
   else if (FL^ = 'CWS') or (FL^ = 'FWS') or (FL^ = 'ZWS') then
-    result := 'swf'
+    Result := 'swf'
   else
     Result := '';
 end;
@@ -1421,10 +1949,10 @@ end;
 
 function CheckStr(s: string; a: TSetOfChar; inv: boolean = false): boolean;
 var
-  i: Integer;
+  I: Integer;
 begin
-  for i := 1 to length(s) do
-    if inv and CharInSet(s[i], a) or not inv and not CharInSet(s[i], a) then
+  for I := 1 to length(s) do
+    if inv and CharInSet(s[I], a) or not inv and not CharInSet(s[I], a) then
     begin
       Result := true;
       Exit;
@@ -1435,12 +1963,12 @@ end;
 
 function CheckStrPos(s: string; a: TSetOfChar; inv: boolean = false): Integer;
 var
-  i: Integer;
+  I: Integer;
 begin
-  for i := 1 to length(s) do
-    if inv and CharInSet(s[i], a) or not inv and not CharInSet(s[i], a) then
+  for I := 1 to length(s) do
+    if inv and CharInSet(s[I], a) or not inv and not CharInSet(s[I], a) then
     begin
-      Result := i;
+      Result := I;
       Exit;
     end;
 
@@ -1450,34 +1978,34 @@ end;
 function CharPos(str: string; ch: Char; Isolators, Brackets: array of string;
   From: Integer = 1): Integer;
 var
-  i, j: Integer;
+  I, j: Integer;
   // n: integer;
   { s1, } s2: Char;
   { b1, } b2: array of Char;
   st, br: TSetOfChar;
 begin
   st := [];
-  for i := 0 to length(Isolators) - 1 do
-    st := st + [Isolators[i][1]];
+  for I := 0 to length(Isolators) - 1 do
+    st := st + [Isolators[I][1]];
 
   br := [];
-  for i := 0 to length(Brackets) - 1 do
-    br := br + [Brackets[i][1]];
+  for I := 0 to length(Brackets) - 1 do
+    br := br + [Brackets[I][1]];
 
   // setlength(b1,0);
-  SetLength(b2, 0);
+  setlength(b2, 0);
 
   // n := 0;
   // s1 := #0;
   s2 := #0;
 
-  for i := From to length(str) do
+  for I := From to length(str) do
     if s2 <> #0 then
-      if str[i] = s2 then
+      if str[I] = s2 then
         s2 := #0
       else
-    else if (length(b2) > 0) and (str[i] = b2[length(b2) - 1]) then
-      SetLength(b2, length(b2) - 1)
+    else if (length(b2) > 0) and (str[I] = b2[length(b2) - 1]) then
+      setlength(b2, length(b2) - 1)
       // else
       // if CharInSet(str[i],br) then
       // begin
@@ -1489,15 +2017,15 @@ begin
       // break;
       // end;
       // end else
-    else if (length(b2) = 0) and (str[i] = ch) then
+    else if (length(b2) = 0) and (str[I] = ch) then
     begin
-      Result := i;
+      Result := I;
       Exit;
     end
-    else if CharInSet(str[i], st) then
+    else if CharInSet(str[I], st) then
     begin
       for j := 0 to length(Isolators) - 1 do
-        if (str[i] = Isolators[j][1]) then
+        if (str[I] = Isolators[j][1]) then
         begin
           // s1 := Isolators[j][1];
           s2 := Isolators[j][2];
@@ -1505,13 +2033,13 @@ begin
         end;
       // inc(n);
     end
-    else if CharInSet(str[i], br) then
+    else if CharInSet(str[I], br) then
     begin
       for j := 0 to length(Brackets) - 1 do
-        if (str[i] = Brackets[j][1]) then
+        if (str[I] = Brackets[j][1]) then
         begin
           // setlength(b1,length(b1)+1);
-          SetLength(b2, length(b2) + 1);
+          setlength(b2, length(b2) + 1);
           // b1[length(b1)-1] := Brackets[j][1];
           b2[length(b2) - 1] := Brackets[j][2];
           break;
@@ -1523,31 +2051,31 @@ end;
 function CharPosEx(str: string; ch: TSetOfChar;
   Isolators, Brackets: array of string; From: Integer = 1): Integer;
 var
-  i, j: Integer;
+  I, j: Integer;
   // n: integer;
   { s1, } s2: Char;
   { b1, } b2: array of Char;
   st, br: TSetOfChar;
 begin
   st := [];
-  for i := 0 to length(Isolators) - 1 do
-    st := st + [Isolators[i][1]];
+  for I := 0 to length(Isolators) - 1 do
+    st := st + [Isolators[I][1]];
 
   br := [];
-  for i := 0 to length(Brackets) - 1 do
-    br := br + [Brackets[i][1]];
+  for I := 0 to length(Brackets) - 1 do
+    br := br + [Brackets[I][1]];
 
   // n := 0;
   // s1 := #0;
   s2 := #0;
 
-  for i := From to length(str) do
+  for I := From to length(str) do
     if s2 <> #0 then
-      if str[i] = s2 then
+      if str[I] = s2 then
         s2 := #0
       else
-    else if (length(b2) > 0) and (str[i] = b2[length(b2) - 1]) then
-      SetLength(b2, length(b2) - 1)
+    else if (length(b2) > 0) and (str[I] = b2[length(b2) - 1]) then
+      setlength(b2, length(b2) - 1)
       // else if CharInSet(str[i],br) then
       // begin
       // for j := 0 to length(Brackets) - 1 do
@@ -1558,15 +2086,15 @@ begin
       // break;
       // end;
       // end else
-    else if (length(b2) = 0) and CharInSet(str[i], ch) then
+    else if (length(b2) = 0) and CharInSet(str[I], ch) then
     begin
-      Result := i;
+      Result := I;
       Exit;
     end
-    else if CharInSet(str[i], st) then
+    else if CharInSet(str[I], st) then
     begin
       for j := 0 to length(Isolators) - 1 do
-        if (str[i] = Isolators[j][1]) then
+        if (str[I] = Isolators[j][1]) then
         begin
           // s1 := Isolators[j][1];
           s2 := Isolators[j][2];
@@ -1574,13 +2102,13 @@ begin
         end;
       // inc(n);
     end
-    else if CharInSet(str[i], br) then
+    else if CharInSet(str[I], br) then
     begin
       for j := 0 to length(Brackets) - 1 do
-        if (str[i] = Brackets[j][1]) then
+        if (str[I] = Brackets[j][1]) then
         begin
           // setlength(b1,length(b1)+1);
-          SetLength(b2, length(b2) + 1);
+          setlength(b2, length(b2) + 1);
           // b1[length(b1)-1] := Brackets[j][1];
           b2[length(b2) - 1] := Brackets[j][2];
           break;
@@ -1589,20 +2117,23 @@ begin
   Result := 0;
 end;
 
-procedure StrToFile(const Value: RawByteString; FileName: String);
+procedure StrToFile(const value: RawByteString; FileName: String);
 var
   F: tFileStream;
 begin
   F := tFileStream.Create(FileName, fmCreate or fmOpenWrite or fmShareDenyNone);
   try
-    //F.WriteData($FEFF);
-    case StringCodepage(Value) of
-      1200: F.Write(#$FF#$FE,2);
-      1201: F.Write(#$FE#$FF,2);
-      65001: F.Write(#$BBEF#$00BF,3);
+    // F.WriteData($FEFF);
+    case StringCodepage(value) of
+      1200:
+        F.Write(#$FF#$FE, 2);
+      1201:
+        F.Write(#$FE#$FF, 2);
+      65001:
+        F.Write(#$BBEF#$00BF, 3);
     end;
-    if length(Value) > 0 then
-      F.Write(@Value[1], SizeOf(Value[1]) * length(Value));
+    if length(value) > 0 then
+      F.Write(@value[1], SizeOf(value[1]) * length(value));
   finally
     F.Free;
   end;
@@ -1611,36 +2142,40 @@ end;
 function FileToStr(FileName: String): RawByteString;
 var
   F: tFileStream;
-  MN: array[0..2] of byte;
+  MN: array [0 .. 2] of byte;
 begin
   F := tFileStream.Create(FileName, fmOpenRead or fmShareDenyNone);
   try
     if F.Size > 1 then
     begin
-      F.Read(MN[0],2);
-      if (MN[0] = $FF)and(MN[1] = $FE) then
-        SetCodepage(Result,1200,false)
-      else if (MN[0] = $FE)and(MN[1] = $FF) then
-        SetCodepage(Result,1201,false)
+      F.Read(MN[0], 2);
+      if (MN[0] = $FF) and (MN[1] = $FE) then
+        SetCodepage(Result, 1200, false)
+      else if (MN[0] = $FE) and (MN[1] = $FF) then
+        SetCodepage(Result, 1201, false)
       else if F.Size > 2 then
       begin
-        F.Read(MN[2],1);
+        F.Read(MN[2], 1);
         if (MN[0] = $EF) and (MN[1] = $BB) and (MN[2] = $BF) then
-          SetCodepage(Result,65001,false)
-        else begin
+          SetCodepage(Result, 65001, false)
+        else
+        begin
           F.Position := 0;
-          SetCodepage(Result,DefaultSystemCodepage,false);
+          SetCodepage(Result, DefaultSystemCodepage, false);
         end;
-      end else begin
+      end
+      else
+      begin
         F.Position := 0;
-        SetCodepage(Result,DefaultSystemCodepage,false);
+        SetCodepage(Result, DefaultSystemCodepage, false);
       end;
-    end else
-      SetCodepage(Result,DefaultSystemCodepage,false);
+    end
+    else
+      SetCodepage(Result, DefaultSystemCodepage, false);
 
     if F.Size > 0 then
     begin
-      SetLength(Result, F.Size - F.Position);
+      setlength(Result, F.Size - F.Position);
       F.Read(Result[1], F.Size - F.Position);
     end
     else
@@ -1655,7 +2190,7 @@ function MathCalcStr(s: variant): variant;
 const
   ops = ['+', '-', '/', '|', '\', '*', '<', '=', '>', '!', '^', '&'];
 
-  function Proc(const p: byte; var s: string; var i: Integer; const l: Integer;
+  function Proc(const p: byte; var s: string; var I: Integer; const l: Integer;
     var ls: variant; const isstring: boolean = false): variant;
   var
     n, tmp, lvl, tp: Integer;
@@ -1672,14 +2207,14 @@ const
     Result := null;
     op := false;
     d := null;
-    while i <= l do
-      case s[i] of
+    while I <= l do
+      case s[I] of
         ' ', #13, #10, #9:
-          inc(i);
+          Inc(I);
         '"', '''':
           begin
             if op then
-              raise Exception.Create(Format(_OPERATOR_MISSED_, [s[i], s]));
+              raise Exception.Create(Format(_OPERATOR_MISSED_, [s[I], s]));
 
             Result := '';
 
@@ -1687,24 +2222,24 @@ const
 
             while true do
             begin
-              n := CharPos(s, s[i], [], [], i + 1);
+              n := CharPos(s, s[I], [], [], I + 1);
 
               if n = 0 then
                 raise Exception.Create(Format(_SYMBOL_MISSED_,
-                  [s[i], i, s[i], s]));
+                  [s[I], I, s[I], s]));
 
               if (n < l) and (s[n + 1] = s[n]) then
               begin
-                Result := Result + copy(s, i + 1, n - i);
-                i := n + 1;
+                Result := Result + copy(s, I + 1, n - I);
+                I := n + 1;
               end
               else
                 break;
             end;
 
-            Result := Result + copy(s, i + 1, n - i - 1);
+            Result := Result + copy(s, I + 1, n - I - 1);
 
-            i := n + 1;
+            I := n + 1;
 
             if p > 0 then
               break;
@@ -1713,15 +2248,15 @@ const
           end;
         '+', '-', '/', '|', '\', '*', '<', '=', '>', '!', '&', '~', '^':
           begin
-            if not op and (s[i] <> '!') then
-              if s[i] = '-' then
+            if not op and (s[I] <> '!') then
+              if s[I] = '-' then
                 goto cc
               else
-                raise Exception.Create(Format(_OPERAND_MISSED_, [s[i], s]));
+                raise Exception.Create(Format(_OPERAND_MISSED_, [s[I], s]));
 
             lvl := 0;
 
-            case s[i] of
+            case s[I] of
               '|':
                 lvl := 1;
               '&':
@@ -1739,21 +2274,21 @@ const
             if (lvl <= p) and not isstring then
               break;
 
-            tmp := i;
-            inc(i);
+            tmp := I;
+            Inc(I);
 
-            if (s[i - 1] = '|') and (Result = true) then
+            if (s[I - 1] = '|') and (Result = true) then
             begin
               d := true;
-              i := l + 1;
+              I := l + 1;
             end
-            else if (s[i - 1] = '&') and (Result = false) then
+            else if (s[I - 1] = '&') and (Result = false) then
             begin
               d := false;
-              i := l + 1;
+              I := l + 1;
             end
             else
-              d := Proc(lvl, s, i, l, ls, VarIsStr(Result));
+              d := Proc(lvl, s, I, l, ls, VarIsStr(Result));
 
             if d = null then
               break;
@@ -1767,7 +2302,7 @@ const
             try
               case s[tmp] of
                 '^':
-                  Result := exp(d * ln (Result));
+                  Result := exp(d * ln(Result));
                 '&':
                   Result := Result and d;
                 '|':
@@ -1782,8 +2317,9 @@ const
                 '*':
                   Result := Result * d;
                 '/':
-                  if {(Result = 0) and }(d = 0) then
-                    raise Exception.Create('creation of black hole was prevented')
+                  if { (Result = 0) and } (d = 0) then
+                    raise Exception.Create
+                      ('creation of black hole was prevented')
                   else
                     Result := Result / d;
                 '<':
@@ -1833,19 +2369,19 @@ const
           begin
             if op then
               raise Exception.Create(Format(_OPERATOR_MISSED_,
-                [s[i], copy(s, i - 10, 20)]));
+                [s[I], copy(s, I - 10, 20)]));
 
-            n := CharPos(s, ')', ['''' + '''', '""'], ['()'], i + 1);
+            n := CharPos(s, ')', ['''' + '''', '""'], ['()'], I + 1);
 
             if n = 0 then
               raise Exception.Create(Format(_SYMBOL_MISSED_,
-                [')', i, s[i], copy(s, i - 10, 20)]));
+                [')', I, s[I], copy(s, I - 10, 20)]));
 
-            inc(i);
+            Inc(I);
             tmpls := null;
-            Result := Proc(0, s, i, n - 1, tmpls);
+            Result := Proc(0, s, I, n - 1, tmpls);
 
-            i := n + 1;
+            I := n + 1;
 
             op := true;
           end;
@@ -1854,14 +2390,14 @@ const
         cc:
           if op then
             raise Exception.Create(Format(_OPERATOR_MISSED_,
-              [s[i], copy(s, i - 10, 20)]));
+              [s[I], copy(s, I - 10, 20)]));
 
-          n := CharPosEx(s, ops + [' '], ['''' + '''', '""'], ['()'], i + 1);
+          n := CharPosEx(s, ops + [' '], ['''' + '''', '""'], ['()'], I + 1);
 
           if (n = 0) or (n > l) then
             n := l + 1;
 
-          Result := copy(s, i, n - i);
+          Result := copy(s, I, n - I);
 
           tp := VarType(Result);
           if (tp = varOleStr) or (tp = varString) or (tp = varUString) then
@@ -1876,16 +2412,16 @@ const
                   Result := vt2
                 else
                   raise Exception.Create(Format(_INCORRECT_SYMBOL_,
-                    [Result, i, copy(s, i - 10, 20)]));
+                    [Result, I, copy(s, I - 10, 20)]));
             else
               raise Exception.Create(Format(_INCORRECT_SYMBOL_,
-                [Result, i, copy(s, i - 10, 20)]));
+                [Result, I, copy(s, I - 10, 20)]));
             end;
           end
           else
             Result := VarAsType(Result, varDouble);
 
-          i := n;
+          I := n;
           op := true;
         end;
       end;
@@ -1893,7 +2429,7 @@ const
   end;
 
 var
-  i: Integer;
+  I: Integer;
   // s: variant;
   st: string;
   ls: variant;
@@ -1908,23 +2444,23 @@ begin
   else
     st := s;
 
-  i := 1;
+  I := 1;
   ls := null;
-  Result := Proc(0, st, i, length(s), ls);
+  Result := Proc(0, st, I, length(s), ls);
 end;
 
 function DateTimeStrEval(const DateTimeFormat: string;
   const DateTimeStr: string; locale: string): TDateTime;
 var
-  i, ii, iii: Integer;
+  I, ii, iii: Integer;
   Retvar: TDateTime;
   tmp, Fmt, Data, Mask, Spec: string;
   Year, Month, Day, Hour, Minute, Second: Integer;
   MSec: word;
   AmPm: Integer;
-  fs: TFormatSettings;
+  fs: tFormatSettings;
 begin
-  fs := TFormatSettings.Create(locale);
+  fs := tFormatSettings.Create(locale);
   Year := 1;
   Month := 1;
   Day := 1;
@@ -1934,7 +2470,7 @@ begin
   MSec := 0;
   Fmt := UPPERCASE(DateTimeFormat);
   Data := UPPERCASE(DateTimeStr);
-  i := 1;
+  I := 1;
   Mask := '';
   AmPm := 0;
 
@@ -1944,13 +2480,13 @@ begin
     Exit;
   end;
 
-  while i < length(Fmt) do
+  while I < length(Fmt) do
   begin
-    if CharInSet(Fmt[i], ['A', 'P', 'D', 'M', 'Y', 'H', 'N', 'S', 'Z']) then
+    if CharInSet(Fmt[I], ['A', 'P', 'D', 'M', 'Y', 'H', 'N', 'S', 'Z']) then
     begin
       // Start of a date specifier
-      Mask := Fmt[i];
-      ii := i + 1;
+      Mask := Fmt[I];
+      ii := I + 1;
 
       // Keep going till not valid specifier
       while true do
@@ -1967,7 +2503,7 @@ begin
           (Spec = 'AMPM') then
         begin
           Mask := Spec;
-          inc(ii);
+          Inc(ii);
         end
         else
         begin
@@ -2149,7 +2685,7 @@ begin
         end;
 
         Mask := '';
-        i := ii;
+        I := ii;
       end;
     end
     else
@@ -2157,7 +2693,7 @@ begin
       // Remove delimiter from data string
       if length(Data) > 1 then
         Delete(Data, 1, 1);
-      inc(i);
+      Inc(I);
     end;
   end;
 
@@ -2268,7 +2804,7 @@ begin
     end;
 
     if (index < list.Count) and (lowercase(value) > lowercase(list[index])) then
-      inc(index);
+      Inc(index);
 
     if (index >= list.Count) or not SameText(value, list[index]) then
       list.insert(index, value);
@@ -2307,7 +2843,7 @@ begin
     end;
 
     if (index < list.Count) and (lowercase(value) > lowercase(list[index])) then
-      inc(index);
+      Inc(index);
 
     if (index < list.Count) and SameText(value, list[index]) then
       list.Delete(index);
@@ -2322,14 +2858,14 @@ end;
 
 function isolate(s: string; symbol: Char): string;
 var
-  i: Integer;
+  I: Integer;
 begin
-  i := PosEx(symbol, s);
+  I := PosEx(symbol, s);
 
-  while i > 0 do
+  while I > 0 do
   begin
-    insert(symbol, s, i);
-    i := PosEx(symbol, s, i + 2);
+    insert(symbol, s, I);
+    I := PosEx(symbol, s, I + 2);
   end;
 
   Result := s;
@@ -2357,7 +2893,7 @@ end;
 
 function PosBack(const substr, str: String; Offset: Integer = 1): Integer;
 var
-  i, LIterCnt, l, j, ls: Integer;
+  I, LIterCnt, l, j, ls: Integer;
   PSubStr, PS: PChar;
 begin
   l := length(substr);
@@ -2373,18 +2909,18 @@ begin
     PS := @str[1];
     // Inc(PS, Offset - 1);
 
-    for i := LIterCnt downto 0 do
+    for I := LIterCnt downto 0 do
     begin
       j := 0;
       while (j >= 0) and (j < l) do
       begin
-        if PS[i + j] = PSubStr[j] then
-          inc(j)
+        if PS[I + j] = PSubStr[j] then
+          Inc(j)
         else
           j := -1;
       end;
       if j >= l then
-        Exit(ls - i + 1);
+        Exit(ls - I + 1);
     end;
   end;
 
@@ -2393,51 +2929,75 @@ end;
 
 function TimeString(secs: int64): string;
 var
-  d,h,m,s: integer;
+  d, H, m, s: Integer;
 begin
-  if (secs > 30*24*60*60) then
-    result := 'over month'
+  if (secs > 30 * 24 * 60 * 60) then
+    Result := 'over month'
   else
   begin
     s := secs mod 60;
     m := secs div 60 mod 60;
-    h := secs div 60 div 60 mod 24;
+    H := secs div 60 div 60 mod 24;
     d := secs div 60 div 60 div 24 mod 30;
 
     if d > 0 then
-      result := inttostr(d) + 'd ' + inttostr(h) + 'h'
-    else if h > 0 then
-      result := inttostr(h) + 'h ' + inttostr(m) + 'm'
+      Result := IntToStr(d) + 'd ' + IntToStr(H) + 'h'
+    else if H > 0 then
+      Result := IntToStr(H) + 'h ' + IntToStr(m) + 'm'
     else if m > 0 then
-      result := inttostr(m) + 'm ' + inttostr(s) + 's'
+      Result := IntToStr(m) + 'm ' + IntToStr(s) + 's'
     else
-      result := inttostr(s) + 's';
+      Result := IntToStr(s) + 's';
   end;
 end;
 
-procedure StreamToFile(astream: tstream; fname: string);
+procedure StreamToFile(AStream: TStream; FName: string);
 var
-  f: tfilestream;
+  F: tFileStream;
 begin
-  astream.Position := 0;
+  AStream.Position := 0;
 
-  f := tfilestream.Create(fname, fmCreate or fmOpenWrite); try
-    f.CopyFrom(astream,astream.Size);
+  F := tFileStream.Create(FName, fmCreate or fmOpenWrite);
+  try
+    F.CopyFrom(AStream, AStream.Size);
   finally
-    f.Free;
+    F.Free;
   end;
 end;
 
-procedure CharArrayToStr(const a: tCharArray; var s: String);
+procedure CharArrayToStr(const a: TCharArray; var s: String);
 var
-  l: integer;
+  l: Integer;
 begin
-  SetLength(s, length(a));
+  setlength(s, length(a));
   for l := 0 to length(a) do
-    s[l+1] := a[l];
+    s[l + 1] := a[l];
+end;
+
+function fmtCSV(const val: variant;const fm: tFormatSettings): String;
+
+begin
+  case VarType(val) of
+    varSingle:
+      Result := FormatFloat('0.#', TVarData(val).VSingle, fm);
+    varDouble:
+      Result := FormatFloat('0.#', TVarData(val).VDouble, fm);
+    varCurrency:
+      Result := FormatFloat('0.#', TVarData(val).VCurrency, fm);
+    varDate:
+      Result := FormatDateTimeEx('YYYY/MM/DDTHH:NN:SS', TVarData(val).VDate, fm);
+  else
+    Result := VarToStr(val)
+  end;
+
+  if (pos('"', Result) > 0) then
+    Result := ANSIReplaceStr(Result, '"', '""');
+  if (pos(';', Result) > 0) then
+    Result := '"' + Result + '"';
 end;
 
 initialization
 
-  CharArrayToStr(tpath.GetInvalidFileNameChars,InvalidFileNameChars);
+CharArrayToStr(tpath.GetInvalidFileNameChars, InvalidFileNameChars);
+
 end.

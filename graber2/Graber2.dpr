@@ -34,7 +34,8 @@ uses
   TextEditorForm in 'TextEditorForm.pas' {fTextEdit},
   Newsv2Form in 'Newsv2Form.pas' {fmNewsv2},
   ThreadUtils in 'ThreadUtils.pas',
-  ProgressForm in 'ProgressForm.pas' {fProgress};
+  ProgressForm in 'ProgressForm.pas' {fProgress},
+  SelectFieldsForm in 'SelectFieldsForm.pas' {fmSelectFields};
 
 {$R *.res}
 
@@ -53,6 +54,7 @@ begin
   Application.CreateForm(Tdm, dm);
   Application.CreateForm(TfmDoublesNewRule, fmDoublesNewRule);
   Application.CreateForm(TfTextEdit, fTextEdit);
+  Application.CreateForm(TfmSelectFields, fmSelectFields);
   //Application.CreateForm(TfProgress, fProgress);
   // Application.CreateForm(TfmNewsv2, fmNewsv2);
   // Application.CreateForm(TfWhatsNew, fWhatsNew);

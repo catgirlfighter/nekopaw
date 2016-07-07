@@ -84,6 +84,7 @@ object mf: Tmf
             Properties.CustomButtons.Buttons = <>
             Properties.Images = dm.il
             Properties.Options = [pcoGoDialog]
+            Properties.ShowTabHints = True
             OnCanCloseEx = pcTablesCanCloseEx
             OnChange = pcTablesChange
             ClientRectBottom = 244
@@ -359,6 +360,7 @@ object mf: Tmf
     StyleFocused.LookAndFeel.NativeStyle = False
     StyleHot.LookAndFeel.NativeStyle = False
     Transparent = True
+    Visible = False
     Height = 17
     Width = 128
   end
@@ -555,6 +557,12 @@ object mf: Tmf
       ImageIndex = 28
       OnClick = bbChangeClick
     end
+    object dxBarButton1: TdxBarButton
+      Caption = 'New Button'
+      Category = 0
+      Hint = 'New Button'
+      Visible = ivAlways
+    end
   end
   object ApplicationEvents1: TApplicationEvents
     OnDeactivate = ApplicationEvents1Deactivate
@@ -562,10 +570,6 @@ object mf: Tmf
     OnMinimize = ApplicationEvents1Minimize
     Left = 504
     Top = 176
-  end
-  object vINFO: TrpVersionInfo
-    Left = 448
-    Top = 112
   end
   object dxSkinController: TdxSkinController
     SkinName = 'UserSkin'
@@ -596,9 +600,8 @@ object mf: Tmf
   object dlgSave: TSaveDialog
     DefaultExt = '.nkp'
     Filter = 
-      'CSV (name+md5+tags, only downloaded)|*.csv|NKP (full progress li' +
-      'st)|*.nkp'
-    FilterIndex = 2
+      'CSV (name+md5+tags, only downloaded)|*.csv|CSV (Custom, Picture ' +
+      'fields)|*.csv|NKP (full progress list)|*.nkp'
     Options = [ofOverwritePrompt, ofHideReadOnly, ofEnableSizing]
     Left = 328
     Top = 188

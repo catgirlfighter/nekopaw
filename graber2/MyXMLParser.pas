@@ -88,6 +88,8 @@ type
   tTagCommentState = set of tTagCommentStates;
 
   TTagList = class(TList)
+  private
+    fRoot: Boolean;
   protected
     function Get(ItemIndex: Integer): TTag;
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
@@ -108,6 +110,7 @@ type
     function CreateChild(Parent: TTag; AName: String = '';
       TagKind: TTagKind = tkTag): TTag;
     function CopyTag(ATag: TTag; Parent: TTag = nil): TTag;
+    property Root: Boolean read fRoot write fRoot;
   end;
 
   TXMLOnTagEvent = procedure(ATag: TTag) of object;
@@ -1556,6 +1559,7 @@ constructor TMyXMLParser.Create;
 begin
   inherited;
   FTagList := TTagList.Create;
+  FTagList.Root := true;
 end;
 
 destructor TMyXMLParser.Destroy;

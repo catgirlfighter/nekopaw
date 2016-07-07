@@ -273,7 +273,6 @@ object fNewList: TfNewList
         Style.BorderStyle = ebsUltraFlat
         Style.Color = clWindow
         OnClick = lHintClick
-        ExplicitLeft = 3
       end
     end
   end

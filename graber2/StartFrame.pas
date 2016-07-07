@@ -48,7 +48,7 @@ type
 
 implementation
 
-uses MainForm, GraberU, LangString, AboutForm, win7taskbar;
+uses MainForm, GraberU, LangString, AboutForm, win7taskbar, SelectFieldsForm;
 
 {$R *.dfm}
 
