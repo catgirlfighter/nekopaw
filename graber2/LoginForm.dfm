@@ -3,7 +3,7 @@ object fLogin: TfLogin
   Top = 0
   BorderStyle = bsDialog
   Caption = 'fLogin'
-  ClientHeight = 97
+  ClientHeight = 129
   ClientWidth = 248
   Color = clBtnFace
   DefaultMonitor = dmDesktop
@@ -17,22 +17,32 @@ object fLogin: TfLogin
   Position = poScreenCenter
   OnClose = FormClose
   OnCreate = FormCreate
+  DesignSize = (
+    248
+    129)
   PixelsPerInch = 96
   TextHeight = 13
+  object iCAPTCHA: TImage
+    Left = 8
+    Top = 57
+    Width = 105
+    Height = 10
+    AutoSize = True
+  end
   object eLogin: TcxTextEdit
-    Left = 112
-    Top = 7
+    Left = 111
+    Top = 8
     TabOrder = 0
     Width = 129
   end
   object lLogin: TcxLabel
     Left = 8
-    Top = 8
+    Top = 9
     Caption = 'lLogin'
     Transparent = True
   end
   object ePassword: TcxTextEdit
-    Left = 112
+    Left = 111
     Top = 30
     Properties.EchoMode = eemPassword
     Properties.PasswordChar = #9679
@@ -47,9 +57,10 @@ object fLogin: TfLogin
   end
   object bOk: TcxButton
     Left = 8
-    Top = 65
+    Top = 96
     Width = 97
     Height = 25
+    Anchors = [akLeft, akBottom]
     Caption = 'bOk'
     Default = True
     TabOrder = 4
@@ -57,11 +68,24 @@ object fLogin: TfLogin
   end
   object bCancel: TcxButton
     Left = 144
-    Top = 65
+    Top = 96
     Width = 96
     Height = 25
+    Anchors = [akLeft, akBottom]
     Caption = 'bCancel'
     TabOrder = 5
     OnClick = bCancelClick
+  end
+  object eCAPTCHA: TcxTextEdit
+    Left = 111
+    Top = 69
+    TabOrder = 6
+    Width = 129
+  end
+  object lCAPTCHA: TcxLabel
+    Left = 8
+    Top = 70
+    Caption = 'CAPTCHA'
+    Transparent = True
   end
 end

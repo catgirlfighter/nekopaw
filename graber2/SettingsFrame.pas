@@ -171,7 +171,8 @@ type
     procedure CreateResFields(rs: TResource);
     procedure SaveResFields;
     procedure LoginCallBack(Sender: TObject; N: Integer;
-      Login, Password: String; const Cancel: Boolean);
+      Login, Password, CAPTCHA: String;
+      const Cancel: Boolean);
     { Private declarations }
   public
     procedure ResetButtons;
@@ -489,13 +490,14 @@ begin
   Application.CreateForm(TfLogin, fLogin);
   fLogin.Execute(N, Format(lang('_LOGINON_'), [FullResList[N].Name]),
     nullstr(FullResList[N].Fields['login']),
-    nullstr(FullResList[N].Fields['password']), LoginCallBack);
+    nullstr(FullResList[N].Fields['password']), FullResList[N].CAPTCHA,
+    LoginCallBack);
 end;
 
 procedure TfSettings.cxLabel5Click(Sender: TObject);
 begin
-  ShellExecute(Handle, nil, 'https://github.com/catgirlfighter/nekopaw', nil, nil,
-    SW_SHOWNORMAL);
+  ShellExecute(Handle, nil, 'https://github.com/catgirlfighter/nekopaw', nil,
+    nil, SW_SHOWNORMAL);
 end;
 
 procedure TfSettings.FrameClick(Sender: TObject);
@@ -1255,7 +1257,8 @@ begin
 end;
 
 procedure TfSettings.LoginCallBack(Sender: TObject; N: Integer;
-  Login, Password: String; const Cancel: Boolean);
+  Login, Password, CAPTCHA: String;
+  const Cancel: Boolean);
 begin
   if Cancel then
   begin
@@ -1272,6 +1275,7 @@ begin
   begin
     FullResList[N].Fields['login'] := Login;
     FullResList[N].Fields['password'] := Password;
+    FullResList[N].Fields['captcha'] := CAPTCHA;
     if ResetRelogin(N) then
     begin
       FLogedOn := true;
@@ -1396,7 +1400,10 @@ begin
       if FLogedOn or FullResList.Canceled then
         fLogin.Close
       else
+      begin
         fLogin.bOk.Enabled := true;
+        fLogin.resetCAPTCHA(tResource(Pointer(fLogin.N)).CAPTCHA);
+      end;
 end;
 
 end.

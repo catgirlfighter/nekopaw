@@ -125,7 +125,7 @@ type
     function ResetRelogin(idx: Integer = 0): Boolean;
     procedure SetIntrfEnabled(b: Boolean);
     procedure LoginCallBack(Sender: TObject; N: Integer;
-      Login, Password: String; const Cancel: Boolean);
+      Login, Password, CAPTCHA: String; const Cancel: Boolean);
     procedure refillRec(DataController: TcxGridDataController;
       RecordIndex, ItemOffset: Integer);
     procedure fillRec(r: TResourceList; DataController: TcxGridDataController;
@@ -418,9 +418,9 @@ begin
         c := dm.CreateCategory(vgSettings, 'vgimain', lang('_MAINCONFIG_') + ' '
           + fCurrItem.Name);
 
-        //if IsNew then
-          (dm.CreateField(vgSettings, 'vgiinherit', lang('_INHERIT_'), '',
-            ftCheck, c, false) as tcxEditorRow).Visible := IsNew;
+        // if IsNew then
+        (dm.CreateField(vgSettings, 'vgiinherit', lang('_INHERIT_'), '',
+          ftCheck, c, false) as TcxEditorRow).Visible := IsNew;
 
         if KeywordList.Count > 0 then
           s := '<list>'
@@ -447,9 +447,9 @@ begin
         with (dm.ertagedit.Properties as TcxCustomEditProperties) do
         begin
           OnButtonClick := OnTagstringButtonClick;
-          Buttons[1].Enabled := isNew;
+          Buttons[1].Enabled := IsNew;
           Buttons[2].Visible := fCurrItem.CheatSheet <> '';
-          if not isNew or (KeywordList.Count > 0) then
+          if not IsNew or (KeywordList.Count > 0) then
           begin
             ReadOnly := True;
           end
@@ -544,7 +544,8 @@ begin
   r := Pointer(N);
   Application.CreateForm(TfLogin, fLogin);
   fLogin.Execute(N, Format(lang('_LOGINON_'), [r.Name]),
-    nullstr(r.Fields['login']), nullstr(r.Fields['password']), LoginCallBack);
+    nullstr(r.Fields['login']), nullstr(r.Fields['password']), r.CAPTCHA,
+    LoginCallBack);
 end;
 
 procedure TfNewList.ExecAddFavClick(Sender: TObject);
@@ -606,6 +607,8 @@ begin
 end;
 
 procedure TfNewList.JobStatus(Sander: TObject; Action: Integer);
+var
+  r: tResource;
 begin
   case Action of
     JOB_LOGIN:
@@ -621,7 +624,11 @@ begin
           if FLoggedOn or FullResList.Canceled then
             fLogin.Close
           else
-            fLogin.bOk.Enabled := True
+          begin
+            r := Pointer(fLogin.N);
+            fLogin.resetCAPTCHA(r.Parent.CAPTCHA);
+            fLogin.bOk.Enabled := True;
+          end
         else if FLoggedOn then
           SendMsg;
       end;
@@ -643,7 +650,8 @@ begin
     try
       if r[RecordIndex].IconFile <> '' then
       begin
-        s := String(FileToStr(rootdir + '\resources\icons\' + r[RecordIndex].IconFile));
+        s := String(FileToStr(rootdir + '\resources\icons\' + r[RecordIndex]
+          .IconFile));
         Values[N, ItemOffset + 1] := s;
       end;
 
@@ -734,21 +742,21 @@ begin
       Values[0, 2] := lang('_GENERAL_');
     end;
 
-    //if  then
-    //begin
+    // if  then
+    // begin
 
-      s := tstringlist.Create;
-      try
-        s.Text := StrToStrList(GlobalSettings.GUI.LastUsedSet, ',');
+    s := tstringlist.Create;
+    try
+      s.Text := StrToStrList(GlobalSettings.GUI.LastUsedSet, ',');
 
-        for i := 1 to FullResList.Count - 1 do
-        begin
+      for i := 1 to FullResList.Count - 1 do
+      begin
 
-          if not bbFavorite.Down or bbFavorite.Down and FullResList[i].Favorite
-          then
-            fillRec(FullResList, tvFull.DataController, i, 1);
+        if not bbFavorite.Down or bbFavorite.Down and FullResList[i].Favorite
+        then
+          fillRec(FullResList, tvFull.DataController, i, 1);
 
-          if State = lfsNew then
+        if State = lfsNew then
           if s.IndexOf(FullResList[i].Name) <> -1 then
           begin
             with ActualResList[ActualResList.CopyResource(FullResList[i])] do
@@ -759,12 +767,12 @@ begin
             fillRec(ActualResList, tvRes.DataController,
               ActualResList.Count - 1, 0)
           end;
-        end;
-      finally
-        s.Free;
       end;
-    //end
-    //else
+    finally
+      s.Free;
+    end;
+    // end
+    // else
     if State = lfsEdit then
     begin
       for i := 0 to fPList.Count - 1 do
@@ -783,7 +791,7 @@ begin
         if not Assigned(fPList[i].MainResource) then
         begin
           FFullResList[N].MainResource := fPList[i];
-          fFullResList[N].ThreadCounter^ := fPList[i].ThreadCounter^;
+          FFullResList[N].ThreadCounter^ := fPList[i].ThreadCounter^;
         end;
 
       end;
@@ -889,7 +897,7 @@ end;
 
 procedure TfNewList.RemoveItem(index: Integer);
 
-  function rem(index: Integer): boolean;
+  function rem(index: Integer): Boolean;
   var
     i: Integer;
   begin
@@ -902,13 +910,13 @@ procedure TfNewList.RemoveItem(index: Integer);
     i := tvRes.DataController.Values[index, 0];
     if not TResource(Pointer(i)).IsNew then
     begin
-      //MessageDlg(lang('_CANTREMLITEMS_'),mtError,[mbOk],0);
+      // MessageDlg(lang('_CANTREMLITEMS_'),mtError,[mbOk],0);
       Exit(false);
     end;
 
     ActualResList.Remove(Pointer(i));
     tvRes.DataController.DeleteRecord(index);
-    Result := true;
+    Result := True;
   end;
 
 var
@@ -934,19 +942,18 @@ begin
 
       i := 1;
       if index = 0 then
-        while i < tvRes.DataController.RecordCount  do
+        while i < tvRes.DataController.RecordCount do
           if not rem(i) then
             inc(i)
           else
 
-        //for i := 1 to tvRes.DataController.RecordCount - 1 do
-        //  rem(1)
-      else
-        if not rem(index) then
-        begin
-          MessageDlg(lang('_CANTREMLITEMS_'),mtError,[mbOK],0);
-          Exit;
-        end;
+            // for i := 1 to tvRes.DataController.RecordCount - 1 do
+            // rem(1)
+          else if not rem(index) then
+          begin
+            MessageDlg(lang('_CANTREMLITEMS_'), mtError, [mbOK], 0);
+            Exit;
+          end;
 
       tvRes.DataController.FocusedRecordIndex :=
         Min(index, tvRes.DataController.RecordCount - 1);
@@ -1146,14 +1153,13 @@ begin
   end;
 
   SaveSet;
-  //case State of
-  //  lfsNew:
-      PostMessage(Application.MainForm.Handle, CM_APPLYNEWLIST,
-        Integer(Parent), 0);
-  //  lfsEdit:
-  //    PostMessage(Application.MainForm.Handle, CM_APPLYEDITLIST,
-  //      Integer(Parent), 0);
-  //end;
+  // case State of
+  // lfsNew:
+  PostMessage(Application.MainForm.Handle, CM_APPLYNEWLIST, Integer(Parent), 0);
+  // lfsEdit:
+  // PostMessage(Application.MainForm.Handle, CM_APPLYEDITLIST,
+  // Integer(Parent), 0);
+  // end;
 end;
 
 procedure TfNewList.SetFavoriteClick(Sender: TObject);
@@ -1176,7 +1182,7 @@ begin
 end;
 
 procedure TfNewList.LoginCallBack(Sender: TObject; N: Integer;
-  Login, Password: String; const Cancel: Boolean);
+  Login, Password, CAPTCHA: String; const Cancel: Boolean);
 var
   r: TResource;
 begin
@@ -1193,6 +1199,7 @@ begin
   begin
     r.Fields['login'] := Login;
     r.Fields['password'] := Password;
+    r.Fields['captcha'] := CAPTCHA;
     if ResetRelogin(N) then
     begin
       FLoggedOn := True;

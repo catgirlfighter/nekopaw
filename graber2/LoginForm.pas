@@ -9,11 +9,11 @@ uses
   {devex}
   cxGraphics, cxControls, cxLookAndFeels, cxLookAndFeelPainters,
   cxContainer, cxEdit, cxButtons, cxLabel, cxTextEdit, dxSkinsCore,
-  dxSkinsDefaultPainters;
+  dxSkinsDefaultPainters, cxImage, Vcl.ExtCtrls, Math;
 
 type
   TLoginCallBack = procedure(Sender: TObject; N: integer;
-    Login, Password: String; const Cancel: boolean) of object;
+    Login, Password, CAPTCHA: String; const Cancel: boolean) of object;
 
   TfLogin = class(TForm)
     eLogin: TcxTextEdit;
@@ -22,16 +22,22 @@ type
     lPassword: TcxLabel;
     bOk: TcxButton;
     bCancel: TcxButton;
+    eCAPTCHA: TcxTextEdit;
+    lCAPTCHA: TcxLabel;
+    iCAPTCHA: TImage;
     procedure bOkClick(Sender: TObject);
     procedure bCancelClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormCreate(Sender: TObject);
   private
     { Private declarations }
+    FN: integer;
   public
     procedure Execute(N: integer; ACaption, Login, Password: String;
-      CallBack: TLoginCallBack);
+      CAPTCHA: tStream; CallBack: TLoginCallBack);
     procedure SetLang;
+    procedure resetCAPTCHA(CAPTCHA: tStream);
+    property N: integer read FN;
     { Public declarations }
   end;
 
@@ -40,34 +46,36 @@ var
 
 implementation
 
-uses LangString;
+uses LangString, common;
 
 {$R *.dfm}
 
 var
   FCallBack: TLoginCallBack;
-  FN: integer;
 
 procedure TfLogin.bCancelClick(Sender: TObject);
 begin
-  FCallBack(Self, FN, eLogin.Text, ePassword.Text, true);
+  FCallBack(Self, FN, eLogin.Text, ePassword.Text, eCAPTCHA.Text, true);
   // Close;
 end;
 
 procedure TfLogin.bOkClick(Sender: TObject);
 begin
-  FCallBack(Self, FN, eLogin.Text, ePassword.Text, false);
+  FCallBack(Self, FN, eLogin.Text, ePassword.Text, eCAPTCHA.Text, false);
   bOk.Enabled := false;
 end;
 
 procedure TfLogin.Execute(N: integer; ACaption, Login, Password: String;
-  CallBack: TLoginCallBack);
+  CAPTCHA: tStream; CallBack: TLoginCallBack);
 begin
   Caption := ACaption;
   eLogin.Text := Login;
   ePassword.Text := Password;
   FN := N;
   FCallBack := CallBack;
+
+  resetCAPTCHA(CAPTCHA);
+
   ShowModal;
 end;
 
@@ -80,6 +88,36 @@ end;
 procedure TfLogin.FormCreate(Sender: TObject);
 begin
   SetLang;
+end;
+
+procedure TfLogin.resetCAPTCHA(CAPTCHA: tStream);
+var
+  buff: array [0 .. 10] of byte;
+begin
+  if Assigned(CAPTCHA) then
+  begin
+    CAPTCHA.Position := 0;
+    CAPTCHA.Read(buff[0], 11);
+    CAPTCHA.Position := 0;
+    DrawImage(iCAPTCHA, CAPTCHA, ImageFormat(@buff[0]));
+    lCAPTCHA.Top := iCAPTCHA.Top + iCAPTCHA.Height + 9;
+    eCAPTCHA.Top := iCAPTCHA.Top + iCAPTCHA.Height + 8;
+    ClientHeight := iCAPTCHA.Top + iCAPTCHA.Height + eCAPTCHA.Height  + bOk.Height + 8 * 3;
+    ClientWidth := MAX(eLogin.Left + eLogin.Width + 8, iCAPTCHA.Width + 8 * 2);
+    iCAPTCHA.Left := (ClientWidth - iCAPTCHA.Width) div 2;
+    iCAPTCHA.Visible := true;
+    lCAPTCHA.Visible := true;
+    eCAPTCHA.Visible := true;
+  end
+  else
+  begin
+    iCAPTCHA.Visible := false;
+    lCAPTCHA.Visible := false;
+    eCAPTCHA.Visible := false;
+    eCAPTCHA.Text := '';
+    ClientHeight := eLogin.Height * 2 + bOk.Height + 8 * 4;
+    ClientWidth := eLogin.Left + eLogin.Width + 8;
+  end;
 end;
 
 procedure TfLogin.SetLang;

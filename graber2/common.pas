@@ -1591,10 +1591,13 @@ var
   Graphic: TGraphic;
 begin
   Ext := lowercase(Ext);
-  Delete(Ext, 1, 1);
+  if pos('.',ext) = 1 then
+    Delete(Ext, 1, 1);
   Graphic := nil;
   if (Ext = 'jpeg') or (Ext = 'jpg') then
+  begin
     Graphic := TJPEGIMAGE.Create;
+  end;
   if (Ext = 'png') then
     Graphic := TPngImage.Create;
   if (Ext = 'gif') then

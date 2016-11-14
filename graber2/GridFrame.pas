@@ -1335,22 +1335,24 @@ begin
 
   vGrid.BeginUpdate;
   try
-    with ResList.PictureList do
-    begin
+    //with ResList.PictureList do
+    //begin
       ResList.PictureList.LockList{('selBL')};
+      ResList.PictureList.BlackList := CopyDSArray(BlackList);
       try
+        //ShowMessage(IntToStr(vGrid.DataController.RecordCount) + ' records');
         for i := 0 to vGrid.DataController.RecordCount - 1 do
           if ResList.PictureList.CheckBlackList(ResList.PictureList[i]) then
           begin
             vGrid.DataController.Values[i, FCheckColumn.Index] := b;
-            ItemList[i].Checked := b;
-            if ItemList[i].Linked.Count > 0 then
+            ResList.PictureList.ItemList[i].Checked := b;
+            if ResList.PictureList.ItemList[i].Linked.Count > 0 then
               Recheck(i);
           end;
       finally
         ResList.PictureList.UnlockList;
       end;
-    end;
+    //end;
     vGrid.DataController.Post(true);
   finally
     vGrid.EndUpdate;

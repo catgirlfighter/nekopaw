@@ -39,6 +39,8 @@ uses
 
 {$R *.res}
 
+{$DEFINE DEBUG}
+
 begin
   Application.Initialize;
 

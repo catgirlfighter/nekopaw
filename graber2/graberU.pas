@@ -175,7 +175,7 @@ type
     Isolator: String;
   end;
 
-  THTTPMethod = (hmGet, hmPost);
+  THTTPMethod = (hmGet, hmPost, hmCAPTCHA);
 
   THTTPRec = record
     // UseProxy: shortint;
@@ -475,6 +475,7 @@ type
     fStopSignalTimer: Boolean;
     fStopMessage: String;
     fResultURL: String;
+    fCAPTCHA: tMemoryStream;
   protected
     procedure SetInitialScript(Value: TScriptSection);
     procedure SetBeforeScript(Value: TScriptSection);
@@ -552,6 +553,7 @@ type
     property StopSignal: Boolean read FStopSignal;
     property StopMessage: String read fStopMessage;
     property StopSignalTimer: Boolean read fStopSignalTimer;
+    property CAPTCHA: tMemoryStream read fCAPTCHA;
   end;
 
   TJobEvent = function(t: TDownloadThread): Boolean of object;
@@ -876,8 +878,7 @@ type
     property ChildCount: Integer read FChildCount;
     procedure SaveToCSV(const FName: string); overload;
     procedure SaveToCSV(const fStream: tStream); overload;
-    procedure SaveToCSV(const FName: string;
-      const Fields: tStrings); overload;
+    procedure SaveToCSV(const FName: string; const Fields: tStrings); overload;
     procedure SaveToCSV(const fStream: tStream;
       const Fields: tStrings); overload;
     function LockList(Index: Integer): TTPicture; overload;
@@ -1070,6 +1071,7 @@ type
     fSaveIndex: Integer;
     fLoadFailed: Boolean;
     fRestarted: Boolean;
+    fCAPTCHA: tMemoryStream;
     procedure SetFavorite(Value: Boolean);
   protected
     procedure DeclorationEvent(ItemName: String; ItemValue: Variant;
@@ -1154,14 +1156,15 @@ type
     property IsNew: Boolean read fNew write fNew;
     property PremadePaths: Boolean read FPremadePaths write FPremadePaths;
     property Restarted: Boolean read fRestarted;
+    property CAPTCHA: tMemoryStream read fCAPTCHA;
   end;
 
   TResourceLinkList = class(TList)
   protected
     function Get(Index: Integer): TResource;
   public
-    procedure GetAllResourceFields(List: TStrings);
-    procedure GetAllPictureFields(List: TStrings; withparam: Boolean = false);
+    procedure GetAllResourceFields(List: tStrings);
+    procedure GetAllPictureFields(List: tStrings; withparam: Boolean = false);
 
     property Items[Index: Integer]: TResource read Get; default;
   end;
@@ -1733,8 +1736,7 @@ begin
   end;
 end;
 
-procedure TValueList.SaveToCSV(const fStream: tStream;
-  const Fields: tStrings);
+procedure TValueList.SaveToCSV(const fStream: tStream; const Fields: tStrings);
 
   procedure wr(const val: string);
   begin
@@ -2930,6 +2932,7 @@ begin
   FFields.AddField('tag', '', ftString, null, '', false);
   FFields.AddField('login', '', ftNone, null, '', false);
   FFields.AddField('password', '', ftNone, null, '', false);
+  FFields.AddField('captcha', '', ftNone, null, '', false);
   FKeywordList := TStringList.Create;
   FSectors := TValueList.Create;
   FPicFieldList := TStringList.Create;
@@ -2992,6 +2995,8 @@ begin
     FPicScript.Free;
   if FMainResource = nil then
     FreeThreadCounter;
+  if Assigned(fCAPTCHA) then
+    fCAPTCHA.Free;
   { if Assigned(FPictureList) then
     FPictureList.Free; }
   inherited;
@@ -3890,6 +3895,20 @@ begin
   end
   else
     FRelogin := false;
+
+  if Assigned(t.CAPTCHA) then
+  begin
+    if not Assigned(fCAPTCHA) then
+      fCAPTCHA := tMemoryStream.Create
+    else
+      fCAPTCHA.Clear;
+
+    t.CAPTCHA.Position := 0;
+    t.CAPTCHA.SaveToStream(fCAPTCHA);
+  end
+  else if Assigned(fCAPTCHA) then
+    FreeAndNil(fCAPTCHA);
+
   FHTTPRec.LoginResult := t.HTTPRec.LoginResult;
   dec(FThreadCounter.CurrThreadCount);
   FOnJobFinished(Self);
@@ -4356,7 +4375,7 @@ begin
   Result := inherited Get(Index);
 end;
 
-procedure TResourceLinkList.GetAllResourceFields(List: TStrings);
+procedure TResourceLinkList.GetAllResourceFields(List: tStrings);
 var
   n, i, j: Integer;
 begin
@@ -4377,7 +4396,7 @@ begin
 
 end;
 
-procedure TResourceLinkList.GetAllPictureFields(List: TStrings;
+procedure TResourceLinkList.GetAllPictureFields(List: tStrings;
   withparam: Boolean = false);
 var
   i, j: Integer;
@@ -5403,6 +5422,8 @@ begin
       FResource := nil;
     end;
 
+    if Assigned(fCAPTCHA) then
+      FreeAndNil(fCAPTCHA);
     FURLList := nil;
     FPostProc.Clear;
     FErrorScript.Clear;
@@ -5591,6 +5612,7 @@ begin
   FSTOPERROR := false;
   FJobComplete := nil;
   FURLList := nil;
+  fCAPTCHA := nil;
 end;
 
 destructor TDownloadThread.Destroy;
@@ -5609,6 +5631,8 @@ begin
   // fSocksInfo.Free;
   FPicList.Free;
   FSectors.Free;
+  if Assigned(fCAPTCHA) then
+    fCAPTCHA.Free;
   inherited;
 end;
 
@@ -6558,6 +6582,8 @@ procedure TDownloadThread.DE(ItemName: String; ItemValue: Variant;
         FHTTPRec.Method := hmGet
       else if SameText('post', Value) then
         FHTTPRec.Method := hmPost
+      else if SameText('captcha', Value) then
+        FHTTPRec.Method := hmCAPTCHA
       else
         raise Exception.Create('unknown method "' + Value + '"')
     else if SameText(name, '$thread.post') then
@@ -7074,6 +7100,20 @@ begin
               Post.Free;
             end;
           end
+          // else if FHTTPRec.Method = hmCAPTCHA then
+          // begin
+          // if not Assigned(fCAPTCHA) then
+          // fCAPTCHA := tMemoryStream.Create
+          // else
+          // fCAPTCHA.Clear;
+          // if not FHTTP.HandleRedirects then
+          // FHTTP.Get(Url, fCAPTCHA, [302])
+          // else
+          // FHTTP.Get(Url, fCAPTCHA);
+          // fCAPTCHA.SaveToStream(Result);
+          // FHTTP.Disconnect;
+          // Result.Clear;
+          // end
           else
           begin
             if not FHTTP.HandleRedirects then
@@ -7081,6 +7121,16 @@ begin
             else
               FHTTP.Get(Url, Result);
             FHTTP.Disconnect;
+          end;
+
+          if FHTTPRec.Method = hmCAPTCHA then
+          begin
+            if not Assigned(fCAPTCHA) then
+              fCAPTCHA := tMemoryStream.Create
+            else
+              fCAPTCHA.Clear;
+            Result.Position := 0;
+            Result.SaveToStream(fCAPTCHA);
           end;
 
           if (ReturnValue = THREAD_FINISH) then
@@ -9977,10 +10027,14 @@ function TPictureList.CheckBlackList(Pic: TTPicture): Boolean;
 var
   i, l: Integer;
 begin
+  //ShowMessage(IntToStr(Length(FBlackList)) + ' black lines');
   for i := 0 to length(FBlackList) - 1 do
+  begin
+    //ShowMessage(FBlackList[i][0] + '=' + FBlackList[i][1]);
     if SameText(FBlackList[i][0], 'tags') then
       if Pic.Tags.FindPosition(FBlackList[i][1], l) then
       begin
+
         Result := true;
         Exit;
       end
@@ -9991,6 +10045,7 @@ begin
       Result := true;
       Exit;
     end;
+  end;
   Result := false;
 end;
 

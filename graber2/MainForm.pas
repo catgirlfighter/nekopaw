@@ -6,7 +6,7 @@ uses
   {base}
   Windows, Messages, SysUtils, Variants, Classes,
   Graphics, Controls, Forms,
-  Dialogs, DB, ActnList, ExtCtrls, ImgList,{ rpVersionInfo,  }
+  Dialogs, DB, ActnList, ExtCtrls, ImgList, {rpVersionInfo,}
   AppEvnts, Types, ShellAPI, Math,
   StrUtils, UITypes,
   {devex}
@@ -20,7 +20,7 @@ uses
   cxGridCustomTableView,
   {graber2}
   common, OpBase, graberU, MyHTTP, UPDUnit, Balloon, Vcl.Menus {, dxSkinBlack}
-    , ProgressForm, dxBarExtItems;
+    , ProgressForm;
 
 type
 
@@ -811,11 +811,14 @@ begin
           Application.CreateForm(tfmSelectFields, fmSelectFields);
           try
             rl.GetAllPictureFields(fmSelectFields.lbFullList.Items);
-            fmSelectFields.lbFieldList.Items.Text := StrToStrList(GlobalSettings.GUI.LastUsedCSVFields,',');
-            if fmSelectFields.execute then
+            fmSelectFields.lbFieldList.Items.Text :=
+              StrToStrList(GlobalSettings.GUI.LastUsedCSVFields, ',');
+            if fmSelectFields.Execute then
             begin
-              rl.PictureList.SaveToCSV(dlgSave.FileName,fmSelectFields.lbFieldList.Items);
-              GlobalSettings.GUI.LastUsedCSVFields := fmSelectFields.FieldsAsStr;
+              rl.PictureList.SaveToCSV(dlgSave.FileName,
+                fmSelectFields.lbFieldList.Items);
+              GlobalSettings.GUI.LastUsedCSVFields :=
+                fmSelectFields.FieldsAsStr;
               SaveGUISettings([gvCSVFields]);
             end;
           finally
@@ -1550,7 +1553,7 @@ begin
     Caption := FOldCaption + ' ' + GetLocalVersion + 'α debug';
 {$ELSE}
   if GLOBAL_LOGMODE then
-    Caption := FOldCaption + ' ' +GetLocalVersion + 'α log'
+    Caption := FOldCaption + ' ' + GetLocalVersion + 'α log'
   else
     Caption := FOldCaption + ' ' + GetLocalVersion + 'α';
 {$ENDIF}
