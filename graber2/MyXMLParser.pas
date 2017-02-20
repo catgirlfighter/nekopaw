@@ -89,7 +89,7 @@ type
 
   TTagList = class(TList)
   private
-    fRoot: Boolean;
+    fRoot: boolean;
   protected
     function Get(ItemIndex: Integer): TTag;
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
@@ -110,7 +110,7 @@ type
     function CreateChild(Parent: TTag; AName: String = '';
       TagKind: TTagKind = tkTag): TTag;
     function CopyTag(ATag: TTag; Parent: TTag = nil): TTag;
-    property Root: Boolean read fRoot write fRoot;
+    property Root: boolean read fRoot write fRoot;
   end;
 
   TXMLOnTagEvent = procedure(ATag: TTag) of object;
@@ -372,17 +372,19 @@ begin
               inc(i, 2);
             end;
           't':
-          begin
-            Result[j] := #9;
-            inc(i,2);
-          end;
+            begin
+              Result[j] := #9;
+              inc(i, 2);
+            end;
           'u':
             if (i + 1 + 4 <= length(S)) and
               TryStrToInt('$' + string(copy(S, i + 2, 4)), c) then
             begin
               inc(i, 6);
               Result[j] := WideChar(c);
-            end else  raise exception.CreateFmt('Invalid format: %s',[copy(S, i, 6)]);
+            end
+            else
+              raise Exception.CreateFmt('Invalid format: %s', [copy(S, i, 6)]);
         else
           raise Exception.CreateFmt('Invalid code: %s', [copy(S, i, 2)]);
         end;
@@ -1493,6 +1495,8 @@ begin
                 begin
                   qt := 0;
                   ve := i - 1;
+                  if (istag <> 0) and (comm = 0) then
+                    tag_separate;
                 end;
             end;
         end;
@@ -1513,6 +1517,8 @@ begin
                 begin
                   qt := 0;
                   ve := i - 1;
+                  if (istag <> 0) and (comm = 0) then
+                    tag_separate;
                 end;
             end;
         end;
