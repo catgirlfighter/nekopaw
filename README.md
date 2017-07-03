@@ -1,4 +1,8 @@
+# No further updates
+Oops, I guess, it just happened. It become hard for me to support this utility any longer. It was very a long road, but in the end, I should be honest with my self: I'm not interested in downloading pictures any more, and it gets harder for me to come back to this project with each time. I'm sorry if it disappoints whoever still uses it!
+
 # About Nekopaw Grabber
+
 Former name is Graber 2 "Nekopaw"
 
 It's Win32 utility with a visual interface for saving images from any galleries (like standart *booru, devintart, pixiv and other). Program based on script-files with algorithms to access needed resources.
