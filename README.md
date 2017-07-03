@@ -1,8 +1,7 @@
 # No further updates
 Oops, I guess, it just happened. It become hard for me to support this utility any longer. It was very a long road, but in the end, I should be honest with my self: I'm not interested in downloading pictures any more, and it gets harder for me to come back to this project with each time. I'm sorry if it disappoints whoever still uses it!
 
-I didn't do any hardcoding updates in a very long time. All one needs to update/make it's own script is in "resources" folder. It isn't hard to understand if you aren't new to scripting languages (all though it's a selfmade script syntax).
-But to whom I'm trying to say this, I've never seen anyone tried to make a new, even simple, script :)
+I didn't do any hardcoding updates in a very long time. All one needs to update/make it's own script is in "resources" folder. You're welcome to try and do something yoursel, but syntax is salfmade and I didn't make any doc on it, sorry.
 
 # About Nekopaw Grabber
 
