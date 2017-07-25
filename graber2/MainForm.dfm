@@ -353,7 +353,7 @@ object mf: Tmf
     Top = 7
     Anchors = [akTop, akRight]
     AutoSize = False
-    Caption = 'Cheking for updates'
+    Caption = 'Che&cking for updates'
     Style.BorderStyle = ebsUltraFlat
     Style.LookAndFeel.NativeStyle = False
     StyleDisabled.LookAndFeel.NativeStyle = False
